@@ -1,6 +1,7 @@
 import {
   BODIES,
   CONDITIONS,
+  DRIVES,
   FUELS,
   MARKETS,
   type Observation,
@@ -46,8 +47,7 @@ export function invalidReason(o: Observation): string | null {
       return null;
     }
     case "VariantFacts":
-      if (!o.facts || typeof o.facts !== "object") return "facts must be an object";
-      return vehicleReason(o.vehicle);
+      return factsReason(o.facts) ?? vehicleReason(o.vehicle);
     case "ListPrice":
       if (!oneOf(MARKETS, o.market)) return `unknown market ${o.market}`;
       if (!isMoney(o.price)) return "price must be a finite amount >= 0 with an ISO currency";
@@ -56,6 +56,33 @@ export function invalidReason(o: Observation): string | null {
     default:
       return `unknown kind ${String((o as { kind?: unknown }).kind)}`;
   }
+}
+
+const NUMERIC_FACTS = new Set([
+  "engineCc",
+  "seats",
+  "doors",
+  "euroClass",
+  "consumptionL100km",
+  "consumptionKwh100km",
+  "co2GKm",
+  "massKg",
+  "lengthMm",
+]);
+
+function factsReason(facts: unknown): string | null {
+  if (!facts || typeof facts !== "object") return "facts must be an object";
+  for (const [field, value] of Object.entries(facts)) {
+    if (value === undefined) continue;
+    if (field === "drive") {
+      if (!oneOf(DRIVES, value)) return `unknown drive ${String(value)}`;
+    } else if (!NUMERIC_FACTS.has(field)) {
+      return `unknown fact ${field}`;
+    } else if (!(typeof value === "number" && Number.isFinite(value) && value >= 0)) {
+      return `fact ${field} must be a finite number >= 0`;
+    }
+  }
+  return null;
 }
 
 function vehicleReason(v: { make?: unknown; model?: unknown } | undefined): string | null {

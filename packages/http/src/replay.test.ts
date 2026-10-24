@@ -102,4 +102,12 @@ describe("replay Http", () => {
     expect(page.bytes).toEqual(bytes);
     expect(page.body).toBe("");
   });
+
+  it("serves a recorded text response as bytes to a binary request", async () => {
+    const page = await createReplayHttp(cassette).get({
+      url: "https://a.example/list?a=1&b=2",
+      binary: true,
+    });
+    expect(new TextDecoder().decode(page.bytes)).toBe("first");
+  });
 });

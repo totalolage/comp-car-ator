@@ -44,7 +44,7 @@ export function createReplayHttp(cassette: Cassette): Http {
   const served = new Map<string, number>();
   return {
     async get(input) {
-      const { url, signal } = normalizeRequest(input);
+      const { url, signal, binary } = normalizeRequest(input);
       signal?.throwIfAborted();
       const key = matchKey(url);
       const candidates = byUrl.get(key);
@@ -54,8 +54,11 @@ export function createReplayHttp(cassette: Cassette): Http {
       const { bodyBase64, ...response } = (candidates[index] as Interaction).response;
       const marker = detectChallenge(response);
       if (marker) throw new HttpBlockedError(url, response.tier, marker);
+      // Serve in the mode the request asks for, as the live adapter would.
+      const raw = bodyBase64 !== undefined ? Buffer.from(bodyBase64, "base64") : undefined;
       const page: Page = { ...response };
-      if (bodyBase64 !== undefined) page.bytes = new Uint8Array(Buffer.from(bodyBase64, "base64"));
+      if (binary) page.bytes = new Uint8Array(raw ?? Buffer.from(response.body, "utf8"));
+      else if (raw) page.body = raw.toString("utf8");
       return page;
     },
   };

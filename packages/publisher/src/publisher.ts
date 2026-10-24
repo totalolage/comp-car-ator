@@ -21,6 +21,7 @@ import {
   type ModelId,
   type Money,
   pragueDate,
+  type YearMonth,
 } from "@cca/vocabulary";
 
 export interface PublishOptions {
@@ -140,10 +141,7 @@ function listingRow(
       odometerKm: listing.odometerKm,
       fuel: v.fuel,
       euroClass: v.euroClass,
-      inspectionValid: listing.inspectionValidUntil
-        ? listing.inspectionValidUntil.year * 12 + (listing.inspectionValidUntil.month ?? 12) >=
-          Number(today.slice(0, 4)) * 12 + Number(today.slice(5, 7))
-        : undefined,
+      inspectionValid: inspectionValid(listing.inspectionValidUntil, today),
     },
     { fx, today, transportCzk },
   );
@@ -322,6 +320,14 @@ function priceHistory(listings: ListingRow[], today: IsoDate): ModelFile["histor
       });
       return prices.length ? [{ date: day, count: prices.length, medianCzk: median(prices) }] : [];
     });
+}
+
+/** True/false when the shown inspection date decides it; undefined (unknown) otherwise. */
+function inspectionValid(until: YearMonth | undefined, today: IsoDate): boolean | undefined {
+  if (!until) return undefined;
+  const thisYear = Number(today.slice(0, 4));
+  if (until.month === undefined) return until.year === thisYear ? undefined : until.year > thisYear;
+  return until.year * 12 + until.month >= thisYear * 12 + Number(today.slice(5, 7));
 }
 
 function isActiveUsed(l: ListingRow): boolean {

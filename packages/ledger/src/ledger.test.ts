@@ -218,4 +218,19 @@ describe("Ledger", () => {
     expect(third).toMatchObject({ census: "applied", gone: 0 });
     expect(ledger.checkpoint("as24").isKnown("v")).toBe(true);
   });
+
+  it("rejects VariantFacts with unknown fields or non-finite values", async () => {
+    ledger = openLedger(":memory:");
+    const vehicle = { make: "Skoda", model: "Octavia" };
+    const summary = await run("eea", "full", "2026-10-02", [
+      { kind: "VariantFacts", vehicle, facts: { co2GKm: Number.NaN } },
+      { kind: "VariantFacts", vehicle, facts: { colour: "red" } as never },
+      { kind: "VariantFacts", vehicle, facts: { co2GKm: 120 } },
+    ]);
+    expect(summary.recorded).toEqual({ VariantFacts: 1 });
+    expect(summary.rejected.map((r) => r.reason)).toEqual([
+      "fact co2GKm must be a finite number >= 0",
+      "unknown fact colour",
+    ]);
+  });
 });

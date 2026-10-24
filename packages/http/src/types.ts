@@ -14,9 +14,12 @@ export interface HttpRequest {
   minTier?: Tier;
   /** Accept-Language flavour. Default "cs". */
   locale?: "cs" | "de" | "en";
-  /** Return the raw bytes in `Page.bytes` (PDF price lists, ZIP datasets); `body` is then "". */
+  /** Return the raw bytes in `Page.bytes` (PDF price lists, ZIP datasets). */
   binary?: boolean;
-  /** Aborts in-flight fetches and backoff waits; `get` then rejects with the abort reason. */
+  /**
+   * Aborts in-flight fetches and backoff waits; `get` then rejects with the abort reason. A
+   * request still queued for its host's pacing slot rejects when the slot comes, without fetching.
+   */
   signal?: AbortSignal;
 }
 
@@ -27,7 +30,10 @@ export interface Page {
   status: number;
   /** Lower-cased header names. */
   headers: Record<string, string>;
-  /** Decoded text (charset from Content-Type, default UTF-8); "" for binary requests. */
+  /**
+   * Decoded text (charset from Content-Type, default UTF-8). For binary requests it is "" unless
+   * the server answered with a text type (a challenge or error page).
+   */
   body: string;
   /** Raw bytes, present only when the request asked for `binary`. */
   bytes?: Uint8Array;

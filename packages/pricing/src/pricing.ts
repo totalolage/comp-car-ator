@@ -153,12 +153,14 @@ function isNewMeansOfTransport(input: LandedInput, today: IsoDate): boolean | "u
   if (km !== undefined && km <= 6000) return true;
   const reg = input.firstRegistration;
   if (!reg) return input.condition === "new" ? true : "unknown";
+  // Registrations are known to the month, so a calendar-month difference d means the true
+  // elapsed time lies strictly between d - 1 and d + 1 months; d = 6 cannot be decided.
   const [ty, tm] = today.split("-").map(Number) as [number, number];
   const monthsAgo = (month: number) => (ty - reg.year) * 12 + (tm - month);
   const newest = monthsAgo(reg.month ?? 12);
   const oldest = monthsAgo(reg.month ?? 1);
-  if (oldest <= 6) return true;
-  if (newest > 6 && km !== undefined) return false;
+  if (oldest <= 5) return true;
+  if (newest >= 7 && km !== undefined) return false;
   return "unknown";
 }
 

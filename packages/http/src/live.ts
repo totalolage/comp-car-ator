@@ -17,11 +17,15 @@ export function createLiveHttp(options: LiveHttpOptions = {}): Http {
 const fetchT0: TierFetcher = async ({ url, headers, binary, signal }) => {
   const response = await fetch(url, { headers, redirect: "follow", signal });
   const bytes = new Uint8Array(await response.arrayBuffer());
+  const contentType = response.headers.get("content-type");
+  // A binary request answered with text (a challenge or error page) keeps its text, so
+  // challenge detection still sees it.
+  const text = !binary || /^text\//i.test(contentType ?? "");
   return {
     url: response.url || url,
     status: response.status,
     headers: Object.fromEntries(response.headers),
-    body: binary ? "" : decode(bytes, response.headers.get("content-type")),
+    body: text ? decode(bytes, contentType) : "",
     ...(binary ? { bytes } : {}),
   } satisfies RawResponse;
 };

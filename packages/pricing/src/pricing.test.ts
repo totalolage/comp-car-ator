@@ -114,5 +114,10 @@ describe("landedPrice", () => {
     expect(thisYear.ok && thisYear.landed.flags).toContain("vatUncertain");
     const lastYear = landedPrice({ ...base, firstRegistration: { year: 2025, month: 1 } }, env);
     expect(lastYear.ok && lastYear.landed.flags).toEqual([]);
+    // Registered exactly six calendar months ago: the day decides, which listings never show.
+    const sixMonths = landedPrice({ ...base, firstRegistration: { year: 2026, month: 4 } }, env);
+    expect(sixMonths.ok && sixMonths.landed.flags).toContain("vatUncertain");
+    const fiveMonths = landedPrice({ ...base, firstRegistration: { year: 2026, month: 5 } }, env);
+    expect(fiveMonths.ok && fiveMonths.landed.flags).toContain("newVehicleVat");
   });
 });
