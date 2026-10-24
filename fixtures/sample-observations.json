@@ -1,0 +1,1555 @@
+{
+  "runs": [
+    {
+      "source": "rsv",
+      "mode": "full",
+      "startedAt": "2026-09-01T03:00:00Z",
+      "observations": [
+        {
+          "kind": "CatalogEntry",
+          "variant": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "generation": {
+              "slug": "mk4",
+              "name": "Octavia IV",
+              "from": 2020
+            },
+            "body": "wagon",
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "years": {
+              "from": 2020
+            },
+            "drive": "fwd",
+            "engineCc": 1968,
+            "seats": 5,
+            "doors": 5,
+            "euroClass": 6,
+            "consumptionL100km": 4.8,
+            "co2GKm": 126
+          }
+        },
+        {
+          "kind": "CatalogEntry",
+          "variant": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "generation": {
+              "slug": "mk4",
+              "name": "Octavia IV",
+              "from": 2020
+            },
+            "body": "wagon",
+            "fuel": "petrol",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "years": {
+              "from": 2020
+            },
+            "drive": "fwd",
+            "engineCc": 1498,
+            "seats": 5,
+            "doors": 5,
+            "euroClass": 6,
+            "consumptionL100km": 5.6,
+            "co2GKm": 127
+          }
+        },
+        {
+          "kind": "CatalogEntry",
+          "variant": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "generation": {
+              "slug": "mk4",
+              "name": "Octavia IV",
+              "from": 2020
+            },
+            "body": "hatchback",
+            "fuel": "petrol",
+            "powerKw": 85,
+            "transmission": "manual",
+            "years": {
+              "from": 2020
+            },
+            "drive": "fwd",
+            "engineCc": 999,
+            "seats": 5,
+            "doors": 5,
+            "euroClass": 6,
+            "consumptionL100km": 5.3,
+            "co2GKm": 121
+          }
+        },
+        {
+          "kind": "CatalogEntry",
+          "variant": {
+            "make": "Škoda",
+            "model": "Fabia",
+            "generation": {
+              "slug": "mk4",
+              "name": "Fabia IV",
+              "from": 2021
+            },
+            "body": "hatchback",
+            "fuel": "petrol",
+            "powerKw": 70,
+            "transmission": "manual",
+            "years": {
+              "from": 2021
+            },
+            "drive": "fwd",
+            "engineCc": 999,
+            "seats": 5,
+            "doors": 5,
+            "euroClass": 6,
+            "consumptionL100km": 5.0,
+            "co2GKm": 114
+          }
+        },
+        {
+          "kind": "CatalogEntry",
+          "variant": {
+            "make": "Volkswagen",
+            "model": "Golf",
+            "generation": {
+              "slug": "mk8",
+              "name": "Golf VIII",
+              "from": 2020
+            },
+            "body": "hatchback",
+            "fuel": "petrol",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "years": {
+              "from": 2020
+            },
+            "drive": "fwd",
+            "engineCc": 1498,
+            "seats": 5,
+            "doors": 5,
+            "euroClass": 6,
+            "consumptionL100km": 5.5,
+            "co2GKm": 125
+          }
+        },
+        {
+          "kind": "CatalogEntry",
+          "variant": {
+            "make": "Volkswagen",
+            "model": "Golf",
+            "generation": {
+              "slug": "mk8",
+              "name": "Golf VIII",
+              "from": 2020
+            },
+            "body": "hatchback",
+            "fuel": "diesel",
+            "powerKw": 85,
+            "transmission": "manual",
+            "years": {
+              "from": 2020
+            },
+            "drive": "fwd",
+            "engineCc": 1968,
+            "seats": 5,
+            "doors": 5,
+            "euroClass": 6,
+            "consumptionL100km": 4.4,
+            "co2GKm": 116
+          }
+        },
+        {
+          "kind": "CatalogEntry",
+          "variant": {
+            "make": "Volkswagen",
+            "model": "Golf",
+            "generation": {
+              "slug": "mk8",
+              "name": "Golf VIII",
+              "from": 2020
+            },
+            "body": "wagon",
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "years": {
+              "from": 2020
+            },
+            "drive": "fwd",
+            "engineCc": 1968,
+            "seats": 5,
+            "doors": 5,
+            "euroClass": 6,
+            "consumptionL100km": 4.9,
+            "co2GKm": 128
+          }
+        },
+        {
+          "kind": "CatalogEntry",
+          "variant": {
+            "make": "Toyota",
+            "model": "Corolla",
+            "generation": {
+              "slug": "e210",
+              "name": "Corolla E210",
+              "from": 2019
+            },
+            "body": "wagon",
+            "fuel": "hev",
+            "powerKw": 103,
+            "transmission": "automatic",
+            "years": {
+              "from": 2023
+            },
+            "drive": "fwd",
+            "engineCc": 1798,
+            "seats": 5,
+            "doors": 5,
+            "euroClass": 6,
+            "consumptionL100km": 4.5,
+            "co2GKm": 102
+          }
+        },
+        {
+          "kind": "CatalogEntry",
+          "variant": {
+            "make": "Toyota",
+            "model": "Corolla",
+            "generation": {
+              "slug": "e210",
+              "name": "Corolla E210",
+              "from": 2019
+            },
+            "body": "hatchback",
+            "fuel": "hev",
+            "powerKw": 90,
+            "transmission": "automatic",
+            "years": {
+              "from": 2019,
+              "to": 2022
+            },
+            "drive": "fwd",
+            "engineCc": 1798,
+            "seats": 5,
+            "doors": 5,
+            "euroClass": 6,
+            "consumptionL100km": 4.6,
+            "co2GKm": 104
+          }
+        },
+        {
+          "kind": "CatalogEntry",
+          "variant": {
+            "make": "Hyundai",
+            "model": "i30",
+            "generation": {
+              "slug": "pd",
+              "name": "i30 III (PD)",
+              "from": 2017
+            },
+            "body": "hatchback",
+            "fuel": "petrol",
+            "powerKw": 88,
+            "transmission": "manual",
+            "years": {
+              "from": 2017
+            },
+            "drive": "fwd",
+            "engineCc": 998,
+            "seats": 5,
+            "doors": 5,
+            "euroClass": 6,
+            "consumptionL100km": 5.6,
+            "co2GKm": 128
+          }
+        }
+      ]
+    },
+    {
+      "source": "skoda-cz",
+      "mode": "full",
+      "startedAt": "2026-10-01T03:00:00Z",
+      "observations": [
+        {
+          "kind": "ListPrice",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi Selection 2.0 TDI 110 kW 7DSG",
+            "modelYear": 2026,
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon"
+          },
+          "price": {
+            "amount": 899900,
+            "currency": "CZK"
+          },
+          "market": "CZ",
+          "validFrom": "2026-07-01"
+        },
+        {
+          "kind": "ListPrice",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi Sportline 2.0 TDI 110 kW 7DSG",
+            "modelYear": 2026,
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon"
+          },
+          "price": {
+            "amount": 949900,
+            "currency": "CZK"
+          },
+          "market": "CZ",
+          "validFrom": "2026-07-01"
+        },
+        {
+          "kind": "ListPrice",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi Selection 1.5 TSI e-TEC 110 kW 7DSG",
+            "modelYear": 2026,
+            "fuel": "petrol",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon"
+          },
+          "price": {
+            "amount": 789900,
+            "currency": "CZK"
+          },
+          "market": "CZ",
+          "validFrom": "2026-07-01"
+        },
+        {
+          "kind": "ListPrice",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Essence 1.0 TSI 85 kW",
+            "modelYear": 2026,
+            "fuel": "petrol",
+            "powerKw": 85,
+            "transmission": "manual",
+            "body": "hatchback"
+          },
+          "price": {
+            "amount": 589900,
+            "currency": "CZK"
+          },
+          "market": "CZ",
+          "validFrom": "2026-07-01"
+        },
+        {
+          "kind": "ListPrice",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Fabia",
+            "trim": "Selection 1.0 TSI 70 kW",
+            "modelYear": 2026,
+            "fuel": "petrol",
+            "powerKw": 70,
+            "transmission": "manual",
+            "body": "hatchback"
+          },
+          "price": {
+            "amount": 459900,
+            "currency": "CZK"
+          },
+          "market": "CZ",
+          "validFrom": "2026-07-01"
+        }
+      ]
+    },
+    {
+      "source": "sauto",
+      "mode": "full",
+      "startedAt": "2026-10-10T03:00:00Z",
+      "observations": [
+        {
+          "kind": "ListingSeen",
+          "ref": "190334521",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190334521",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 2.0 TDI Style DSG",
+            "firstRegistration": {
+              "year": 2021,
+              "month": 3
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 98000,
+          "price": {
+            "amount": 489000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Praha",
+            "region": "Hlavní město Praha"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190287744",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190287744",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 2.0 TDI Ambition DSG",
+            "firstRegistration": {
+              "year": 2020,
+              "month": 11
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 142000,
+          "price": {
+            "amount": 399900,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Brno",
+            "region": "Jihomoravský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190401230",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190401230",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 1.5 TSI e-TEC Style DSG",
+            "firstRegistration": {
+              "year": 2022,
+              "month": 6
+            },
+            "fuel": "petrol",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 45000,
+          "price": {
+            "amount": 569000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Ostrava",
+            "region": "Moravskoslezský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "189950012",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/189950012",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "1.0 TSI Ambition",
+            "firstRegistration": {
+              "year": 2021,
+              "month": 2
+            },
+            "fuel": "petrol",
+            "powerKw": 85,
+            "transmission": "manual"
+          },
+          "odometerKm": 76000,
+          "price": {
+            "amount": 359000,
+            "currency": "CZK"
+          },
+          "priceBasis": "unknown",
+          "seller": "private",
+          "photos": [],
+          "location": {
+            "city": "Plzeň",
+            "region": "Plzeňský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190312009",
+          "url": "https://www.sauto.cz/osobni/detail/vw/golf/190312009",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "VW",
+            "model": "Golf",
+            "trim": "1.5 eTSI Life DSG",
+            "firstRegistration": {
+              "year": 2021,
+              "month": 5
+            },
+            "fuel": "petrol",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "hatchback",
+            "euroClass": 6
+          },
+          "odometerKm": 61000,
+          "price": {
+            "amount": 459000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Liberec",
+            "region": "Liberecký kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190477310",
+          "url": "https://www.sauto.cz/osobni/detail/toyota/corolla/190477310",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Toyota",
+            "model": "Corolla",
+            "trim": "Touring Sports 1.8 Hybrid Comfort",
+            "firstRegistration": {
+              "year": 2023,
+              "month": 4
+            },
+            "fuel": "hev",
+            "powerKw": 103,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 28000,
+          "price": {
+            "amount": 589000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Praha",
+            "region": "Hlavní město Praha"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190198420",
+          "url": "https://www.sauto.cz/osobni/detail/hyundai/i30/190198420",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Hyundai",
+            "model": "i30",
+            "trim": "1.0 T-GDi Smart",
+            "firstRegistration": {
+              "year": 2019,
+              "month": 7
+            },
+            "fuel": "petrol",
+            "powerKw": 88,
+            "transmission": "manual"
+          },
+          "odometerKm": 88000,
+          "price": {
+            "amount": 259000,
+            "currency": "CZK"
+          },
+          "priceBasis": "unknown",
+          "seller": "private",
+          "photos": [],
+          "location": {
+            "city": "Olomouc",
+            "region": "Olomoucký kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190466002",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/kodiaq/190466002",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Kodiaq",
+            "trim": "2.0 TDI 4x4 DSG",
+            "firstRegistration": {
+              "year": 2022,
+              "month": 1
+            },
+            "fuel": "diesel",
+            "powerKw": 142,
+            "transmission": "automatic"
+          },
+          "odometerKm": 70000,
+          "price": {
+            "amount": 799000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Zlín",
+            "region": "Zlínský kraj"
+          }
+        }
+      ]
+    },
+    {
+      "source": "sauto",
+      "mode": "full",
+      "startedAt": "2026-10-17T03:00:00Z",
+      "observations": [
+        {
+          "kind": "ListingSeen",
+          "ref": "190334521",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190334521",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 2.0 TDI Style DSG",
+            "firstRegistration": {
+              "year": 2021,
+              "month": 3
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 98000,
+          "price": {
+            "amount": 479000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Praha",
+            "region": "Hlavní město Praha"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190287744",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190287744",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 2.0 TDI Ambition DSG",
+            "firstRegistration": {
+              "year": 2020,
+              "month": 11
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 142000,
+          "price": {
+            "amount": 399900,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Brno",
+            "region": "Jihomoravský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190401230",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190401230",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 1.5 TSI e-TEC Style DSG",
+            "firstRegistration": {
+              "year": 2022,
+              "month": 6
+            },
+            "fuel": "petrol",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 45000,
+          "price": {
+            "amount": 569000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Ostrava",
+            "region": "Moravskoslezský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190455871",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/fabia/190455871",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Fabia",
+            "trim": "1.0 TSI Style",
+            "firstRegistration": {
+              "year": 2022,
+              "month": 9
+            },
+            "fuel": "petrol",
+            "powerKw": 70,
+            "transmission": "manual",
+            "body": "hatchback",
+            "euroClass": 6
+          },
+          "odometerKm": 32000,
+          "price": {
+            "amount": 329000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Praha",
+            "region": "Hlavní město Praha"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190312009",
+          "url": "https://www.sauto.cz/osobni/detail/vw/golf/190312009",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "VW",
+            "model": "Golf",
+            "trim": "1.5 eTSI Life DSG",
+            "firstRegistration": {
+              "year": 2021,
+              "month": 5
+            },
+            "fuel": "petrol",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "hatchback",
+            "euroClass": 6
+          },
+          "odometerKm": 61000,
+          "price": {
+            "amount": 459000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Liberec",
+            "region": "Liberecký kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190477310",
+          "url": "https://www.sauto.cz/osobni/detail/toyota/corolla/190477310",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Toyota",
+            "model": "Corolla",
+            "trim": "Touring Sports 1.8 Hybrid Comfort",
+            "firstRegistration": {
+              "year": 2023,
+              "month": 4
+            },
+            "fuel": "hev",
+            "powerKw": 103,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 28000,
+          "price": {
+            "amount": 589000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Praha",
+            "region": "Hlavní město Praha"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190198420",
+          "url": "https://www.sauto.cz/osobni/detail/hyundai/i30/190198420",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Hyundai",
+            "model": "i30",
+            "trim": "1.0 T-GDi Smart",
+            "firstRegistration": {
+              "year": 2019,
+              "month": 7
+            },
+            "fuel": "petrol",
+            "powerKw": 88,
+            "transmission": "manual"
+          },
+          "odometerKm": 88000,
+          "price": {
+            "amount": 259000,
+            "currency": "CZK"
+          },
+          "priceBasis": "unknown",
+          "seller": "private",
+          "photos": [],
+          "location": {
+            "city": "Olomouc",
+            "region": "Olomoucký kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190466002",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/kodiaq/190466002",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Kodiaq",
+            "trim": "2.0 TDI 4x4 DSG",
+            "firstRegistration": {
+              "year": 2022,
+              "month": 1
+            },
+            "fuel": "diesel",
+            "powerKw": 142,
+            "transmission": "automatic"
+          },
+          "odometerKm": 70000,
+          "price": {
+            "amount": 799000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Zlín",
+            "region": "Zlínský kraj"
+          }
+        }
+      ]
+    },
+    {
+      "source": "autoscout24-de",
+      "mode": "incremental",
+      "startedAt": "2026-10-20T03:00:00Z",
+      "observations": [
+        {
+          "kind": "ListingSeen",
+          "ref": "5f1c2a8e-91b0-4c4e-9a3e-7d2b6c1e0a11",
+          "url": "https://www.autoscout24.de/angebote/volkswagen-golf-5f1c2a8e-91b0-4c4e-9a3e-7d2b6c1e0a11",
+          "market": "DE",
+          "condition": "used",
+          "vehicle": {
+            "make": "Volkswagen",
+            "model": "Golf",
+            "trim": "1.5 eTSI DSG Life",
+            "firstRegistration": {
+              "year": 2021,
+              "month": 9
+            },
+            "fuel": "petrol",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "euroClass": 6
+          },
+          "odometerKm": 55000,
+          "price": {
+            "amount": 17990,
+            "currency": "EUR"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "München",
+            "region": "Bayern"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "0b7d9f42-3c55-4a8e-b1f0-2e9c8d7a6b52",
+          "url": "https://www.autoscout24.de/angebote/volkswagen-golf variant-0b7d9f42-3c55-4a8e-b1f0-2e9c8d7a6b52",
+          "market": "DE",
+          "condition": "used",
+          "vehicle": {
+            "make": "Volkswagen",
+            "model": "Golf Variant",
+            "trim": "2.0 TDI DSG Style",
+            "firstRegistration": {
+              "year": 2022,
+              "month": 3
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 78000,
+          "price": {
+            "amount": 21990,
+            "currency": "EUR"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Dresden",
+            "region": "Sachsen"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "c3e8a1d0-6f2b-4b7a-8c9d-1a2b3c4d5e63",
+          "url": "https://www.autoscout24.de/angebote/skoda-octavia combi-c3e8a1d0-6f2b-4b7a-8c9d-1a2b3c4d5e63",
+          "market": "DE",
+          "condition": "used",
+          "vehicle": {
+            "make": "Skoda",
+            "model": "Octavia Combi",
+            "trim": "2.0 TDI DSG Style",
+            "firstRegistration": {
+              "year": 2021,
+              "month": 6
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 110000,
+          "price": {
+            "amount": 18900,
+            "currency": "EUR"
+          },
+          "priceBasis": "margin",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Nürnberg",
+            "region": "Bayern"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "8a9b0c1d-2e3f-4a5b-9c6d-7e8f9a0b1c74",
+          "url": "https://www.autoscout24.de/angebote/toyota-corolla-8a9b0c1d-2e3f-4a5b-9c6d-7e8f9a0b1c74",
+          "market": "DE",
+          "condition": "used",
+          "vehicle": {
+            "make": "Toyota",
+            "model": "Corolla",
+            "trim": "Touring Sports 1.8 Hybrid Team D",
+            "firstRegistration": {
+              "year": 2023,
+              "month": 2
+            },
+            "fuel": "hev",
+            "powerKw": 103,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 35000,
+          "price": {
+            "amount": 22450,
+            "currency": "EUR"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Berlin",
+            "region": "Berlin"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a85",
+          "url": "https://www.autoscout24.de/angebote/volkswagen-golf-e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a85",
+          "market": "DE",
+          "condition": "used",
+          "vehicle": {
+            "make": "Volkswagen",
+            "model": "Golf",
+            "trim": "2.0 TDI Comfortline",
+            "firstRegistration": {
+              "year": 2020,
+              "month": 4
+            },
+            "fuel": "diesel",
+            "powerKw": 85,
+            "transmission": "manual"
+          },
+          "odometerKm": 140000,
+          "price": {
+            "amount": 12900,
+            "currency": "EUR"
+          },
+          "priceBasis": "unknown",
+          "seller": "private",
+          "photos": [],
+          "location": {
+            "city": "Regensburg",
+            "region": "Bayern"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "f9e8d7c6-b5a4-4392-8170-6f5e4d3c2b96",
+          "url": "https://www.autoscout24.de/angebote/volkswagen-golf-f9e8d7c6-b5a4-4392-8170-6f5e4d3c2b96",
+          "market": "DE",
+          "condition": "used",
+          "vehicle": {
+            "make": "Volkswagen",
+            "model": "Golf",
+            "trim": "GTI 2.0 TSI DSG",
+            "firstRegistration": {
+              "year": 2021,
+              "month": 11
+            },
+            "fuel": "petrol",
+            "powerKw": 180,
+            "transmission": "automatic",
+            "euroClass": 6
+          },
+          "odometerKm": 48000,
+          "price": {
+            "amount": 29990,
+            "currency": "EUR"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Leipzig",
+            "region": "Sachsen"
+          }
+        }
+      ]
+    },
+    {
+      "source": "tipcars",
+      "mode": "incremental",
+      "startedAt": "2026-10-22T03:00:00Z",
+      "observations": [
+        {
+          "kind": "ListingSeen",
+          "ref": "4471209",
+          "url": "https://www.tipcars.com/skoda-octavia/4471209.html",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 2.0 TDI DSG",
+            "firstRegistration": {
+              "year": 2020,
+              "month": 8
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 165000,
+          "price": {
+            "amount": 369000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Hradec Králové",
+            "region": "Královéhradecký kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "4470866",
+          "url": "https://www.tipcars.com/volkswagen-golf/4470866.html",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Volkswagen",
+            "model": "Golf",
+            "trim": "2.0 TDI",
+            "firstRegistration": {
+              "year": 2020,
+              "month": 10
+            },
+            "fuel": "diesel",
+            "powerKw": 85,
+            "transmission": "manual",
+            "body": "hatchback",
+            "euroClass": 6
+          },
+          "odometerKm": 120000,
+          "price": {
+            "amount": 339000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "České Budějovice",
+            "region": "Jihočeský kraj"
+          }
+        }
+      ]
+    },
+    {
+      "source": "autoscout24-at",
+      "mode": "incremental",
+      "startedAt": "2026-10-23T03:00:00Z",
+      "observations": [
+        {
+          "kind": "ListingSeen",
+          "ref": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4ca7",
+          "url": "https://www.autoscout24.at/angebote/skoda-octavia combi-1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4ca7",
+          "market": "AT",
+          "condition": "used",
+          "vehicle": {
+            "make": "Skoda",
+            "model": "Octavia Combi",
+            "trim": "2.0 TDI DSG Style",
+            "firstRegistration": {
+              "year": 2022,
+              "month": 1
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 60000,
+          "price": {
+            "amount": 24900,
+            "currency": "EUR"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Linz",
+            "region": "Oberösterreich"
+          }
+        }
+      ]
+    },
+    {
+      "source": "sauto",
+      "mode": "full",
+      "startedAt": "2026-10-24T03:00:00Z",
+      "observations": [
+        {
+          "kind": "ListingSeen",
+          "ref": "190334521",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190334521",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 2.0 TDI Style DSG",
+            "firstRegistration": {
+              "year": 2021,
+              "month": 3
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 98000,
+          "price": {
+            "amount": 479000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Praha",
+            "region": "Hlavní město Praha"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190287744",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190287744",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 2.0 TDI Ambition DSG",
+            "firstRegistration": {
+              "year": 2020,
+              "month": 11
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 142000,
+          "price": {
+            "amount": 399900,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Brno",
+            "region": "Jihomoravský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190401230",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190401230",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 1.5 TSI e-TEC Style DSG",
+            "firstRegistration": {
+              "year": 2022,
+              "month": 6
+            },
+            "fuel": "petrol",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 45000,
+          "price": {
+            "amount": 569000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Ostrava",
+            "region": "Moravskoslezský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190455871",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/fabia/190455871",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Fabia",
+            "trim": "1.0 TSI Style",
+            "firstRegistration": {
+              "year": 2022,
+              "month": 9
+            },
+            "fuel": "petrol",
+            "powerKw": 70,
+            "transmission": "manual",
+            "body": "hatchback",
+            "euroClass": 6
+          },
+          "odometerKm": 32000,
+          "price": {
+            "amount": 329000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Praha",
+            "region": "Hlavní město Praha"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190312009",
+          "url": "https://www.sauto.cz/osobni/detail/vw/golf/190312009",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "VW",
+            "model": "Golf",
+            "trim": "1.5 eTSI Life DSG",
+            "firstRegistration": {
+              "year": 2021,
+              "month": 5
+            },
+            "fuel": "petrol",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "hatchback",
+            "euroClass": 6
+          },
+          "odometerKm": 61000,
+          "price": {
+            "amount": 459000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Liberec",
+            "region": "Liberecký kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190477310",
+          "url": "https://www.sauto.cz/osobni/detail/toyota/corolla/190477310",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Toyota",
+            "model": "Corolla",
+            "trim": "Touring Sports 1.8 Hybrid Comfort",
+            "firstRegistration": {
+              "year": 2023,
+              "month": 4
+            },
+            "fuel": "hev",
+            "powerKw": 103,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 28000,
+          "price": {
+            "amount": 589000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Praha",
+            "region": "Hlavní město Praha"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190198420",
+          "url": "https://www.sauto.cz/osobni/detail/hyundai/i30/190198420",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Hyundai",
+            "model": "i30",
+            "trim": "1.0 T-GDi Smart",
+            "firstRegistration": {
+              "year": 2019,
+              "month": 7
+            },
+            "fuel": "petrol",
+            "powerKw": 88,
+            "transmission": "manual"
+          },
+          "odometerKm": 88000,
+          "price": {
+            "amount": 259000,
+            "currency": "CZK"
+          },
+          "priceBasis": "unknown",
+          "seller": "private",
+          "photos": [],
+          "location": {
+            "city": "Olomouc",
+            "region": "Olomoucký kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190500101",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190500101",
+          "market": "CZ",
+          "condition": "new",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 2.0 TDI Selection DSG",
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 10,
+          "price": {
+            "amount": 899900,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Praha",
+            "region": "Hlavní město Praha"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190466002",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/kodiaq/190466002",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Kodiaq",
+            "trim": "2.0 TDI 4x4 DSG",
+            "firstRegistration": {
+              "year": 2022,
+              "month": 1
+            },
+            "fuel": "diesel",
+            "powerKw": 142,
+            "transmission": "automatic"
+          },
+          "odometerKm": 70000,
+          "price": {
+            "amount": 799000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Zlín",
+            "region": "Zlínský kraj"
+          }
+        }
+      ]
+    },
+    {
+      "source": "autoscout24-de",
+      "mode": "incremental",
+      "startedAt": "2026-10-24T03:00:00Z",
+      "observations": [
+        {
+          "kind": "ListingSeen",
+          "ref": "5f1c2a8e-91b0-4c4e-9a3e-7d2b6c1e0a11",
+          "url": "https://www.autoscout24.de/angebote/volkswagen-golf-5f1c2a8e-91b0-4c4e-9a3e-7d2b6c1e0a11",
+          "market": "DE",
+          "condition": "used",
+          "vehicle": {
+            "make": "Volkswagen",
+            "model": "Golf",
+            "trim": "1.5 eTSI DSG Life",
+            "firstRegistration": {
+              "year": 2021,
+              "month": 9
+            },
+            "fuel": "petrol",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "euroClass": 6
+          },
+          "odometerKm": 55000,
+          "price": {
+            "amount": 17490,
+            "currency": "EUR"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "München",
+            "region": "Bayern"
+          }
+        }
+      ]
+    }
+  ]
+}

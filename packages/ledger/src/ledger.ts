@@ -1,0 +1,335 @@
+import { DatabaseSync } from "node:sqlite";
+import { createResolver } from "@cca/resolver";
+import type { Checkpoint, SourceId } from "@cca/sources";
+import {
+  type CatalogVariant,
+  type FxTable,
+  generationIdOf,
+  type IsoDate,
+  type ListingSeen,
+  type ListPrice,
+  makeIdOf,
+  modelIdOf,
+  type Observation,
+  pragueDate,
+  slugify,
+  type VariantSpec,
+  variantIdOf,
+} from "@cca/vocabulary";
+import { migrate } from "./schema.ts";
+import type { Ledger, LedgerListing, LedgerSnapshot, RunInfo, RunSummary } from "./types.ts";
+import { invalidReason } from "./validate.ts";
+
+const BATCH = 500;
+/** A listing missed by this many consecutive complete full runs is gone. */
+const MISSES_TO_GONE = 2;
+const MAX_REJECTIONS_REPORTED = 50;
+
+type ListingData = Omit<ListingSeen, "kind" | "ref">;
+
+/** Opens (and migrates) a Ledger. Use ":memory:" in tests. */
+export function openLedger(path: string): Ledger {
+  const db = new DatabaseSync(path);
+  // Rollback journal (not WAL): the file is uploaded as one release asset after each run.
+  db.exec("PRAGMA foreign_keys = ON;");
+  migrate(db);
+
+  const q = {
+    insertRun: db.prepare(
+      "INSERT INTO runs (source, mode, started_at, status) VALUES (?, ?, ?, 'running') RETURNING id",
+    ),
+    finishRun: db.prepare("UPDATE runs SET status = ? WHERE id = ?"),
+    lastCompleteRun: db.prepare(
+      "SELECT max(started_at) AS at FROM runs WHERE source = ? AND status = 'complete'",
+    ),
+    isKnown: db.prepare("SELECT 1 FROM listings WHERE id = ? AND gone IS NULL"),
+    upsertFx: db.prepare(
+      `INSERT INTO fx_rates (currency, valid_for, czk_per_unit) VALUES (?, ?, ?)
+       ON CONFLICT (currency, valid_for) DO UPDATE SET czk_per_unit = excluded.czk_per_unit`,
+    ),
+    getListing: db.prepare("SELECT price_amount, price_currency FROM listings WHERE id = ?"),
+    insertListing: db.prepare(
+      `INSERT INTO listings (id, source, ref, data, price_amount, price_currency, first_seen, last_seen, last_seen_run)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ),
+    updateListing: db.prepare(
+      `UPDATE listings SET data = ?, price_amount = ?, price_currency = ?, last_seen = ?, last_seen_run = ?,
+         missed_full_runs = 0, first_missed = NULL, gone = NULL
+       WHERE id = ?`,
+    ),
+    upsertHistory: db.prepare(
+      `INSERT INTO price_history (listing_id, date, amount, currency) VALUES (?, ?, ?, ?)
+       ON CONFLICT (listing_id, date) DO UPDATE SET amount = excluded.amount, currency = excluded.currency`,
+    ),
+    markGone: db.prepare("UPDATE listings SET gone = ? WHERE id = ? AND gone IS NULL"),
+    countMissed: db.prepare(
+      `UPDATE listings SET missed_full_runs = missed_full_runs + 1, first_missed = coalesce(first_missed, ?)
+       WHERE source = ? AND gone IS NULL AND last_seen_run <> ?`,
+    ),
+    goneAfterMisses: db.prepare(
+      "UPDATE listings SET gone = first_missed WHERE source = ? AND gone IS NULL AND missed_full_runs >= ?",
+    ),
+    upsertCatalog: db.prepare(
+      `INSERT INTO catalog_entries (variant_id, source, data, updated) VALUES (?, ?, ?, ?)
+       ON CONFLICT (variant_id, source) DO UPDATE SET data = excluded.data, updated = excluded.updated`,
+    ),
+    upsertListPrice: db.prepare(
+      `INSERT INTO list_prices (source, key, valid_from, data) VALUES (?, ?, ?, ?)
+       ON CONFLICT (source, key, valid_from) DO UPDATE SET data = excluded.data`,
+    ),
+  };
+
+  function recordOne(
+    o: Observation,
+    run: RunInfo,
+    runId: number,
+    day: IsoDate,
+    summary: RunSummary,
+  ) {
+    switch (o.kind) {
+      case "FxRate":
+        q.upsertFx.run(o.currency, o.validFor, o.czkPerUnit);
+        break;
+      case "ListingSeen": {
+        const id = `${run.source}:${o.ref}`;
+        const { kind: _kind, ref: _ref, ...data } = o;
+        const existing = q.getListing.get(id) as
+          | { price_amount: number; price_currency: string }
+          | undefined;
+        if (!existing) {
+          q.insertListing.run(
+            id,
+            run.source,
+            o.ref,
+            JSON.stringify(data),
+            o.price.amount,
+            o.price.currency,
+            day,
+            day,
+            runId,
+          );
+          q.upsertHistory.run(id, day, o.price.amount, o.price.currency);
+          summary.newListings++;
+        } else {
+          q.updateListing.run(
+            JSON.stringify(data),
+            o.price.amount,
+            o.price.currency,
+            day,
+            runId,
+            id,
+          );
+          if (
+            existing.price_amount !== o.price.amount ||
+            existing.price_currency !== o.price.currency
+          ) {
+            q.upsertHistory.run(id, day, o.price.amount, o.price.currency);
+            summary.priceChanges++;
+          }
+        }
+        break;
+      }
+      case "ListingGone":
+        summary.gone += Number(q.markGone.run(day, `${run.source}:${o.ref}`).changes);
+        break;
+      case "CatalogEntry":
+        q.upsertCatalog.run(variantIdOf(o.variant), run.source, JSON.stringify(o.variant), day);
+        break;
+      case "ListPrice": {
+        const { kind: _kind, ...data } = o;
+        q.upsertListPrice.run(run.source, listPriceKey(o), o.validFrom, JSON.stringify(data));
+        break;
+      }
+    }
+    summary.recorded[o.kind] = (summary.recorded[o.kind] ?? 0) + 1;
+  }
+
+  function catalog(): CatalogVariant[] {
+    const rows = db
+      .prepare("SELECT variant_id, data FROM catalog_entries ORDER BY variant_id, updated, source")
+      .all() as { variant_id: string; data: string }[];
+    const merged = new Map<string, VariantSpec>();
+    for (const row of rows) {
+      // Field-level merge; later updates win. TODO(wave1-stream8): per-field source priority.
+      const spec = JSON.parse(row.data) as VariantSpec;
+      merged.set(row.variant_id, {
+        ...merged.get(row.variant_id),
+        ...defined(spec),
+      } as VariantSpec);
+    }
+    return [...merged].map(([id, spec]) => ({
+      ...spec,
+      id,
+      makeId: makeIdOf(spec.make),
+      modelId: modelIdOf(spec.make, spec.model),
+      generationId: generationIdOf(spec),
+    }));
+  }
+
+  return {
+    checkpoint(source: SourceId): Checkpoint {
+      const row = q.lastCompleteRun.get(source) as { at: string | null };
+      return {
+        lastRunAt: row.at ? new Date(row.at) : null,
+        isKnown: (ref) => q.isKnown.get(`${source}:${ref}`) !== undefined,
+      };
+    },
+
+    async record(run, observations) {
+      const { id: runId } = q.insertRun.get(run.source, run.mode, run.startedAt.toISOString()) as {
+        id: number;
+      };
+      const day = pragueDate(run.startedAt);
+      const summary: RunSummary = {
+        recorded: {},
+        rejected: [],
+        newListings: 0,
+        priceChanges: 0,
+        gone: 0,
+      };
+      let open = false;
+      let pending = 0;
+      const begin = () => {
+        if (!open) db.exec("BEGIN");
+        open = true;
+      };
+      const commit = () => {
+        if (open) db.exec("COMMIT");
+        open = false;
+        pending = 0;
+      };
+
+      try {
+        for await (const observation of observations) {
+          const reason = invalidReason(observation);
+          if (reason) {
+            if (summary.rejected.length < MAX_REJECTIONS_REPORTED) {
+              summary.rejected.push({ kind: String(observation?.kind), reason });
+            }
+            continue;
+          }
+          begin();
+          recordOne(observation, run, runId, day, summary);
+          if (++pending >= BATCH) commit();
+        }
+        commit();
+      } catch (error) {
+        commit();
+        q.finishRun.run("failed", runId);
+        throw error;
+      }
+
+      begin();
+      if (run.mode === "full") {
+        q.countMissed.run(day, run.source, runId);
+        summary.gone += Number(q.goneAfterMisses.run(run.source, MISSES_TO_GONE).changes);
+      }
+      q.finishRun.run("complete", runId);
+      commit();
+      return summary;
+    },
+
+    snapshot(): LedgerSnapshot {
+      const variants = catalog();
+      const resolver = createResolver(variants);
+      const historyOf = db.prepare(
+        "SELECT date, amount, currency FROM price_history WHERE listing_id = ? ORDER BY date",
+      );
+      const listPrices = (
+        db.prepare("SELECT data FROM list_prices ORDER BY key, valid_from").all() as {
+          data: string;
+        }[]
+      ).map((row) => {
+        const data = JSON.parse(row.data) as Omit<ListPrice, "kind">;
+        return { ...data, resolution: resolver.resolve(data.vehicle) };
+      });
+
+      return {
+        fx: latestFx(db),
+        sources: (
+          db
+            .prepare(
+              `SELECT source, max(CASE WHEN status = 'complete' THEN started_at END) AS at
+               FROM runs GROUP BY source ORDER BY source`,
+            )
+            .all() as { source: string; at: string | null }[]
+        ).map((row) => ({ id: row.source, lastRunAt: row.at ? new Date(row.at) : null })),
+        catalog: variants,
+        listPrices,
+        *listings(): Iterable<LedgerListing> {
+          const rows = db
+            .prepare(
+              "SELECT id, source, ref, data, first_seen, last_seen, gone FROM listings ORDER BY id",
+            )
+            .iterate() as Iterable<{
+            id: string;
+            source: string;
+            ref: string;
+            data: string;
+            first_seen: string;
+            last_seen: string;
+            gone: string | null;
+          }>;
+          for (const row of rows) {
+            const data = JSON.parse(row.data) as ListingData;
+            const history = historyOf.all(row.id) as {
+              date: string;
+              amount: number;
+              currency: string;
+            }[];
+            yield {
+              ...data,
+              id: row.id,
+              source: row.source,
+              ref: row.ref,
+              firstSeen: row.first_seen,
+              lastSeen: row.last_seen,
+              gone: row.gone,
+              priceHistory: history.map((h) => ({
+                date: h.date,
+                price: { amount: h.amount, currency: h.currency },
+              })),
+              resolution: resolver.resolve(data.vehicle),
+            };
+          }
+        },
+      };
+    },
+
+    close() {
+      db.close();
+    },
+  };
+}
+
+function latestFx(db: DatabaseSync): FxTable {
+  const rows = db
+    .prepare(
+      `SELECT currency, valid_for, czk_per_unit FROM fx_rates f
+       WHERE valid_for = (SELECT max(valid_for) FROM fx_rates WHERE currency = f.currency)
+       ORDER BY currency`,
+    )
+    .all() as { currency: string; valid_for: string; czk_per_unit: number }[];
+  return Object.fromEntries(
+    rows.map((r) => [r.currency, { czkPerUnit: r.czk_per_unit, validFor: r.valid_for }]),
+  );
+}
+
+function listPriceKey(o: ListPrice): string {
+  const v = o.vehicle;
+  return [
+    o.market,
+    v.make,
+    v.model,
+    v.trim ?? "",
+    v.fuel ?? "",
+    v.powerKw ?? "",
+    v.transmission ?? "",
+  ]
+    .map((part) => slugify(String(part)))
+    .join("|");
+}
+
+function defined<T extends object>(value: T): Partial<T> {
+  return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Partial<T>;
+}

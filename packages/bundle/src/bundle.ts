@@ -1,0 +1,102 @@
+import type { ModelId } from "@cca/vocabulary";
+import {
+  BUNDLE_FORMAT,
+  type BundleContent,
+  type BundleManifest,
+  type CatalogIndex,
+  type ModelFile,
+} from "./format.ts";
+
+/** Bundle files by relative path ("manifest.json", "models/skoda/octavia.json"). */
+export type BundleFiles = Map<string, string>;
+
+/**
+ * Where the reader gets file text from: the Loader seam (fetch in the browser, the file
+ * system at build time and in Node, memory in tests). Resolves with the file's text, or
+ * null when the file does not exist; rejects on any other failure.
+ */
+export type Loader = (path: string) => Promise<string | null>;
+
+export class BundleFormatError extends Error {
+  override name = "BundleFormatError";
+}
+
+const MANIFEST = "manifest.json";
+const CATALOG = "catalog.json";
+
+function modelPath(id: ModelId): string {
+  return `models/${id}.json`;
+}
+
+/** Writer: encodes decoded documents into Bundle files. Pure; persisting them is the caller's job. */
+export function encodeBundle(content: BundleContent): BundleFiles {
+  const files: BundleFiles = new Map();
+  files.set(MANIFEST, json(content.manifest));
+  files.set(CATALOG, json(content.catalog));
+  for (const model of content.models) files.set(modelPath(model.model.id), json(model));
+  return files;
+}
+
+export interface BundleReader {
+  readonly manifest: BundleManifest;
+  /** Loaded once, then cached. */
+  catalog(): Promise<CatalogIndex>;
+  /** Null for an unknown model. Cached per model. */
+  model(id: ModelId): Promise<ModelFile | null>;
+}
+
+/**
+ * Reader: opens a Bundle through a Loader. Rejects with BundleFormatError when the manifest
+ * is missing or was written in a format this reader does not understand.
+ */
+export async function openBundle(loader: Loader): Promise<BundleReader> {
+  const manifestText = await loader(MANIFEST);
+  if (manifestText === null) throw new BundleFormatError("Bundle has no manifest.json");
+  const manifest = JSON.parse(manifestText) as BundleManifest;
+  if (manifest.format !== BUNDLE_FORMAT) {
+    throw new BundleFormatError(
+      `Bundle format ${String(manifest.format)} is not readable (reader is format ${BUNDLE_FORMAT})`,
+    );
+  }
+  let catalog: Promise<CatalogIndex> | undefined;
+  const models = new Map<ModelId, Promise<ModelFile | null>>();
+  return {
+    manifest,
+    catalog() {
+      catalog ??= loader(CATALOG).then((text) => {
+        if (text === null) throw new BundleFormatError("Bundle has no catalog.json");
+        return JSON.parse(text) as CatalogIndex;
+      });
+      return catalog;
+    },
+    model(id) {
+      let model = models.get(id);
+      if (!model) {
+        model = loader(modelPath(id)).then((text) =>
+          text === null ? null : (JSON.parse(text) as ModelFile),
+        );
+        models.set(id, model);
+      }
+      return model;
+    },
+  };
+}
+
+/** Loader over in-memory files, e.g. straight from `encodeBundle` in tests. */
+export function memoryLoader(files: BundleFiles): Loader {
+  return async (path) => files.get(path) ?? null;
+}
+
+/** Loader over HTTP, relative to `baseUrl` (e.g. "/bundle/"). 404 means missing. */
+export function fetchLoader(baseUrl: string | URL, fetchImpl: typeof fetch = fetch): Loader {
+  return async (path) => {
+    const response = await fetchImpl(new URL(path, baseUrl));
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`Bundle fetch ${path} failed: HTTP ${response.status}`);
+    return response.text();
+  };
+}
+
+function json(value: unknown): string {
+  return `${JSON.stringify(value)}\n`;
+}

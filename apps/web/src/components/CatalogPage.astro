@@ -1,0 +1,21 @@
+---
+import { type Lang, messages } from "../i18n/messages.ts";
+import Base from "../layouts/Base.astro";
+import { buildCatalog } from "../lib/catalog.ts";
+import CatalogExplorer from "./CatalogExplorer.tsx";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const m = messages(lang);
+const catalog = await buildCatalog();
+const initial = catalog.query({ sort: { key: "make", dir: "asc" }, limit: 200 });
+const makeNames = Object.fromEntries(
+  catalog.query({ limit: Number.MAX_SAFE_INTEGER }).rows.map((v) => [v.makeId, v.make]),
+);
+---
+<Base lang={lang} path="/">
+  <h1>{m["catalog.heading"]}</h1>
+  <CatalogExplorer client:load lang={lang} m={m} initial={initial} makeNames={makeNames} />
+</Base>

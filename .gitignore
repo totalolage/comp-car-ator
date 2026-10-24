@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.astro/
+coverage/
+*.sqlite
+*.sqlite-*
+/out/
+apps/web/public/bundle/
+.env
+.env.*
+!.env.example
+.vercel

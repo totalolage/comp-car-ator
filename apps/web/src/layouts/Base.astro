@@ -1,0 +1,32 @@
+---
+import { type Lang, localePath, messages } from "../i18n/messages.ts";
+
+interface Props {
+  lang: Lang;
+  title?: string;
+  /** Path of this page without the locale prefix, for the language switch. */
+  path: string;
+}
+const { lang, title, path } = Astro.props;
+const m = messages(lang);
+const other: Lang = lang === "cs" ? "en" : "cs";
+---
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title ? `${title} · ${m["site.title"]}` : m["site.title"]}</title>
+  </head>
+  <body>
+    <header>
+      <a href={localePath(lang, "/")}><strong>{m["site.title"]}</strong></a>
+      <span>{m["site.tagline"]}</span>
+      <a href={localePath(other, path)} hreflang={other} lang={other}>{m["lang.switch"]}</a>
+    </header>
+    <main>
+      <slot />
+    </main>
+  </body>
+</html>

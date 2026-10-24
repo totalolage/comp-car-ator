@@ -1,0 +1,55 @@
+---
+import type { ModelId } from "@cca/vocabulary";
+import { type Lang, label, localePath, messages, numberLocale } from "../i18n/messages.ts";
+import Base from "../layouts/Base.astro";
+import { buildCatalog } from "../lib/catalog.ts";
+
+/**
+ * Minimal model page, rendered at build time from the Bundle.
+ * TODO(wave1-stream15): price history chart, landed-price breakdown, listing facets.
+ */
+interface Props {
+  lang: Lang;
+  id: ModelId;
+}
+const { lang, id } = Astro.props;
+const m = messages(lang);
+const view = await (await buildCatalog()).model(id);
+if (!view) throw new Error(`Model ${id} is in the catalog index but has no model file`);
+const listings = view.listings({ sort: { key: "priceCzk", dir: "asc" }, limit: 500 });
+const fmt = new Intl.NumberFormat(numberLocale(lang), { maximumFractionDigits: 0 });
+const czk = (n: number | undefined) => (n === undefined ? "–" : `${fmt.format(n)} Kč`);
+---
+<Base lang={lang} path={`/model/${id}/`} title={`${view.model.make} ${view.model.name}`}>
+  <p><a href={localePath(lang, "/")}>{m["model.back"]}</a></p>
+  <h1>{view.model.make} {view.model.name}</h1>
+  <h2>{m["model.listings"]} ({listings.total})</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>{m["col.title"]}</th>
+        <th>{m["col.year"]}</th>
+        <th>{m["col.odometer"]}</th>
+        <th>{m["col.price"]}</th>
+        <th>{m["col.landed"]}</th>
+        <th>{m["col.market"]}</th>
+        <th>{m["col.source"]}</th>
+        <th>{m["col.days"]}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {listings.rows.map((l) => (
+        <tr data-listing={l.id}>
+          <td><a href={l.url} rel="noopener nofollow">{l.title}</a></td>
+          <td>{l.year ?? "–"}</td>
+          <td>{l.odometerKm === undefined ? "–" : `${fmt.format(l.odometerKm)} km`}</td>
+          <td>{fmt.format(l.price.amount)} {l.price.currency}</td>
+          <td>{czk(l.landed?.totalCzk)}</td>
+          <td>{label(m, "market", l.market)}</td>
+          <td>{l.source}</td>
+          <td>{l.daysOnMarket}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</Base>

@@ -1,0 +1,25 @@
+{
+  "name": "web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "stage-bundle": "node scripts/stage-bundle.mjs",
+    "dev": "node scripts/stage-bundle.mjs && astro dev",
+    "build": "node scripts/stage-bundle.mjs && astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/preact": "^6.1.1",
+    "@cca/bundle": "workspace:*",
+    "@cca/catalog": "workspace:*",
+    "@cca/vocabulary": "workspace:*",
+    "astro": "^7.4.2",
+    "preact": "^11.0.2"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "typescript": "^6.0.3"
+  }
+}
