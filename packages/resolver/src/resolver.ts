@@ -24,13 +24,17 @@ export type Resolution =
  * Pure and deterministic for a given catalog.
  */
 export interface Resolver {
-  resolve(vehicle: VehicleDescriptor): Resolution;
+  /**
+   * `source` is the SourceId the descriptor came from; it namespaces
+   * `vehicle.sourceTaxonomy` ids (Sauto's make id 93 means nothing to AutoScout24).
+   */
+  resolve(vehicle: VehicleDescriptor, source?: string): Resolution;
 }
 
 /**
  * Wave 0 implementation: slug + alias match on make, longest-prefix match on model,
  * generation by year, then narrowing by fuel, transmission, body and power (±3 kW).
- * TODO(wave1-stream11): source taxonomy aliases, trim parsing, fuzzy matching, scoring.
+ * TODO(wave1-stream11): per-source taxonomy aliases, trim parsing, fuzzy matching, scoring.
  */
 export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
   const byModel = new Map<ModelId, CatalogVariant[]>();

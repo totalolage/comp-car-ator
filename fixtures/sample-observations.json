@@ -367,6 +367,64 @@
           },
           "market": "CZ",
           "validFrom": "2026-07-01"
+        },
+        {
+          "kind": "ListPrice",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi Selection 2.0 TDI 110 kW 7DSG",
+            "modelYear": 2026,
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon"
+          },
+          "price": {
+            "amount": 919900,
+            "currency": "CZK"
+          },
+          "market": "CZ",
+          "validFrom": "2027-01-01"
+        }
+      ]
+    },
+    {
+      "source": "eea",
+      "mode": "full",
+      "startedAt": "2026-10-02T03:00:00Z",
+      "observations": [
+        {
+          "kind": "VariantFacts",
+          "vehicle": {
+            "make": "Toyota",
+            "model": "Corolla Touring Sports",
+            "fuel": "hev",
+            "powerKw": 103,
+            "firstRegistration": {
+              "year": 2024
+            }
+          },
+          "facts": {
+            "massKg": 1435,
+            "lengthMm": 4650
+          }
+        },
+        {
+          "kind": "VariantFacts",
+          "vehicle": {
+            "make": "Skoda",
+            "model": "Octavia",
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon"
+          },
+          "facts": {
+            "massKg": 1530,
+            "lengthMm": 4698,
+            "co2GKm": 999
+          }
         }
       ]
     },
@@ -1547,6 +1605,10 @@
           "location": {
             "city": "München",
             "region": "Bayern"
+          },
+          "inspectionValidUntil": {
+            "year": 2027,
+            "month": 9
           }
         }
       ]

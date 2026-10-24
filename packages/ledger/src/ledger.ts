@@ -13,6 +13,7 @@ import {
   type Observation,
   pragueDate,
   slugify,
+  type VariantFacts,
   type VariantSpec,
   variantIdOf,
 } from "@cca/vocabulary";
@@ -36,7 +37,7 @@ export function openLedger(path: string): Ledger {
 
   const q = {
     insertRun: db.prepare(
-      "INSERT INTO runs (source, mode, started_at, status) VALUES (?, ?, ?, 'running') RETURNING id",
+      "INSERT INTO runs (source, mode, scope, started_at, status) VALUES (?, ?, ?, ?, 'running') RETURNING id",
     ),
     finishRun: db.prepare("UPDATE runs SET status = ? WHERE id = ?"),
     lastCompleteRun: db.prepare(
@@ -49,12 +50,12 @@ export function openLedger(path: string): Ledger {
     ),
     getListing: db.prepare("SELECT price_amount, price_currency FROM listings WHERE id = ?"),
     insertListing: db.prepare(
-      `INSERT INTO listings (id, source, ref, data, price_amount, price_currency, first_seen, last_seen, last_seen_run)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO listings (id, source, ref, scope, data, price_amount, price_currency, first_seen, last_seen, last_seen_run)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ),
     updateListing: db.prepare(
-      `UPDATE listings SET data = ?, price_amount = ?, price_currency = ?, last_seen = ?, last_seen_run = ?,
-         missed_full_runs = 0, first_missed = NULL, gone = NULL
+      `UPDATE listings SET scope = ?, data = ?, price_amount = ?, price_currency = ?, last_seen = ?, last_seen_run = ?,
+         missed_full_runs = 0, first_missed = NULL, last_missed = NULL, gone = NULL
        WHERE id = ?`,
     ),
     upsertHistory: db.prepare(
@@ -62,16 +63,24 @@ export function openLedger(path: string): Ledger {
        ON CONFLICT (listing_id, date) DO UPDATE SET amount = excluded.amount, currency = excluded.currency`,
     ),
     markGone: db.prepare("UPDATE listings SET gone = ? WHERE id = ? AND gone IS NULL"),
+    // A listing misses at most once per day, so re-recording a full run cannot double-count.
     countMissed: db.prepare(
-      `UPDATE listings SET missed_full_runs = missed_full_runs + 1, first_missed = coalesce(first_missed, ?)
-       WHERE source = ? AND gone IS NULL AND last_seen_run <> ?`,
+      `UPDATE listings SET missed_full_runs = missed_full_runs + 1,
+         first_missed = coalesce(first_missed, :day), last_missed = :day
+       WHERE source = :source AND scope = :scope AND gone IS NULL AND last_seen_run <> :run
+         AND (last_missed IS NULL OR last_missed < :day)`,
     ),
     goneAfterMisses: db.prepare(
-      "UPDATE listings SET gone = first_missed WHERE source = ? AND gone IS NULL AND missed_full_runs >= ?",
+      `UPDATE listings SET gone = first_missed
+       WHERE source = :source AND scope = :scope AND gone IS NULL AND missed_full_runs >= :misses`,
     ),
     upsertCatalog: db.prepare(
       `INSERT INTO catalog_entries (variant_id, source, data, updated) VALUES (?, ?, ?, ?)
        ON CONFLICT (variant_id, source) DO UPDATE SET data = excluded.data, updated = excluded.updated`,
+    ),
+    upsertFacts: db.prepare(
+      `INSERT INTO variant_facts (source, key, data, updated) VALUES (?, ?, ?, ?)
+       ON CONFLICT (source, key) DO UPDATE SET data = excluded.data, updated = excluded.updated`,
     ),
     upsertListPrice: db.prepare(
       `INSERT INTO list_prices (source, key, valid_from, data) VALUES (?, ?, ?, ?)
@@ -81,7 +90,7 @@ export function openLedger(path: string): Ledger {
 
   function recordOne(
     o: Observation,
-    run: RunInfo,
+    run: RunInfo & { scope: string },
     runId: number,
     day: IsoDate,
     summary: RunSummary,
@@ -101,6 +110,7 @@ export function openLedger(path: string): Ledger {
             id,
             run.source,
             o.ref,
+            run.scope,
             JSON.stringify(data),
             o.price.amount,
             o.price.currency,
@@ -112,6 +122,7 @@ export function openLedger(path: string): Ledger {
           summary.newListings++;
         } else {
           q.updateListing.run(
+            run.scope,
             JSON.stringify(data),
             o.price.amount,
             o.price.currency,
@@ -135,6 +146,9 @@ export function openLedger(path: string): Ledger {
       case "CatalogEntry":
         q.upsertCatalog.run(variantIdOf(o.variant), run.source, JSON.stringify(o.variant), day);
         break;
+      case "VariantFacts":
+        q.upsertFacts.run(run.source, JSON.stringify(o.vehicle), JSON.stringify(o), day);
+        break;
       case "ListPrice": {
         const { kind: _kind, ...data } = o;
         q.upsertListPrice.run(run.source, listPriceKey(o), o.validFrom, JSON.stringify(data));
@@ -157,13 +171,31 @@ export function openLedger(path: string): Ledger {
         ...defined(spec),
       } as VariantSpec);
     }
-    return [...merged].map(([id, spec]) => ({
+    const variants: CatalogVariant[] = [...merged].map(([id, spec]) => ({
       ...spec,
       id,
       makeId: makeIdOf(spec.make),
       modelId: modelIdOf(spec.make, spec.model),
       generationId: generationIdOf(spec),
     }));
+
+    // Partial evidence fills Specs the CatalogEntries left empty, on Variants it resolves to.
+    const byId = new Map(variants.map((v) => [v.id, v]));
+    const resolver = createResolver(variants);
+    const facts = db
+      .prepare("SELECT source, data FROM variant_facts ORDER BY updated, source, key")
+      .all() as { source: string; data: string }[];
+    for (const row of facts) {
+      const fact = JSON.parse(row.data) as VariantFacts;
+      const resolution = resolver.resolve(fact.vehicle, row.source);
+      if (resolution.status !== "matched") continue;
+      const variant = byId.get(resolution.variantId) as CatalogVariant;
+      for (const [field, value] of Object.entries(fact.facts)) {
+        const target = variant as unknown as Record<string, unknown>;
+        if (target[field] === undefined && value !== undefined) target[field] = value;
+      }
+    }
+    return variants;
   }
 
   return {
@@ -176,9 +208,13 @@ export function openLedger(path: string): Ledger {
     },
 
     async record(run, observations) {
-      const { id: runId } = q.insertRun.get(run.source, run.mode, run.startedAt.toISOString()) as {
-        id: number;
-      };
+      const scope = run.scope ?? "all";
+      const { id: runId } = q.insertRun.get(
+        run.source,
+        run.mode,
+        scope,
+        run.startedAt.toISOString(),
+      ) as { id: number };
       const day = pragueDate(run.startedAt);
       const summary: RunSummary = {
         recorded: {},
@@ -186,7 +222,9 @@ export function openLedger(path: string): Ledger {
         newListings: 0,
         priceChanges: 0,
         gone: 0,
+        census: "not-full",
       };
+      let rejectedTotal = 0;
       let open = false;
       let pending = 0;
       const begin = () => {
@@ -203,13 +241,14 @@ export function openLedger(path: string): Ledger {
         for await (const observation of observations) {
           const reason = invalidReason(observation);
           if (reason) {
+            rejectedTotal++;
             if (summary.rejected.length < MAX_REJECTIONS_REPORTED) {
               summary.rejected.push({ kind: String(observation?.kind), reason });
             }
             continue;
           }
           begin();
-          recordOne(observation, run, runId, day, summary);
+          recordOne(observation, { ...run, scope }, runId, day, summary);
           if (++pending >= BATCH) commit();
         }
         commit();
@@ -220,9 +259,13 @@ export function openLedger(path: string): Ledger {
       }
 
       begin();
-      if (run.mode === "full") {
-        q.countMissed.run(day, run.source, runId);
-        summary.gone += Number(q.goneAfterMisses.run(run.source, MISSES_TO_GONE).changes);
+      if (run.mode === "full" && rejectedTotal > 0) summary.census = "skipped-rejections";
+      if (run.mode === "full" && rejectedTotal === 0) {
+        summary.census = "applied";
+        q.countMissed.run({ day, source: run.source, scope, run: runId });
+        summary.gone += Number(
+          q.goneAfterMisses.run({ source: run.source, scope, misses: MISSES_TO_GONE }).changes,
+        );
       }
       q.finishRun.run("complete", runId);
       commit();
@@ -236,12 +279,16 @@ export function openLedger(path: string): Ledger {
         "SELECT date, amount, currency FROM price_history WHERE listing_id = ? ORDER BY date",
       );
       const listPrices = (
-        db.prepare("SELECT data FROM list_prices ORDER BY key, valid_from").all() as {
-          data: string;
-        }[]
+        db
+          .prepare("SELECT source, key, data FROM list_prices ORDER BY source, key, valid_from")
+          .all() as { source: string; key: string; data: string }[]
       ).map((row) => {
         const data = JSON.parse(row.data) as Omit<ListPrice, "kind">;
-        return { ...data, resolution: resolver.resolve(data.vehicle) };
+        return {
+          ...data,
+          offer: `${row.source}|${row.key}`,
+          resolution: resolver.resolve(data.vehicle, row.source),
+        };
       });
 
       return {
@@ -289,7 +336,7 @@ export function openLedger(path: string): Ledger {
                 date: h.date,
                 price: { amount: h.amount, currency: h.currency },
               })),
-              resolution: resolver.resolve(data.vehicle),
+              resolution: resolver.resolve(data.vehicle, row.source),
             };
           }
         },
@@ -322,6 +369,8 @@ function listPriceKey(o: ListPrice): string {
     v.make,
     v.model,
     v.trim ?? "",
+    v.body ?? "",
+    v.modelYear ?? "",
     v.fuel ?? "",
     v.powerKw ?? "",
     v.transmission ?? "",

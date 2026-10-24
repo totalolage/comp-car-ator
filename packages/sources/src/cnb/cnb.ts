@@ -53,7 +53,7 @@ export function cnbSource(options: CnbOptions = {}): Source {
 
 async function getOk(ctx: HarvestContext, url: string): Promise<string> {
   ctx.signal.throwIfAborted();
-  const page = await ctx.http.get({ url, locale: "cs" });
+  const page = await ctx.http.get({ url, locale: "cs", signal: ctx.signal });
   if (page.status !== 200) throw new Error(`ČNB returned HTTP ${page.status} for ${url}`);
   ctx.log.info("cnb fetched", { url });
   return page.body;

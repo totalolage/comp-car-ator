@@ -54,8 +54,15 @@ function buildContent(ledger: Ledger, { now, transportCzk }: PublishOptions): Bu
     listingsByModel.set(modelId, [...(listingsByModel.get(modelId) ?? []), row]);
   }
 
-  const newPrices = new Map<string, number[]>();
+  // Current CZ new prices: per offer, the latest edition already in force today.
+  const current = new Map<string, (typeof snapshot.listPrices)[number]>();
   for (const listPrice of snapshot.listPrices) {
+    if (listPrice.market !== "CZ" || listPrice.validFrom > today) continue;
+    const seen = current.get(listPrice.offer);
+    if (!seen || seen.validFrom < listPrice.validFrom) current.set(listPrice.offer, listPrice);
+  }
+  const newPrices = new Map<string, number[]>();
+  for (const listPrice of current.values()) {
     if (listPrice.resolution.status !== "matched") continue;
     const czk = toCzk(listPrice.price, fx);
     if (czk === null) continue;
@@ -133,6 +140,10 @@ function listingRow(
       odometerKm: listing.odometerKm,
       fuel: v.fuel,
       euroClass: v.euroClass,
+      inspectionValid: listing.inspectionValidUntil
+        ? listing.inspectionValidUntil.year * 12 + (listing.inspectionValidUntil.month ?? 12) >=
+          Number(today.slice(0, 4)) * 12 + Number(today.slice(5, 7))
+        : undefined,
     },
     { fx, today, transportCzk },
   );
@@ -164,7 +175,10 @@ function listingRow(
     lastSeen: listing.lastSeen,
     gone: listing.gone ?? undefined,
     daysOnMarket: daysBetween(started, listing.gone ?? today),
-    priceHistory: listing.priceHistory.map((h) => ({ date: h.date, amount: h.price.amount })),
+    priceHistory: listing.priceHistory.flatMap((h) => {
+      const czk = toCzk(h.price, fx);
+      return czk === null ? [] : [{ date: h.date, price: h.price, priceCzk: czk }];
+    }),
   });
 }
 
@@ -194,6 +208,8 @@ function variantRow(
     consumptionL100km: variant.consumptionL100km,
     consumptionKwh100km: variant.consumptionKwh100km,
     co2GKm: variant.co2GKm,
+    massKg: variant.massKg,
+    lengthMm: variant.lengthMm,
     newPriceCzk: newPrices?.length
       ? { min: Math.min(...newPrices), max: Math.max(...newPrices) }
       : undefined,
@@ -220,6 +236,20 @@ function usedStats(listings: ListingRow[]): UsedStats | null {
     years: years.length ? { min: Math.min(...years), max: Math.max(...years) } : null,
     markets,
     sources,
+    groups: [...groupBy(listings, (l) => `${l.market}|${l.source}`)].sort(byKey).map(([, ls]) => {
+      const first = ls[0] as ListingRow;
+      const prices = ls.map((l) => l.priceCzk);
+      const kms = ls.flatMap((l) => (l.odometerKm === undefined ? [] : [l.odometerKm]));
+      const ys = ls.flatMap((l) => (l.year === undefined ? [] : [l.year]));
+      return {
+        market: first.market,
+        source: first.source,
+        count: ls.length,
+        priceCzk: { min: Math.min(...prices), max: Math.max(...prices) },
+        odometerKm: kms.length ? { min: Math.min(...kms), max: Math.max(...kms) } : null,
+        years: ys.length ? { min: Math.min(...ys), max: Math.max(...ys) } : null,
+      };
+    }),
   };
 }
 
@@ -288,7 +318,7 @@ function priceHistory(listings: ListingRow[], today: IsoDate): ModelFile["histor
         if (l.firstSeen > day || (l.gone && l.gone <= day)) return [];
         const point = l.priceHistory.filter((h) => h.date <= day).at(-1);
         if (!point) return [];
-        return [Math.round(point.amount * (l.priceCzk / l.price.amount || 1))];
+        return [point.priceCzk];
       });
       return prices.length ? [{ date: day, count: prices.length, medianCzk: median(prices) }] : [];
     });

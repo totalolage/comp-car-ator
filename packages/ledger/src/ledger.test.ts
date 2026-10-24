@@ -172,4 +172,50 @@ describe("Ledger", () => {
     ]);
     expect(ledger.snapshot().catalog).toMatchObject([{ seats: 5, co2GKm: 126 }]);
   });
+
+  it("fills missing Specs from partial VariantFacts without overriding CatalogEntries", async () => {
+    ledger = openLedger(":memory:");
+    await run("rsv", "full", "2026-10-01", [
+      { ...octavia, variant: { ...octavia.variant, seats: 5 } },
+    ]);
+    await run("eea", "full", "2026-10-02", [
+      {
+        kind: "VariantFacts",
+        vehicle: { make: "Skoda", model: "Octavia", fuel: "diesel", powerKw: 110 },
+        facts: { co2GKm: 126, seats: 7 },
+      },
+    ]);
+    expect(ledger.snapshot().catalog).toMatchObject([{ seats: 5, co2GKm: 126 }]);
+  });
+
+  it("re-recording a full run on the same day does not count a second miss", async () => {
+    ledger = openLedger(":memory:");
+    await run("sauto", "full", "2026-10-10", [seen("1", 1), seen("2", 2)]);
+    await run("sauto", "full", "2026-10-17", [seen("1", 1)]);
+    const replay = await run("sauto", "full", "2026-10-17", [seen("1", 1)]);
+    expect(replay.gone).toBe(0);
+    expect(ledger.checkpoint("sauto").isKnown("2")).toBe(true);
+  });
+
+  it("a full run with rejected observations is not a census", async () => {
+    ledger = openLedger(":memory:");
+    await run("sauto", "full", "2026-10-10", [seen("1", 1), seen("2", 2)]);
+    const broken = [seen("1", 1), seen("2", Number.NaN)];
+    expect((await run("sauto", "full", "2026-10-17", broken)).census).toBe("skipped-rejections");
+    expect((await run("sauto", "full", "2026-10-24", broken)).census).toBe("skipped-rejections");
+    expect([...ledger.snapshot().listings()].every((l) => l.gone === null)).toBe(true);
+  });
+
+  it("census inference stays inside the run's scope", async () => {
+    ledger = openLedger(":memory:");
+    const sliced = (scope: string, date: string, obs: ListingSeen[]) =>
+      ledger.record({ source: "as24", mode: "full", scope, startedAt: day(date) }, obs);
+    await sliced("makes:skoda", "2026-10-10", [seen("s", 1)]);
+    await sliced("makes:vw", "2026-10-10", [seen("v", 1)]);
+    // Two more Škoda slices without the VW listing must not retire it.
+    await sliced("makes:skoda", "2026-10-17", [seen("s", 1)]);
+    const third = await sliced("makes:skoda", "2026-10-24", [seen("s", 1)]);
+    expect(third).toMatchObject({ census: "applied", gone: 0 });
+    expect(ledger.checkpoint("as24").isKnown("v")).toBe(true);
+  });
 });

@@ -10,6 +10,11 @@ export interface FacetDefs<Row, E extends string, R extends string, K extends st
   /** The interval a row covers for each range facet; null = unknown (fails an active filter). */
   ranges: Record<R, (row: Row) => readonly [number, number] | null>;
   sort: Record<K, (row: Row) => string | number | undefined>;
+  /**
+   * Rows sharing an identity are one result (a Variant expanded into one row per listing
+   * group): counted once per facet value, returned once (first matching row).
+   */
+  identity?: (row: Row) => string;
 }
 
 export interface EngineResult<Row> {
@@ -58,15 +63,21 @@ export function runQuery<Row, E extends string, R extends string, K extends stri
     return failed.length === 0 || (failed.length === 1 && failed[0] === key);
   };
 
+  const ids = all.map((row, i) => defs.identity?.(row) ?? String(i));
+
   const values: Record<string, FacetCount[]> = {};
   for (const key of Object.keys(defs.values) as E[]) {
-    const counts = new Map<string, number>();
+    const counts = new Map<string, Set<string>>();
     all.forEach((row, i) => {
       if (!countsFor(key, i)) return;
-      for (const v of new Set(defs.values[key](row))) counts.set(v, (counts.get(v) ?? 0) + 1);
+      for (const v of defs.values[key](row)) {
+        const set = counts.get(v) ?? new Set<string>();
+        set.add(ids[i] as string);
+        counts.set(v, set);
+      }
     });
     values[key] = [...counts]
-      .map(([value, count]) => ({ value, count }))
+      .map(([value, set]) => ({ value, count: set.size }))
       .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
   }
 
@@ -84,7 +95,12 @@ export function runQuery<Row, E extends string, R extends string, K extends stri
     ranges[key] = min <= max ? { min, max } : null;
   }
 
-  const matched = all.filter((_, i) => (failures[i] as string[]).length === 0);
+  const seen = new Set<string>();
+  const matched = all.filter((_, i) => {
+    if ((failures[i] as string[]).length > 0 || seen.has(ids[i] as string)) return false;
+    seen.add(ids[i] as string);
+    return true;
+  });
   if (sort) {
     const key = defs.sort[sort.key];
     const dir = sort.dir === "asc" ? 1 : -1;

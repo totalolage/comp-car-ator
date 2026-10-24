@@ -11,8 +11,9 @@ export interface Range {
 
 /**
  * Filters over catalog Variants. Values inside one facet are OR-ed, facets are AND-ed.
- * Listing-derived facets (market, source, usedPriceCzk) match Variants that have at least
- * one active used listing satisfying them, judged on the Variant's aggregates.
+ * Listing-derived filters (market, source, usedPriceCzk, odometerKm) must all hold for one
+ * (market, source) group of the Variant's active used listings; price and odometer compare
+ * against that group's min-max range. Exact per-listing filtering is `model(id).listings`.
  */
 export interface VariantFilters {
   make?: string[];
@@ -29,8 +30,10 @@ export interface VariantFilters {
   consumptionL100km?: Range;
   /** Overlap with the Variant's new-price range. */
   newPriceCzk?: Range;
-  /** Median used price. */
+  /** Overlap with the asking-price range of a matching listing group. */
   usedPriceCzk?: Range;
+  /** Overlap with the odometer range of a matching listing group. */
+  odometerKm?: Range;
 }
 
 /** Filters over one model's listings. Same OR/AND rule as VariantFilters. */
@@ -103,7 +106,7 @@ export interface Facets<E extends string, R extends string> {
 
 export type VariantFacets = Facets<
   "make" | "model" | "body" | "fuel" | "transmission" | "market" | "source",
-  "year" | "powerKw" | "seats" | "consumptionL100km" | "newPriceCzk" | "usedPriceCzk"
+  "year" | "powerKw" | "seats" | "consumptionL100km" | "newPriceCzk" | "usedPriceCzk" | "odometerKm"
 >;
 
 export type ListingFacets = Facets<

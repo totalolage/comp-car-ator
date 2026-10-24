@@ -18,6 +18,7 @@ export {
   ODOMETER_BANDS,
   type OdometerBand,
   type Quantiles,
+  type UsedGroup,
   type UsedStats,
   type VariantRow,
 } from "./format.ts";

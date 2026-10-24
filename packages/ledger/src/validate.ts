@@ -45,6 +45,9 @@ export function invalidReason(o: Observation): string | null {
       if (!v.years || !Number.isInteger(v.years.from)) return "years.from must be a year";
       return null;
     }
+    case "VariantFacts":
+      if (!o.facts || typeof o.facts !== "object") return "facts must be an object";
+      return vehicleReason(o.vehicle);
     case "ListPrice":
       if (!oneOf(MARKETS, o.market)) return `unknown market ${o.market}`;
       if (!isMoney(o.price)) return "price must be a finite amount >= 0 with an ISO currency";

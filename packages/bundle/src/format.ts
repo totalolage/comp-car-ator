@@ -2,7 +2,7 @@ import type { LandedPrice } from "@cca/pricing";
 /**
  * The decoded Bundle documents: what the writer accepts and the reader returns. How they
  * are laid out in files (names, sharding, encoding) is private to this module
- * (docs/adr/0004-bundle-format.md), so it can change without touching Publisher or the web.
+ * (docs/adr/0004-bundle-format-and-catalog-query.md), so it can change without touching Publisher or the web.
  */
 import type {
   Body,
@@ -67,6 +67,8 @@ export interface VariantRow {
   consumptionL100km?: number;
   consumptionKwh100km?: number;
   co2GKm?: number;
+  massKg?: number;
+  lengthMm?: number;
   /** Range of current CZ list prices across trims, gross CZK. */
   newPriceCzk?: { min: number; max: number };
   /** Aggregates over active used listings matched to this Variant; null when none. */
@@ -82,6 +84,20 @@ export interface UsedStats {
   years: { min: number; max: number } | null;
   markets: Partial<Record<Market, number>>;
   sources: Record<string, number>;
+  /**
+   * The same listings split by (market, source), so listing-level filters can be matched
+   * together: "DE + Sauto" matches only if one group has both. Sorted by market, source.
+   */
+  groups: UsedGroup[];
+}
+
+export interface UsedGroup {
+  market: Market;
+  source: string;
+  count: number;
+  priceCzk: { min: number; max: number };
+  odometerKm: { min: number; max: number } | null;
+  years: { min: number; max: number } | null;
 }
 
 export interface Quantiles {
@@ -138,5 +154,6 @@ export interface ListingRow {
   lastSeen: IsoDate;
   gone?: IsoDate;
   daysOnMarket: number;
-  priceHistory: { date: IsoDate; amount: number }[];
+  /** Oldest first. `priceCzk` converts at this Bundle's rates, so it shows price moves, not FX moves. */
+  priceHistory: { date: IsoDate; price: Money; priceCzk: number }[];
 }

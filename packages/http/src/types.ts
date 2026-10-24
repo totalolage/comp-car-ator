@@ -14,6 +14,10 @@ export interface HttpRequest {
   minTier?: Tier;
   /** Accept-Language flavour. Default "cs". */
   locale?: "cs" | "de" | "en";
+  /** Return the raw bytes in `Page.bytes` (PDF price lists, ZIP datasets); `body` is then "". */
+  binary?: boolean;
+  /** Aborts in-flight fetches and backoff waits; `get` then rejects with the abort reason. */
+  signal?: AbortSignal;
 }
 
 /** A fetched document. Any final HTTP status is a Page; callers decide what 404 means. */
@@ -23,8 +27,10 @@ export interface Page {
   status: number;
   /** Lower-cased header names. */
   headers: Record<string, string>;
-  /** Decoded text (charset from Content-Type, default UTF-8). */
+  /** Decoded text (charset from Content-Type, default UTF-8); "" for binary requests. */
   body: string;
+  /** Raw bytes, present only when the request asked for `binary`. */
+  bytes?: Uint8Array;
   tier: Tier;
 }
 

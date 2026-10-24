@@ -16,6 +16,8 @@ export type {
   ListPrice,
   Observation,
   ObservationKind,
+  VariantFactFields,
+  VariantFacts,
 } from "./observation.ts";
 export {
   BODIES,

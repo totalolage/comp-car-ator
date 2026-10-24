@@ -1,4 +1,10 @@
-import { type ListingRow, type Loader, openBundle, type VariantRow } from "@cca/bundle";
+import {
+  type ListingRow,
+  type Loader,
+  openBundle,
+  type UsedGroup,
+  type VariantRow,
+} from "@cca/bundle";
 import { type FacetDefs, point, runQuery } from "./engine.ts";
 import type {
   Catalog,
@@ -17,6 +23,13 @@ export async function openCatalog(loader: Loader): Promise<Catalog> {
   const index = await bundle.catalog();
   const thisYear = new Date(bundle.manifest.generatedAt).getUTCFullYear();
   const variantDefs = variantFacetDefs(thisYear);
+  // One row per (Variant, listing group) so market, source, price and odometer filters must
+  // hold for the same group; Variants without listings get one row with no group.
+  const variantRows: VariantGroupRow[] = index.variants.flatMap<VariantGroupRow>((variant) =>
+    variant.used?.groups.length
+      ? variant.used.groups.map((group) => ({ variant, group }))
+      : [{ variant, group: null }],
+  );
   const byId = new Map(index.variants.map((v) => [v.id, v]));
   const views = new Map<string, Promise<ModelView | null>>();
 
@@ -24,7 +37,8 @@ export async function openCatalog(loader: Loader): Promise<Catalog> {
     manifest: bundle.manifest,
     query(query = {}) {
       const { filters = {}, sort, offset, limit } = query;
-      return runQuery(index.variants, variantDefs, filters, sort, offset, limit) as VariantResult;
+      const result = runQuery(variantRows, variantDefs, filters, sort, offset, limit);
+      return { ...result, rows: result.rows.map((r) => r.variant) } as VariantResult;
     },
     model(id) {
       let view = views.get(id);
@@ -53,39 +67,48 @@ export async function openCatalog(loader: Loader): Promise<Catalog> {
   };
 }
 
+interface VariantGroupRow {
+  variant: VariantRow;
+  group: UsedGroup | null;
+}
+
 type VariantEnum = keyof VariantFacets["values"];
 type VariantRange = keyof VariantFacets["ranges"];
 
 function variantFacetDefs(
   thisYear: number,
-): FacetDefs<VariantRow, VariantEnum, VariantRange, VariantSortKey> {
+): FacetDefs<VariantGroupRow, VariantEnum, VariantRange, VariantSortKey> {
   return {
+    identity: (r) => r.variant.id,
     values: {
-      make: (v) => [v.makeId],
-      model: (v) => [v.modelId],
-      body: (v) => [v.body],
-      fuel: (v) => [v.fuel],
-      transmission: (v) => [v.transmission],
-      market: (v) => Object.keys(v.used?.markets ?? {}),
-      source: (v) => Object.keys(v.used?.sources ?? {}),
+      make: (r) => [r.variant.makeId],
+      model: (r) => [r.variant.modelId],
+      body: (r) => [r.variant.body],
+      fuel: (r) => [r.variant.fuel],
+      transmission: (r) => [r.variant.transmission],
+      market: (r) => (r.group ? [r.group.market] : []),
+      source: (r) => (r.group ? [r.group.source] : []),
     },
     ranges: {
-      year: (v) => [v.years.from, v.years.to ?? thisYear],
-      powerKw: (v) => point(v.powerKw),
-      seats: (v) => point(v.seats),
-      consumptionL100km: (v) => point(v.consumptionL100km),
-      newPriceCzk: (v) => (v.newPriceCzk ? [v.newPriceCzk.min, v.newPriceCzk.max] : null),
-      usedPriceCzk: (v) => point(v.used?.priceCzk.median),
+      year: (r) => [r.variant.years.from, r.variant.years.to ?? thisYear],
+      powerKw: (r) => point(r.variant.powerKw),
+      seats: (r) => point(r.variant.seats),
+      consumptionL100km: (r) => point(r.variant.consumptionL100km),
+      newPriceCzk: (r) =>
+        r.variant.newPriceCzk ? [r.variant.newPriceCzk.min, r.variant.newPriceCzk.max] : null,
+      usedPriceCzk: (r) => (r.group ? [r.group.priceCzk.min, r.group.priceCzk.max] : null),
+      odometerKm: (r) =>
+        r.group?.odometerKm ? [r.group.odometerKm.min, r.group.odometerKm.max] : null,
     },
     sort: {
-      make: (v) => `${v.make} ${v.model}`,
-      model: (v) => v.model,
-      year: (v) => v.years.from,
-      powerKw: (v) => v.powerKw,
-      newPriceCzk: (v) => v.newPriceCzk?.min,
-      usedPriceCzk: (v) => v.used?.priceCzk.median,
-      usedCount: (v) => v.used?.count ?? 0,
-      consumptionL100km: (v) => v.consumptionL100km,
+      make: (r) => `${r.variant.make} ${r.variant.model}`,
+      model: (r) => r.variant.model,
+      year: (r) => r.variant.years.from,
+      powerKw: (r) => r.variant.powerKw,
+      newPriceCzk: (r) => r.variant.newPriceCzk?.min,
+      usedPriceCzk: (r) => r.variant.used?.priceCzk.median,
+      usedCount: (r) => r.variant.used?.count ?? 0,
+      consumptionL100km: (r) => r.variant.consumptionL100km,
     },
   };
 }

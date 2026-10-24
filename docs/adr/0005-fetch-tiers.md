@@ -7,5 +7,6 @@ Sources reach websites through one Http module whose interface is `get(request) 
 - Wave 0 ships T0 only; T1 and T2 are stubs that report themselves unavailable (Wave 1 stream 1). A request for an unavailable tier falls back to the highest available one.
 - The replay adapter applies the same challenge rule to recorded responses, so an adapter's handling of blocks is testable from fixtures.
 - Any final HTTP status is a Page; deciding that 404 means "listing gone" is the adapter's job.
-- Http is GET-only and text-only until a Source needs more.
+- Http is GET-only. `binary: true` returns raw bytes (`Page.bytes`) for PDF price lists and ZIP datasets; cassettes store them base64-encoded. Responses are buffered in memory, so multi-GB bulk downloads (the full vehicle register) need a streaming addition when stream 8 gets there.
+- `request.signal` aborts in-flight fetches and backoff waits.
 - The raw response cache from the plan is not built yet (Wave 1 stream 1).

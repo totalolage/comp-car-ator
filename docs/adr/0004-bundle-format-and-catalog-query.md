@@ -12,7 +12,9 @@ Plain JSON for v1. At ~50k Variants `catalog.json` will be several MB uncompress
 
 ## Facet semantics
 
-Values inside one facet are OR-ed and facets are AND-ed. Counts are disjunctive: each facet's counts apply every active filter except its own, so the rail always shows what another choice would yield (the McMaster-Carr behaviour). Listing-level facets on the catalog (market, source, used price) match a Variant through its aggregates; exact listing-level filtering (odometer, landed price) happens in `model(id).listings(query)`.
+Values inside one facet are OR-ed and facets are AND-ed. Counts are disjunctive: each facet's counts apply every active filter except its own, so the rail always shows what another choice would yield (the McMaster-Carr behaviour).
+
+Listing-level filters on the catalog (market, source, used price, odometer) must hold together: each Variant row carries its active used listings split into (market, source) groups with price, odometer and year ranges, and a Variant matches when one group satisfies all of them. Without the groups, a Variant with Czech listings on Sauto and German ones on AutoScout24 would wrongly match "Germany + Sauto" (found by the envoy-peer review). Inside a group, price and odometer are compared by range overlap, so the catalog stays an approximation; exact per-listing filtering (and landed price) happens in `model(id).listings(query)`. The query engine expands each Variant into one row per group and counts distinct Variants.
 
 ## Considered options (design it twice)
 

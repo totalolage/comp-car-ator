@@ -81,4 +81,38 @@ describe("landedPrice", () => {
     );
     expect(result).toEqual({ ok: false, reason: "fx-missing" });
   });
+
+  it("prices a used car with unknown registration and odometer as used, flagged", () => {
+    const result = landedPrice(
+      {
+        price: { amount: 15_000, currency: "EUR" },
+        market: "DE",
+        seller: "dealer",
+        priceBasis: "gross",
+        condition: "used",
+        euroClass: 6,
+        inspectionValid: true,
+      },
+      env,
+    );
+    expect(result.ok && result.landed.flags).toEqual(["vatUncertain"]);
+    expect(result.ok && result.landed.totalCzk).toBe(378_615);
+  });
+
+  it("does not assume January for a registration year without month", () => {
+    const base = {
+      price: { amount: 40_000, currency: "EUR" },
+      market: "DE" as const,
+      seller: "dealer" as const,
+      priceBasis: "gross" as const,
+      condition: "used" as const,
+      odometerKm: 9_000,
+      euroClass: 6,
+      inspectionValid: true,
+    };
+    const thisYear = landedPrice({ ...base, firstRegistration: { year: 2026 } }, env);
+    expect(thisYear.ok && thisYear.landed.flags).toContain("vatUncertain");
+    const lastYear = landedPrice({ ...base, firstRegistration: { year: 2025, month: 1 } }, env);
+    expect(lastYear.ok && lastYear.landed.flags).toEqual([]);
+  });
 });

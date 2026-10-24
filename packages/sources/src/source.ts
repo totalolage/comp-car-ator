@@ -6,13 +6,15 @@ export type SourceId = string;
 
 /**
  * `incremental`: only what is new since the last run (newest-first, stop at known refs).
- * `full`: a census of everything the adapter is configured to cover. After a full run
- * completes, the Ledger treats listings of this Source that were not seen as missing.
+ * Existing listings' price changes are not refreshed by incremental runs; full runs do that.
+ * `full`: a census of everything the adapter covers under its `scope`. After a full run
+ * completes cleanly, the Ledger treats this Source's listings in that scope that were not
+ * seen as missing.
  */
 export type HarvestMode = "incremental" | "full";
 
 /**
- * The Source seam (docs/adr/0003-observation-vocabulary.md). One adapter per site, API or
+ * The Source seam (docs/adr/0003-source-seam-and-observation-vocabulary.md). One adapter per site, API or
  * dataset. An adapter hides pagination, parsing, query splitting and source quirks, and
  * emits Observations in the shared vocabulary.
  *
@@ -21,12 +23,19 @@ export type HarvestMode = "incremental" | "full";
  * - It may yield an Observation more than once; the Ledger is idempotent.
  * - In `full` mode it must yield a ListingSeen for every listing currently in scope, or
  *   throw. A harvest that throws is never treated as a census.
- * - It stops promptly when `ctx.signal` aborts (throwing the abort reason is fine).
+ * - It stops promptly when `ctx.signal` aborts: pass it to every `ctx.http.get` (throwing the
+ *   abort reason is fine).
  * - All network access goes through `ctx.http`; it never reads the clock except via `ctx.now`.
  * - Http errors it cannot work around propagate; the run fails, recorded data stays.
  */
 export interface Source {
   readonly id: SourceId;
+  /**
+   * Stable name of what this adapter instance covers (e.g. AutoScout24 slice "makes:skoda,vw").
+   * Census inference only touches listings last seen under the same scope, so narrowing or
+   * slicing a Source never retires listings outside the slice. Default "all".
+   */
+  readonly scope?: string;
   harvest(ctx: HarvestContext): AsyncIterable<Observation>;
 }
 

@@ -53,6 +53,8 @@ export type LandedFlag =
   | "inspectionAssumed"
   /** The car counts as a "new means of transport", so CZ VAT applies. */
   | "newVehicleVat"
+  /** Registration date or odometer missing, so the new/used VAT test could not decide; priced as used. */
+  | "vatUncertain"
   /** Rules for this market are simplified (AT: NoVA ignored). */
   | "approximate";
 
@@ -100,7 +102,10 @@ function fromEu(input: LandedInput, env: PricingEnv): LandedResult {
   const dealer = input.seller === "dealer";
   const price = input.price.amount;
   const consumerGross = dealer && input.priceBasis === "net" ? price * (1 + vat) : price;
-  const isNew = isNewMeansOfTransport(input, env.today);
+  const classification = isNewMeansOfTransport(input, env.today);
+  // Undecidable cases are priced as used (German VAT stays in the price) and flagged.
+  if (classification === "unknown") flags.push("vatUncertain");
+  const isNew = classification === true;
 
   let goods: number;
   let vatCz = 0;
@@ -138,13 +143,23 @@ function fromEu(input: LandedInput, env: PricingEnv): LandedResult {
   return { ok: true, landed: { totalCzk, lines, flags, fxDate: fx.date } };
 }
 
-/** ZDPH §19(1)(a): new if never registered, or ≤ 6 months since registration, or ≤ 6,000 km. */
-function isNewMeansOfTransport(input: LandedInput, today: IsoDate): boolean {
+/**
+ * ZDPH §19(1)(a): a car is a "new means of transport" if never registered, or registered
+ * ≤ 6 months ago, or driven ≤ 6,000 km; it is used only when both limits are exceeded.
+ * Returns "unknown" when the listing's evidence cannot decide (missing date or odometer).
+ */
+function isNewMeansOfTransport(input: LandedInput, today: IsoDate): boolean | "unknown" {
+  const km = input.odometerKm;
+  if (km !== undefined && km <= 6000) return true;
   const reg = input.firstRegistration;
-  if (!reg) return input.condition !== "used" || (input.odometerKm ?? 0) <= 6000;
+  if (!reg) return input.condition === "new" ? true : "unknown";
   const [ty, tm] = today.split("-").map(Number) as [number, number];
-  const months = (ty - reg.year) * 12 + (tm - (reg.month ?? 1));
-  return months <= 6 || (input.odometerKm !== undefined && input.odometerKm <= 6000);
+  const monthsAgo = (month: number) => (ty - reg.year) * 12 + (tm - month);
+  const newest = monthsAgo(reg.month ?? 12);
+  const oldest = monthsAgo(reg.month ?? 1);
+  if (oldest <= 6) return true;
+  if (newest > 6 && km !== undefined) return false;
+  return "unknown";
 }
 
 function rateOf(

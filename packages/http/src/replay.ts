@@ -17,6 +17,8 @@ export interface Interaction {
     status: number;
     headers: Record<string, string>;
     body: string;
+    /** Binary responses (requests with `binary`) are stored base64-encoded; `body` is then "". */
+    bodyBase64?: string;
     tier: Tier;
   };
 }
@@ -42,16 +44,19 @@ export function createReplayHttp(cassette: Cassette): Http {
   const served = new Map<string, number>();
   return {
     async get(input) {
-      const { url } = normalizeRequest(input);
+      const { url, signal } = normalizeRequest(input);
+      signal?.throwIfAborted();
       const key = matchKey(url);
       const candidates = byUrl.get(key);
       if (!candidates) throw new ReplayMissError(url);
       const index = Math.min(served.get(key) ?? 0, candidates.length - 1);
       served.set(key, index + 1);
-      const response = (candidates[index] as Interaction).response;
+      const { bodyBase64, ...response } = (candidates[index] as Interaction).response;
       const marker = detectChallenge(response);
       if (marker) throw new HttpBlockedError(url, response.tier, marker);
-      return { ...response } satisfies Page;
+      const page: Page = { ...response };
+      if (bodyBase64 !== undefined) page.bytes = new Uint8Array(Buffer.from(bodyBase64, "base64"));
+      return page;
     },
   };
 }
@@ -66,7 +71,15 @@ export function recordingHttp(inner: Http): { http: Http; cassette(): Cassette }
         const page = await inner.get(request);
         // Cookies are session state, not fixture data; keep them out of committed cassettes.
         const { "set-cookie": _cookie, ...headers } = page.headers;
-        interactions.push({ request: { url: request.url }, response: { ...page, headers } });
+        const { bytes, ...rest } = page;
+        interactions.push({
+          request: { url: request.url },
+          response: {
+            ...rest,
+            headers,
+            ...(bytes ? { bodyBase64: Buffer.from(bytes).toString("base64") } : {}),
+          },
+        });
         return page;
       },
     },

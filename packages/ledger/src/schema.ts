@@ -10,6 +10,7 @@ const MIGRATIONS: string[] = [
     id INTEGER PRIMARY KEY,
     source TEXT NOT NULL,
     mode TEXT NOT NULL CHECK (mode IN ('incremental', 'full')),
+    scope TEXT NOT NULL,
     started_at TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('running', 'complete', 'failed'))
   );
@@ -26,6 +27,7 @@ const MIGRATIONS: string[] = [
     id TEXT PRIMARY KEY,
     source TEXT NOT NULL,
     ref TEXT NOT NULL,
+    scope TEXT NOT NULL,
     data TEXT NOT NULL,
     price_amount REAL NOT NULL,
     price_currency TEXT NOT NULL,
@@ -34,9 +36,10 @@ const MIGRATIONS: string[] = [
     last_seen_run INTEGER NOT NULL,
     missed_full_runs INTEGER NOT NULL DEFAULT 0,
     first_missed TEXT,
+    last_missed TEXT,
     gone TEXT
   );
-  CREATE INDEX listings_source ON listings (source, gone);
+  CREATE INDEX listings_source ON listings (source, scope, gone);
 
   CREATE TABLE price_history (
     listing_id TEXT NOT NULL REFERENCES listings (id),
@@ -52,6 +55,14 @@ const MIGRATIONS: string[] = [
     data TEXT NOT NULL,
     updated TEXT NOT NULL,
     PRIMARY KEY (variant_id, source)
+  );
+
+  CREATE TABLE variant_facts (
+    source TEXT NOT NULL,
+    key TEXT NOT NULL,
+    data TEXT NOT NULL,
+    updated TEXT NOT NULL,
+    PRIMARY KEY (source, key)
   );
 
   CREATE TABLE list_prices (

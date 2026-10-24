@@ -20,11 +20,14 @@ export interface RawResponse {
   status: number;
   headers: Record<string, string>;
   body: string;
+  bytes?: Uint8Array;
 }
 
 export type TierFetcher = (request: {
   url: string;
   headers: Record<string, string>;
+  binary: boolean;
+  signal?: AbortSignal;
 }) => Promise<RawResponse>;
 
 export interface PacingOptions {
@@ -56,7 +59,7 @@ export function createTieredHttp(
   fetchers: Partial<Record<Tier, TierFetcher>>,
   options: TieredOptions = {},
 ): Http {
-  const sleep = options.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
+  const baseSleep = options.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
   const now = options.now ?? Date.now;
   const attempts = Math.max(1, options.attempts ?? 3);
   const chains = new Map<string, Promise<unknown>>();
@@ -72,7 +75,7 @@ export function createTieredHttp(
       const last = lastAt.get(host);
       if (last !== undefined) {
         const wait = last + intervalFor(host) - now();
-        if (wait > 0) await sleep(wait);
+        if (wait > 0) await baseSleep(wait);
       }
       try {
         return await fn();
@@ -97,17 +100,23 @@ export function createTieredHttp(
 
   async function fetchWithRetry(
     tier: Tier,
-    url: string,
+    request: HttpRequest,
     headers: Record<string, string>,
   ): Promise<RawResponse> {
     const fetcher = fetchers[tier] as TierFetcher;
+    const { url, signal } = request;
     const host = new URL(url).hostname;
+    const sleep = (ms: number) => abortable(baseSleep(ms), signal);
     let lastError: unknown;
     for (let attempt = 1; attempt <= attempts; attempt++) {
+      signal?.throwIfAborted();
       let response: RawResponse;
       try {
-        response = await paced(host, () => fetcher({ url, headers }));
+        response = await paced(host, () =>
+          fetcher({ url, headers, binary: request.binary ?? false, signal }),
+        );
       } catch (error) {
+        signal?.throwIfAborted();
         lastError = error;
         if (attempt < attempts) await sleep(backoffMs(attempt));
         continue;
@@ -131,7 +140,7 @@ export function createTieredHttp(
       const tiers = tiersFrom(request.minTier ?? "T0");
       let blocked: { tier: Tier; marker: string } | undefined;
       for (const tier of tiers) {
-        const response = await fetchWithRetry(tier, request.url, headers);
+        const response = await fetchWithRetry(tier, request, headers);
         const marker = detectChallenge(response);
         if (!marker) return { ...response, tier };
         blocked = { tier, marker };
@@ -140,6 +149,19 @@ export function createTieredHttp(
       throw new HttpBlockedError(request.url, tier, marker);
     },
   };
+}
+
+function abortable(wait: Promise<void>, signal: AbortSignal | undefined): Promise<void> {
+  if (!signal) return wait;
+  signal.throwIfAborted();
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    wait.then(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, reject);
+  });
 }
 
 function backoffMs(attempt: number): number {

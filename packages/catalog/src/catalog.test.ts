@@ -6,20 +6,30 @@ import {
   type UsedStats,
   type VariantRow,
 } from "@cca/bundle";
+import type { Market } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
 import { openCatalog } from "./index.ts";
 
-function used(median: number, markets: UsedStats["markets"]): UsedStats {
+/** Listing aggregates with one (market, source) group per entry, all at one price. */
+function used(median: number, groups: [Market, string, number][]): UsedStats {
   const q = { min: median, p25: median, median, p75: median, max: median };
-  const count = Object.values(markets).reduce((a, b) => a + (b ?? 0), 0);
+  const count = groups.reduce((n, [, , c]) => n + c, 0);
   return {
     count,
     priceCzk: q,
     landedCzk: q,
     odometerKm: null,
     years: null,
-    markets,
-    sources: { sauto: count },
+    markets: Object.fromEntries(groups.map(([m, , c]) => [m, c])),
+    sources: Object.fromEntries(groups.map(([, src, c]) => [src, c])),
+    groups: groups.map(([market, source, c]) => ({
+      market,
+      source,
+      count: c,
+      priceCzk: { min: median, max: median },
+      odometerKm: null,
+      years: null,
+    })),
   };
 }
 
@@ -70,19 +80,22 @@ const variants = [
     body: "wagon",
     fuel: "diesel",
     powerKw: 110,
-    used: used(450_000, { CZ: 3, DE: 1 }),
+    used: used(450_000, [
+      ["CZ", "sauto", 3],
+      ["DE", "autoscout24-de", 1],
+    ]),
   }),
   variant("skoda/octavia/b", {
     body: "wagon",
     fuel: "petrol",
     powerKw: 110,
-    used: used(520_000, { CZ: 2 }),
+    used: used(520_000, [["CZ", "sauto", 2]]),
   }),
   variant("skoda/fabia/c", {
     fuel: "petrol",
     powerKw: 70,
     years: { from: 2021 },
-    used: used(320_000, { CZ: 1 }),
+    used: used(320_000, [["CZ", "sauto", 1]]),
   }),
   variant("volkswagen/golf/d", {
     fuel: "diesel",
@@ -176,6 +189,17 @@ describe("catalog query engine", () => {
     expect(
       catalog.query({ filters: { usedPriceCzk: { max: 460_000 } } }).rows.map((r) => r.id),
     ).toEqual(["skoda/octavia/a", "skoda/fabia/c"]);
+  });
+
+  it("requires listing-derived filters to hold for the same market/source group", async () => {
+    const catalog = await open();
+    // octavia/a has CZ listings on Sauto and DE listings on AutoScout24, none on Sauto in DE.
+    expect(catalog.query({ filters: { market: ["DE"], source: ["sauto"] } }).total).toBe(0);
+    const de = catalog.query({ filters: { market: ["DE"], source: ["autoscout24-de"] } });
+    expect(de.rows.map((r) => r.id)).toEqual(["skoda/octavia/a"]);
+    // A Variant with two groups still counts once.
+    expect(catalog.query().facets.values.make).toContainEqual({ value: "skoda", count: 3 });
+    expect(catalog.query().total).toBe(4);
   });
 
   it("filters ranges by overlap and reports bounds from the other filters", async () => {

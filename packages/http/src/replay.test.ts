@@ -80,4 +80,26 @@ describe("replay Http", () => {
     expect(recorded.interactions[0]?.response.headers).toEqual({ "content-type": "text/plain" });
     expect((await createReplayHttp(recorded).get("https://b.example/")).body).toBe("hello");
   });
+
+  it("round-trips binary responses (PDF, ZIP) through a cassette", async () => {
+    const bytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x00, 0xff]);
+    const inner: Http = {
+      get: async () => ({
+        url: "https://c.example/x.pdf",
+        status: 200,
+        headers: {},
+        body: "",
+        bytes,
+        tier: "T0",
+      }),
+    };
+    const recorder = recordingHttp(inner);
+    await recorder.http.get({ url: "https://c.example/x.pdf", binary: true });
+    const page = await createReplayHttp(recorder.cassette()).get({
+      url: "https://c.example/x.pdf",
+      binary: true,
+    });
+    expect(page.bytes).toEqual(bytes);
+    expect(page.body).toBe("");
+  });
 });

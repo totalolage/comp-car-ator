@@ -14,16 +14,15 @@ export function createLiveHttp(options: LiveHttpOptions = {}): Http {
 }
 
 /** T0: built-in fetch with browser-like headers. */
-const fetchT0: TierFetcher = async ({ url, headers }) => {
-  const response = await fetch(url, { headers, redirect: "follow" });
+const fetchT0: TierFetcher = async ({ url, headers, binary, signal }) => {
+  const response = await fetch(url, { headers, redirect: "follow", signal });
+  const bytes = new Uint8Array(await response.arrayBuffer());
   return {
     url: response.url || url,
     status: response.status,
     headers: Object.fromEntries(response.headers),
-    body: decode(
-      new Uint8Array(await response.arrayBuffer()),
-      response.headers.get("content-type"),
-    ),
+    body: binary ? "" : decode(bytes, response.headers.get("content-type")),
+    ...(binary ? { bytes } : {}),
   } satisfies RawResponse;
 };
 

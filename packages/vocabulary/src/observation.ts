@@ -8,16 +8,23 @@ import type {
   PriceBasis,
   Seller,
   VehicleDescriptor,
+  YearMonth,
 } from "./vehicle.ts";
 
 /**
  * Observation: one fact a Source saw, in source-neutral terms. The closed union is the
- * standard output of the Source seam (docs/adr/0003-observation-vocabulary.md).
+ * standard output of the Source seam (docs/adr/0003-source-seam-and-observation-vocabulary.md).
  *
  * Observations carry no source id and no timestamp: the Ledger stamps both from the
  * run that recorded them, so an adapter cannot get them wrong.
  */
-export type Observation = ListingSeen | ListingGone | FxRate | CatalogEntry | ListPrice;
+export type Observation =
+  | ListingSeen
+  | ListingGone
+  | FxRate
+  | CatalogEntry
+  | VariantFacts
+  | ListPrice;
 
 export type ObservationKind = Observation["kind"];
 
@@ -41,6 +48,8 @@ export interface ListingSeen {
   photos: string[];
   /** When the source says the listing was posted, if it says. */
   listedAt?: IsoDate;
+  /** Last month the origin country's periodic inspection (DE "HU") is valid, if shown. */
+  inspectionValidUntil?: YearMonth;
 }
 
 /** The source positively reports the listing as removed or sold (e.g. a 404/410 detail page). */
@@ -58,11 +67,41 @@ export interface FxRate {
   czkPerUnit: number;
 }
 
-/** A catalog Source describes a Variant (register, type approval, spec database). */
+/**
+ * A catalog Source fully identifies and describes a Variant (register, type approval).
+ * Only CatalogEntries create Variants.
+ */
 export interface CatalogEntry {
   kind: "CatalogEntry";
   variant: VariantSpec;
 }
+
+/**
+ * Partial Spec evidence from a Source that cannot identify a Variant on its own (EEA has no
+ * body, Wikidata is sparse). At snapshot time the Ledger resolves `vehicle` and fills the
+ * matched Variant's missing Specs; CatalogEntry values win over facts.
+ */
+export interface VariantFacts {
+  kind: "VariantFacts";
+  vehicle: VehicleDescriptor;
+  facts: VariantFactFields;
+}
+
+export type VariantFactFields = Partial<
+  Pick<
+    VariantSpec,
+    | "drive"
+    | "engineCc"
+    | "seats"
+    | "doors"
+    | "euroClass"
+    | "consumptionL100km"
+    | "consumptionKwh100km"
+    | "co2GKm"
+    | "massKg"
+    | "lengthMm"
+  >
+>;
 
 /** A manufacturer price list states the new price of a trim. */
 export interface ListPrice {

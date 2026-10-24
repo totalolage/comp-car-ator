@@ -95,4 +95,21 @@ describe("Http policy", () => {
     expect((await http.get({ url: "https://a.example/", minTier: "T1" })).tier).toBe("T1");
     expect(t0.calls).toHaveLength(0);
   });
+
+  it("stops retrying when the request is aborted during backoff", async () => {
+    const controller = new AbortController();
+    const t0 = scripted([{ ...ok("https://a.example/"), status: 503 }, ok("https://a.example/")]);
+    const http = createTieredHttp(
+      { T0: t0 },
+      {
+        hostIntervalMs: 0,
+        now: () => 0,
+        sleep: async () => controller.abort(new Error("cancelled")),
+      },
+    );
+    await expect(
+      http.get({ url: "https://a.example/", signal: controller.signal }),
+    ).rejects.toThrow("cancelled");
+    expect(t0.calls).toHaveLength(1);
+  });
 });

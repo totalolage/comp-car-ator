@@ -33,7 +33,7 @@ export function runSource(options: RunSourceOptions): Promise<RunSummary> {
     signal = new AbortController().signal,
   } = options;
   return ledger.record(
-    { source: source.id, mode, startedAt: now },
+    { source: source.id, mode, scope: source.scope, startedAt: now },
     source.harvest({ http, mode, checkpoint: ledger.checkpoint(source.id), now, log, signal }),
   );
 }
