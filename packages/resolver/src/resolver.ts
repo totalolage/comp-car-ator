@@ -114,7 +114,7 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
       if (!models) return { status: "unmatched", reason: "unknown-make" };
       const found = findModel(makeKey, models, vehicle.model);
       if (!found) return { status: "unmatched", reason: "unknown-model" };
-      const { model, nameLength } = found;
+      const { model, name } = found;
 
       const hints = readHints(`${vehicle.model} ${vehicle.trim ?? ""}`, FUEL_BADGES[makeKey]);
       const fuel = vehicle.fuel ?? hints.fuel;
@@ -125,9 +125,10 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
       // A lone "I" or "V" names a generation only right after the model name as the listing
       // spells it ("C-Klasse I") or as the first trim word. A lower-case "i" or "v" never does:
       // it stays a word that matches no generation ("v záruce" is "under warranty").
+      const nameEnd = readHints(name).words.length;
       const modelWords = readHints(vehicle.model).words.length;
       const words = hints.words.filter(
-        (w, i) => (w !== "I" && w !== "V") || i === nameLength || i === modelWords,
+        (w, i) => (w !== "I" && w !== "V") || i === nameEnd || i === modelWords,
       );
       const named = [...model.generationWords]
         .filter(([, names]) => names.some((name) => words.includes(name)))
@@ -217,13 +218,18 @@ function modelKeyOf(makeKey: string, slug: string): string {
   return (keys?.get(named) ?? named).replace(/-/g, "");
 }
 
-/** The longest model name that prefixes `text`, and how many words of `text` it spans. */
+/**
+ * The longest model name that prefixes `text`, and that prefix as written ("C-Klasse" of
+ * "C-Klasse I"), so its words count the way the hints count them ("3.0 CSL" is one word).
+ */
 function findModel(
   makeKey: string,
   models: Map<string, Model>,
   text: string,
-): { model: Model; nameLength: number } | undefined {
-  const tokens = slugify(text).split("-").filter(Boolean);
+): { model: Model; name: string } | undefined {
+  const folded = fold(text);
+  const spans = [...folded.matchAll(/[A-Za-z0-9]+/g)];
+  const tokens = spans.map(([token]) => token.toLowerCase());
   for (let length = tokens.length; length > 0; length--) {
     const key = modelKeyOf(makeKey, tokens.slice(0, length).join("-"));
     const model = models.get(key);
@@ -232,7 +238,8 @@ function findModel(
     const isOther = (SUBMODELS.get(makeKey)?.get(key) ?? []).some((word) =>
       rest.some((_, i) => rest.slice(0, i + 1).join("") === word),
     );
-    return isOther ? undefined : { model, nameLength: length };
+    const last = spans[length - 1] as RegExpExecArray;
+    return isOther ? undefined : { model, name: folded.slice(0, last.index + last[0].length) };
   }
   return undefined;
 }

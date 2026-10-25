@@ -316,7 +316,7 @@ describe("Resolver", () => {
       }
     });
 
-    it("reads a lone I or V only in upper case, right after the model name", () => {
+    it("reads a lone I or V only in upper case, after the model name or as the first trim word", () => {
       const golfs = createResolver(
         [
           { slug: "mk1", name: "Golf I", from: 1974, to: 1983 },
@@ -352,7 +352,7 @@ describe("Resolver", () => {
       });
     });
 
-    it("reads a lone I right after a model alias as a generation claim", () => {
+    it("reads a lone I right after the model name as a claim, however the model is spelled", () => {
       // The catalog has only the C-Class W203 ("C-Class II"); each listing names generation I.
       const cClass = createResolver(
         variants("Mercedes-Benz", "C-Class", { slug: "w203", name: "W203 II", from: 2000 }, [
@@ -360,8 +360,13 @@ describe("Resolver", () => {
         ]),
       );
       const listing = { make: "Mercedes", fuel: "petrol", powerKw: 100 } as const;
-      for (const model of ["C-Class I", "C-Klasse I", "C-Trida I", "Třída C I", "C220 I"]) {
-        expect(cClass.resolve({ ...listing, model })).toMatchObject({
+      for (const vehicle of [
+        ...["C-Class I", "C-Klasse I", "C-Trida I", "Třída C I", "C220 I"].map((model) => ({
+          model,
+        })),
+        { model: "C-Klasse", trim: "I 1.8" },
+      ]) {
+        expect(cClass.resolve({ ...listing, ...vehicle })).toMatchObject({
           status: "model",
           reason: "ambiguous",
         });
@@ -369,6 +374,16 @@ describe("Resolver", () => {
       expect(cClass.resolve({ ...listing, model: "C-Klasse" })).toMatchObject({
         status: "matched",
       });
+
+      // A model name the hints read as fewer words ("3.0" is a displacement) keeps its I.
+      const csl = createResolver(
+        variants("BMW", "3.0 CSL", { slug: "mk2", name: "3.0 CSL II", from: 2023 }, [
+          { body: "coupe", fuel: "petrol", powerKw: 412, transmission: "manual" },
+        ]),
+      );
+      const bmw = { make: "BMW", fuel: "petrol", powerKw: 412 } as const;
+      expect(csl.resolve({ ...bmw, model: "3.0 CSL I" })).toMatchObject({ status: "model" });
+      expect(csl.resolve({ ...bmw, model: "3.0 CSL" })).toMatchObject({ status: "matched" });
     });
 
     it("does not match when the text names a generation the catalog lacks, or two", () => {
