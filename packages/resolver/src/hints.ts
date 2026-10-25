@@ -49,14 +49,14 @@ const ELECTRIFIED: [Fuel[], RegExp][] = [
   [["bev"], word("bev|ev")],
   [["hev"], word("hev|full ?hybrid|voll-?hybrid[a-z]*|self-? ?charging")],
   [["hev", "phev"], word("(?<!mild[- ]?)hybrid[a-z]*")],
-  [["hev", "phev", "bev", "reev"], word("elektro|elektroauto|e-?tron|e-?tech")],
+  [
+    ["hev", "phev", "bev", "reev"],
+    word("elektro|elektroauto|elektromotor|elektrisch|e-?tron|e-?tech"),
+  ],
   [["petrol", "diesel", "hev"], word("mhev|mild[- ]?hybrid|48 ?v|etsi")],
 ];
-/** Škoda's "iV" badge (plug-in or electric) in any case but "IV", which is the generation. */
-const IV_BADGE: [Fuel[], RegExp] = [
-  ["phev", "bev"],
-  /(?<![A-Za-z0-9])(?!IV)[iI][vV](?![A-Za-z0-9])/,
-];
+/** Škoda's "iV" badge (plug-in or electric), in its own casing: "IV" and "iv" are generations. */
+const IV_BADGE: [Fuel[], RegExp] = [["phev", "bev"], /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/];
 
 const TRANSMISSION: [Transmission, RegExp][] = [
   [

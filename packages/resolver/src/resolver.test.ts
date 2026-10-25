@@ -308,6 +308,11 @@ describe("Resolver", () => {
       );
       const listing = { ...kodiaq, powerKw: 140 };
       expect(kodiaq2.resolve({ ...listing, trim: "I 2.0 TDI" })).toMatchObject({ status: "model" });
+      expect(kodiaq2.resolve({ ...listing, model: "Kodiaq 2.0 TDI", trim: "I DSG" })).toMatchObject(
+        {
+          status: "model",
+        },
+      );
       expect(kodiaq2.resolve({ ...listing, model: "Kodiaq I", trim: "2.0 TDI" })).toMatchObject({
         status: "model",
       });
@@ -410,13 +415,14 @@ describe("Resolver", () => {
         { trim: "1.4 TSI Elektro/Benzin 110 kW DSG" },
         { trim: "1.5 TSI mHEV 110 kW DSG" },
         { trim: "1.4 TSI Vollhybrid 110 kW DSG" },
-        { trim: "1.4 TSI iv 110 kW DSG" },
+        { trim: "1.4 TSI Elektromotor 110 kW DSG" },
       ]) {
         expect(golf.resolve({ ...vw, ...listing })).toMatchObject({ status: "model" });
       }
-      expect(golf.resolve({ ...vw, trim: "1.4 TSI 110 kW DSG" })).toMatchObject({
-        status: "matched",
-      });
+      // Equipment is not propulsion: "elektrische Heckklappe" is a tailgate.
+      for (const trim of ["1.4 TSI 110 kW DSG", "1.4 TSI 110 kW DSG elektrische Heckklappe"]) {
+        expect(golf.resolve({ ...vw, trim })).toMatchObject({ status: "matched" });
+      }
     });
 
     it("finds no Variant when the wording contradicts the stated fuel", () => {

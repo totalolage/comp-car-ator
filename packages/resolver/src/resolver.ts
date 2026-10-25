@@ -114,7 +114,7 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
       const powerKw =
         vehicle.powerKw !== undefined && vehicle.powerKw > 0 ? vehicle.powerKw : hints.powerKw;
       // A lone "I" is generation I only as the first trim word or right after the model name.
-      const modelWords = split(vehicle.model).length;
+      const modelWords = readHints(vehicle.model).words.length;
       const words = hints.words.filter((w, i) => {
         const before = hints.words[i - 1];
         return (
