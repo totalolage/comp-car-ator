@@ -20,9 +20,7 @@ const word = (alternation: string) => new RegExp(`(?<![a-z0-9])(?:${alternation}
 const BODY: [Body, RegExp][] = [
   [
     "wagon",
-    word(
-      "combi|kombi|variant|avant|touring|sports ?tourer|sportswagon|estate|sw|shooting ?brake",
-    ),
+    word("combi|kombi|variant|avant|touring|sports ?tourer|sportswagon|estate|sw|shooting ?brake"),
   ],
   ["convertible", word("cabrio|cabriolet|roadster|spider|spyder")],
 ];
@@ -66,7 +64,10 @@ export function readHints(text: string): Hints {
     fuel: only(FUEL, lower),
     transmission: only(TRANSMISSION, lower),
     powerKw: powers.every((p) => Math.abs(p - (powers[0] as number)) <= 3) ? powers[0] : undefined,
-    words: folded.replace(/\bmk\s+(\d)/gi, "mk$1").split(/[^A-Za-z0-9]+/).filter(Boolean),
+    words: folded
+      .replace(/\bmk\s+(\d)/gi, "mk$1")
+      .split(/[^A-Za-z0-9]+/)
+      .filter(Boolean),
   };
 }
 

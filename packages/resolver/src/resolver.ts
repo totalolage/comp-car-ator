@@ -194,7 +194,9 @@ function generationWords(variant: CatalogVariant): string[] {
 }
 
 function split(text: string): string[] {
-  return fold(text).split(/[^A-Za-z0-9]+/).filter(Boolean);
+  return fold(text)
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean);
 }
 
 function capitalize(word: string): string {

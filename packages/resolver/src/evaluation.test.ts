@@ -7,13 +7,13 @@ import {
   modelIdOf,
   type Transmission,
   type VariantSpec,
-  variantIdOf,
   type VehicleDescriptor,
+  variantIdOf,
 } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
-import { createResolver, type Resolution } from "./index.ts";
 import catalogFile from "./fixtures/evaluation-catalog.json" with { type: "json" };
 import listingsFile from "./fixtures/evaluation-listings.json" with { type: "json" };
+import { createResolver, type Resolution } from "./index.ts";
 
 /**
  * Accuracy on real listings: 95 Sauto and AutoScout24 descriptors, hand-labelled against a
@@ -109,11 +109,15 @@ describe("Resolver evaluation set", () => {
     const matched = results.filter((r) => r.resolution.status === "matched");
     const wrong = matched.filter((r) => !agrees(r.expect, r.resolution));
     expect(wrong.map((r) => r.ref)).toEqual([]);
-    expect((matched.length - wrong.length) / matched.length).toBeGreaterThanOrEqual(PRECISION_FLOOR);
+    expect((matched.length - wrong.length) / matched.length).toBeGreaterThanOrEqual(
+      PRECISION_FLOOR,
+    );
   });
 
   it("matches enough labelled Variants", () => {
-    const labelled = results.filter((r) => r.expect !== "unmatched" && !r.expect.startsWith("model:"));
+    const labelled = results.filter(
+      (r) => r.expect !== "unmatched" && !r.expect.startsWith("model:"),
+    );
     const hits = labelled.filter((r) => agrees(r.expect, r.resolution));
     expect(hits.length / labelled.length).toBeGreaterThanOrEqual(COVERAGE_FLOOR);
   });

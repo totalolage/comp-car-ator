@@ -4,8 +4,8 @@ import {
   makeIdOf,
   modelIdOf,
   type VariantSpec,
-  variantIdOf,
   type VehicleDescriptor,
+  variantIdOf,
 } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
 import { createResolver } from "./index.ts";
@@ -86,7 +86,12 @@ const variantOf = (vehicle: VehicleDescriptor) => {
   return r.status === "matched" ? r.variantId : r;
 };
 
-const kodiaq = { make: "Škoda", model: "Kodiaq", fuel: "diesel", transmission: "automatic" } as const;
+const kodiaq = {
+  make: "Škoda",
+  model: "Kodiaq",
+  fuel: "diesel",
+  transmission: "automatic",
+} as const;
 
 describe("Resolver", () => {
   it("matches a fully described listing", () => {
@@ -235,16 +240,18 @@ describe("Resolver", () => {
       expect(
         variantOf({ ...octavia, fuel: "phev", powerKw: 150, trim: "iV 1.4 TSI", modelYear: 2021 }),
       ).toBe("skoda/octavia/mk4/wagon-phev-150kw-automatic");
-      expect(resolve({ ...octavia, firstRegistration: { year: 2020 }, trim: "3 4 2.0" })).toMatchObject(
-        { reason: "ambiguous" },
-      );
+      expect(
+        resolve({ ...octavia, firstRegistration: { year: 2020 }, trim: "3 4 2.0" }),
+      ).toMatchObject({ reason: "ambiguous" });
     });
 
     it("finds no Variant when the named generation contradicts the year", () => {
-      expect(resolve({ ...octavia, firstRegistration: { year: 2023 }, trim: "III" })).toMatchObject({
-        status: "model",
-        reason: "no-variant",
-      });
+      expect(resolve({ ...octavia, firstRegistration: { year: 2023 }, trim: "III" })).toMatchObject(
+        {
+          status: "model",
+          reason: "no-variant",
+        },
+      );
     });
   });
 
@@ -269,9 +276,7 @@ describe("Resolver", () => {
       powerKw: 140,
       transmission: "automatic",
     };
-    expect(resolver.resolve(sauto, "sauto")).toEqual(
-      resolver.resolve(autoscout, "autoscout24-de"),
-    );
+    expect(resolver.resolve(sauto, "sauto")).toEqual(resolver.resolve(autoscout, "autoscout24-de"));
     expect(variantOf(sauto)).toBe("skoda/kodiaq/mk1/suv-diesel-140kw-automatic");
   });
 
@@ -298,7 +303,12 @@ describe("Resolver", () => {
 
   it("does not depend on catalog order", () => {
     const reversed = createResolver([...catalog].reverse());
-    const listing = { make: "Mercedes-Benz", model: "C 220 d", fuel: "diesel", powerKw: 147 } as const;
+    const listing = {
+      make: "Mercedes-Benz",
+      model: "C 220 d",
+      fuel: "diesel",
+      powerKw: 147,
+    } as const;
     expect(reversed.resolve(listing)).toEqual(resolver.resolve(listing));
     expect(reversed.resolve({ make: "VW", model: "Golf" })).toEqual(
       resolver.resolve({ make: "VW", model: "Golf" }),

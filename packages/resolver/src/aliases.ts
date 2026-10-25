@@ -20,9 +20,10 @@ export const MAKE_GROUPS: readonly (readonly string[])[] = [
 ];
 
 /** Mercedes-Benz classes: "C 300", "C-Klasse", "C-Class", "Třída C" and "Třídy C" are one Model. */
-const MERCEDES_CLASSES = (
-  "a b c e s g v t x r m ml gl cl sl cla cls clk gla glb glc gle glk gls slc slk eqa eqb eqc eqe eqs eqv"
-).split(" ");
+const MERCEDES_CLASSES =
+  "a b c e s g v t x r m ml gl cl sl cla cls clk gla glb glc gle glk gls slc slk eqa eqb eqc eqe eqs eqv".split(
+    " ",
+  );
 
 /** BMW series: "Řada 3", "3er", "3 Series", "Serie 3", and engine badges "320", "320d". */
 const BMW_SERIES = ["1", "2", "3", "4", "5", "6", "7", "8"];
