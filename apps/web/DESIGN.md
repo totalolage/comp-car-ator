@@ -97,8 +97,8 @@ Enforced on every build by `scripts/check-budget.mjs` (fails the build), gzipped
 | ------------------------------ | ------ | ------------ | ---------- |
 | HTML                           | 30 kB  | 6.9 kB       | 1.9 kB     |
 | CSS                            | 8 kB   | 2.5 kB       | 2.5 kB     |
-| JS (all chunks the page loads) | 30 kB  | 19.0 kB      | 3.9 kB     |
-| Total                          | 60 kB  | 28.4 kB      | 8.3 kB     |
+| JS (all chunks the page loads) | 30 kB  | 19.1 kB      | 3.9 kB     |
+| Total                          | 60 kB  | 28.5 kB      | 8.3 kB     |
 
 Measured on the sample Bundle (2026-10-25). The catalog page's JS is Preact, its hooks, the
 island (with the catalog query engine) and the shared url-state/i18n chunk; category pages
