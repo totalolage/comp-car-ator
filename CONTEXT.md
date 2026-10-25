@@ -31,7 +31,7 @@ A technical fact about a Variant (seats, consumption, CO2, engine displacement).
 _Avoid_: attribute, feature
 
 **New price**:
-The current gross price a Czech buyer pays a dealer for a new car of an Offer, taken from manufacturer price lists. A Variant's New price is the range over its Offers.
+The current gross price a Czech buyer pays a dealer for a new car of an Offer, taken from manufacturer price lists. A Variant's New price is the range over its Offers; a Variant without a current Offer takes the range of landed prices of active Czech dealer Listings of new cars, labelled as such.
 _Avoid_: MSRP, list price (in prose)
 
 **Offer**:
@@ -77,7 +77,7 @@ The estimated total in CZK to buy a Listing's car and register it in Czechia: pr
 _Avoid_: total cost, import price, final price
 
 **Used-price statistics**:
-Quantiles of asking prices over a Variant's active used Listings, also broken down by year and odometer band.
+Count, p10, median and p90 of asking prices in CZK over a Variant's (or Model's) active Listings, after the outlier rule leaves out implausible prices; per Market, and broken down by Condition, year and odometer band.
 _Avoid_: price stats, market value
 
 ### Data

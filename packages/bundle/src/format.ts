@@ -21,7 +21,7 @@ import type {
 } from "@cca/vocabulary";
 
 /** Bumped on any change a previous reader cannot read. */
-export const BUNDLE_FORMAT = 1;
+export const BUNDLE_FORMAT = 2;
 
 export interface BundleContent {
   manifest: BundleManifest;
@@ -69,24 +69,44 @@ export interface VariantRow {
   co2GKm?: number;
   massKg?: number;
   lengthMm?: number;
-  /** Range of current CZ list prices across trims, gross CZK. */
-  newPriceCzk?: { min: number; max: number };
+  newPriceCzk?: NewPrice;
   /** Aggregates over active used listings matched to this Variant; null when none. */
   used: UsedStats | null;
 }
 
-export interface UsedStats {
+/**
+ * Gross CZK a Czech buyer pays a dealer for a new car of this Variant, and where it came from:
+ * `list` = the current manufacturer list prices (min-max over the Variant's Offers);
+ * `dealer` = no current list price, so the landed price of active Czech dealer Listings of new
+ * cars (min-max of those the outlier rule keeps). `count` = Offers or Listings behind it.
+ */
+export interface NewPrice {
+  min: number;
+  max: number;
+  source: "list" | "dealer";
   count: number;
-  priceCzk: Quantiles;
+}
+
+export interface UsedStats {
+  /** Active used Listings matched to this Variant, outliers included (availability). */
+  count: number;
+  /**
+   * Asking price in CZK over the Listings the outlier rule keeps; null when it keeps none.
+   * Every statistic below counts only kept Listings.
+   */
+  priceCzk: Quantiles | null;
   /** Landed CZK (docs: CONTEXT.md "Landed price"); only listings with an estimate count. */
   landedCzk: Quantiles | null;
   odometerKm: Quantiles | null;
+  /** Asking price in CZK per Market. */
+  byMarket: Partial<Record<Market, Quantiles>>;
   years: { min: number; max: number } | null;
   markets: Partial<Record<Market, number>>;
   sources: Record<string, number>;
   /**
    * The same listings split by (market, source), so listing-level filters can be matched
    * together: "DE + Sauto" matches only if one group has both. Sorted by market, source.
+   * Built from every active used Listing, so outliers stay findable through filters.
    */
   groups: UsedGroup[];
 }
@@ -100,12 +120,12 @@ export interface UsedGroup {
   years: { min: number; max: number } | null;
 }
 
+/** `count` is the sample behind the quantiles; it differs per measure. */
 export interface Quantiles {
-  min: number;
-  p25: number;
+  count: number;
+  p10: number;
   median: number;
-  p75: number;
-  max: number;
+  p90: number;
 }
 
 /** Everything a model page needs, loaded on demand. */
@@ -113,17 +133,57 @@ export interface ModelFile {
   model: { id: ModelId; makeId: MakeId; make: string; name: string };
   generations: { id: string; name: string; from: number; to?: number }[];
   variantIds: VariantId[];
+  /** Active Listings plus those gone in the last 30 days, sorted by id. */
   listings: ListingRow[];
-  stats: {
-    byYear: { year: number; count: number; medianCzk: number }[];
-    byOdometerBand: { band: OdometerBand; count: number; medianCzk: number }[];
-  };
-  /** Daily median asking price (CZK) of the model's active used listings. */
-  history: { date: IsoDate; count: number; medianCzk: number }[];
+  /** Price statistics of the model's active Listings; see PriceCell. */
+  stats: PriceCell[];
+  /**
+   * Weekly median asking price (CZK) of the model's used Listings, one series per Market:
+   * a point every Monday plus the publish day, from the Listings active that day.
+   */
+  history: { market: Market; points: { date: IsoDate; count: number; medianCzk: number }[] }[];
 }
 
-export const ODOMETER_BANDS = ["0-50k", "50-100k", "100-150k", "150-200k", "200k+"] as const;
+/**
+ * Asking-price statistics (CZK at this Bundle's rates) of one slice of a model's active
+ * Listings, over those the outlier rule keeps. `null` in a dimension means "all": each
+ * (variant or model) × Market × Condition has its year × band cells and the year-only,
+ * band-only and total ones. A missing cell means fewer than 3 Listings, not none; Markets
+ * are never pooled. Sorted by variantId, market, condition, year, band (null first).
+ */
+export interface PriceCell {
+  /** Null: the whole model, including Listings resolved only to the model. */
+  variantId: VariantId | null;
+  market: Market;
+  condition: Condition;
+  /** As `ListingRow.year`. */
+  year: number | null;
+  /** Null includes Listings without an odometer reading. */
+  band: OdometerBand | null;
+  count: number;
+  p10: number;
+  median: number;
+  p90: number;
+}
+
+/** Lower bound inclusive, in km. */
+export const ODOMETER_BANDS = [
+  "0-10k",
+  "10-50k",
+  "50-100k",
+  "100-150k",
+  "150-200k",
+  "200k+",
+] as const;
 export type OdometerBand = (typeof ODOMETER_BANDS)[number];
+
+const BAND_LOWER_KM = [0, 10_000, 50_000, 100_000, 150_000, 200_000];
+
+export function odometerBand(km: number): OdometerBand {
+  let i = BAND_LOWER_KM.length - 1;
+  while (km < (BAND_LOWER_KM[i] as number)) i--;
+  return ODOMETER_BANDS[Math.max(i, 0)] as OdometerBand;
+}
 
 export interface ListingRow {
   /** `<source>:<ref>`, unique across the Bundle. */
@@ -152,11 +212,14 @@ export interface ListingRow {
   landed: LandedPrice | null;
   seller: Seller;
   location?: string;
+  /** The first 3 photos; the rest stay at the Source. */
   photos: string[];
   firstSeen: IsoDate;
   lastSeen: IsoDate;
   gone?: IsoDate;
   daysOnMarket: number;
+  /** The outlier rule leaves this Listing out of every statistic. */
+  excluded?: true;
   /** Oldest first. `priceCzk` converts at this Bundle's rates, so it shows price moves, not FX moves. */
   priceHistory: { date: IsoDate; price: Money; priceCzk: number }[];
 }

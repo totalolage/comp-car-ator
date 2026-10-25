@@ -1578,6 +1578,285 @@
             "city": "Zlín",
             "region": "Zlínský kraj"
           }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190340101",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190340101",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 2.0 TDI Style DSG",
+            "firstRegistration": {
+              "year": 2021
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 112000,
+          "price": {
+            "amount": 469000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Brno",
+            "region": "Jihomoravský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190340102",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190340102",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 2.0 TDI Style DSG",
+            "firstRegistration": {
+              "year": 2021
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 87000,
+          "price": {
+            "amount": 515000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Brno",
+            "region": "Jihomoravský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190340103",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190340103",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 2.0 TDI Style DSG",
+            "firstRegistration": {
+              "year": 2022
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 64000,
+          "price": {
+            "amount": 579000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Brno",
+            "region": "Jihomoravský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190340104",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190340104",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 2.0 TDI Style DSG",
+            "firstRegistration": {
+              "year": 2022
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 71000,
+          "price": {
+            "amount": 559000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Brno",
+            "region": "Jihomoravský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190340105",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190340105",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 2.0 TDI Style DSG",
+            "firstRegistration": {
+              "year": 2023
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 38000,
+          "price": {
+            "amount": 649000,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Brno",
+            "region": "Jihomoravský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190340106",
+          "url": "https://www.sauto.cz/osobni/detail/skoda/octavia/190340106",
+          "market": "CZ",
+          "condition": "used",
+          "vehicle": {
+            "make": "Škoda",
+            "model": "Octavia",
+            "trim": "Combi 2.0 TDI Style DSG",
+            "firstRegistration": {
+              "year": 2021
+            },
+            "fuel": "diesel",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "wagon",
+            "euroClass": 6
+          },
+          "odometerKm": 140000,
+          "price": {
+            "amount": 1,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Brno",
+            "region": "Jihomoravský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190340201",
+          "url": "https://www.sauto.cz/osobni/detail/volkswagen/golf/190340201",
+          "market": "CZ",
+          "condition": "new",
+          "vehicle": {
+            "make": "Volkswagen",
+            "model": "Golf",
+            "trim": "1.5 eTSI Life DSG",
+            "fuel": "petrol",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "hatchback",
+            "manufactureYear": 2026
+          },
+          "odometerKm": 10,
+          "price": {
+            "amount": 749900,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Ostrava",
+            "region": "Moravskoslezský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190340202",
+          "url": "https://www.sauto.cz/osobni/detail/volkswagen/golf/190340202",
+          "market": "CZ",
+          "condition": "new",
+          "vehicle": {
+            "make": "Volkswagen",
+            "model": "Golf",
+            "trim": "1.5 eTSI Life DSG",
+            "fuel": "petrol",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "hatchback",
+            "manufactureYear": 2026
+          },
+          "odometerKm": 10,
+          "price": {
+            "amount": 772900,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Ostrava",
+            "region": "Moravskoslezský kraj"
+          }
+        },
+        {
+          "kind": "ListingSeen",
+          "ref": "190340203",
+          "url": "https://www.sauto.cz/osobni/detail/volkswagen/golf/190340203",
+          "market": "CZ",
+          "condition": "new",
+          "vehicle": {
+            "make": "Volkswagen",
+            "model": "Golf",
+            "trim": "1.5 eTSI Life DSG",
+            "fuel": "petrol",
+            "powerKw": 110,
+            "transmission": "automatic",
+            "body": "hatchback",
+            "manufactureYear": 2026
+          },
+          "odometerKm": 10,
+          "price": {
+            "amount": 789900,
+            "currency": "CZK"
+          },
+          "priceBasis": "gross",
+          "seller": "dealer",
+          "photos": [],
+          "location": {
+            "city": "Ostrava",
+            "region": "Moravskoslezský kraj"
+          }
         }
       ]
     },
