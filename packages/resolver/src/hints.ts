@@ -47,13 +47,16 @@ const FUEL: [Fuel, RegExp][] = [
 const ELECTRIFIED: [Fuel[], RegExp][] = [
   [["phev"], word("plug-? ?in|phev|e-?hybrid|gte")],
   [["bev"], word("bev|ev")],
-  [["hev"], word("hev|full ?hybrid|self-? ?charging")],
+  [["hev"], word("hev|full ?hybrid|voll-?hybrid[a-z]*|self-? ?charging")],
   [["hev", "phev"], word("(?<!mild[- ]?)hybrid[a-z]*")],
   [["hev", "phev", "bev", "reev"], word("elektro|elektroauto|e-?tron|e-?tech")],
   [["petrol", "diesel", "hev"], word("mhev|mild[- ]?hybrid|48 ?v|etsi")],
 ];
-/** Škoda's "iV" badge (plug-in or electric); lower case would read as generation IV. */
-const IV_BADGE: [Fuel[], RegExp] = [["phev", "bev"], /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/];
+/** Škoda's "iV" badge (plug-in or electric) in any case but "IV", which is the generation. */
+const IV_BADGE: [Fuel[], RegExp] = [
+  ["phev", "bev"],
+  /(?<![A-Za-z0-9])(?!IV)[iI][vV](?![A-Za-z0-9])/,
+];
 
 const TRANSMISSION: [Transmission, RegExp][] = [
   [
@@ -102,6 +105,8 @@ export function readHints(text: string): Hints {
       .replace(/\bmk\s+(\d)/gi, "mk$1")
       // "Euro VI" is an emission class, not generation VI.
       .replace(/\beu(?:ro)?\s*-?\s*[0-9IVX]+[a-z]*\b/gi, " ")
+      // Displacements ("2.0d", "1,6TDI") would split into code-like words ("0d").
+      .replace(/\b\d[.,]\d[a-z]*\b/gi, " ")
       // "I. majitel" is the first owner, not generation I.
       .replace(/\b[IVX]+\.\s*maj[a-z]*/gi, " ")
       .split(/[^A-Za-z0-9]+/)

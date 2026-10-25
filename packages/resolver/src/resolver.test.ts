@@ -331,13 +331,39 @@ describe("Resolver", () => {
         eClass213.resolve({ ...e220, model: "E-Klasse", trim: "E220 CDI W213" }),
       ).toMatchObject({ status: "matched" });
 
-      // The catalog's 3 Series is the G20 only.
+      // Platform codes claim a generation for the whole make: "5G" is the Golf VII.
+      expect(
+        resolve({ make: "VW", model: "Golf", trim: "5G 2.0 TDI", fuel: "diesel", powerKw: 85 }),
+      ).toMatchObject({ status: "model" });
+
+      // The catalog's 3 Series is the G20 only; "N47" is an engine, "V6" a layout.
       expect(
         resolve({ make: "BMW", model: "320d", trim: "F30 Touring", fuel: "diesel", powerKw: 140 }),
       ).toMatchObject({ status: "model" });
       expect(
         resolve({ make: "BMW", model: "320d", trim: "G20 M Sport", fuel: "diesel", powerKw: 140 }),
       ).toMatchObject({ status: "matched" });
+      for (const trim of ["N47 M Sport", "v6 M Sport"]) {
+        expect(
+          resolve({ make: "BMW", model: "320d", trim, fuel: "diesel", powerKw: 140 }),
+        ).toMatchObject({ status: "matched" });
+      }
+    });
+
+    it("reads a lone I deep in the trim as no generation", () => {
+      const kodiaqs = createResolver([
+        ...variants("Škoda", "Kodiaq", { slug: "mk1", name: "Kodiaq I", from: 2016, to: 2024 }, [
+          { body: "suv", fuel: "diesel", powerKw: 140, transmission: "automatic" },
+        ]),
+        ...variants("Škoda", "Kodiaq", { slug: "mk2", name: "Kodiaq II", from: 2024 }, [
+          { body: "suv", fuel: "diesel", powerKw: 140, transmission: "automatic" },
+        ]),
+      ]);
+      const listing = { ...kodiaq, model: "Kodiaq II", powerKw: 140, trim: "2.0 TDI Style I" };
+      expect(kodiaqs.resolve(listing)).toMatchObject({
+        status: "matched",
+        variantId: "skoda/kodiaq/mk2/suv-diesel-140kw-automatic",
+      });
     });
 
     it("finds no Variant when a chassis code contradicts the year", () => {
@@ -383,6 +409,8 @@ describe("Resolver", () => {
         { trim: "1.4 TSI Hybrid 110 kW DSG" },
         { trim: "1.4 TSI Elektro/Benzin 110 kW DSG" },
         { trim: "1.5 TSI mHEV 110 kW DSG" },
+        { trim: "1.4 TSI Vollhybrid 110 kW DSG" },
+        { trim: "1.4 TSI iv 110 kW DSG" },
       ]) {
         expect(golf.resolve({ ...vw, ...listing })).toMatchObject({ status: "model" });
       }

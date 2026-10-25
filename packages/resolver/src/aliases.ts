@@ -76,3 +76,28 @@ export const MODEL_ALIASES: Readonly<Record<string, ModelAliases>> = {
   ford: { submodels: { focus: ["c-max"], tourneo: ["connect", "custom", "courier"] } },
   renault: { submodels: { megane: ["scenic", "e-tech"] } },
 };
+
+/**
+ * Volkswagen Group platform codes ("5G" Golf VII, "8V" A3, "5E" Octavia III); "5D" is the
+ * door count and "4M" 4Motion.
+ */
+const VW_GROUP = "(?![2-5]d$|4m$)[1-9][a-z]";
+const VW_GROUP_CODE = new RegExp(`^${VW_GROUP}$`, "i");
+
+/**
+ * The shapes of each make's chassis codes, so a listing naming one ("W212", "F30") claims a
+ * generation whether or not the catalog has it. Keyed by make group key; makes without an
+ * entry claim generations by Roman numeral or "Mk7" only.
+ */
+export const CHASSIS_CODES: Readonly<Record<string, RegExp>> = {
+  volkswagen: new RegExp(`^(?:${VW_GROUP}|[bt]\\d)$`, "i"),
+  skoda: VW_GROUP_CODE,
+  seat: VW_GROUP_CODE,
+  cupra: VW_GROUP_CODE,
+  audi: new RegExp(`^(?:${VW_GROUP}|[b-d]\\d)$`, "i"),
+  bmw: /^[efgu]\d\d$/i,
+  "mercedes-benz": /^[acrsvwx]\d{3}$/i,
+  "land-rover": /^l\d{3}$/i,
+  hyundai: /^[a-z]{2}\d$/i,
+  kia: /^[a-z]{2}\d$/i,
+};
