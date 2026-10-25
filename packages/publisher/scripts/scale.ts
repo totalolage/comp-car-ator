@@ -64,6 +64,7 @@ if (step === "generate") {
   let gzipTotal = 0;
   for (const text of files.values()) gzipTotal += gzipSync(text).length;
   const brotli = (path: string) => brotliCompressSync(files.get(path) ?? "").length;
+  const gzip = (path: string) => gzipSync(files.get(path) ?? "").length;
   const largestModel = sizes.find((s) => s.path.startsWith("models/"));
   const manifest = JSON.parse(files.get("manifest.json") ?? "{}");
   const modelSizes = sizes.filter((s) => s.path.startsWith("models/")).map((s) => s.bytes);
@@ -78,10 +79,12 @@ if (step === "generate") {
         totalMb: mb(sizes.reduce((n, s) => n + s.bytes, 0)),
         gzipTotalMb: mb(gzipTotal),
         catalogMb: mb(Buffer.byteLength(files.get("catalog.json") ?? "")),
+        catalogGzipMb: mb(gzip("catalog.json")),
         catalogBrotliMb: mb(brotli("catalog.json")),
         largestModel: largestModel && {
           path: largestModel.path,
           mb: mb(largestModel.bytes),
+          gzipMb: mb(gzip(largestModel.path)),
           brotliMb: mb(brotli(largestModel.path)),
         },
         medianModelKb: Math.round((modelSizes[Math.floor(modelSizes.length / 2)] ?? 0) / 1024),

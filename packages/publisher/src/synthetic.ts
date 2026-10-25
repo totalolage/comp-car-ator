@@ -152,6 +152,7 @@ function catalog(count: number, endYear: number): VariantSpec[] {
     const k = i % VARIANTS_PER_GENERATION;
     const newer = g % GENERATIONS_PER_MODEL === 1;
     const from = newer ? endYear - 5 : endYear - 13;
+    const electric = FUELS[Math.floor(k / 2) % FUELS.length] === "bev";
     variants.push({
       make: `Make${make}`,
       model: `Model${m}`,
@@ -167,7 +168,20 @@ function catalog(count: number, endYear: number): VariantSpec[] {
       powerKw: 60 + 20 * k,
       transmission: TRANSMISSIONS[k % 2] as Transmission,
       years: newer ? { from } : { from, to: endYear - 6 },
+      // Full specs, as register + EEA data give, so the catalog's size is realistic.
+      drive: k % 5 === 4 ? "awd" : "fwd",
       seats: 5,
+      doors: 5,
+      euroClass: 6,
+      ...(electric
+        ? { consumptionKwh100km: 15 + (k % 4) }
+        : {
+            engineCc: 999 + 250 * (k % 6),
+            consumptionL100km: 4 + (k % 5) * 0.4,
+            co2GKm: 95 + 9 * (k % 5),
+          }),
+      massKg: 1_200 + 37 * k,
+      lengthMm: 4_100 + 23 * (m % 20),
     });
   }
   return variants;
