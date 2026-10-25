@@ -352,7 +352,8 @@ describe("autoesa source", () => {
     const cassette = edit(
       await loadCassette(full),
       "?rok_od=2002&rok_do=2002&razeni=7",
-      body(withoutCard),
+      // The slice reports one listing more than it shows.
+      body((b) => b.replace("<strong>7</strong>", "<strong>8</strong>")),
     );
     const os: Observation[] = [];
     await expect(harvest(cassette, { mode: "full" }, os)).rejects.toThrow(
@@ -361,7 +362,7 @@ describe("autoesa source", () => {
     expect(slicesDone(os)).toEqual(["year:2003"]);
     const done = os.findIndex((o) => o.kind === "SliceDone");
     const in2002 = listings(os).filter((o) => o.vehicle.firstRegistration?.year === 2002);
-    expect(in2002).toHaveLength(6);
+    expect(in2002).toHaveLength(7);
     expect(in2002.every((o) => os.indexOf(o) > done)).toBe(true);
   });
 
