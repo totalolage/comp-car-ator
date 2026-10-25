@@ -1,7 +1,7 @@
 import { createReplayHttp, loadCassette } from "@cca/http";
 import type { FxRate, Observation } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
-import { type HarvestContext, type HarvestMode, silentLogger } from "../source.ts";
+import { emptyCheckpoint, type HarvestContext, type HarvestMode, silentLogger } from "../source.ts";
 import { cnbSource } from "./cnb.ts";
 
 // Recorded 2026-10-24 (a Saturday; the latest fixing is Friday 2026-10-23).
@@ -19,7 +19,7 @@ async function harvest(
   const ctx: HarvestContext = {
     http: createReplayHttp(await loadCassette(cassette)),
     mode,
-    checkpoint: { lastRunAt, isKnown: () => false },
+    checkpoint: { ...emptyCheckpoint, lastRunAt },
     now,
     log: silentLogger,
     signal,

@@ -12,7 +12,6 @@ import {
   modelIdOf,
   type Observation,
   pragueDate,
-  slugify,
   type VariantFacts,
   type VariantSpec,
   variantIdOf,
@@ -41,8 +40,18 @@ export function openLedger(path: string): Ledger {
     ),
     finishRun: db.prepare("UPDATE runs SET status = ? WHERE id = ?"),
     lastCompleteRun: db.prepare(
-      "SELECT max(started_at) AS at FROM runs WHERE source = ? AND status = 'complete'",
+      "SELECT max(started_at) AS at FROM runs WHERE source = ? AND scope = ? AND status = 'complete'",
     ),
+    // Full runs after this id belong to the scope's current census.
+    lastCompleteFullRun: db.prepare(
+      `SELECT coalesce(max(id), 0) AS id FROM runs
+       WHERE source = ? AND scope = ? AND mode = 'full' AND status = 'complete'`,
+    ),
+    sliceDoneAt: db.prepare(
+      `SELECT max(r.started_at) AS at FROM slices s JOIN runs r ON r.id = s.run
+       WHERE r.source = ? AND r.scope = ? AND r.mode = 'full' AND r.id > ? AND s.slice = ?`,
+    ),
+    insertSlice: db.prepare("INSERT OR IGNORE INTO slices (run, slice) VALUES (?, ?)"),
     isKnown: db.prepare("SELECT 1 FROM listings WHERE id = ? AND gone IS NULL"),
     upsertFx: db.prepare(
       `INSERT INTO fx_rates (currency, valid_for, czk_per_unit) VALUES (?, ?, ?)
@@ -63,11 +72,16 @@ export function openLedger(path: string): Ledger {
        ON CONFLICT (listing_id, date) DO UPDATE SET amount = excluded.amount, currency = excluded.currency`,
     ),
     markGone: db.prepare("UPDATE listings SET gone = ? WHERE id = ? AND gone IS NULL"),
-    // A listing misses at most once per day, so re-recording a full run cannot double-count.
+    // Missed: not seen by any run of the census (full runs since the last complete one, so
+    // slices done by a failed run and skipped by this one count as seen). A listing misses
+    // at most once per day, so re-recording a full run cannot double-count.
     countMissed: db.prepare(
       `UPDATE listings SET missed_full_runs = missed_full_runs + 1,
          first_missed = coalesce(first_missed, :day), last_missed = :day
-       WHERE source = :source AND scope = :scope AND gone IS NULL AND last_seen_run <> :run
+       WHERE source = :source AND scope = :scope AND gone IS NULL
+         AND last_seen_run < (
+           SELECT min(id) FROM runs WHERE source = :source AND scope = :scope AND mode = 'full'
+             AND id > :after)
          AND (last_missed IS NULL OR last_missed < :day)`,
     ),
     goneAfterMisses: db.prepare(
@@ -83,8 +97,8 @@ export function openLedger(path: string): Ledger {
        ON CONFLICT (source, key) DO UPDATE SET data = excluded.data, updated = excluded.updated`,
     ),
     upsertListPrice: db.prepare(
-      `INSERT INTO list_prices (source, key, valid_from, data) VALUES (?, ?, ?, ?)
-       ON CONFLICT (source, key, valid_from) DO UPDATE SET data = excluded.data`,
+      `INSERT INTO list_prices (source, ref, valid_from, data) VALUES (?, ?, ?, ?)
+       ON CONFLICT (source, ref, valid_from) DO UPDATE SET data = excluded.data`,
     ),
   };
 
@@ -149,9 +163,12 @@ export function openLedger(path: string): Ledger {
       case "VariantFacts":
         q.upsertFacts.run(run.source, JSON.stringify(o.vehicle), JSON.stringify(o), day);
         break;
+      case "SliceDone":
+        q.insertSlice.run(runId, o.slice);
+        break;
       case "ListPrice": {
-        const { kind: _kind, ...data } = o;
-        q.upsertListPrice.run(run.source, listPriceKey(o), o.validFrom, JSON.stringify(data));
+        const { kind: _kind, ref: _ref, ...data } = o;
+        q.upsertListPrice.run(run.source, o.ref, o.validFrom, JSON.stringify(data));
         break;
       }
     }
@@ -199,16 +216,22 @@ export function openLedger(path: string): Ledger {
   }
 
   return {
-    checkpoint(source: SourceId): Checkpoint {
-      const row = q.lastCompleteRun.get(source) as { at: string | null };
+    checkpoint(source: SourceId, scope = "all"): Checkpoint {
+      const row = q.lastCompleteRun.get(source, scope) as { at: string | null };
+      const census = q.lastCompleteFullRun.get(source, scope) as { id: number };
       return {
         lastRunAt: row.at ? new Date(row.at) : null,
         isKnown: (ref) => q.isKnown.get(`${source}:${ref}`) !== undefined,
+        sliceDoneAt: (slice) => {
+          const done = q.sliceDoneAt.get(source, scope, census.id, slice) as { at: string | null };
+          return done.at ? new Date(done.at) : null;
+        },
       };
     },
 
     async record(run, observations) {
       const scope = run.scope ?? "all";
+      const { id: censusAfter } = q.lastCompleteFullRun.get(run.source, scope) as { id: number };
       const { id: runId } = q.insertRun.get(
         run.source,
         run.mode,
@@ -225,6 +248,7 @@ export function openLedger(path: string): Ledger {
         census: "not-full",
       };
       let rejectedTotal = 0;
+      let rejectedInSlice = 0;
       let open = false;
       let pending = 0;
       const begin = () => {
@@ -239,7 +263,13 @@ export function openLedger(path: string): Ledger {
 
       try {
         for await (const observation of observations) {
-          const reason = invalidReason(observation);
+          const sliceDone = observation.kind === "SliceDone";
+          let reason = invalidReason(observation);
+          if (!reason && sliceDone && rejectedInSlice > 0) {
+            reason = "slice had rejected observations, so it is not done";
+          }
+          if (sliceDone) rejectedInSlice = 0;
+          else if (reason) rejectedInSlice++;
           if (reason) {
             rejectedTotal++;
             if (summary.rejected.length < MAX_REJECTIONS_REPORTED) {
@@ -262,7 +292,7 @@ export function openLedger(path: string): Ledger {
       if (run.mode === "full" && rejectedTotal > 0) summary.census = "skipped-rejections";
       if (run.mode === "full" && rejectedTotal === 0) {
         summary.census = "applied";
-        q.countMissed.run({ day, source: run.source, scope, run: runId });
+        q.countMissed.run({ day, source: run.source, scope, after: censusAfter });
         summary.gone += Number(
           q.goneAfterMisses.run({ source: run.source, scope, misses: MISSES_TO_GONE }).changes,
         );
@@ -280,13 +310,13 @@ export function openLedger(path: string): Ledger {
       );
       const listPrices = (
         db
-          .prepare("SELECT source, key, data FROM list_prices ORDER BY source, key, valid_from")
-          .all() as { source: string; key: string; data: string }[]
+          .prepare("SELECT source, ref, data FROM list_prices ORDER BY source, ref, valid_from")
+          .all() as { source: string; ref: string; data: string }[]
       ).map((row) => {
-        const data = JSON.parse(row.data) as Omit<ListPrice, "kind">;
+        const data = JSON.parse(row.data) as Omit<ListPrice, "kind" | "ref">;
         return {
           ...data,
-          offer: `${row.source}|${row.key}`,
+          offer: `${row.source}:${row.ref}`,
           resolution: resolver.resolve(data.vehicle, row.source),
         };
       });
@@ -360,23 +390,6 @@ function latestFx(db: DatabaseSync): FxTable {
   return Object.fromEntries(
     rows.map((r) => [r.currency, { czkPerUnit: r.czk_per_unit, validFor: r.valid_for }]),
   );
-}
-
-function listPriceKey(o: ListPrice): string {
-  const v = o.vehicle;
-  return [
-    o.market,
-    v.make,
-    v.model,
-    v.trim ?? "",
-    v.body ?? "",
-    v.modelYear ?? "",
-    v.fuel ?? "",
-    v.powerKw ?? "",
-    v.transmission ?? "",
-  ]
-    .map((part) => slugify(String(part)))
-    .join("|");
 }
 
 function defined<T extends object>(value: T): Partial<T> {

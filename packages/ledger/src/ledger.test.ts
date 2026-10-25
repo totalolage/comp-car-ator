@@ -217,6 +217,25 @@ describe("Ledger", () => {
     const third = await sliced("makes:skoda", "2026-10-24", [seen("s", 1)]);
     expect(third).toMatchObject({ census: "applied", gone: 0 });
     expect(ledger.checkpoint("as24").isKnown("v")).toBe(true);
+    expect(ledger.checkpoint("as24", "makes:vw").lastRunAt).toEqual(day("2026-10-10"));
+    expect(ledger.checkpoint("as24", "makes:skoda").lastRunAt).toEqual(day("2026-10-24"));
+  });
+
+  it("a slice with a rejected observation is not done", async () => {
+    ledger = openLedger(":memory:");
+    const failed = run("as24", "full", "2026-10-10", {
+      async *[Symbol.asyncIterator]() {
+        yield seen("1", 1);
+        yield { kind: "SliceDone", slice: "A" } as const;
+        yield seen("2", Number.NaN);
+        yield { kind: "SliceDone", slice: "B" } as const;
+        throw new Error("HTTP 503");
+      },
+    });
+    await expect(failed).rejects.toThrow("HTTP 503");
+    const checkpoint = ledger.checkpoint("as24");
+    expect(checkpoint.sliceDoneAt("A")).toEqual(day("2026-10-10"));
+    expect(checkpoint.sliceDoneAt("B")).toBeNull();
   });
 
   it("rejects VariantFacts with unknown fields or non-finite values", async () => {

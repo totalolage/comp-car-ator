@@ -26,6 +26,14 @@ export function invalidReason(o: Observation): string | null {
       if (!oneOf(PRICE_BASES, o.priceBasis)) return `unknown priceBasis ${o.priceBasis}`;
       if (!oneOf(SELLERS, o.seller)) return `unknown seller ${o.seller}`;
       if (!isMoney(o.price)) return "price must be a finite amount >= 0 with an ISO currency";
+      if (o.sellerExtras !== undefined) {
+        if (!isMoney(o.sellerExtras) || o.sellerExtras.currency !== o.price.currency) {
+          return "sellerExtras must be a finite amount >= 0 in the price's currency";
+        }
+        if (!oneOf(PRICE_BASES, o.sellerExtras.basis)) {
+          return `unknown sellerExtras basis ${o.sellerExtras.basis}`;
+        }
+      }
       if (o.odometerKm !== undefined && !(Number.isFinite(o.odometerKm) && o.odometerKm >= 0)) {
         return "odometerKm must be >= 0";
       }
@@ -49,10 +57,16 @@ export function invalidReason(o: Observation): string | null {
     case "VariantFacts":
       return factsReason(o.facts) ?? vehicleReason(o.vehicle);
     case "ListPrice":
+      if (!nonEmpty(o.ref)) return "ref is empty";
       if (!oneOf(MARKETS, o.market)) return `unknown market ${o.market}`;
       if (!isMoney(o.price)) return "price must be a finite amount >= 0 with an ISO currency";
       if (!isDate(o.validFrom)) return "validFrom must be YYYY-MM-DD";
+      if (o.validTo !== undefined && !(isDate(o.validTo) && o.validTo >= o.validFrom)) {
+        return "validTo must be YYYY-MM-DD, not before validFrom";
+      }
       return vehicleReason(o.vehicle);
+    case "SliceDone":
+      return nonEmpty(o.slice) ? null : "slice is empty";
     default:
       return `unknown kind ${String((o as { kind?: unknown }).kind)}`;
   }

@@ -31,14 +31,18 @@ A technical fact about a Variant (seats, consumption, CO2, engine displacement).
 _Avoid_: attribute, feature
 
 **New price**:
-The current gross price a Czech buyer pays a dealer for a new car of a Variant and Trim, taken from manufacturer price lists.
+The current gross price a Czech buyer pays a dealer for a new car of an Offer, taken from manufacturer price lists. A Variant's New price is the range over its Offers.
 _Avoid_: MSRP, list price (in prose)
+
+**Offer**:
+One priced configuration on a manufacturer price list (Trim, engine, drive, gearbox, model year), identified by its Source across price-list editions. Several Offers usually belong to one Variant; each edition of an Offer is valid from a day, and optionally until a day.
+_Avoid_: price-list item, configuration
 
 ### Listings
 
 **Listing**:
 One car offered for sale at a Source, with its asking price, odometer and history of prices.
-_Avoid_: ad, offer, inzerát (in code)
+_Avoid_: ad, offer (that is a price-list Offer), inzerát (in code)
 
 **Market**:
 The country where a Listing's car stands and is sold (CZ, DE, AT).
@@ -52,6 +56,10 @@ _Avoid_: state, status
 What a Listing's asking price includes with respect to VAT: gross, net, margin scheme, or unknown.
 _Avoid_: VAT status, tax mode
 
+**Seller extras**:
+Charges a Listing's seller invoices on top of the asking price that the buyer cannot decline (delivery, preparation, dealer fees), with their own Price basis. Transport the buyer arranges is not one.
+_Avoid_: fees (alone), add-ons
+
 **Days on market**:
 Days from when a Listing was first seen (or posted, if earlier) until it was gone, or until today.
 _Avoid_: age, listing age
@@ -61,7 +69,7 @@ A Listing that is no longer offered: reported removed by its Source, or missing 
 _Avoid_: sold, deleted, expired
 
 **Landed price**:
-The estimated total in CZK to buy a Listing's car and register it in Czechia: price converted at the ČNB rate, Czech VAT where the car counts as new, transport, inspection, registration and eco fees. For Czech Listings it is the asking price.
+The estimated total in CZK to buy a Listing's car and register it in Czechia: price and seller extras converted at the ČNB rate, Czech VAT on both where the car counts as new, transport, inspection, registration and eco fees. For Czech Listings it is the asking price plus seller extras.
 _Avoid_: total cost, import price, final price
 
 **Used-price statistics**:
@@ -75,7 +83,7 @@ One external website, API or dataset that the app harvests (Sauto, AutoScout24 D
 _Avoid_: site, provider, scraper, feed
 
 **Observation**:
-One fact a Source saw during a run, in the app's shared vocabulary: a Listing seen, a Listing gone, a catalog entry, a new price, or an FX rate.
+One fact a Source saw during a run, in the app's shared vocabulary: a Listing seen, a Listing gone, a catalog entry, a new price, an FX rate, or a Slice done.
 _Avoid_: record, event, item
 
 **Run**:
@@ -83,8 +91,12 @@ One harvest of one Source, either incremental (only what is new) or full (a cens
 _Avoid_: crawl, scrape, job
 
 **Census**:
-A complete full Run: every Listing the Source currently offers in its scope was seen, so absence means the Listing may be gone.
+The full Runs of a Source's scope up to and including a complete one: together they saw every Listing the Source currently offers in that scope, so absence means the Listing may be gone. Failed full Runs in between contribute the Slices they finished.
 _Avoid_: full scan, sweep
+
+**Slice**:
+A part of a Source's scope that its adapter harvests as one unit, keyed by the adapter (an AutoScout24 make/model/year/price query under the result cap). A full Run reports each Slice it finished, so a Census that fails part way resumes with the Slices left.
+_Avoid_: shard, partition, chunk
 
 **Resolution**:
 The match of a Listing's or new price's raw make/model description to a catalog Variant, or only to a Model when the Variant is ambiguous.

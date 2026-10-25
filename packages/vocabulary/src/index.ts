@@ -16,6 +16,8 @@ export type {
   ListPrice,
   Observation,
   ObservationKind,
+  SellerExtras,
+  SliceDone,
   VariantFactFields,
   VariantFacts,
 } from "./observation.ts";

@@ -87,7 +87,10 @@ export function memoryLoader(files: BundleFiles): Loader {
   return async (path) => files.get(path) ?? null;
 }
 
-/** Loader over HTTP, relative to `baseUrl` (e.g. "/bundle/"). 404 means missing. */
+/**
+ * Loader over HTTP, relative to `baseUrl`. 404 means missing. `baseUrl` must be absolute;
+ * in the browser resolve the path first: `fetchLoader(new URL("/bundle/", location.href))`.
+ */
 export function fetchLoader(baseUrl: string | URL, fetchImpl: typeof fetch = fetch): Loader {
   return async (path) => {
     const response = await fetchImpl(new URL(path, baseUrl));

@@ -65,12 +65,20 @@ const MIGRATIONS: string[] = [
     PRIMARY KEY (source, key)
   );
 
+  -- Slices a run reported done (SliceDone); full runs since the scope's last complete full
+  -- run form the current census, and its done slices may be skipped.
+  CREATE TABLE slices (
+    run INTEGER NOT NULL REFERENCES runs (id),
+    slice TEXT NOT NULL,
+    PRIMARY KEY (run, slice)
+  );
+
   CREATE TABLE list_prices (
     source TEXT NOT NULL,
-    key TEXT NOT NULL,
+    ref TEXT NOT NULL,
     valid_from TEXT NOT NULL,
     data TEXT NOT NULL,
-    PRIMARY KEY (source, key, valid_from)
+    PRIMARY KEY (source, ref, valid_from)
   );
   `,
 ];

@@ -34,7 +34,14 @@ export function runSource(options: RunSourceOptions): Promise<RunSummary> {
   } = options;
   return ledger.record(
     { source: source.id, mode, scope: source.scope, startedAt: now },
-    source.harvest({ http, mode, checkpoint: ledger.checkpoint(source.id), now, log, signal }),
+    source.harvest({
+      http,
+      mode,
+      checkpoint: ledger.checkpoint(source.id, source.scope),
+      now,
+      log,
+      signal,
+    }),
   );
 }
 

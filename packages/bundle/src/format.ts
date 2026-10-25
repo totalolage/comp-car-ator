@@ -143,7 +143,10 @@ export interface ListingRow {
   fuel?: Fuel;
   powerKw?: number;
   transmission?: Transmission;
+  /** Asking price as shown, without seller extras. */
   price: Money;
+  /** Charges the seller invoices on top of `price`; the landed price includes them. */
+  sellerExtras?: Money;
   priceCzk: number;
   /** Null when no estimate is possible (missing FX rate, unsupported market). */
   landed: LandedPrice | null;

@@ -8,7 +8,7 @@
  */
 import { createLiveHttp, recordingHttp, saveCassette } from "@cca/http";
 import type { Observation } from "@cca/vocabulary";
-import { type HarvestMode, sources } from "../src/index.ts";
+import { emptyCheckpoint, type HarvestMode, sources } from "../src/index.ts";
 
 const [id, mode, out, ...rest] = process.argv.slice(2);
 const flag = (name: string) => {
@@ -29,7 +29,7 @@ const observations: Observation[] = [];
 for await (const observation of factory().harvest({
   http: recorder.http,
   mode: mode as HarvestMode,
-  checkpoint: { lastRunAt: lastRun ? new Date(lastRun) : null, isKnown: () => false },
+  checkpoint: { ...emptyCheckpoint, lastRunAt: lastRun ? new Date(lastRun) : null },
   now,
   log: { info: (m, d) => console.error(m, d ?? ""), warn: (m, d) => console.error(m, d ?? "") },
   signal: AbortSignal.timeout(30 * 60_000),

@@ -8,8 +8,8 @@ export type SourceId = string;
  * `incremental`: only what is new since the last run (newest-first, stop at known refs).
  * Existing listings' price changes are not refreshed by incremental runs; full runs do that.
  * `full`: a census of everything the adapter covers under its `scope`. After a full run
- * completes cleanly, the Ledger treats this Source's listings in that scope that were not
- * seen as missing.
+ * completes cleanly, the Ledger treats this Source's listings in that scope that no full run
+ * of the census saw as missing. A census can span runs: see `Checkpoint.sliceDoneAt`.
  */
 export type HarvestMode = "incremental" | "full";
 
@@ -22,7 +22,9 @@ export type HarvestMode = "incremental" | "full";
  * - `harvest` is lazy: no request happens before the first `next()`.
  * - It may yield an Observation more than once; the Ledger is idempotent.
  * - In `full` mode it must yield a ListingSeen for every listing currently in scope, or
- *   throw. A harvest that throws is never treated as a census.
+ *   throw. A harvest that throws is never treated as a census. An adapter that splits its
+ *   scope into slices yields SliceDone after each finished slice, and may skip slices whose
+ *   `ctx.checkpoint.sliceDoneAt` is set: earlier full runs of this census covered them.
  * - It stops promptly when `ctx.signal` aborts: pass it to every `ctx.http.get` (throwing the
  *   abort reason is fine).
  * - All network access goes through `ctx.http`; it never reads the clock except via `ctx.now`.
@@ -49,12 +51,22 @@ export interface HarvestContext {
   readonly signal: AbortSignal;
 }
 
-/** What the Ledger already knows about this Source, so incremental runs can stop early. */
+/**
+ * What the Ledger already knows about this Source in this run's scope, so incremental runs can
+ * stop early and a failed full census can resume.
+ */
 export interface Checkpoint {
-  /** Start of the last run of this Source that completed, or null on the first run. */
+  /** Start of the last complete run of this Source in this scope, or null on the first run. */
   readonly lastRunAt: Date | null;
   /** Whether a listing with this ref is already in the Ledger and not gone. */
   isKnown(ref: string): boolean;
+  /**
+   * When a full run of the current census (full runs in this scope since the last complete
+   * one) reported this slice done, or null. A full harvest skips slices with a date; it may
+   * redo old ones if it judges them stale. A complete full run ends the census, so the next
+   * one starts with every slice null.
+   */
+  sliceDoneAt(slice: string): Date | null;
 }
 
 export interface Logger {
@@ -64,4 +76,8 @@ export interface Logger {
 
 export const silentLogger: Logger = { info() {}, warn() {} };
 
-export const emptyCheckpoint: Checkpoint = { lastRunAt: null, isKnown: () => false };
+export const emptyCheckpoint: Checkpoint = {
+  lastRunAt: null,
+  isKnown: () => false,
+  sliceDoneAt: () => null,
+};

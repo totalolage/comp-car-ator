@@ -275,6 +275,7 @@
       "observations": [
         {
           "kind": "ListPrice",
+          "ref": "octavia-combi-selection-20tdi-110-dsg-my26",
           "vehicle": {
             "make": "Škoda",
             "model": "Octavia",
@@ -294,6 +295,7 @@
         },
         {
           "kind": "ListPrice",
+          "ref": "octavia-combi-sportline-20tdi-110-dsg-my26",
           "vehicle": {
             "make": "Škoda",
             "model": "Octavia",
@@ -313,6 +315,7 @@
         },
         {
           "kind": "ListPrice",
+          "ref": "octavia-combi-selection-15etec-110-dsg-my26",
           "vehicle": {
             "make": "Škoda",
             "model": "Octavia",
@@ -332,6 +335,7 @@
         },
         {
           "kind": "ListPrice",
+          "ref": "octavia-essence-10tsi-85-my26",
           "vehicle": {
             "make": "Škoda",
             "model": "Octavia",
@@ -351,6 +355,7 @@
         },
         {
           "kind": "ListPrice",
+          "ref": "fabia-selection-10tsi-70-my26",
           "vehicle": {
             "make": "Škoda",
             "model": "Fabia",
@@ -370,6 +375,7 @@
         },
         {
           "kind": "ListPrice",
+          "ref": "octavia-combi-selection-20tdi-110-dsg-my26",
           "vehicle": {
             "make": "Škoda",
             "model": "Octavia",
@@ -1150,6 +1156,11 @@
           "price": {
             "amount": 29990,
             "currency": "EUR"
+          },
+          "sellerExtras": {
+            "amount": 990,
+            "currency": "EUR",
+            "basis": "gross"
           },
           "priceBasis": "gross",
           "seller": "dealer",

@@ -55,7 +55,8 @@ function buildContent(ledger: Ledger, { now, transportCzk }: PublishOptions): Bu
     listingsByModel.set(modelId, [...(listingsByModel.get(modelId) ?? []), row]);
   }
 
-  // Current CZ new prices: per offer, the latest edition already in force today.
+  // Current CZ new prices: per offer, the latest edition already in force today, unless it
+  // has expired. An expired edition is never replaced by an older one.
   const current = new Map<string, (typeof snapshot.listPrices)[number]>();
   for (const listPrice of snapshot.listPrices) {
     if (listPrice.market !== "CZ" || listPrice.validFrom > today) continue;
@@ -64,6 +65,7 @@ function buildContent(ledger: Ledger, { now, transportCzk }: PublishOptions): Bu
   }
   const newPrices = new Map<string, number[]>();
   for (const listPrice of current.values()) {
+    if (listPrice.validTo !== undefined && listPrice.validTo < today) continue;
     if (listPrice.resolution.status !== "matched") continue;
     const czk = toCzk(listPrice.price, fx);
     if (czk === null) continue;
@@ -133,6 +135,7 @@ function listingRow(
   const landed = landedPrice(
     {
       price: listing.price,
+      sellerExtras: listing.sellerExtras,
       market: listing.market,
       seller: listing.seller,
       priceBasis: listing.priceBasis,
@@ -163,6 +166,10 @@ function listingRow(
     powerKw: v.powerKw,
     transmission: v.transmission,
     price: listing.price,
+    sellerExtras: listing.sellerExtras && {
+      amount: listing.sellerExtras.amount,
+      currency: listing.sellerExtras.currency,
+    },
     priceCzk,
     landed: landed.ok ? landed.landed : null,
     seller: listing.seller,

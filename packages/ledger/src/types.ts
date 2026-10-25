@@ -12,6 +12,7 @@ import type {
   ObservationKind,
   PriceBasis,
   Seller,
+  SellerExtras,
   VehicleDescriptor,
   YearMonth,
 } from "@cca/vocabulary";
@@ -48,18 +49,21 @@ export interface RunSummary {
  * concurrent writers; one ingest process owns the file.
  */
 export interface Ledger {
-  /** What incremental runs of this Source may skip. */
-  checkpoint(source: SourceId): Checkpoint;
+  /** What a run of this Source in this scope (default "all") may skip. */
+  checkpoint(source: SourceId, scope?: string): Checkpoint;
   /**
    * Records one run's Observations, streaming them in batched transactions. Idempotent per
    * (source, day): re-recording the same Observations changes nothing.
    *
-   * When the iterable completes, the run is marked complete; for a `full` run with no
-   * rejected Observations, this Source's active listings in the run's scope that were not
-   * seen are counted as missed (at most once per day), and a listing missed on 2 days of
-   * complete full runs is gone as of the first miss. When the iterable
-   * throws, what was recorded stays, the run is marked failed, nothing is inferred, and
-   * `record` rejects with that error.
+   * When the iterable completes, the run is marked complete. A `full` run with no rejected
+   * Observations then closes a census: this Source's active listings in the run's scope that
+   * no full run since the scope's previous complete full run saw are counted as missed (at
+   * most once per day), and a listing missed on 2 days of censuses is gone as of the first
+   * miss. Failed full runs in between belong to the census, so the slices they reported done
+   * (SliceDone) may be skipped. When the iterable throws, what was recorded stays (each
+   * SliceDone is durable once recorded), the run is marked failed, nothing is inferred, and
+   * `record` rejects with that error. A SliceDone after a rejected Observation in that slice
+   * is rejected too, so the slice is harvested again.
    */
   record(
     run: RunInfo,
@@ -76,10 +80,11 @@ export interface LedgerSnapshot {
   /** Merged catalog: one entry per Variant id. */
   catalog: CatalogVariant[];
   /**
-   * Every recorded new price. `offer` identifies one priced offer (source + market + trim +
-   * configuration) across price-list editions; pick the latest `validFrom` per offer.
+   * Every recorded edition of every new-price offer. `offer` is `<source>:<ref>`. On a day,
+   * an offer's price is its edition with the latest `validFrom` on or before that day,
+   * unless that edition's `validTo` is before the day (then it has none).
    */
-  listPrices: (Omit<ListPrice, "kind"> & { offer: string; resolution: Resolution })[];
+  listPrices: (Omit<ListPrice, "kind" | "ref"> & { offer: string; resolution: Resolution })[];
   /** All listings, active and gone, with history. */
   listings(): Iterable<LedgerListing>;
 }
@@ -96,6 +101,8 @@ export interface LedgerListing {
   odometerKm?: number;
   /** Latest price. */
   price: Money;
+  /** As last seen; see `ListingSeen.sellerExtras`. */
+  sellerExtras?: SellerExtras;
   priceBasis: PriceBasis;
   seller: Seller;
   location?: { region?: string; city?: string; postcode?: string };

@@ -11,11 +11,17 @@ import type {
   Money,
   PriceBasis,
   Seller,
+  SellerExtras,
   YearMonth,
 } from "@cca/vocabulary";
 
 export interface LandedInput {
   price: Money;
+  /**
+   * Charges the seller invoices on top of `price` (delivery, preparation, dealer fees), in
+   * `price`'s currency, on their own price basis. Part of the CZ VAT base for a new car.
+   */
+  sellerExtras?: SellerExtras;
   market: Market;
   seller: Seller;
   priceBasis: PriceBasis;
@@ -40,6 +46,8 @@ export interface PricingEnv {
 export type LandedLineCode =
   | "price"
   | "goods"
+  /** Seller extras, converted and normalized like the price (net for new cars). */
+  | "sellerExtras"
   | "vatCz"
   | "transport"
   | "inspection"
@@ -69,7 +77,7 @@ export interface LandedPrice {
 
 export type LandedResult =
   | { ok: true; landed: LandedPrice }
-  | { ok: false; reason: "fx-missing" | "unsupported-market" };
+  | { ok: false; reason: "fx-missing" | "unsupported-market" | "extras-currency" };
 
 const REGISTRATION_FEE = 800;
 const DEFAULT_TRANSPORT = 12_000;
@@ -79,14 +87,20 @@ const ORIGIN_VAT: Record<Market, number> = { CZ: 0.21, DE: 0.19, AT: 0.2 };
 
 /** Pricing's interface: one pure function. Never throws for well-typed input. */
 export function landedPrice(input: LandedInput, env: PricingEnv): LandedResult {
+  if (input.sellerExtras && input.sellerExtras.currency !== input.price.currency) {
+    return { ok: false, reason: "extras-currency" };
+  }
   if (input.market === "CZ") {
     const fx = rateOf(input.price.currency, env.fx);
     if (!fx) return { ok: false, reason: "fx-missing" };
-    const czk = round(input.price.amount * fx.czkPerUnit);
-    return {
-      ok: true,
-      landed: { totalCzk: czk, lines: [{ code: "price", czk }], flags: [], fxDate: fx.date },
-    };
+    const lines: LandedPrice["lines"] = [
+      { code: "price", czk: round(input.price.amount * fx.czkPerUnit) },
+    ];
+    if (input.sellerExtras?.amount) {
+      lines.push({ code: "sellerExtras", czk: round(input.sellerExtras.amount * fx.czkPerUnit) });
+    }
+    const totalCzk = lines.reduce((sum, line) => sum + line.czk, 0);
+    return { ok: true, landed: { totalCzk, lines, flags: [], fxDate: fx.date } };
   }
   if (input.market === "DE" || input.market === "AT") return fromEu(input, env);
   return { ok: false, reason: "unsupported-market" };
@@ -100,26 +114,25 @@ function fromEu(input: LandedInput, env: PricingEnv): LandedResult {
 
   const vat = ORIGIN_VAT[input.market];
   const dealer = input.seller === "dealer";
-  const price = input.price.amount;
-  const consumerGross = dealer && input.priceBasis === "net" ? price * (1 + vat) : price;
   const classification = isNewMeansOfTransport(input, env.today);
   // Undecidable cases are priced as used (German VAT stays in the price) and flagged.
   if (classification === "unknown") flags.push("vatUncertain");
   const isNew = classification === true;
+  if (isNew) flags.push("newVehicleVat");
 
-  let goods: number;
-  let vatCz = 0;
-  if (isNew) {
-    flags.push("newVehicleVat");
-    const net =
-      dealer && (input.priceBasis === "gross" || input.priceBasis === "net")
-        ? consumerGross / (1 + vat)
-        : price;
-    goods = net * fx.czkPerUnit;
-    vatCz = 0.21 * goods;
-  } else {
-    goods = consumerGross * fx.czkPerUnit;
-  }
+  // What the buyer is invoiced for an amount shown on `basis`: consumer gross for a used car;
+  // net of origin VAT for a new one (exempt intra-EU supply), where a private seller's agreed
+  // amount is taxed as is.
+  const invoiced = (amount: number, basis: PriceBasis) => {
+    const consumerGross = dealer && basis === "net" ? amount * (1 + vat) : amount;
+    if (!isNew) return consumerGross;
+    return dealer && (basis === "gross" || basis === "net") ? consumerGross / (1 + vat) : amount;
+  };
+  const goods = invoiced(input.price.amount, input.priceBasis) * fx.czkPerUnit;
+  const extras = input.sellerExtras
+    ? invoiced(input.sellerExtras.amount, input.sellerExtras.basis) * fx.czkPerUnit
+    : 0;
+  const vatCz = isNew ? 0.21 * (goods + extras) : 0;
 
   let inspection = INSPECTION_FULL;
   if (input.inspectionValid) inspection = INSPECTION_VALID;
@@ -133,6 +146,7 @@ function fromEu(input: LandedInput, env: PricingEnv): LandedResult {
 
   const lines: LandedPrice["lines"] = [
     { code: "goods", czk: round(goods) },
+    ...(extras > 0 ? [{ code: "sellerExtras" as const, czk: round(extras) }] : []),
     ...(vatCz > 0 ? [{ code: "vatCz" as const, czk: round(vatCz) }] : []),
     { code: "transport", czk: env.transportCzk ?? DEFAULT_TRANSPORT },
     { code: "inspection", czk: inspection },

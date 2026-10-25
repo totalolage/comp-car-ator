@@ -24,7 +24,8 @@ export type Observation =
   | FxRate
   | CatalogEntry
   | VariantFacts
-  | ListPrice;
+  | ListPrice
+  | SliceDone;
 
 export type ObservationKind = Observation["kind"];
 
@@ -41,6 +42,13 @@ export interface ListingSeen {
   odometerKm?: number;
   /** Price as shown, in the listing's currency. */
   price: Money;
+  /**
+   * Sum of the charges the seller invoices on top of `price` and the buyer cannot decline
+   * (delivery/Überführung, preparation, dealer registration fees), in `price`'s currency.
+   * Not charges already in `price`, nor transport the buyer arranges. Absent when the
+   * listing shows none.
+   */
+  sellerExtras?: SellerExtras;
   priceBasis: PriceBasis;
   seller: Seller;
   location?: { region?: string; city?: string; postcode?: string };
@@ -50,6 +58,11 @@ export interface ListingSeen {
   listedAt?: IsoDate;
   /** Last month the origin country's periodic inspection (DE "HU") is valid, if shown. */
   inspectionValidUntil?: YearMonth;
+}
+
+export interface SellerExtras extends Money {
+  /** Fees can be shown gross while the car is shown net, so they carry their own basis. */
+  basis: PriceBasis;
 }
 
 /** The source positively reports the listing as removed or sold (e.g. a 404/410 detail page). */
@@ -103,13 +116,41 @@ export type VariantFactFields = Partial<
   >
 >;
 
-/** A manufacturer price list states the new price of a trim. */
+/**
+ * A manufacturer price list states the new price of one offer in one edition. An offer is
+ * one priced configuration (Trim, engine, drive, gearbox, model year...); several offers
+ * usually resolve to the same Variant, so the offer has its own identity, `ref`.
+ */
 export interface ListPrice {
   kind: "ListPrice";
+  /**
+   * Source-local id of the offer, stable across editions: the manufacturer's sales code, or
+   * the row key of a curated table. Unique within the Source, markets included: offers that
+   * differ in anything priced need different refs; a later edition of the offer reuses it.
+   */
+  ref: string;
   /** Trim text belongs in `vehicle.trim`; the Resolver maps the rest to a Variant. */
   vehicle: VehicleDescriptor;
   /** Gross consumer price in the market's currency. */
   price: Money;
   market: Market;
+  /** First day this edition's price applies. An edition replaces earlier ones of its offer. */
   validFrom: IsoDate;
+  /**
+   * Last day this edition's price applies, inclusive. Absent: until a later edition. Set it
+   * when the list states an end date, or re-emit the edition with it when the offer is
+   * withdrawn; the offer then has no New price after that day.
+   */
+  validTo?: IsoDate;
+}
+
+/**
+ * The Source has yielded every listing currently in one slice of its `scope` during this run
+ * (e.g. an AutoScout24 make/model/year/price query under the result cap). `slice` is the
+ * adapter's own stable key. Full runs report slices so a census that fails part way resumes:
+ * the next full run reads `Checkpoint.sliceDoneAt` and skips slices already done.
+ */
+export interface SliceDone {
+  kind: "SliceDone";
+  slice: string;
 }
