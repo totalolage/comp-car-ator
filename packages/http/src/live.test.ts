@@ -301,6 +301,8 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
   it("closes the connection of a binary fetch still running at close()", async () => {
     const held = holdResponse("/slow.zip");
     handler = held.handle;
+    // One browser at a time: the shared one relaunches if a later test needs it.
+    await http.close();
     const own = createLiveHttp({
       hostIntervalMs: 0,
       attempts: 1,
