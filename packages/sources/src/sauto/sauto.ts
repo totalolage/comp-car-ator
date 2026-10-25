@@ -109,7 +109,9 @@ class Run {
   /**
    * `sorting_date` is never earlier than a listing's creation, so everything new or changed
    * since the last run sits above it in the order: with a last run the walk ends at the first
-   * page older than it; on a first run, at the first page of known listings.
+   * page older than it; on a first run, at the first page of known listings. Reaching the
+   * 10,000-result window after a last run means changes went unseen, so the run fails rather
+   * than complete and move `lastRunAt` past them; a full run catches up.
    */
   async *incremental(): AsyncIterable<Observation> {
     const { checkpoint } = this.ctx;
@@ -121,19 +123,23 @@ class Run {
       let more = false;
       for (const item of page.items) {
         const ref = refOf(item);
-        if (ref && isUnpriced(item)) continue;
+        // Unpriced listings never become known, so only their timestamp keeps the walk going.
+        const unpriced = ref !== undefined && isUnpriced(item);
         const known = ref !== undefined && checkpoint.isKnown(ref);
         const changed = since !== undefined && text(item.sorting_date) >= since;
-        if (since !== undefined ? changed : !known) more = true;
-        if (!known || changed) yield* this.listing(item);
+        if (since !== undefined ? changed : !known && !unpriced) more = true;
+        if (!unpriced && (!known || changed)) yield* this.listing(item);
       }
       if (!more || page.items.length < this.pageSize || offset + this.pageSize >= page.total) {
         return;
       }
     }
-    this.ctx.log.warn("sauto incremental reached the 10,000-result window; run a full harvest", {
-      lastRunAt: checkpoint.lastRunAt?.toISOString(),
-    });
+    if (since !== undefined) {
+      throw new Error(
+        `Sauto incremental reached the ${WINDOW}-result window before the last run; run a full harvest`,
+      );
+    }
+    this.ctx.log.warn("sauto first incremental run stopped at the 10,000-result window");
   }
 
   /**
@@ -151,7 +157,7 @@ class Run {
     if (page.total > limit) {
       const mid = band.to === undefined ? band.from * 2 : Math.floor((band.from + band.to) / 2);
       // Never down to [0, 1): `price_to=0` would drop the bound.
-      if (mid <= band.from + 1) {
+      if (mid <= band.from || (band.from === 0 && mid <= 1)) {
         throw new Error(`Sauto slice ${slice} holds ${page.total} results and cannot be split`);
       }
       yield* this.band(condition, { from: band.from, to: mid }, limit);
@@ -161,7 +167,7 @@ class Run {
     // Page the whole band before the slow detail requests, so the order barely moves under
     // us; consecutive pages overlap a little in case deletions shift it up.
     const items = [...page.items];
-    const step = this.pageSize - Math.floor(this.pageSize / 20);
+    const step = this.pageSize - Math.min(5, Math.floor(this.pageSize / 4));
     while (page.items.length === this.pageSize && query.offset + step < page.total) {
       query.offset += step;
       if (query.offset + this.pageSize > WINDOW) {
@@ -240,7 +246,9 @@ class Run {
     }
     const total = body.pagination?.total;
     if (typeof total !== "number") throw new Error(`Sauto search without a total: ${page.url}`);
-    return { total, items: body.results.filter((r) => r && typeof r === "object") as Item[] };
+    // A malformed entry keeps its place as an empty item, so page lengths stay true.
+    const items = body.results.map((r) => (r && typeof r === "object" ? r : {}) as Item);
+    return { total, items };
   }
 
   private async get(url: string) {
@@ -387,11 +395,12 @@ function toListingSeen(
     vehicle: prune(vehicle),
     odometerKm: typeof d.tachometer === "number" ? d.tachometer : undefined,
     price: { amount: typeof d.price === "number" ? d.price : Number.NaN, currency: "CZK" },
+    // A price shown without VAT is net even when the VAT is also deductible.
     priceBasis:
-      d.price_is_vat_deductible === true
-        ? "gross"
-        : d.price_is_without_vat === true
-          ? "net"
+      d.price_is_without_vat === true
+        ? "net"
+        : d.price_is_vat_deductible === true
+          ? "gross"
           : "unknown",
     seller: d.premise ? "dealer" : "private",
     location: Object.keys(location).length > 0 ? location : undefined,

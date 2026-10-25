@@ -21,7 +21,7 @@ import { sautoSource } from "./sauto.ts";
 // sautoSource(OPTIONS), personal fields (phone, user, VIN, description) stripped.
 const fixture = new URL("./fixtures/dacia-spring.cassette.json", import.meta.url);
 const now = new Date("2026-10-25T13:27:00Z");
-const OPTIONS = { manufacturerModel: "dacia:spring", pageSize: 4, sliceLimit: 3 };
+const OPTIONS = { manufacturerModel: "dacia:spring", pageSize: 4, sliceLimit: 8 };
 
 async function harvest(
   mode: HarvestMode,
@@ -198,6 +198,20 @@ describe("sauto source", () => {
     expect(listings(observations)).toHaveLength(8);
   });
 
+  it("incremental run keeps walking past a page of recent listings without a price", async () => {
+    const { observations, urls } = await harvest(
+      "incremental",
+      { lastRunAt: new Date("2026-10-14T12:00:00Z") },
+      (cassette) =>
+        editBodies(cassette, firstSearchPage, (body) => {
+          for (const item of body.results)
+            Object.assign(item, { price: null, price_by_agreement: true });
+        }),
+    );
+    expect(searches(urls)).toHaveLength(2);
+    expect(listings(observations)).toHaveLength(4);
+  });
+
   it("incremental run re-yields known listings changed since the last run", async () => {
     const all = listings((await harvest("incremental")).observations);
     const known = { isKnown: () => true };
@@ -209,10 +223,15 @@ describe("sauto source", () => {
   });
 
   it("full run halves bands over the slice limit and reports each finished slice", async () => {
-    const { observations } = await harvest("full");
+    const { observations, urls } = await harvest("full");
     const done = slices(observations);
-    expect(done.length).toBeGreaterThan(6);
     expect(new Set(done).size).toBe(done.length);
+    // A leaf band paged in overlapping steps (pageSize 4, step 3); overlaps yield once.
+    expect(searches(urls).some((u) => u.includes("price_from") && u.includes("offset=3"))).toBe(
+      true,
+    );
+    const refs = listings(observations).map((o) => o.ref);
+    expect(new Set(refs).size).toBe(refs.length);
     expect(done).toContain("new/134217728-");
     expect(done).toContain("demo/134217728-");
     expect(done.some((s) => s.startsWith("used/") && s !== "used/0-134217728")).toBe(true);
@@ -279,6 +298,32 @@ describe("sauto source", () => {
     expect(out.filter((o) => o.ref !== "" && o.vehicle.make !== "")).toHaveLength(all.length - 2);
   });
 
+  it("a malformed search entry neither ends its slice's paging nor its census", async () => {
+    const full = await harvest("full");
+    const paged = searches(full.urls).find(
+      (u) => u.includes("price_from") && u.includes("offset=3"),
+    );
+    const pageOne = paged?.replace("offset=3", "offset=0");
+    expect(pageOne).toBeDefined();
+    let dropped = "";
+    const { observations, urls } = await harvest("full", {}, (cassette) =>
+      editBodies(
+        cassette,
+        (url) => url === pageOne,
+        (body) => {
+          dropped = String(body.results[0]?.id);
+          (body.results as unknown[])[0] = null;
+        },
+      ),
+    );
+    expect(urls).toContain(paged);
+    const out = listings(observations);
+    expect(out.filter((o) => o.ref === "")).toHaveLength(1);
+    expect(out.some((o) => o.ref === dropped)).toBe(false);
+    expect(out.length).toBe(listings(full.observations).length);
+    expect(slices(observations)).toEqual(slices(full.observations));
+  });
+
   it("skips listings without a price and reports a removed listing gone", async () => {
     const all = listings((await harvest("incremental")).observations);
     const [unpriced, removed] = all as [ListingSeen, ListingSeen];
@@ -303,6 +348,16 @@ describe("sauto source", () => {
     );
     expect(observations).toContainEqual({ kind: "ListingGone", ref: removed.ref });
     expect(listings(observations)).toHaveLength(all.length - 2);
+  });
+
+  it("a price shown without VAT is net, even when the VAT is deductible", async () => {
+    const [first] = listings((await harvest("incremental")).observations) as [ListingSeen];
+    const { observations } = await harvest("incremental", {}, (cassette) =>
+      editBodies(cassette, isDetail(first.ref), (body) =>
+        Object.assign(body.result, { price_is_vat_deductible: true, price_is_without_vat: true }),
+      ),
+    );
+    expect(listings(observations)[0]).toMatchObject({ ref: first.ref, priceBasis: "net" });
   });
 
   it("fails the run when the API answers with a page that is not JSON", async () => {
