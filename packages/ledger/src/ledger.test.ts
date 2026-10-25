@@ -1,4 +1,4 @@
-import type { CatalogEntry, ListingSeen, Observation } from "@cca/vocabulary";
+import type { CatalogEntry, ListingSeen, ListPrice, Observation } from "@cca/vocabulary";
 import { afterEach, describe, expect, it } from "vitest";
 import { type Ledger, openLedger } from "./index.ts";
 
@@ -258,5 +258,32 @@ describe("Ledger", () => {
       "fact co2GKm must be a finite number >= 0",
       "unknown fact colour",
     ]);
+  });
+  it("gives a price-list Source the edition in force of each of its Offers", async () => {
+    ledger = openLedger(":memory:");
+    const edition = (ref: string, amount: number, validFrom: string, validTo?: string) =>
+      ({
+        kind: "ListPrice",
+        ref,
+        vehicle: { make: "Škoda", model: "Kodiaq", fuel: "diesel", powerKw: 110 },
+        price: { amount, currency: "CZK" },
+        market: "CZ",
+        validFrom,
+        ...(validTo ? { validTo } : {}),
+      }) satisfies ListPrice;
+    await run("skoda-pricelist", "full", "2026-09-02", [
+      edition("a", 1_000_000, "2026-09-01"),
+      edition("b", 1_100_000, "2026-09-01"),
+    ]);
+    await run("skoda-pricelist", "full", "2026-10-22", [
+      edition("a", 1_050_000, "2026-10-21"),
+      edition("b", 1_100_000, "2026-09-01", "2026-10-20"),
+    ]);
+    await run("vw-pricelist", "full", "2026-10-22", [edition("a", 900_000, "2026-10-01")]);
+
+    expect(ledger.checkpoint("skoda-pricelist").offersInForce()).toEqual([
+      edition("a", 1_050_000, "2026-10-21"),
+    ]);
+    expect(ledger.checkpoint("cnb").offersInForce()).toEqual([]);
   });
 });

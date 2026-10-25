@@ -1,5 +1,5 @@
 import type { Http } from "@cca/http";
-import type { Observation } from "@cca/vocabulary";
+import type { ListPrice, Observation } from "@cca/vocabulary";
 
 /** Stable kebab-case id of a Source adapter ("cnb", "sauto", "autoscout24-de"). */
 export type SourceId = string;
@@ -67,6 +67,13 @@ export interface Checkpoint {
    * one starts with every slice null.
    */
   sliceDoneAt(slice: string): Date | null;
+  /**
+   * The edition in force of each of this Source's Offers: per `ref`, the edition with the latest
+   * `validFrom`, left out when that edition has a `validTo`. A price-list Source compares a new
+   * list with it and withdraws the Offers the list dropped by re-emitting these editions with
+   * `validTo` (docs/adr/0003-source-seam-and-observation-vocabulary.md).
+   */
+  offersInForce(): readonly ListPrice[];
 }
 
 export interface Logger {
@@ -80,4 +87,5 @@ export const emptyCheckpoint: Checkpoint = {
   lastRunAt: null,
   isKnown: () => false,
   sliceDoneAt: () => null,
+  offersInForce: () => [],
 };

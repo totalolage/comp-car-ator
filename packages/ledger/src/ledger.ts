@@ -96,6 +96,9 @@ export function openLedger(path: string): Ledger {
       `INSERT INTO variant_facts (source, key, data, updated) VALUES (?, ?, ?, ?)
        ON CONFLICT (source, key) DO UPDATE SET data = excluded.data, updated = excluded.updated`,
     ),
+    listPricesOf: db.prepare(
+      "SELECT ref, data FROM list_prices WHERE source = ? ORDER BY ref, valid_from",
+    ),
     upsertListPrice: db.prepare(
       `INSERT INTO list_prices (source, ref, valid_from, data) VALUES (?, ?, ?, ?)
        ON CONFLICT (source, ref, valid_from) DO UPDATE SET data = excluded.data`,
@@ -225,6 +228,14 @@ export function openLedger(path: string): Ledger {
         sliceDoneAt: (slice) => {
           const done = q.sliceDoneAt.get(source, scope, census.id, slice) as { at: string | null };
           return done.at ? new Date(done.at) : null;
+        },
+        offersInForce: () => {
+          const latest = new Map<string, ListPrice>();
+          for (const row of q.listPricesOf.all(source) as { ref: string; data: string }[]) {
+            const data = JSON.parse(row.data) as Omit<ListPrice, "kind" | "ref">;
+            latest.set(row.ref, { kind: "ListPrice", ref: row.ref, ...data });
+          }
+          return [...latest.values()].filter((edition) => edition.validTo === undefined);
         },
       };
     },
