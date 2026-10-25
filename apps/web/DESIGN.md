@@ -60,8 +60,12 @@ Sentence case everywhere; no uppercase labels.
   appears in the query string.
 - Facet rail, top to bottom: make, model (once a make is chosen), body, fuel, transmission,
   production years, power, new price, used price, odometer (with one quick pick per Bundle
-  odometer band), seats, consumption, listing country, listing source. Counts are the
-  engine's disjunctive counts: each is what that click would leave. Enum options keep a fixed
+  odometer band), seats, consumption, listing country, listing source. Counts are per value:
+  how many Variants have it under the other facets' filters, so checking a value never
+  changes its own facet's counts. In a facet with a checked value, unchecked make, model,
+  body, fuel and transmission options show "+N", exactly what checking them adds; country
+  and source counts overlap, so they stay plain. A footnote under the rail says this, and
+  each checkbox's accessible name carries the count's meaning (ADR 0009). Enum options keep a fixed
   order (vocabulary order, or by name), and a chosen value with no matches stays listed so it
   can be unchosen. Lists over 12 values scroll inside their group.
 - Range fields narrow on every keystroke that parses (Czech `1,5` is fine); the placeholder
@@ -75,7 +79,7 @@ Sentence case everywhere; no uppercase labels.
 ## Components (classes in base.css)
 
 `masthead`, `menu` / `menu-panel` / `tree`, `crumbs`, `page-title`, `page-summary`,
-`section-title`, `split` / `rail` / `results`, `facet` / `facet-option`, `button-quiet`,
+`section-title`, `split` / `rail` / `results`, `facet` / `facet-option` / `facet-note`, `button-quiet`,
 `facet-scroll`, `range`, `bands` / `band`, `rail-toggle`, `data` (table; `.num` right-aligns;
 `.sort` header buttons), `table-scroll`, `results-more`, `subcategories`, `count`, `badge`,
 `empty`, `colophon`.

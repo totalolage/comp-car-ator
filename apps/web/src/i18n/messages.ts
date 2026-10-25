@@ -76,6 +76,9 @@ const cs = {
   "facet.odometerKm": "Najeto (km)",
   "facet.seats": "Počet míst",
   "facet.consumptionL100km": "Spotřeba (l/100 km)",
+  "facet.adds": "přidá {variants}",
+  "facet.note":
+    "Čísla udávají počet variant s danou hodnotou; +N je počet variant, které zaškrtnutí přidá.",
   "range.min": "od",
   "range.max": "do",
   "model.listings": "Inzeráty",
@@ -179,6 +182,9 @@ const en: Record<MessageKey, string> = {
   "facet.odometerKm": "Odometer (km)",
   "facet.seats": "Seats",
   "facet.consumptionL100km": "Consumption (l/100 km)",
+  "facet.adds": "adds {variants}",
+  "facet.note":
+    "Numbers count the variants with that value; +N is how many variants checking it adds.",
   "range.min": "from",
   "range.max": "to",
   "model.listings": "Listings",

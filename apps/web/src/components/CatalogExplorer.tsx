@@ -32,6 +32,7 @@ import {
   RAIL,
   type RangeFacet,
   rangeFromText,
+  toggleValue,
   withoutScope,
 } from "../lib/catalog-view.ts";
 import { siteStore } from "../lib/store.ts";
@@ -91,18 +92,7 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
   }
 
   function toggle(facet: EnumFacet, value: string) {
-    update((filters) => {
-      const selected = new Set<string>(filters[facet] ?? []);
-      if (selected.has(value)) selected.delete(value);
-      else selected.add(value);
-      const next: Record<string, unknown> = { ...filters, [facet]: [...selected] };
-      if (selected.size === 0) {
-        delete next[facet];
-        // Models belong to makes: dropping the last make drops the model choice too.
-        if (facet === "make") delete next.model;
-      }
-      return next as VariantFilters;
-    });
+    update((filters) => toggleValue(filters, facet, value));
   }
 
   function setRange(facet: RangeFacet, range: Range | undefined) {
@@ -160,24 +150,32 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
             <fieldset key={facet.key} class="facet" data-facet={facet.key}>
               <legend>{t.t(`facet.${facet.key}`)}</legend>
               <div class={options.length > 12 ? "facet-scroll" : undefined}>
-                {options.map(({ value, label, count, checked }) => (
-                  <label key={value} class="facet-option">
-                    <input
-                      type="checkbox"
-                      name={facet.key}
-                      value={value}
-                      checked={checked}
-                      disabled={!catalog}
-                      onChange={() => toggle(facet.key, value)}
-                    />
-                    <span class="facet-label">{label}</span>
-                    <span class="count">{count}</span>
-                  </label>
-                ))}
+                {options.map(({ value, label, count, checked, adds }) => {
+                  const variants = t.count("count.variants", count);
+                  const meaning = adds ? t.t("facet.adds", { variants }) : variants;
+                  return (
+                    <label key={value} class="facet-option">
+                      <input
+                        type="checkbox"
+                        name={facet.key}
+                        value={value}
+                        checked={checked}
+                        disabled={!catalog}
+                        aria-label={`${label}, ${meaning}`}
+                        onChange={() => toggle(facet.key, value)}
+                      />
+                      <span class="facet-label">{label}</span>
+                      <span class="count" title={meaning} aria-hidden="true">
+                        {adds ? `+${count}` : count}
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             </fieldset>
           );
         })}
+        <p class="facet-note">{t.t("facet.note")}</p>
         <button type="button" class="button-quiet" disabled={!catalog || !active} onClick={clear}>
           {t.t("catalog.clear")}
         </button>

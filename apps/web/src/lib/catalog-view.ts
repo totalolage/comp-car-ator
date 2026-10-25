@@ -75,12 +75,32 @@ export function namesOf(rows: readonly VariantRow[]): Names {
   return names;
 }
 
+/**
+ * One checkbox in an enum facet. `count` is how many Variants have the value under every
+ * other facet's filters, the conventional per-value count: it does not change when other
+ * values of the same facet are checked or unchecked. `adds` marks a count the rail shows as
+ * "+N" because checking the value adds exactly that many Variants to the list.
+ */
 export interface FacetOption {
   value: string;
   label: string;
   count: number;
   checked: boolean;
+  adds: boolean;
 }
+
+/**
+ * Facets where each Variant has exactly one value, so checking another value adds exactly
+ * its count. A Variant can be listed in several countries and sources, so their counts
+ * overlap and checking one more adds at most its count; those show the plain count.
+ */
+const SINGLE_VALUED: ReadonlySet<EnumFacet> = new Set([
+  "make",
+  "model",
+  "body",
+  "fuel",
+  "transmission",
+]);
 
 const VOCABULARY: Partial<Record<EnumFacet, readonly string[]>> = {
   body: BODIES,
@@ -107,11 +127,13 @@ export function facetOptions(
   for (const value of selected) if (!counts.has(value)) counts.set(value, 0);
   const label = (value: string) =>
     key === "make" || key === "model" ? (names[value] ?? value) : t.label(key, value);
+  const additive = selected.size > 0 && SINGLE_VALUED.has(key);
   const options = [...counts].map(([value, count]) => ({
     value,
     label: label(value),
     count,
     checked: selected.has(value),
+    adds: additive && !selected.has(value),
   }));
   const order = VOCABULARY[key];
   return options.sort(
@@ -119,6 +141,24 @@ export function facetOptions(
       ? (a, b) => order.indexOf(a.value) - order.indexOf(b.value)
       : (a, b) => a.label.localeCompare(b.label, t.lang),
   );
+}
+
+/** Filters after clicking one enum facet checkbox: the value joins or leaves the facet. */
+export function toggleValue(
+  filters: VariantFilters,
+  key: EnumFacet,
+  value: string,
+): VariantFilters {
+  const selected = new Set<string>(filters[key] ?? []);
+  if (selected.has(value)) selected.delete(value);
+  else selected.add(value);
+  const next: Record<string, unknown> = { ...filters, [key]: [...selected] };
+  if (selected.size === 0) {
+    delete next[key];
+    // Models belong to makes: dropping the last make drops the model choice too.
+    if (key === "make") delete next.model;
+  }
+  return next as VariantFilters;
 }
 
 /** Quick picks under the odometer range, one per published odometer band. */

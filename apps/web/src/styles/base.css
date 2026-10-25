@@ -367,6 +367,13 @@ main:focus {
   overflow-y: auto;
 }
 
+.facet-note {
+  margin: 0 0 var(--s2);
+  padding: 0 var(--s2);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
 .range {
   display: grid;
   grid-template-columns: 1fr 1fr;

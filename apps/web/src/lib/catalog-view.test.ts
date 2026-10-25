@@ -19,6 +19,7 @@ import {
   odometerBands,
   RAIL,
   rangeFromText,
+  toggleValue,
   withoutScope,
 } from "./catalog-view.ts";
 import { type CatalogState, readCatalogState, writeCatalogState } from "./url-state.ts";
@@ -121,6 +122,8 @@ const views: CatalogState[] = [
     sort: { key: "consumptionL100km", dir: "asc" },
   },
   { filters: { newPriceCzk: { min: 600_000 }, consumptionL100km: { max: 7.5 } } },
+  { filters: { make: ["skoda", "volkswagen"], model: ["skoda/m1", "volkswagen/m2"] } },
+  { filters: { market: ["CZ", "DE"], source: ["sauto", "tipcars"], body: ["wagon", "suv"] } },
 ];
 
 describe("catalog view over the query engine", () => {
@@ -133,17 +136,90 @@ describe("catalog view over the query engine", () => {
     }
   });
 
-  it("gives every facet value the count its click would produce", () => {
+  it("gives every facet count the meaning the rail states for the click it labels", () => {
+    const single = new Set<EnumFacet>(["make", "model", "body", "fuel", "transmission"]);
     for (const view of views) {
-      const result = catalog.query(catalogQuery(view));
+      const result = catalog.query(catalogQuery(view, {}, everything));
       for (const facet of enumFacets) {
+        const active = (view.filters[facet]?.length ?? 0) > 0;
         for (const option of facetOptions(facet, result, view.filters, {}, t)) {
-          const chosen = { ...view.filters, [facet]: [option.value] };
-          const clicked = catalog.query(catalogQuery({ ...view, filters: chosen }, {}, 0));
-          expect([facet, option.value, clicked.total]).toEqual([facet, option.value, option.count]);
+          // The checkbox's own toggle, then a trip through the URL, as a click does.
+          const filters = toggleValue(view.filters, facet, option.value);
+          const state = readCatalogState(writeCatalogState({ ...view, filters }));
+          const after = catalog.query(catalogQuery(state, {}, everything)).total;
+          const { total } = result;
+          const { count } = option;
+          const at = [facet, option.value];
+          expect([...at, option.adds]).toEqual([
+            ...at,
+            active && !option.checked && single.has(facet),
+          ]);
+          if (!active) expect([...at, after]).toEqual([...at, count]);
+          else if (option.adds) expect([...at, after]).toEqual([...at, total + count]);
+          else if (!option.checked) {
+            // Listing country or source: Variants overlap, so the click adds at most N.
+            expect(after).toBeGreaterThanOrEqual(Math.max(total, count));
+            expect(after).toBeLessThanOrEqual(total + count);
+          } else if (view.filters[facet]?.length === 1) {
+            // The only checked value: every row has it, and unchecking clears the facet.
+            expect([...at, count]).toEqual([...at, total]);
+            expect(state.filters[facet]).toBeUndefined();
+          } else if (single.has(facet)) expect([...at, after]).toEqual([...at, total - count]);
+          else {
+            expect(after).toBeGreaterThanOrEqual(total - count);
+            expect(after).toBeLessThanOrEqual(total);
+          }
         }
       }
     }
+  });
+
+  it("keeps a facet's counts when its own values are toggled and recounts the others", () => {
+    const optionsOf = (filters: VariantFilters, facet: EnumFacet) =>
+      facetOptions(facet, catalog.query(catalogQuery({ filters }, {}, 0)), filters, {}, t);
+    const counts = (filters: VariantFilters, facet: EnumFacet) =>
+      Object.fromEntries(optionsOf(filters, facet).map((o) => [o.value, o.count]));
+    const option = (filters: VariantFilters, facet: EnumFacet, value: string) =>
+      optionsOf(filters, facet).find((o) => o.value === value);
+    const total = (filters: VariantFilters) =>
+      catalog.query(catalogQuery({ filters }, {}, 0)).total;
+    const start: VariantFilters = { fuel: ["diesel"] };
+    const makes = counts(start, "make");
+    const a = Object.keys(makes)[0] as string;
+    const b = Object.keys(makes)[1] as string;
+    const ca = makes[a] as number;
+    const cb = makes[b] as number;
+
+    const withA = toggleValue(start, "make", a);
+    expect(total(withA)).toBe(ca);
+    expect(counts(withA, "make")).toEqual(makes);
+    expect(option(withA, "make", b)).toMatchObject({ count: cb, checked: false, adds: true });
+
+    const withAB = toggleValue(withA, "make", b);
+    expect(withAB.make).toEqual([a, b]);
+    expect(total(withAB)).toBe(ca + cb);
+    expect(counts(withAB, "make")).toEqual(makes);
+    expect(option(withAB, "make", b)).toMatchObject({ count: cb, checked: true, adds: false });
+
+    const removedB = toggleValue(withAB, "make", b);
+    expect(removedB).toEqual(withA);
+    expect(total(removedB)).toBe(ca);
+    expect(option(removedB, "make", b)).toMatchObject({ count: cb, checked: false, adds: true });
+
+    // Other facets count only the chosen makes; with nothing chosen there, they sum to the total.
+    for (const filters of [withA, withAB, removedB]) {
+      const sum = Object.values(counts(filters, "body")).reduce((n, c) => n + c, 0);
+      expect(sum).toBe(total(filters));
+    }
+    expect(counts(withAB, "body")).not.toEqual(counts(withA, "body"));
+
+    // Clearing the last make clears the facet and the models under it.
+    const withModel = toggleValue(withA, "model", `${a}/m1`);
+    const cleared = toggleValue(withModel, "make", a);
+    expect(cleared).toEqual(start);
+    expect(writeCatalogState({ filters: cleared })).toBe("?fuel=diesel");
+    expect(total(cleared)).toBe(total(start));
+    expect(optionsOf(cleared, "make").every((o) => !o.checked && !o.adds)).toBe(true);
   });
 
   it("narrows rows and counts together", () => {
