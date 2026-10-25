@@ -248,7 +248,10 @@ export function openLedger(path: string): Ledger {
         census: "not-full",
       };
       let rejectedTotal = 0;
-      let rejectedInSlice = 0;
+      // Observations since the previous SliceDone belong to the next one. A slice that had a
+      // rejection stays not done for the rest of the run, even if its SliceDone repeats.
+      let rejectedInSlice = false;
+      const tainted = new Set<string>();
       let open = false;
       let pending = 0;
       const begin = () => {
@@ -263,13 +266,16 @@ export function openLedger(path: string): Ledger {
 
       try {
         for await (const observation of observations) {
-          const sliceDone = observation.kind === "SliceDone";
           let reason = invalidReason(observation);
-          if (!reason && sliceDone && rejectedInSlice > 0) {
-            reason = "slice had rejected observations, so it is not done";
+          if (observation.kind === "SliceDone") {
+            if (rejectedInSlice) tainted.add(observation.slice);
+            if (!reason && tainted.has(observation.slice)) {
+              reason = "slice had rejected observations, so it is not done";
+            }
+            rejectedInSlice = false;
+          } else if (reason) {
+            rejectedInSlice = true;
           }
-          if (sliceDone) rejectedInSlice = 0;
-          else if (reason) rejectedInSlice++;
           if (reason) {
             rejectedTotal++;
             if (summary.rejected.length < MAX_REJECTIONS_REPORTED) {

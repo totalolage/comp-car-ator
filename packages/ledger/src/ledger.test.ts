@@ -229,6 +229,7 @@ describe("Ledger", () => {
         yield { kind: "SliceDone", slice: "A" } as const;
         yield seen("2", Number.NaN);
         yield { kind: "SliceDone", slice: "B" } as const;
+        yield { kind: "SliceDone", slice: "B" } as const;
         throw new Error("HTTP 503");
       },
     });
@@ -236,6 +237,12 @@ describe("Ledger", () => {
     const checkpoint = ledger.checkpoint("as24");
     expect(checkpoint.sliceDoneAt("A")).toEqual(day("2026-10-10"));
     expect(checkpoint.sliceDoneAt("B")).toBeNull();
+
+    // A full run that completes with a rejection ends the census without inferring absence,
+    // so the next census harvests every slice again.
+    const rejected = await run("as24", "full", "2026-10-11", [seen("2", Number.NaN)]);
+    expect(rejected.census).toBe("skipped-rejections");
+    expect(ledger.checkpoint("as24").sliceDoneAt("A")).toBeNull();
   });
 
   it("rejects VariantFacts with unknown fields or non-finite values", async () => {

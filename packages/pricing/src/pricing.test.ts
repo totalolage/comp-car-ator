@@ -135,6 +135,24 @@ describe("landedPrice", () => {
     expect(result.ok && result.landed.totalCzk).toBe(359_900);
   });
 
+  it("adds Czech VAT to a CZ dealer's net amounts, each on its own basis", () => {
+    const result = landedPrice(
+      {
+        price: { amount: 350_000, currency: "CZK" },
+        sellerExtras: { amount: 10_000, currency: "CZK", basis: "net" },
+        market: "CZ",
+        seller: "dealer",
+        priceBasis: "gross",
+        condition: "used",
+      },
+      env,
+    );
+    expect(result.ok && result.landed.lines).toEqual([
+      { code: "price", czk: 350_000 },
+      { code: "sellerExtras", czk: 12_100 },
+    ]);
+  });
+
   it("normalizes gross seller extras of a net-priced new car on their own basis", () => {
     const result = landedPrice(
       {

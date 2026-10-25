@@ -149,6 +149,8 @@ export interface ListPrice {
  * (e.g. an AutoScout24 make/model/year/price query under the result cap). `slice` is the
  * adapter's own stable key. Full runs report slices so a census that fails part way resumes:
  * the next full run reads `Checkpoint.sliceDoneAt` and skips slices already done.
+ * Harvest slices one after another: Observations since the previous SliceDone (or the run's
+ * start) belong to this one, and a rejected one among them keeps the slice not done.
  */
 export interface SliceDone {
   kind: "SliceDone";

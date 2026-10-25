@@ -93,11 +93,18 @@ export function landedPrice(input: LandedInput, env: PricingEnv): LandedResult {
   if (input.market === "CZ") {
     const fx = rateOf(input.price.currency, env.fx);
     if (!fx) return { ok: false, reason: "fx-missing" };
+    // A private buyer pays a dealer's net amounts plus Czech VAT.
+    const consumer = (amount: number, basis: PriceBasis) =>
+      input.seller === "dealer" && basis === "net" ? amount * (1 + ORIGIN_VAT.CZ) : amount;
     const lines: LandedPrice["lines"] = [
-      { code: "price", czk: round(input.price.amount * fx.czkPerUnit) },
+      { code: "price", czk: round(consumer(input.price.amount, input.priceBasis) * fx.czkPerUnit) },
     ];
-    if (input.sellerExtras?.amount) {
-      lines.push({ code: "sellerExtras", czk: round(input.sellerExtras.amount * fx.czkPerUnit) });
+    const extras = input.sellerExtras;
+    if (extras?.amount) {
+      lines.push({
+        code: "sellerExtras",
+        czk: round(consumer(extras.amount, extras.basis) * fx.czkPerUnit),
+      });
     }
     const totalCzk = lines.reduce((sum, line) => sum + line.czk, 0);
     return { ok: true, landed: { totalCzk, lines, flags: [], fxDate: fx.date } };
