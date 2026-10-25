@@ -386,6 +386,19 @@ describe("autoesa source", () => {
     );
   });
 
+  it("a later page without pagination does not cut the walk short", async () => {
+    // Page 2 still has a new listing, so the walk reads page 3, as page 1 advertised.
+    const cassette = edit(
+      await loadCassette(incremental),
+      "?rok_od=2000&razeni=8&stranka=2",
+      body((b) => b.replace(/<div id="snippet--paginationTop"[\s\S]*?<\/ul>/, "")),
+    );
+    const urls: string[] = [];
+    const os = await harvest(cassette, { mode: "incremental", known: await known(), urls });
+    expect(listings(os).map((o) => o.ref)).toEqual(FRESH);
+    expect(urls.filter((u) => u.includes("/vsechna-auta"))).toHaveLength(3);
+  });
+
   it("a changed list page fails the run", async () => {
     const cassette = edit(
       await loadCassette(full),

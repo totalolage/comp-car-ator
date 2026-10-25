@@ -186,10 +186,11 @@ class Harvest {
   }
 
   /**
-   * A list's pages from the first to the last it reports (or `maxPages`; a full walk then
-   * throws).
+   * A list's pages from the first to the last any of them reports (or `maxPages`; a full walk
+   * then throws). A page that loses its pagination cannot cut the walk short.
    */
   private async *pages(filter: string, full: boolean) {
+    let last = 1;
     for (let n = 1; ; n++) {
       if (n > this.maxPages) {
         if (full) throw new Error(`Autoesa ?${filter} has more than ${this.maxPages} pages`);
@@ -198,8 +199,9 @@ class Harvest {
       const url = `${BASE}/vsechna-auta?${filter}${n > 1 ? `&stranka=${n}` : ""}`;
       const page = parseListPage(await this.get(url), url, n);
       this.ctx.log.info("autoesa page", { url, cards: page.cards.length, total: page.total });
+      last = Math.max(last, page.lastPage);
       yield page;
-      if (page.cards.length === 0 || n >= page.lastPage) return;
+      if (page.cards.length === 0 || n >= last) return;
     }
   }
 
