@@ -157,6 +157,30 @@ describe("Resolver", () => {
     });
   });
 
+  it("does not read door counts as diesel or climate control as a gearbox", () => {
+    // The only 110 kW manual Golf is a diesel, but "5D" is five doors, not a diesel badge.
+    expect(
+      resolve({ make: "VW", model: "Golf", trim: "1.5 5D", powerKw: 110, transmission: "manual" }),
+    ).toMatchObject({ status: "model", reason: "ambiguous" });
+    expect(variantOf({
+        make: "VW",
+        model: "Golf",
+        trim: "2.0d 5D",
+        powerKw: 110,
+        transmission: "manual",
+        firstRegistration: { year: 2022 },
+      })).toBe(
+      "volkswagen/golf/mk8/hatchback-diesel-110kw-manual",
+    );
+    const kodiaq110 = { ...kodiaq, transmission: undefined, powerKw: 110 };
+    for (const trim of ["Automatická klimatizace", "Automatische Klimaanlage", "Aut. klima", "Aut.klima"]) {
+      expect(resolve({ ...kodiaq110, trim })).toMatchObject({ reason: "ambiguous" });
+    }
+    for (const trim of ["Automatik, Klima", "2,0 TDI Aut. Navi", "Automat"]) {
+      expect(variantOf({ ...kodiaq110, trim })).toBe("skoda/kodiaq/mk1/suv-diesel-110kw-automatic");
+    }
+  });
+
   it("tolerates power within 3 kW and no more", () => {
     expect(variantOf({ ...kodiaq, powerKw: 137 })).toBe(
       "skoda/kodiaq/mk1/suv-diesel-140kw-automatic",
@@ -245,6 +269,20 @@ describe("Resolver", () => {
       ).toMatchObject({ reason: "ambiguous" });
     });
 
+    it("does not match when the text names a generation the catalog lacks, or two", () => {
+      // The catalog has Kodiaq I only; "Kodiaq II" is no evidence for it.
+      expect(resolve({ ...kodiaq, powerKw: 140, trim: "II 2.0 TDI" })).toMatchObject({
+        status: "model",
+        reason: "ambiguous",
+      });
+      expect(resolve({ ...kodiaq, powerKw: 140, trim: "Mk2 2.0 TDI" })).toMatchObject({
+        status: "model",
+      });
+      expect(
+        resolve({ ...octavia, firstRegistration: { year: 2022 }, trim: "Mk3 IV" }),
+      ).toMatchObject({ status: "model", reason: "ambiguous" });
+    });
+
     it("finds no Variant when the named generation contradicts the year", () => {
       expect(resolve({ ...octavia, firstRegistration: { year: 2023 }, trim: "III" })).toMatchObject(
         {
@@ -290,6 +328,11 @@ describe("Resolver", () => {
       reason: "unknown-model",
     });
     // "Range Rover Sport" shares engines with the Range Rover but is another Model.
+    for (const model of ["RangeRover Sport", "Range-Rover Sport", "Range Rover SPORT HSE"]) {
+      expect(
+        resolve({ make: "Land Rover", model, fuel: "diesel", powerKw: 225, transmission: "automatic" }),
+      ).toEqual({ status: "unmatched", reason: "unknown-model" });
+    }
     expect(
       resolve({
         make: "Land Rover",
@@ -313,5 +356,26 @@ describe("Resolver", () => {
     expect(reversed.resolve({ make: "VW", model: "Golf" })).toEqual(
       resolver.resolve({ make: "VW", model: "Golf" }),
     );
+  });
+
+  it("picks the same Model id when two catalog spellings share an alias group", () => {
+    const w206 = { slug: "w206", name: "W206", from: 2021 };
+    const spellings = [
+      ...variants("Mercedes-Benz", "Třída C", w206, [
+        { body: "wagon", fuel: "diesel", powerKw: 147, transmission: "automatic" },
+      ]),
+      ...variants("Mercedes-Benz", "C-Klasse", w206, [
+        { body: "sedan", fuel: "diesel", powerKw: 147, transmission: "automatic" },
+      ]),
+    ];
+    const listing = { make: "Mercedes", model: "C 220 d", fuel: "diesel", powerKw: 147 } as const;
+    const expected = {
+      status: "model",
+      makeId: "mercedes-benz",
+      modelId: "mercedes-benz/c-klasse",
+      reason: "ambiguous",
+    };
+    expect(createResolver(spellings).resolve(listing)).toEqual(expected);
+    expect(createResolver([...spellings].reverse()).resolve(listing)).toEqual(expected);
   });
 });

@@ -45,7 +45,12 @@ interface Model {
   variants: CatalogVariant[];
   /** Words that name each of the model's generations ("IV", "mk4", "PD"). */
   generationWords: Map<GenerationId, string[]>;
+  /** Lower-case words of the catalog's model name ("v", "class" for "V-Class"). */
+  nameWords: Set<string>;
 }
+
+/** Words a listing uses to claim a generation, whatever the catalog calls its generations. */
+const GENERATION_CLAIM = /^(?:II|III|IV|V|VI|VII|VIII|IX|[Mm][Kk]\d{1,2})$/;
 
 /**
  * Matching rule (docs/adr/0002-variant-definition.md):
@@ -57,8 +62,10 @@ interface Model {
  * 3. A Variant fits when every known field agrees: fuel, transmission and body equal, power
  *    within 3 kW, year inside the Variant's production years (manufacture year exactly,
  *    registration or model year ±1), and generation equal when the text names one.
- * 4. One fitting Variant is a match only if fuel and power are known; otherwise, or when
- *    several fit, the listing resolves to the Model. Fitting Variants are never ranked.
+ * 4. One fitting Variant is a match only if fuel and power are known and the text names at
+ *    most one generation, all of them known to the catalog ("Octavia III" when the catalog
+ *    has only the IV is not evidence for the IV). Otherwise, or when several fit, the listing
+ *    resolves to the Model. Fitting Variants are never ranked.
  * TODO(wave1-stream11): per-source `sourceTaxonomy` aliases once a Source needs them.
  */
 export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
@@ -76,6 +83,7 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
         makeId: variant.makeId,
         variants: [],
         generationWords: new Map(),
+        nameWords: new Set(split(variant.model).map((w) => w.toLowerCase())),
       };
       models.set(modelKey, model);
     }
@@ -103,6 +111,10 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
       const named = [...model.generationWords]
         .filter(([, names]) => names.some((name) => words.has(name)))
         .map(([id]) => id);
+      const known = new Set([...model.generationWords.values()].flat());
+      const unknownGeneration = hints.words.some(
+        (w) => GENERATION_CLAIM.test(w) && !known.has(w) && !model.nameWords.has(w.toLowerCase()),
+      );
 
       const fits = model.variants.filter(
         (v) =>
@@ -114,7 +126,9 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
           (named.length === 0 || named.includes(v.generationId)),
       );
       const only = fits.length === 1 ? fits[0] : undefined;
-      if (only && fuel !== undefined && powerKw !== undefined) {
+      const evidence =
+        fuel !== undefined && powerKw !== undefined && named.length <= 1 && !unknownGeneration;
+      if (only && evidence) {
         return {
           status: "matched",
           makeId: only.makeId,
@@ -135,6 +149,18 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
 const MAKE_KEYS = keyIndex(MAKE_GROUPS);
 const MODEL_KEYS = new Map(
   Object.entries(MODEL_ALIASES).map(([make, aliases]) => [make, keyIndex(aliases.groups ?? [])]),
+);
+/** Submodel words by model key, compacted like model keys ("c-max" → "cmax"). */
+const SUBMODELS = new Map(
+  Object.entries(MODEL_ALIASES).map(([make, aliases]) => [
+    make,
+    new Map(
+      Object.entries(aliases.submodels ?? {}).map(([model, words]) => [
+        modelKeyOf(make, model),
+        words.map((w) => w.replace(/-/g, "")),
+      ]),
+    ),
+  ]),
 );
 
 function keyIndex(groups: readonly (readonly string[])[]): Map<string, string> {
@@ -158,14 +184,13 @@ function modelKeyOf(makeKey: string, slug: string): string {
 
 function findModel(makeKey: string, models: Map<string, Model>, text: string): Model | undefined {
   const tokens = slugify(text).split("-").filter(Boolean);
-  const submodels = MODEL_ALIASES[makeKey]?.submodels ?? {};
   for (let length = tokens.length; length > 0; length--) {
-    const slug = tokens.slice(0, length).join("-");
-    const model = models.get(modelKeyOf(makeKey, slug));
+    const key = modelKeyOf(makeKey, tokens.slice(0, length).join("-"));
+    const model = models.get(key);
     if (!model) continue;
-    const rest = tokens.slice(length).join("-");
-    const isOther = (submodels[slug] ?? []).some(
-      (word) => rest === word || rest.startsWith(`${word}-`),
+    const rest = tokens.slice(length);
+    const isOther = (SUBMODELS.get(makeKey)?.get(key) ?? []).some((word) =>
+      rest.some((_, i) => rest.slice(0, i + 1).join("") === word),
     );
     return isOther ? undefined : model;
   }

@@ -29,7 +29,7 @@ const FUEL: [Fuel, RegExp][] = [
   [
     "diesel",
     word(
-      "tdi|tdci|cdi|crdi|hdi|bluehdi|dci|cdti|jtd|jtdm|multijet|m-jet|d-4d|td4|sd4|tdv6|sdv6|diesel|nafta|\\d+d",
+      "tdi|tdci|cdi|crdi|hdi|bluehdi|dci|cdti|jtd|jtdm|multijet|m-jet|d-4d|td4|sd4|tdv6|sdv6|diesel|nafta|\\d{2,3}d|\\d[.,]\\dd",
     ),
   ],
   ["petrol", word("e?tsi|tfsi|fsi|mpi|tce|puretech|ecoboost|t-gdi|gdi|benzin")],
@@ -38,8 +38,10 @@ const FUEL: [Fuel, RegExp][] = [
 const TRANSMISSION: [Transmission, RegExp][] = [
   [
     "automatic",
-    // "Aut." is automatic, but "Aut.klima" is climate control.
-    /(?<![a-z0-9])(?:\d?dsg|automat[a-z]*|autm|aut(?!\.?[a-z])|at|s-? ?tronic|tiptronic|steptronic|multitronic|pdk|cvt|dct|edc|eat\d|\dg-?tronic)(?![a-z0-9])/,
+    // "Automatik", "Aut." are the gearbox; "Automatická klimatizace", "Aut. klima" are not.
+    word(
+      `\\d?dsg|autm|at|s-? ?tronic|tiptronic|steptronic|multitronic|pdk|cvt|dct|edc|eat\\d|\\dg-?tronic|(?:automat[a-z]*|aut(?!\\.[a-z]))(?![a-z0-9])(?![.\\s]*(?:klim|clim))`,
+    ),
   ],
   ["manual", word("manual[a-z]*|schaltgetriebe|\\d?mt\\d?|\\dman")],
 ];
