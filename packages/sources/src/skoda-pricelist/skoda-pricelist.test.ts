@@ -219,6 +219,16 @@ describe("skoda-pricelist source", () => {
     expect(offers.some((o) => o.validTo)).toBe(false);
   });
 
+  it("reads a price-list link whose label is wrapped in markup", async () => {
+    const offers = await harvest({
+      cassette: await edit("/nabidka/ceniky-katalogy", (r) => ({
+        ...r,
+        body: r.body.replace(">Enyaq - Ceník<", "><span>Enyaq</span> - <b>Ceník</b><"),
+      })),
+    });
+    expect(offers.filter((o) => o.vehicle.model.startsWith("Enyaq"))).toHaveLength(18);
+  });
+
   it("a price-list link it cannot name keeps every model in the index", async () => {
     const warnings: string[] = [];
     const offers = await harvest({
