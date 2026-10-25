@@ -65,11 +65,12 @@ export function localReleaseStore(root: string): ReleaseStore {
 }
 
 /**
- * `github:<owner>/<repo>` (token from GITHUB_TOKEN) or a directory path.
+ * `github:<owner>/<repo>` (token from GITHUB_TOKEN; only releases tagged `tagPrefix…`) or a
+ * directory path.
  */
-export function releaseStoreFrom(spec: string, env = process.env): ReleaseStore {
+export function releaseStoreFrom(spec: string, tagPrefix: string, env = process.env): ReleaseStore {
   if (!spec.startsWith("github:")) return localReleaseStore(spec);
   const token = env.GITHUB_TOKEN;
   if (!token) throw new Error(`${spec} needs GITHUB_TOKEN`);
-  return githubReleaseStore({ repo: spec.slice("github:".length), token });
+  return githubReleaseStore({ repo: spec.slice("github:".length), token, tagPrefix });
 }

@@ -48,7 +48,13 @@ export async function harvestToLog(options: HarvestToLogOptions): Promise<Harves
   const { ledger, source, http, mode, now, out, log = silentLogger } = options;
   const signal = options.signal ?? new AbortController().signal;
   const file = createWriteStream(out);
+  // A write error is not the harvest failing: it fails the whole call.
+  let writeError: Error | null = null;
+  file.on("error", (error) => {
+    writeError ??= error;
+  });
   const write = async (line: Line) => {
+    if (writeError) throw writeError;
     if (!file.write(`${JSON.stringify(line)}\n`)) await once(file, "drain");
   };
   const report: HarvestReport = { source: source.id, mode, observations: 0, error: null };
@@ -71,13 +77,17 @@ export async function harvestToLog(options: HarvestToLogOptions): Promise<Harves
       }
       await write({ end: "complete" });
     } catch (error) {
+      if (writeError) throw writeError;
       report.error = String(error);
       await write({ end: "failed", error: report.error });
     }
   } finally {
-    file.end();
-    await once(file, "close");
+    if (!file.destroyed) {
+      file.end();
+      await once(file, "close").catch(() => {});
+    }
   }
+  if (writeError) throw writeError;
   return report;
 }
 

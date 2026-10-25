@@ -28,7 +28,7 @@ export const ASSETS = {
   bundle: "bundle.json.gz",
   manifest: "manifest.json",
 } as const;
-const TAG_PREFIX = "data-";
+export const TAG_PREFIX = "data-";
 
 export interface Manifest {
   dataRelease: 1;
@@ -222,14 +222,15 @@ export async function releaseRuns(options: ReleaseRunsOptions): Promise<ReleaseR
   );
   log.info(`released ${tag}`);
 
-  const stale = (await store.list()).filter((r) => r.tag.startsWith(TAG_PREFIX)).slice(keep);
-  for (const { tag: old } of stale) {
-    try {
+  // Best effort: the release is out, so a pruning failure must not fail the run.
+  try {
+    const stale = (await store.list()).filter((r) => r.tag.startsWith(TAG_PREFIX)).slice(keep);
+    for (const { tag: old } of stale) {
       await store.delete(old);
       log.info(`pruned ${old}`);
-    } catch (error) {
-      log.warn(`could not prune ${old}`, { error: String(error) });
     }
+  } catch (error) {
+    log.warn("could not prune old data releases", { error: String(error) });
   }
   return { tag, runs };
 }

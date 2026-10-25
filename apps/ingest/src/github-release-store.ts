@@ -11,6 +11,8 @@ export interface GithubReleaseStoreOptions {
   repo: string;
   /** Needs Contents: read and write on the repo. */
   token: string;
+  /** The store sees, cleans up and deletes only releases whose tag starts with this. */
+  tagPrefix: string;
   /** Default https://api.github.com; tests point it at a fake. */
   apiUrl?: string;
 }
@@ -56,12 +58,23 @@ export function githubReleaseStore(options: GithubReleaseStoreOptions): ReleaseS
     return (await response.json()) as T;
   }
 
+  /** This store's releases (tag prefix), drafts included, across every page. */
   async function releases(): Promise<GithubRelease[]> {
-    return json<GithubRelease[]>("/releases?per_page=100");
+    const all: GithubRelease[] = [];
+    let next: string | null = "/releases?per_page=100";
+    while (next) {
+      const response = await call(next);
+      if (!response.ok) throw new Error(`GitHub ${next}: ${response.status}`);
+      all.push(...((await response.json()) as GithubRelease[]));
+      next = response.headers.get("link")?.match(/<([^>]+)>;\s*rel="next"/)?.[1] ?? null;
+    }
+    return all.filter((r) => r.tag_name.startsWith(options.tagPrefix));
   }
 
+  /** A published release by tag. */
   async function byTag(tag: string): Promise<GithubRelease | undefined> {
-    return (await releases()).find((r) => r.tag_name === tag);
+    const response = await call(`/releases/tags/${encodeURIComponent(tag)}`);
+    return response.status === 404 ? undefined : ((await response.json()) as GithubRelease);
   }
 
   async function remove(release: GithubRelease): Promise<void> {
@@ -120,11 +133,13 @@ export function githubReleaseStore(options: GithubReleaseStoreOptions): ReleaseS
           body: JSON.stringify({ draft: false, make_latest: "true" }),
         });
       } catch (error) {
-        // The publishing PATCH may have gone through with its response lost: a published
-        // release is complete (publishing is the last step), so keep it; delete a draft.
-        const now = await byTag(tag).catch(() => undefined);
-        if (now && !now.draft) return;
-        await remove({ ...release, draft: true }).catch(() => {});
+        // The publishing PATCH may have gone through with its response lost. A published
+        // release is complete (publishing is the last step): keep it. Delete it only when it is
+        // known to be a draft; when its state is unknown, the next create cleans it up if it is.
+        const state = await call(`/releases/${release.id}`).catch(() => null);
+        const current = state?.ok ? ((await state.json()) as GithubRelease) : null;
+        if (current && !current.draft) return;
+        if (current) await remove(current).catch(() => {});
         throw error;
       }
     },

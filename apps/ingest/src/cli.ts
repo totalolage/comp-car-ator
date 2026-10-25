@@ -22,7 +22,7 @@ import { createLiveHttp, createReplayHttp, loadCassette } from "@cca/http";
 import { openLedger } from "@cca/ledger";
 import { publish } from "@cca/publisher";
 import { type HarvestMode, type Logger, sources } from "@cca/sources";
-import { findRelease, releaseRuns, restoreLedger } from "./data-release.ts";
+import { findRelease, releaseRuns, restoreLedger, TAG_PREFIX } from "./data-release.ts";
 import {
   buildSampleBundle,
   importObservations,
@@ -108,7 +108,7 @@ switch (command) {
   }
   case "plan": {
     // Explicit sources (a manual dispatch) run in the given mode; otherwise the schedule decides.
-    const base = await findRelease(releaseStoreFrom(required("store")));
+    const base = await findRelease(releaseStoreFrom(required("store"), TAG_PREFIX));
     const harvests = values.source
       ? values.source.split(",").map((id) => ({ source: knownSource(id).id, mode: harvestMode() }))
       : plan(
@@ -120,10 +120,14 @@ switch (command) {
     break;
   }
   case "restore": {
-    const release = await restoreLedger(releaseStoreFrom(required("store")), required("ledger"), {
-      base: values.base || undefined,
-      init: values.init,
-    });
+    const release = await restoreLedger(
+      releaseStoreFrom(required("store"), TAG_PREFIX),
+      required("ledger"),
+      {
+        base: values.base || undefined,
+        init: values.init,
+      },
+    );
     log.info(release ? `restored Ledger from ${release.tag}` : "no data release yet; new Ledger");
     break;
   }
@@ -157,7 +161,7 @@ switch (command) {
       break;
     }
     const result = await releaseRuns({
-      store: releaseStoreFrom(required("store")),
+      store: releaseStoreFrom(required("store"), TAG_PREFIX),
       logs,
       work: values.work ?? join(dir, ".work"),
       now,

@@ -70,11 +70,19 @@ interface FakeRelease {
 }
 
 /** The slice of the GitHub REST API the adapter uses, in memory. */
-async function githubHarness(): Promise<Harness & { losePublishResponse(): void }> {
+interface GithubHarness extends Harness {
+  /** The publishing update goes through but its response is lost (and the follow-up lookup). */
+  losePublishResponse(alsoLookup: boolean): void;
+  addRelease(tag: string, draft: boolean): void;
+  tags(): string[];
+}
+
+async function githubHarness(): Promise<GithubHarness> {
   const releases: FakeRelease[] = [];
   let nextId = 1;
   let broken: string | null = null;
   let loseResponse = false;
+  let loseLookup = false;
   const body = async (req: IncomingMessage) => {
     const chunks: Buffer[] = [];
     for await (const chunk of req) chunks.push(chunk as Buffer);
@@ -104,8 +112,24 @@ async function githubHarness(): Promise<Harness & { losePublishResponse(): void 
     const route = (method: string, pattern: RegExp) =>
       req.method === method ? url.pathname.match(pattern) : null;
     let m: RegExpMatchArray | null;
-    if (req.method === "GET" && url.pathname === `${repo}/releases`)
-      return send(200, [...releases].reverse().map(view));
+    if (req.method === "GET" && url.pathname === `${repo}/releases`) {
+      // Pages of 2, newest first, linked like GitHub's.
+      const page = Number(url.searchParams.get("page") ?? 1);
+      const all = [...releases].reverse();
+      if (all.length > page * 2)
+        res.setHeader(
+          "link",
+          `<${base}${repo}/releases?per_page=100&page=${page + 1}>; rel="next"`,
+        );
+      return send(200, all.slice((page - 1) * 2, page * 2).map(view));
+    }
+    m = route("GET", new RegExp(`^${repo}/releases/tags/(.+)$`));
+    if (m) {
+      const found = releases.find(
+        (r) => !r.draft && r.tag_name === decodeURIComponent(m?.[1] ?? ""),
+      );
+      return found ? send(200, view(found)) : send(404);
+    }
     if (req.method === "POST" && url.pathname === `${repo}/releases`) {
       const input = JSON.parse((await body(req)).toString());
       const id = nextId++;
@@ -142,6 +166,13 @@ async function githubHarness(): Promise<Harness & { losePublishResponse(): void 
         return send(204);
       }
       const release = releases[index] as FakeRelease;
+      if (req.method === "GET") {
+        if (loseLookup) {
+          loseLookup = false;
+          return res.socket?.destroy();
+        }
+        return send(200, view(release));
+      }
       Object.assign(release, { draft: JSON.parse((await body(req)).toString()).draft });
       if (loseResponse) {
         loseResponse = false;
@@ -166,14 +197,27 @@ async function githubHarness(): Promise<Harness & { losePublishResponse(): void 
     store: githubReleaseStore({
       repo: "totalolage/comp-car-ator",
       token: "t0ken",
+      tagPrefix: "data-",
       apiUrl: `http://127.0.0.1:${port}`,
     }),
     breakUpload: (asset) => {
       broken = asset;
     },
-    losePublishResponse: () => {
+    losePublishResponse: (alsoLookup) => {
       loseResponse = true;
+      loseLookup = alsoLookup;
     },
+    addRelease: (tag, draft) => {
+      releases.push({
+        id: nextId++,
+        tag_name: tag,
+        draft,
+        prerelease: false,
+        upload_url: "",
+        assets: [],
+      });
+    },
+    tags: () => releases.map((r) => r.tag_name),
     tamper: async (tag, asset) => {
       const found = releases.find((r) => r.tag_name === tag)?.assets.find((a) => a.name === asset);
       if (found) found.bytes = Buffer.from("tampered");
@@ -389,18 +433,58 @@ describe.each([
 });
 
 describe("GitHub release store", () => {
+  let dir: string;
+  let h: GithubHarness;
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "cca-gh-"));
+    h = await githubHarness();
+    await writeFile(join(dir, "a.txt"), "a");
+  });
+  afterEach(async () => {
+    await h.close();
+    await rm(dir, { recursive: true, force: true });
+  });
+  const create = (tag: string) =>
+    h.store.create(tag, [{ name: "a.txt", path: join(dir, "a.txt") }]);
+
   it("keeps a release whose publish went through when the response was lost", async () => {
-    const dir = await mkdtemp(join(tmpdir(), "cca-gh-"));
-    const h = await githubHarness();
-    try {
-      await writeFile(join(dir, "a.txt"), "a");
-      h.losePublishResponse();
-      await h.store.create("data-1", [{ name: "a.txt", path: join(dir, "a.txt") }]);
-      expect(await h.store.list()).toEqual([{ tag: "data-1", assets: ["a.txt"] }]);
-    } finally {
-      await h.close();
-      await rm(dir, { recursive: true, force: true });
-    }
+    h.losePublishResponse(false);
+    await create("data-1");
+    expect(await h.store.list()).toEqual([{ tag: "data-1", assets: ["a.txt"] }]);
+  });
+
+  it("never deletes a release whose state it could not check", async () => {
+    h.losePublishResponse(true);
+    await expect(create("data-1")).rejects.toThrow();
+    expect(h.tags()).toEqual(["data-1"]);
+    expect(await h.store.list()).toEqual([{ tag: "data-1", assets: ["a.txt"] }]);
+  });
+
+  it("cleans up only its own unfinished drafts, and sees past the first page", async () => {
+    h.addRelease("v1.0.0", true);
+    h.addRelease("data-0", true);
+    for (const tag of ["data-1", "data-2", "data-3"]) await create(tag);
+    expect(h.tags()).toEqual(["v1.0.0", "data-1", "data-2", "data-3"]);
+    expect((await h.store.list()).map((r) => r.tag)).toEqual(["data-3", "data-2", "data-1"]);
+    await h.store.delete("data-1");
+    expect(h.tags()).toEqual(["v1.0.0", "data-2", "data-3"]);
+  });
+});
+
+describe("run logs", () => {
+  it("rejects, rather than reporting a failed harvest, when the log cannot be written", async () => {
+    const ledger = openLedger(":memory:");
+    const out = join(tmpdir(), "cca-missing-dir", "x", "cnb.ndjson");
+    const run = harvestToLog({
+      ledger,
+      source: census({ A: ["a1"] }),
+      http: noHttp,
+      mode: "full",
+      now: day("2026-10-26"),
+      out,
+    });
+    await expect(run).rejects.toThrow(/ENOENT/);
+    ledger.close();
   });
 });
 
