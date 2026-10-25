@@ -308,17 +308,16 @@ function parseListPage(html: string, url: string): ListPage {
   }
   const message = (state?.["car-list"] as Raw | undefined)?.message as Raw | undefined;
   const pagination = message?.pagination as Raw | undefined;
-  if (
-    !Array.isArray(message?.items) ||
-    !Number.isInteger(pagination?.totalItems) ||
-    !Number.isInteger(pagination?.totalPages)
-  ) {
+  const items = message?.items;
+  const total = pagination?.totalItems;
+  const pages = pagination?.totalPages;
+  if (!Array.isArray(items) || !Number.isInteger(total) || !Number.isInteger(pages)) {
     throw new Error(`AAA Auto page changed: no car list in the page state at ${url}`);
   }
   return {
-    total: pagination.totalItems as number,
-    pages: pagination.totalPages as number,
-    cars: message.items.map((car) => (car && typeof car === "object" ? (car as Raw) : {})),
+    total: total as number,
+    pages: pages as number,
+    cars: items.map((car) => (car && typeof car === "object" ? (car as Raw) : {})),
   };
 }
 
