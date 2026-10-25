@@ -304,19 +304,70 @@ describe("Resolver", () => {
       expect(
         octaviaIII.resolve({ make: "Škoda", model: "Octavia iv", fuel: "phev", powerKw: 150 }),
       ).toMatchObject({ status: "model", reason: "ambiguous" });
-      // A lower-case "v" names a generation only right after the model name.
-      expect(
-        octaviaIII.resolve({ ...petrol, model: "Octavia v" } as VehicleDescriptor),
-      ).toMatchObject({ status: "model", reason: "ambiguous" });
-      expect(
-        octaviaIII.resolve({
-          ...petrol,
-          model: "Octavia",
-          trim: "Combi v záruce",
-        } as VehicleDescriptor),
-      ).toMatchObject({
+      // A lone lower-case "v" claims no generation, wherever it stands.
+      for (const listing of [
+        { model: "Octavia v" },
+        { model: "Octavia", trim: "Combi v záruce" },
+      ]) {
+        expect(octaviaIII.resolve({ ...petrol, ...listing } as VehicleDescriptor)).toMatchObject({
+          status: "matched",
+          variantId: "skoda/octavia/mk3/wagon-petrol-110kw-automatic",
+        });
+      }
+    });
+
+    it("reads a lone I or V only in upper case, right after the model name", () => {
+      const golfs = createResolver(
+        [
+          { slug: "mk1", name: "Golf I", from: 1974, to: 1983 },
+          { slug: "mk5", name: "Golf V", from: 2003, to: 2008 },
+          golf8,
+        ].flatMap((generation) =>
+          variants("Volkswagen", "Golf", generation, [
+            { body: "hatchback", fuel: "petrol", powerKw: 110, transmission: "automatic" },
+          ]),
+        ),
+      );
+      const petrol = { make: "VW", fuel: "petrol", powerKw: 110 } as const;
+      // "v záruce" is "under warranty"; lower-case letters never pick among fitting generations.
+      for (const listing of [
+        { model: "Golf", trim: "v záruce 110 kW DSG" },
+        { model: "Golf v" },
+        { model: "Golf i" },
+        { model: "Golf", trim: "i 110 kW" },
+        { model: "Golf", trim: "110 kW DSG, V záruce" },
+      ]) {
+        expect(golfs.resolve({ ...petrol, ...listing })).toMatchObject({
+          status: "model",
+          reason: "ambiguous",
+        });
+      }
+      expect(golfs.resolve({ ...petrol, model: "Golf V" })).toMatchObject({
         status: "matched",
-        variantId: "skoda/octavia/mk3/wagon-petrol-110kw-automatic",
+        variantId: "volkswagen/golf/mk5/hatchback-petrol-110kw-automatic",
+      });
+      expect(golfs.resolve({ ...petrol, model: "Golf", trim: "I 1.6" })).toMatchObject({
+        status: "matched",
+        variantId: "volkswagen/golf/mk1/hatchback-petrol-110kw-automatic",
+      });
+    });
+
+    it("reads a lone I right after a model alias as a generation claim", () => {
+      // The catalog has only the C-Class W203 ("C-Class II"); each listing names generation I.
+      const cClass = createResolver(
+        variants("Mercedes-Benz", "C-Class", { slug: "w203", name: "W203 II", from: 2000 }, [
+          { body: "sedan", fuel: "petrol", powerKw: 100, transmission: "manual" },
+        ]),
+      );
+      const listing = { make: "Mercedes", fuel: "petrol", powerKw: 100 } as const;
+      for (const model of ["C-Class I", "C-Klasse I", "C-Trida I", "Třída C I", "C220 I"]) {
+        expect(cClass.resolve({ ...listing, model })).toMatchObject({
+          status: "model",
+          reason: "ambiguous",
+        });
+      }
+      expect(cClass.resolve({ ...listing, model: "C-Klasse" })).toMatchObject({
+        status: "matched",
       });
     });
 

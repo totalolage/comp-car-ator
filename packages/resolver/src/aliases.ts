@@ -9,7 +9,7 @@ import type { FuelWording } from "./hints.ts";
  * entry is the group's key; it does not have to be the catalog's spelling, because catalog
  * names are looked up through the same groups. Slugs not in any group stand for themselves.
  */
-export const ALIASES_VERSION = 3;
+export const ALIASES_VERSION = 4;
 
 export const MAKE_GROUPS: readonly (readonly string[])[] = [
   ["volkswagen", "vw"],

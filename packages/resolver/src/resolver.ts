@@ -55,7 +55,7 @@ interface Model {
   nameWords: Set<string>;
 }
 
-/** Words that claim a generation for any make; a lone "I" only next to the model name. */
+/** Words that claim a generation for any make; a lone "I" or "V" only next to the model name. */
 const GENERATION_CLAIM = /^(?:II|III|IV|V|VI|VII|VIII|IX|[Mm][Kk]\d{1,2})$/;
 /** Engine layouts ("V6 TDI", "W12"), not chassis codes. */
 const ENGINE_LAYOUT = /^[vw]\d{1,2}$/i;
@@ -76,9 +76,9 @@ const ENGINE_LAYOUT = /^[vw]\d{1,2}$/i;
  * 4. One fitting Variant is a match only if fuel and power are known and the text names at
  *    most one generation, all of them known to the catalog ("Octavia III" when the catalog
  *    has only the IV is not evidence for the IV). A word claims a generation when it is a
- *    Roman numeral ("IV", "iv", not Škoda's "iV") or "Mk7", a lone "I", "i" or "v" next to the
- *    model name, or one of the make's chassis codes in aliases.ts ("W212", whether or not the
- *    catalog has it). Otherwise, or when several fit, the listing resolves to the Model.
+ *    Roman numeral ("IV", "iv", not Škoda's "iV") or "Mk7", a lone upper-case "I" or "V" right
+ *    after the model name (alias or catalog spelling) or as the first trim word, or one of the
+ *    make's chassis codes in aliases.ts ("W212", whether or not the catalog has it). Otherwise, or when several fit, the listing resolves to the Model.
  *    Fitting Variants are never ranked.
  * TODO(wave1-stream11): per-source `sourceTaxonomy` aliases once a Source needs them.
  */
@@ -112,8 +112,9 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
       const makeKey = makeKeyOf(slugify(vehicle.make));
       const models = makes.get(makeKey);
       if (!models) return { status: "unmatched", reason: "unknown-make" };
-      const model = findModel(makeKey, models, vehicle.model);
-      if (!model) return { status: "unmatched", reason: "unknown-model" };
+      const found = findModel(makeKey, models, vehicle.model);
+      if (!found) return { status: "unmatched", reason: "unknown-model" };
+      const { model, nameLength } = found;
 
       const hints = readHints(`${vehicle.model} ${vehicle.trim ?? ""}`, FUEL_BADGES[makeKey]);
       const fuel = vehicle.fuel ?? hints.fuel;
@@ -121,16 +122,13 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
       const body = vehicle.body ?? hints.body;
       const powerKw =
         vehicle.powerKw !== undefined && vehicle.powerKw > 0 ? vehicle.powerKw : hints.powerKw;
-      // A lone "I" is generation I only as the first trim word or right after the model name;
-      // a lower-case "i" or "v" only right after it ("Golf v", not "v záruce").
+      // A lone "I" or "V" names a generation only right after the model name as the listing
+      // spells it ("C-Klasse I") or as the first trim word. A lower-case "i" or "v" never does:
+      // it stays a word that matches no generation ("v záruce" is "under warranty").
       const modelWords = readHints(vehicle.model).words.length;
-      const words = hints.words.flatMap((w, i) => {
-        const before = hints.words[i - 1];
-        const afterName = before !== undefined && model.nameWords.has(before.toLowerCase());
-        if (w === "I") return i === modelWords || before === undefined || afterName ? [w] : [];
-        if (w === "i" || w === "v") return afterName ? [w.toUpperCase()] : [w];
-        return [w];
-      });
+      const words = hints.words.filter(
+        (w, i) => (w !== "I" && w !== "V") || i === nameLength || i === modelWords,
+      );
       const named = [...model.generationWords]
         .filter(([, names]) => names.some((name) => words.includes(name)))
         .map(([id]) => id);
@@ -219,7 +217,12 @@ function modelKeyOf(makeKey: string, slug: string): string {
   return (keys?.get(named) ?? named).replace(/-/g, "");
 }
 
-function findModel(makeKey: string, models: Map<string, Model>, text: string): Model | undefined {
+/** The longest model name that prefixes `text`, and how many words of `text` it spans. */
+function findModel(
+  makeKey: string,
+  models: Map<string, Model>,
+  text: string,
+): { model: Model; nameLength: number } | undefined {
   const tokens = slugify(text).split("-").filter(Boolean);
   for (let length = tokens.length; length > 0; length--) {
     const key = modelKeyOf(makeKey, tokens.slice(0, length).join("-"));
@@ -229,7 +232,7 @@ function findModel(makeKey: string, models: Map<string, Model>, text: string): M
     const isOther = (SUBMODELS.get(makeKey)?.get(key) ?? []).some((word) =>
       rest.some((_, i) => rest.slice(0, i + 1).join("") === word),
     );
-    return isOther ? undefined : model;
+    return isOther ? undefined : { model, nameLength: length };
   }
   return undefined;
 }
