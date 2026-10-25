@@ -402,6 +402,8 @@ main:focus {
 .table-scroll {
   max-height: calc(100dvh - var(--masthead));
   overflow: auto;
+  /* Keyboard focus scrolled into view lands below the sticky header row, not behind it. */
+  scroll-padding-top: 2rem;
 }
 
 .data {
