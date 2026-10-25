@@ -48,9 +48,13 @@ and hash, so switching language keeps the view.
   `history.replaceState`; new filters are a row in its field table plus a test case.
 - Static pages render unfiltered; an island applies the URL state after hydration, so a
   shared filtered link briefly shows the unfiltered first paint.
+  Category tree pages (`/make/<make>/`, `/body/<body>/`) avoid that for the common entry
+  points: the category is the island's fixed scope, rendered narrowed at build time and kept
+  out of the query string (`withoutScope` drops a conflicting URL value).
 - The compare tray (#17) reads the list from `cmp` when the URL has it (even empty) and from
-  the store otherwise; the header compare link already follows the store. Whoever owns the
-  catalog URL (today `CatalogExplorer`) must write the tray's `compare` back with the filters.
+  the store otherwise; the header compare link already follows the store. The catalog URL
+  has one owner, `CatalogExplorer`: it subscribes to the store and writes a changed compare
+  list back as `cmp` with the filters, so the tray changes the list only through the store.
 - Message catalogs ship to islands as one shared chunk with both languages (about 3 kB
   gzipped today); the shell script imports only `i18n/locale.ts`.
 - A performance budget per page is enforced at build time (`apps/web/DESIGN.md`).

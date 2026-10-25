@@ -1,0 +1,8 @@
+---
+import CategoryPage from "../../components/CategoryPage.astro";
+import { makePaths } from "../../lib/paths.ts";
+
+export const getStaticPaths = makePaths;
+const { id } = Astro.params;
+---
+<CategoryPage lang="cs" kind="make" id={id as string} />

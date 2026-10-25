@@ -49,11 +49,36 @@ Sentence case everywhere; no uppercase labels.
   sticks to the top of the box at every width.
 - Content is fluid up to `--page-max` (100rem), with a 16px gutter (12px narrow).
 
+## Catalog page
+
+- The catalog is one island (`CatalogExplorer`) over the catalog query engine; what it shows
+  (rail order, columns, option order) is `lib/catalog-view.ts`, the one place that reads
+  Variant aggregates. Every click, keystroke or sort re-runs `query()` and rewrites the URL.
+- Category tree pages are the catalog with a fixed scope: `/make/<make>/` (the make's
+  models listed above the table) and `/body/<body>/` (the makes that build it, each linking
+  to `/make/<make>/?body=<body>`). They render pre-narrowed at build time; the scope never
+  appears in the query string.
+- Facet rail, top to bottom: make, model (once a make is chosen), body, fuel, transmission,
+  production years, power, new price, used price, odometer (with one quick pick per Bundle
+  odometer band), seats, consumption, listing country, listing source. Counts are the
+  engine's disjunctive counts: each is what that click would leave. Enum options keep a fixed
+  order (vocabulary order, or by name), and a chosen value with no matches stays listed so it
+  can be unchosen. Lists over 12 values scroll inside their group.
+- Range fields narrow on every keystroke that parses (Czech `1,5` is fine); the placeholder
+  shows the bound the other filters leave.
+- Table: make and model link to the model page, then generation, years, body, fuel, power,
+  transmission, consumption, seats, new price (from), used median, landed-in-CZ median,
+  listing countries, listing count. Headers with a sort are buttons; `aria-sort` marks the
+  current one. 100 rows, then "show 100 more".
+- Below 48rem the rail folds behind a "Filters (n)" button above the table.
+
 ## Components (classes in base.css)
 
 `masthead`, `menu` / `menu-panel` / `tree`, `crumbs`, `page-title`, `page-summary`,
 `section-title`, `split` / `rail` / `results`, `facet` / `facet-option`, `button-quiet`,
-`data` (table; `.num` right-aligns), `table-scroll`, `count`, `badge`, `empty`, `colophon`.
+`facet-scroll`, `range`, `bands` / `band`, `rail-toggle`, `data` (table; `.num` right-aligns;
+`.sort` header buttons), `table-scroll`, `results-more`, `subcategories`, `count`, `badge`,
+`empty`, `colophon`.
 Rows are ~19px (2px vertical cell padding at 12px text), hairline rules, no zebra striping. A table's first cell is a row
 header (`<th scope="row">`) holding the link.
 
@@ -70,14 +95,19 @@ Enforced on every build by `scripts/check-budget.mjs` (fails the build), gzipped
 
 |                                | budget | catalog page | model page |
 | ------------------------------ | ------ | ------------ | ---------- |
-| HTML                           | 30 kB  | 6.5 kB       | 1.9 kB     |
-| CSS                            | 8 kB   | 2.3 kB       | 2.3 kB     |
-| JS (all chunks the page loads) | 30 kB  | 16.0 kB      | 3.8 kB     |
-| Total                          | 60 kB  | 24.8 kB      | 7.9 kB     |
+| HTML                           | 30 kB  | 6.9 kB       | 1.9 kB     |
+| CSS                            | 8 kB   | 2.5 kB       | 2.5 kB     |
+| JS (all chunks the page loads) | 30 kB  | 19.0 kB      | 3.9 kB     |
+| Total                          | 60 kB  | 28.4 kB      | 8.3 kB     |
 
 Measured on the sample Bundle (2026-10-25). The catalog page's JS is Preact, its hooks, the
-island and the shared url-state/i18n chunk; a model page loads only the shell script and
-Astro's prefetch.
+island (with the catalog query engine) and the shared url-state/i18n chunk; category pages
+are the same page. A model page loads only the shell script and Astro's prefetch.
+
+Query time is measured by `node apps/web/scripts/bench-catalog.ts` on a synthetic Bundle of
+50k Variants (about 110k Variant × listing-group rows). On devbox (2026-10-25, under load):
+a facet click, range edit or sort takes 11–15 ms (median), the first query 0.2 s (the
+engine reads the rows into columns once), parsing `catalog.json` 0.4 s.
 
 Bundle data (`/bundle/*.json`) is reported, not budgeted: its size follows the catalog and
 is owned by the Bundle format and the catalog page. Rules that keep the shell inside the

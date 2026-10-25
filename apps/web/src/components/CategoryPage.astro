@@ -1,0 +1,54 @@
+---
+/**
+ * A node of the category tree as a catalog page: a make (its models listed above the table)
+ * or a body type (the makes that build it). The category is the catalog's fixed scope.
+ */
+import type { Body } from "@cca/vocabulary";
+import { i18n } from "../i18n/i18n.ts";
+import type { Lang } from "../i18n/messages.ts";
+import { buildCatalog, categoryTree } from "../lib/catalog.ts";
+import { writeCatalogState } from "../lib/url-state.ts";
+import CatalogPage from "./CatalogPage.astro";
+
+interface Props {
+  lang: Lang;
+  kind: "make" | "body";
+  id: string;
+}
+const { lang, kind, id } = Astro.props;
+const t = i18n(lang);
+const tree = await categoryTree();
+let title: string;
+let index: { heading: string; links: { href: string; label: string; count: number }[] };
+if (kind === "make") {
+  const make = tree.makes.find((m) => m.id === id);
+  if (!make) throw new Error(`Make ${id} is not in the category tree`);
+  title = make.name;
+  index = {
+    heading: t.t("catalog.models"),
+    links: make.models.map((m) => ({
+      href: t.path(`/model/${m.id}/`),
+      label: m.name,
+      count: m.count,
+    })),
+  };
+} else {
+  const label = t.label("body", id);
+  title = label.charAt(0).toLocaleUpperCase(lang) + label.slice(1);
+  const makes = (await buildCatalog()).query({ filters: { body: [id as Body] }, limit: 0 }).facets
+    .values.make;
+  const names = new Map(tree.makes.map((m) => [m.id, m.name]));
+  index = {
+    heading: t.t("nav.makes"),
+    links: makes
+      .map(({ value, count }) => ({
+        href: t.path(`/make/${value}/`) + writeCatalogState({ filters: { body: [id as Body] } }),
+        label: names.get(value) ?? value,
+        count,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, lang)),
+  };
+}
+const scope = kind === "make" ? { make: [id] } : { body: [id as Body] };
+---
+<CatalogPage lang={lang} path={`/${kind}/${id}/`} category={{ title, scope }} index={index} />
