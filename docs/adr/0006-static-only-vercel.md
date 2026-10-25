@@ -5,6 +5,6 @@ cars.f8y.dev is a fully static site: Astro with `output: "static"` and no adapte
 ## Consequences
 
 - `vercel.json` pins the build: install with pnpm, `pnpm --filter web build`, output `apps/web/dist`. The Vercel project's root directory must stay the repository root so the workspace packages resolve.
-- The build reads `BUNDLE_DIR` when set (the published Bundle, downloaded by the deploy pipeline); without it the site builds from the committed sample Bundle, so every preview deploy works.
+- Production builds download the Bundle from the newest Data release (`releases/latest/download/bundle.json.gz`, ADR 0014) and fail if they cannot, so a broken download keeps the previous deployment up; `BUNDLE_URL` or `BUNDLE_DIR` override the source. Preview and local builds use the committed sample Bundle, so every preview deploy works without data.
 - Model pages are pre-rendered per Model; per-Variant or per-listing pages would multiply the file count and are avoided.
 - Data freshness is bounded by the deploy cadence (daily ingest → deploy hook).

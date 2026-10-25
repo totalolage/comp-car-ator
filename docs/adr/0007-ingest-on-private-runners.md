@@ -5,6 +5,6 @@ Scheduled ingest runs in the private repository `totalolage/comp-car-ator-ingest
 ## Consequences
 
 - Never add `runs-on: self-hosted` (or any self-hosted label) to a workflow in this repository.
-- The Ledger persists between runs as a GitHub Release asset of this public repo; the ingest job downloads the previous Ledger, runs Sources, publishes, uploads the new Ledger and Bundle, and calls the Vercel deploy hook. Scraped data is public by design.
+- The Ledger persists between runs in Data releases of this public repo; the ingest workflow restores the previous Ledger, runs Sources, publishes, releases the new Ledger and Bundle, and calls the Vercel deploy hook (ADR 0014). Scraped data is public by design.
 - Everything the ingest job runs is code from this public repo's `main`, so it is reviewed like any other change; the private repo holds only workflow wiring and secrets.
 - Runner infrastructure lives in the private `totalolage/home-runners` repo.

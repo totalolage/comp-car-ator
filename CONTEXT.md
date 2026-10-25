@@ -118,9 +118,18 @@ _Avoid_: database, store, warehouse
 The published, read-only snapshot of the Ledger that the website renders: catalog index, per-Model files with Listings and price history.
 _Avoid_: export, dump, dataset, build data
 
+**Run log**:
+A Run written to a file instead of the Ledger: its Observations and whether the harvest completed. Harvest jobs write them; one job records them into the Ledger.
+_Avoid_: dump, artifact (in code)
+
+**Data release**:
+A GitHub Release of the public repo holding one ingest's Ledger, the Bundle published from it and a manifest. The newest is where the next ingest starts and what the site builds from.
+_Avoid_: snapshot, backup, export
+
 ## Relationships
 
 - A **Make** has many **Models**; a **Model** has many **Generations**; a **Generation** has many **Variants**.
 - A **Listing** belongs to exactly one **Source** and one **Market**, and resolves to at most one **Variant** (or only a **Model**).
 - A **Run** of a **Source** produces **Observations**; the **Ledger** records them; a **Bundle** is published from the **Ledger**.
+- A daily ingest restores the **Ledger** from the newest **Data release**, records each **Run log**, and releases the new **Ledger** with its **Bundle** as the next **Data release**.
 - A **Landed price** is computed for a **Listing** from its **Market**, seller, **Price basis**, whether it is a **New means of transport**, and the latest **FX rate**.

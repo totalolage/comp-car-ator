@@ -1,0 +1,440 @@
+// The scheduled pipeline through its CLI-level functions: plan → harvestToLog → releaseRuns →
+// restoreLedger, against both ReleaseStore adapters (a local directory and the GitHub adapter
+// talking to a fake of the GitHub Releases API).
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createServer, type IncomingMessage, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { memoryLoader } from "@cca/bundle";
+import { unpackBundle } from "@cca/bundle/node";
+import { openCatalog } from "@cca/catalog";
+import { createReplayHttp, loadCassette } from "@cca/http";
+import { openLedger } from "@cca/ledger";
+import { publish } from "@cca/publisher";
+import { cnbSource, type Source } from "@cca/sources";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { ASSETS, findRelease, type Manifest, releaseRuns, restoreLedger } from "./data-release.ts";
+import { githubReleaseStore } from "./github-release-store.ts";
+import { SAMPLE } from "./ingest.ts";
+import { localReleaseStore, type ReleaseStore } from "./release-store.ts";
+import { harvestToLog } from "./run-log.ts";
+import { plan } from "./schedule.ts";
+
+const noHttp = createReplayHttp({ version: 1, interactions: [] });
+const day = (date: string) => new Date(`${date}T03:00:00Z`);
+
+/** A ReleaseStore plus test-only access to what it holds. */
+interface Harness {
+  store: ReleaseStore;
+  /** Makes uploading this asset fail (once). */
+  breakUpload(asset: string): void;
+  tamper(tag: string, asset: string): Promise<void>;
+  drafts(): Promise<number>;
+  close(): Promise<void>;
+}
+
+async function localHarness(root: string): Promise<Harness> {
+  const inner = localReleaseStore(root);
+  let broken: string | null = null;
+  return {
+    store: {
+      ...inner,
+      // An asset that cannot be read part-way through, as a disk or network failure would.
+      create: (tag, files, notes) => {
+        const failing = broken;
+        broken = null;
+        return inner.create(
+          tag,
+          files.map((f) => (f.name === failing ? { ...f, path: join(root, "missing") } : f)),
+          notes,
+        );
+      },
+    },
+    breakUpload: (asset) => {
+      broken = asset;
+    },
+    tamper: (tag, asset) => writeFile(join(root, tag, asset), "tampered"),
+    drafts: async () => (await readdir(root)).filter((e) => e.startsWith(".draft-")).length,
+    close: async () => {},
+  };
+}
+
+interface FakeRelease {
+  id: number;
+  tag_name: string;
+  draft: boolean;
+  prerelease: boolean;
+  upload_url: string;
+  assets: { id: number; name: string; bytes: Buffer }[];
+}
+
+/** The slice of the GitHub REST API the adapter uses, in memory. */
+async function githubHarness(): Promise<Harness & { losePublishResponse(): void }> {
+  const releases: FakeRelease[] = [];
+  let nextId = 1;
+  let broken: string | null = null;
+  let loseResponse = false;
+  const body = async (req: IncomingMessage) => {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    return Buffer.concat(chunks);
+  };
+  // Storage behind the asset redirect: another origin, which must not receive the token.
+  const storage = createServer((req, res) => {
+    const id = Number(req.url?.split("/").pop());
+    const asset = releases.flatMap((r) => r.assets).find((a) => a.id === id);
+    if (req.headers.authorization) return res.writeHead(400).end("token leaked to storage");
+    res.writeHead(asset ? 200 : 404).end(asset?.bytes);
+  });
+  const server: Server = createServer(async (req, res) => {
+    const url = new URL(req.url ?? "/", "http://fake");
+    const send = (status: number, json?: unknown) => {
+      res.writeHead(status, { "content-type": "application/json" });
+      res.end(json === undefined ? undefined : JSON.stringify(json));
+    };
+    if (req.headers.authorization !== "Bearer t0ken")
+      return send(401, { message: "Bad credentials" });
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const view = (r: FakeRelease) => ({
+      ...r,
+      assets: r.assets.map(({ id, name }) => ({ id, name })),
+    });
+    const repo = "/repos/totalolage/comp-car-ator";
+    const route = (method: string, pattern: RegExp) =>
+      req.method === method ? url.pathname.match(pattern) : null;
+    let m: RegExpMatchArray | null;
+    if (req.method === "GET" && url.pathname === `${repo}/releases`)
+      return send(200, [...releases].reverse().map(view));
+    if (req.method === "POST" && url.pathname === `${repo}/releases`) {
+      const input = JSON.parse((await body(req)).toString());
+      const id = nextId++;
+      const release: FakeRelease = {
+        id,
+        tag_name: input.tag_name,
+        draft: input.draft,
+        prerelease: false,
+        upload_url: `${base}/uploads/${id}/assets{?name,label}`,
+        assets: [],
+      };
+      releases.push(release);
+      return send(201, view(release));
+    }
+    m = route("POST", /^\/uploads\/(\d+)\/assets$/);
+    if (m) {
+      const release = releases.find((r) => r.id === Number(m?.[1]));
+      const name = url.searchParams.get("name") ?? "";
+      const bytes = await body(req);
+      if (name === broken) {
+        broken = null;
+        return send(502, { message: "upload failed" });
+      }
+      if (!release || Number(req.headers["content-length"]) !== bytes.length) return send(400);
+      release.assets.push({ id: nextId++, name, bytes });
+      return send(201, {});
+    }
+    m = url.pathname.match(new RegExp(`^${repo}/releases/(\\d+)$`));
+    if (m) {
+      const index = releases.findIndex((r) => r.id === Number(m?.[1]));
+      if (index < 0) return send(404);
+      if (req.method === "DELETE") {
+        releases.splice(index, 1);
+        return send(204);
+      }
+      const release = releases[index] as FakeRelease;
+      Object.assign(release, { draft: JSON.parse((await body(req)).toString()).draft });
+      if (loseResponse) {
+        loseResponse = false;
+        return res.socket?.destroy();
+      }
+      return send(200, view(release));
+    }
+    m = route("GET", new RegExp(`^${repo}/releases/assets/(\\d+)$`));
+    if (m) {
+      const storagePort = (storage.address() as AddressInfo).port;
+      res.writeHead(302, { location: `http://127.0.0.1:${storagePort}/blob/${m[1]}` });
+      return res.end();
+    }
+    if (req.method === "DELETE" && url.pathname.startsWith(`${repo}/git/refs/tags/`))
+      return send(204);
+    return send(404);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await new Promise<void>((resolve) => storage.listen(0, "127.0.0.1", resolve));
+  const port = (server.address() as AddressInfo).port;
+  return {
+    store: githubReleaseStore({
+      repo: "totalolage/comp-car-ator",
+      token: "t0ken",
+      apiUrl: `http://127.0.0.1:${port}`,
+    }),
+    breakUpload: (asset) => {
+      broken = asset;
+    },
+    losePublishResponse: () => {
+      loseResponse = true;
+    },
+    tamper: async (tag, asset) => {
+      const found = releases.find((r) => r.tag_name === tag)?.assets.find((a) => a.name === asset);
+      if (found) found.bytes = Buffer.from("tampered");
+    },
+    drafts: async () => releases.filter((r) => r.draft).length,
+    close: async () => {
+      server.closeAllConnections();
+      storage.closeAllConnections();
+      await new Promise((resolve) => server.close(resolve));
+      await new Promise((resolve) => storage.close(resolve));
+    },
+  };
+}
+
+/** A full-census Source that yields a listing per ref and SliceDone per slice, failing in `failIn`. */
+function census(slices: Record<string, string[]>, failIn?: string): Source {
+  return {
+    id: "autoscout24-de",
+    scope: "de",
+    async *harvest(ctx) {
+      for (const [slice, refs] of Object.entries(slices)) {
+        if (ctx.checkpoint.sliceDoneAt(slice)) continue;
+        for (const ref of refs)
+          yield {
+            kind: "ListingSeen",
+            ref,
+            url: `https://www.autoscout24.de/angebote/${ref}`,
+            market: "DE",
+            condition: "used",
+            vehicle: { make: "VW", model: "Golf" },
+            price: { amount: 15_000, currency: "EUR" },
+            priceBasis: "gross",
+            seller: "dealer",
+            photos: [],
+          };
+        if (slice === failIn) throw new Error("HTTP 503");
+        yield { kind: "SliceDone", slice };
+      }
+    },
+  };
+}
+
+describe.each([
+  ["local directory", localHarness],
+  ["GitHub", githubHarness],
+] as const)("data releases (%s store)", (_, makeHarness) => {
+  let dir: string;
+  let h: Harness;
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "cca-release-"));
+    h = await makeHarness(join(dir, "store"));
+  });
+  afterEach(async () => {
+    await h.close();
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  /** One scheduled day: each harvest job restores the Ledger and writes a log; one release. */
+  async function ingestDay(now: Date, sources: Source[], init = false) {
+    const base = (await findRelease(h.store))?.tag;
+    const logs: string[] = [];
+    for (const source of sources) {
+      const job = await mkdtemp(join(dir, "job-"));
+      const ledgerPath = join(job, "ledger.sqlite");
+      await restoreLedger(h.store, ledgerPath, { base, init });
+      const ledger = openLedger(ledgerPath);
+      const http =
+        source.id === "cnb" ? createReplayHttp(await loadCassette(SAMPLE.cnbCassette)) : noHttp;
+      const mode = source.id === "cnb" ? "incremental" : "full";
+      const out = join(job, `${source.id}.ndjson`);
+      await harvestToLog({ ledger, source, http, mode, now, out });
+      ledger.close();
+      logs.push(out);
+    }
+    return releaseRuns({
+      store: h.store,
+      logs,
+      work: join(dir, `work-${now.getTime()}`),
+      now,
+      init,
+    });
+  }
+
+  async function restored(tag?: string) {
+    const path = join(dir, `restored-${Math.random()}.sqlite`);
+    expect((await restoreLedger(h.store, path))?.tag).toBe(tag ?? (await h.store.list())[0]?.tag);
+    return openLedger(path);
+  }
+
+  it("refuses to start a new Ledger unless told it is the first run", async () => {
+    await expect(restoreLedger(h.store, join(dir, "l.sqlite"))).rejects.toThrow(/--init/);
+    expect(await restoreLedger(h.store, join(dir, "l.sqlite"), { init: true })).toBeNull();
+  });
+
+  it("releases the Ledger and the Bundle it publishes, and the next run builds on them", async () => {
+    const first = await ingestDay(SAMPLE.now, [cnbSource()], true);
+    expect(first.tag).toBe("data-20261024-160000");
+    expect(await h.store.list()).toEqual([
+      { tag: first.tag, assets: [ASSETS.bundle, ASSETS.ledger, ASSETS.manifest].sort() },
+    ]);
+
+    const ledger = await restored(first.tag);
+    expect(ledger.snapshot().fx.EUR?.czkPerUnit).toBe(24.335);
+    const expectedBundle = publish(ledger, { now: SAMPLE.now });
+    ledger.close();
+    await h.store.download(first.tag, ASSETS.bundle, join(dir, "bundle.json.gz"));
+    const bundle = unpackBundle(await readFile(join(dir, "bundle.json.gz")));
+    expect(bundle).toEqual(expectedBundle);
+    expect((await openCatalog(memoryLoader(bundle))).manifest.fx.EUR?.czkPerUnit).toBe(24.335);
+
+    const next = await ingestDay(day("2026-10-26"), [census({ A: ["a1"] })]);
+    await h.store.download(next.tag, ASSETS.manifest, join(dir, "manifest.json"));
+    const manifest = JSON.parse(await readFile(join(dir, "manifest.json"), "utf8")) as Manifest;
+    expect(manifest).toMatchObject({ tag: next.tag, previous: first.tag });
+    expect(manifest.runs).toMatchObject([{ source: "autoscout24-de", mode: "full" }]);
+    const both = await restored(next.tag);
+    expect(both.snapshot().fx.EUR?.czkPerUnit).toBe(24.335);
+    expect([...both.snapshot().listings()].map((l) => l.ref)).toEqual(["a1"]);
+    both.close();
+  });
+
+  it("records a failed harvest as a failed run, so the census resumes the next day", async () => {
+    await ingestDay(day("2026-10-10"), [census({ A: ["a1", "a2"], B: ["b1"] }, "B")], true);
+    const after = await restored();
+    const checkpoint = after.checkpoint("autoscout24-de", "de");
+    expect(checkpoint.sliceDoneAt("A")).toEqual(day("2026-10-10"));
+    expect(checkpoint.sliceDoneAt("B")).toBeNull();
+    expect(checkpoint.lastRunAt).toBeNull();
+    after.close();
+
+    expect((await findRelease(h.store))?.manifest.lastCensus).toEqual({});
+    const resumed = await ingestDay(day("2026-10-11"), [census({ A: ["a1", "a2"], B: ["b1"] })]);
+    expect(resumed.runs[0]?.summary).toMatchObject({ census: "applied", gone: 0 });
+    expect((await findRelease(h.store))?.manifest.lastCensus).toEqual({
+      "autoscout24-de": "2026-10-11T03:00:00.000Z",
+    });
+    const ledger = await restored();
+    expect(ledger.checkpoint("autoscout24-de", "de").lastRunAt).toEqual(day("2026-10-11"));
+    expect([...ledger.snapshot().listings()].map((l) => l.ref).sort()).toEqual(["a1", "a2", "b1"]);
+    ledger.close();
+  });
+
+  it("leaves the previous release as the latest when an upload fails midway", async () => {
+    const first = await ingestDay(SAMPLE.now, [cnbSource()], true);
+    h.breakUpload(ASSETS.bundle);
+    await expect(ingestDay(day("2026-10-26"), [census({ A: ["a1"] })])).rejects.toThrow();
+    expect((await h.store.list()).map((r) => r.tag)).toEqual([first.tag]);
+    expect(await h.drafts()).toBe(0);
+    const ledger = await restored(first.tag);
+    expect([...ledger.snapshot().listings()]).toEqual([]);
+    ledger.close();
+  });
+
+  it("refuses to release run logs harvested against a release that is no longer the latest", async () => {
+    const first = await ingestDay(SAMPLE.now, [cnbSource()], true);
+    const out = join(dir, "stale.ndjson");
+    const ledger = openLedger(":memory:");
+    await harvestToLog({
+      ledger,
+      source: census({ A: ["a1"] }),
+      http: noHttp,
+      mode: "full",
+      now: day("2026-10-26"),
+      out,
+    });
+    ledger.close();
+    const second = await ingestDay(day("2026-10-27"), [census({ A: ["a2"] })]);
+    await expect(
+      releaseRuns({
+        store: h.store,
+        logs: [out],
+        work: join(dir, "stale"),
+        now: day("2026-10-28"),
+        base: first.tag,
+      }),
+    ).rejects.toThrow(/stale/);
+    expect((await h.store.list()).map((r) => r.tag)).toEqual([second.tag, first.tag]);
+  });
+
+  it("refuses a Ledger asset that does not match its manifest", async () => {
+    const { tag } = await ingestDay(SAMPLE.now, [cnbSource()], true);
+    await h.tamper(tag, ASSETS.ledger);
+    await expect(restoreLedger(h.store, join(dir, "l.sqlite"))).rejects.toThrow(/sha256/);
+  });
+
+  it("keeps the newest data releases", async () => {
+    for (const date of ["2026-10-20", "2026-10-21", "2026-10-22"]) {
+      const logs = [join(dir, `${date}.ndjson`)];
+      const ledger = openLedger(":memory:");
+      await harvestToLog({
+        ledger,
+        source: census({}),
+        http: noHttp,
+        mode: "full",
+        now: day(date),
+        out: logs[0] as string,
+      });
+      ledger.close();
+      await releaseRuns({
+        store: h.store,
+        logs,
+        work: join(dir, date),
+        now: day(date),
+        init: true,
+        keep: 2,
+      });
+    }
+    expect((await h.store.list()).map((r) => r.tag)).toEqual([
+      "data-20261022-030000",
+      "data-20261021-030000",
+    ]);
+  });
+});
+
+describe("GitHub release store", () => {
+  it("keeps a release whose publish went through when the response was lost", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "cca-gh-"));
+    const h = await githubHarness();
+    try {
+      await writeFile(join(dir, "a.txt"), "a");
+      h.losePublishResponse();
+      await h.store.create("data-1", [{ name: "a.txt", path: join(dir, "a.txt") }]);
+      expect(await h.store.list()).toEqual([{ tag: "data-1", assets: ["a.txt"] }]);
+    } finally {
+      await h.close();
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("schedule", () => {
+  const ids = ["cnb", "sauto"];
+  const census = (iso: string) => ({ sauto: iso });
+
+  it("runs listings incrementally and takes a census on Sundays", () => {
+    const lastSunday = census("2026-10-18T03:00:00Z");
+    expect(plan(ids, new Date("2026-10-24T01:00:00Z"), lastSunday)).toEqual([
+      { source: "cnb", mode: "incremental" },
+      { source: "sauto", mode: "incremental" },
+    ]);
+    expect(plan(ids, new Date("2026-10-25T01:00:00Z"), lastSunday)).toEqual([
+      { source: "cnb", mode: "incremental" },
+      { source: "sauto", mode: "full" },
+    ]);
+  });
+
+  it("repeats a census that has not completed since its scheduled day", () => {
+    const monday = new Date("2026-10-26T01:00:00Z");
+    expect(plan(["sauto"], monday, census("2026-10-18T03:00:00Z"))).toEqual([
+      { source: "sauto", mode: "full" },
+    ]);
+    expect(plan(["sauto"], monday, census("2026-10-25T03:00:00Z"))).toEqual([
+      { source: "sauto", mode: "incremental" },
+    ]);
+    expect(plan(["sauto"], monday)).toEqual([{ source: "sauto", mode: "full" }]);
+  });
+
+  it("uses the Prague calendar day", () => {
+    // 23:30 UTC on Saturday is already Sunday in Prague.
+    expect(
+      plan(["sauto"], new Date("2026-10-24T23:30:00Z"), census("2026-10-18T03:00:00Z")),
+    ).toEqual([{ source: "sauto", mode: "full" }]);
+  });
+});

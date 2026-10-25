@@ -11,6 +11,7 @@ import {
   openBundle,
   type VariantRow,
 } from "./index.ts";
+import { packBundle, unpackBundle } from "./node.ts";
 
 const model: ModelFile = {
   model: { id: "skoda/octavia", makeId: "skoda", make: "Škoda", name: "Octavia" },
@@ -209,5 +210,17 @@ describe("Bundle", () => {
     });
     const reader = await openBundle(memoryLoader(files));
     expect((await reader.model("skoda/octavia"))?.listings).toStrictEqual(odd);
+  });
+});
+
+describe("Bundle archive", () => {
+  it("packs a Bundle into one file and unpacks it unchanged", () => {
+    const files = encodeBundle(content);
+    expect(unpackBundle(packBundle(files))).toEqual(files);
+  });
+
+  it("refuses an archive that would write outside the Bundle", () => {
+    const evil = packBundle(new Map([["../../etc/passwd", "x"]]));
+    expect(() => unpackBundle(evil)).toThrow(/invalid file/);
   });
 });
