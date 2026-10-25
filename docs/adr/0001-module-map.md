@@ -16,7 +16,7 @@ The codebase is a TypeScript pnpm workspace (Node 24) of deep modules, one packa
 | `@cca/publisher`    | `publish(ledger, { now }) → files`                                                                           | Grouping by model, used-price statistics, landed prices, price history series                           |
 | `@cca/catalog`      | `openCatalog(loader)` → `query(q)`, `model(id).listings(q)`                                                  | Filter evaluation, disjunctive facet counts, range bounds, sort, paging                                 |
 | `@cca/ingest` (app) | CLI `run`, `publish`, `import`, `sample-bundle`                                                              | Composition only                                                                                        |
-| `web` (app)         | Static Astro site                                                                                            | Presentation over `@cca/catalog`                                                                        |
+| `web` (app)         | Static Astro site; `read/writeCatalogState`, `openStore`, `i18n(lang)` (ADR 0009)                            | Presentation over `@cca/catalog`; canonical URL state, browser memory, cs/en strings and formats        |
 
 Dependency direction: vocabulary ← http ← sources ← ledger (also ← resolver) ← publisher (also ← pricing, bundle) ← ingest; web → catalog → bundle → pricing (types) → vocabulary. The web never imports Node-only code; `@cca/bundle/node` holds the file-system helpers.
 

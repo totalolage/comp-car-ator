@@ -6,7 +6,7 @@
   "scripts": {
     "stage-bundle": "node scripts/stage-bundle.mjs",
     "dev": "node scripts/stage-bundle.mjs && astro dev",
-    "build": "node scripts/stage-bundle.mjs && astro build",
+    "build": "node scripts/stage-bundle.mjs && astro build && node scripts/check-budget.mjs",
     "preview": "astro preview",
     "typecheck": "astro check"
   },
