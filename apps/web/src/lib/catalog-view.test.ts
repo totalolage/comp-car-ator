@@ -234,8 +234,9 @@ describe("catalog view over the query engine", () => {
     };
     const [first, second] = view({}).models;
     if (!first || !second) throw new Error("the test catalog has several Škoda models");
-    const one = toggleValue({}, "model", first.value);
-    expect(writeCatalogState({ filters: one })).toBe(`?model=${first.value}`);
+    const url = writeCatalogState({ filters: toggleValue({}, "model", first.value) });
+    expect(url).toBe(`?model=${first.value}`);
+    const one = withoutScope(readCatalogState(url), scope).filters;
     const before = view(one);
     const added = before.models.find((o) => o.value === second.value);
     expect(added).toMatchObject({ checked: false, adds: true });

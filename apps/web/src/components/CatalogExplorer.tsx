@@ -151,7 +151,7 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
               <legend>{t.t(`facet.${facet.key}`)}</legend>
               <div class={options.length > 12 ? "facet-scroll" : undefined}>
                 {options.map(({ value, label, count, checked, adds }) => {
-                  const meaning = t.count(adds ? "facet.adds" : "count.variants", count);
+                  const meaning = t.count(adds ? "count.facetAdds" : "count.variants", count);
                   return (
                     <label key={value} class="facet-option">
                       <input
