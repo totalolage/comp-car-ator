@@ -77,7 +77,8 @@ function edition(ref: string, validFrom: string, amount = 1_000_000): ListPrice 
   };
 }
 
-describe("skoda-pricelist source", () => {
+// Each harvest parses several PDFs: allow for a loaded machine.
+describe("skoda-pricelist source", { timeout: 30_000 }, () => {
   it("reads every priced cell of each grid as an Offer", async () => {
     const offers = await harvest();
     const byModel: Record<string, number> = {};

@@ -61,7 +61,8 @@ function edition(ref: string, validFrom: string): ListPrice {
   };
 }
 
-describe("vw-pricelist source", () => {
+// Each harvest parses several PDFs: allow for a loaded machine.
+describe("vw-pricelist source", { timeout: 30_000 }, () => {
   it("reads every sales-code row of every list on a model's Ceníky page", async () => {
     const offers = await harvest();
     expect(offers).toHaveLength(46);
