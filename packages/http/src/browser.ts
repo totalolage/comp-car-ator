@@ -33,15 +33,18 @@ export interface BrowserOptions {
 interface Profile {
   context: BrowserContext;
   tempDir?: string;
+  /** The browser's User-Agent, read on the first binary fetch. */
+  userAgent?: Promise<string>;
 }
 
 /**
  * Navigates a browser tab to the URL and returns the rendered document. A page that still shows
  * a challenge is polled until it clears or `challengeWaitMs` passes, then returned as it is so
- * the policy can escalate or report the block. Navigation takes only Accept-Language (as the
- * browser's locale) and Referer from the request headers, since other headers would break the
- * browser's fingerprint. Binary requests go through the context's request API, which shares
- * its cookies and sends the caller's headers.
+ * the policy can escalate or report the block. Accept-Language becomes the browser's locale;
+ * the other request headers go on the page's main-frame navigations only, over the browser's
+ * own, so subresources keep the browser's fingerprint. Binary requests go through a request
+ * API context of their own that carries the browser's User-Agent and cookies (and hands new
+ * cookies back), so an abort can dispose it and close the connection.
  */
 export function createBrowserFetcher(
   options: BrowserOptions,
@@ -128,10 +131,10 @@ export function createBrowserFetcher(
     active++;
     try {
       const locale = headers["accept-language"]?.split(",")[0]?.trim() || "cs-CZ";
-      const { context } = await profile(locale);
+      const current = await profile(locale);
       signal?.throwIfAborted();
-      if (binary) return await untilAborted(fetchBinary(context, url, headers, timeoutMs), signal);
-      const page = await context.newPage();
+      if (binary) return await fetchBinary(current, url, headers, timeoutMs, signal);
+      const page = await current.context.newPage();
       if (signal?.aborted) {
         await page.close().catch(() => {});
         signal.throwIfAborted();
@@ -139,6 +142,7 @@ export function createBrowserFetcher(
       const onAbort = () => void page.close().catch(() => {});
       signal?.addEventListener("abort", onAbort, { once: true });
       try {
+        await sendHeaders(page, url, headers);
         return await navigate(page, url, headers.referer, timeoutMs, challengeWaitMs);
       } finally {
         signal?.removeEventListener("abort", onAbort);
@@ -154,6 +158,26 @@ export function createBrowserFetcher(
   };
 
   return { fetch, close };
+}
+
+/**
+ * Puts the request headers other than Accept-Language and Referer on the page's main-frame
+ * navigations to the URL's origin (a solved challenge navigates again), over the browser's
+ * own headers.
+ */
+async function sendHeaders(page: Page, url: string, headers: Record<string, string>) {
+  const extra = Object.fromEntries(
+    Object.entries(headers).filter(([name]) => name !== "accept-language" && name !== "referer"),
+  );
+  if (Object.keys(extra).length === 0) return;
+  const origin = new URL(url).origin;
+  await page.route(
+    (target) => target.origin === origin,
+    (route, request) =>
+      request.isNavigationRequest() && request.frame() === page.mainFrame()
+        ? route.continue({ headers: { ...request.headers(), ...extra } })
+        : route.fallback(),
+  );
 }
 
 async function navigate(
@@ -199,30 +223,56 @@ async function snapshotOf(page: Page, document: Response | null): Promise<RawRes
 }
 
 async function fetchBinary(
-  context: BrowserContext,
+  profile: Profile,
   url: string,
   headers: Record<string, string>,
   timeoutMs: number,
+  signal: AbortSignal | undefined,
 ): Promise<RawResponse> {
-  const response = await context.request.get(url, { headers, timeout: timeoutMs });
-  const bytes = new Uint8Array(await response.body());
-  const responseHeaders = response.headers();
-  const text = /^text\//i.test(responseHeaders["content-type"] ?? "");
-  return {
-    url: response.url(),
-    status: response.status(),
-    headers: responseHeaders,
-    body: text ? new TextDecoder().decode(bytes) : "",
-    bytes,
-  };
+  const { context } = profile;
+  if (!profile.userAgent) {
+    profile.userAgent = userAgentOf(context);
+    profile.userAgent.catch(() => {
+      profile.userAgent = undefined;
+    });
+  }
+  const { request } = await import("patchright");
+  const api = await request.newContext({
+    userAgent: await profile.userAgent,
+    storageState: { cookies: await context.cookies(), origins: [] },
+    timeout: timeoutMs,
+  });
+  // Disposing the context destroys its in-flight request, which the request API has no signal for.
+  const onAbort = () => void api.dispose().catch(() => {});
+  signal?.addEventListener("abort", onAbort, { once: true });
+  try {
+    signal?.throwIfAborted();
+    const response = await api.get(url, { headers, timeout: timeoutMs });
+    const bytes = new Uint8Array(await response.body());
+    await context.addCookies((await api.storageState()).cookies);
+    const responseHeaders = response.headers();
+    const text = /^text\//i.test(responseHeaders["content-type"] ?? "");
+    return {
+      url: response.url(),
+      status: response.status(),
+      headers: responseHeaders,
+      body: text ? new TextDecoder().decode(bytes) : "",
+      bytes,
+    };
+  } catch (error) {
+    signal?.throwIfAborted();
+    throw error;
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
+    await api.dispose().catch(() => {});
+  }
 }
 
-/** The request API takes no signal: stop waiting on abort and let the request finish unseen. */
-function untilAborted<T>(work: Promise<T>, signal: AbortSignal | undefined): Promise<T> {
-  if (!signal) return work;
-  return new Promise((resolve, reject) => {
-    const onAbort = () => reject(signal.reason);
-    signal.addEventListener("abort", onAbort, { once: true });
-    work.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
-  });
+async function userAgentOf(context: BrowserContext): Promise<string> {
+  const page = await context.newPage();
+  try {
+    return await page.evaluate(() => navigator.userAgent);
+  } finally {
+    await page.close().catch(() => {});
+  }
 }

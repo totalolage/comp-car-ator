@@ -160,18 +160,110 @@ describe("raw response cache", () => {
 });
 
 describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)", () => {
+  let http: ReturnType<typeof createLiveHttp>;
+  const seen = new Map<string, IncomingMessage["headers"]>();
+  beforeAll(() => {
+    http = createLiveHttp({ hostIntervalMs: 0, browser: { engine: "patchright" } });
+  });
+  afterAll(() => http.close());
+  beforeEach(() => seen.clear());
+
+  /** Records each request's headers by path, then hands it to `inner`. */
+  const recording =
+    (inner: Handler): Handler =>
+    (req, res) => {
+      seen.set(new URL(req.url ?? "", base).pathname, req.headers);
+      inner(req, res);
+    };
+
   it("renders the page in Chrome when the request starts at T2", async () => {
     handler = (_req, res) => {
       res.writeHead(200, { "content-type": "text/html" });
       res.end(`<body><script>document.body.append("rendered by js")</script></body>`);
     };
-    const http = createLiveHttp({ hostIntervalMs: 0, browser: { engine: "patchright" } });
-    try {
-      const page = await http.get({ url: `${base}/t2`, minTier: "T2" });
-      expect(page).toMatchObject({ status: 200, tier: "T2" });
-      expect(page.body).toContain("rendered by js");
-    } finally {
-      await http.close();
-    }
+    const page = await http.get({ url: `${base}/t2`, minTier: "T2" });
+    expect(page).toMatchObject({ status: 200, tier: "T2" });
+    expect(page.body).toContain("rendered by js");
+  }, 120_000);
+
+  it("sends the caller's headers on the navigation, not on the page's subresources", async () => {
+    handler = recording((req, res) => {
+      if (req.url === "/sub.js") {
+        res.writeHead(200, { "content-type": "text/javascript" }).end("");
+        return;
+      }
+      res.writeHead(200, { "content-type": "text/html", "set-cookie": "seen=1" });
+      res.end(`<script src="/sub.js"></script><p>ok</p>`);
+    });
+    await http.get({ url: `${base}/first`, minTier: "T2" });
+    await http.get({
+      url: `${base}/headers`,
+      minTier: "T2",
+      headers: { "X-Test-Token": "abc", referer: `${base}/from` },
+    });
+    expect(seen.get("/headers")).toMatchObject({
+      "x-test-token": "abc",
+      referer: `${base}/from`,
+      cookie: expect.stringContaining("seen=1"),
+      "user-agent": expect.stringContaining("Chrome/"),
+    });
+    expect(seen.get("/sub.js")).toBeDefined();
+    expect(seen.get("/sub.js")).not.toHaveProperty("x-test-token");
+  }, 120_000);
+
+  it("fetches binary requests with the browser's cookies and keeps the cookies they set", async () => {
+    handler = recording((req, res) => {
+      if (req.url === "/a.pdf") {
+        res.writeHead(200, { "content-type": "application/pdf", "set-cookie": "pdf=1" });
+        res.end(Buffer.from([0x25, 0x50, 0x44, 0x46]));
+        return;
+      }
+      res.writeHead(200, { "content-type": "text/html", "set-cookie": "page=1" }).end("ok");
+    });
+    await http.get({ url: `${base}/page`, minTier: "T2" });
+    const pdf = await http.get({
+      url: `${base}/a.pdf`,
+      minTier: "T2",
+      binary: true,
+      headers: { "x-test-token": "abc" },
+    });
+    await http.get({ url: `${base}/after`, minTier: "T2" });
+    expect(pdf).toMatchObject({ status: 200, tier: "T2" });
+    expect([...(pdf.bytes ?? [])]).toEqual([0x25, 0x50, 0x44, 0x46]);
+    expect(seen.get("/a.pdf")).toMatchObject({
+      cookie: expect.stringContaining("page=1"),
+      "x-test-token": "abc",
+      "user-agent": expect.stringContaining("Chrome/"),
+    });
+    expect(seen.get("/after")?.cookie).toContain("pdf=1");
+  }, 120_000);
+
+  it("closes the connection of an aborted binary fetch", async () => {
+    let arrived: () => void = () => {};
+    const arrival = new Promise<void>((resolve) => {
+      arrived = resolve;
+    });
+    let closedAt = Number.POSITIVE_INFINITY;
+    handler = (req, res) => {
+      // Hold the response for 5 s, the way a large download would.
+      const timer = setTimeout(() => res.end("late"), 5000);
+      res.on("close", () => {
+        clearTimeout(timer);
+        closedAt = Date.now();
+      });
+      if (req.url === "/slow.zip") arrived();
+    };
+    const controller = new AbortController();
+    const pending = http.get({
+      url: `${base}/slow.zip`,
+      minTier: "T2",
+      binary: true,
+      signal: controller.signal,
+    });
+    await arrival;
+    const abortedAt = Date.now();
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    await expect.poll(() => closedAt - abortedAt, { timeout: 2000 }).toBeLessThan(1000);
   }, 120_000);
 });
