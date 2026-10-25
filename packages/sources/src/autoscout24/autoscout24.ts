@@ -13,9 +13,11 @@
  *   census resumes where it stopped.
  * - full: every slice's pages newest first, a SliceDone after each slice that yielded as
  *   many distinct listings as it reports (paged a second time if it came out short); slices
- *   done earlier in the census are skipped. A slice still short, still over the cap at a
- *   single price, or split into parts whose counts fall well short of its own fails the run
- *   at the end (after every other slice), so it is no census.
+ *   done earlier in the census are skipped. A split slice is recounted after its parts and
+ *   must not have more results than they do. A slice still short, still over the cap at a
+ *   single price, or split into parts that miss results fails the run at the end (after
+ *   every other slice), so it is no census; its finished parts stay done, and the next full
+ *   run recounts it.
  * - incremental: the same slices, narrowed to listings online since the last run (`adage`,
  *   whole days up to 14; no window after a longer gap), newest first, each stopping at a
  *   page of known listings.
@@ -124,8 +126,8 @@ class Harvest {
   private readonly adage: number | undefined;
   /** Slices this run could not harvest whole. */
   private readonly unfinished: string[] = [];
-  /** Incremental: refs this run has yielded. */
-  private readonly yielded = new Set<string>();
+  /** Incremental: whether each listing this run has met was known before it, as first met. */
+  private readonly knownBefore = new Map<string, boolean>();
 
   constructor(ctx: HarvestContext, settings: Settings) {
     this.ctx = ctx;
@@ -153,50 +155,61 @@ class Harvest {
   }
 
   /**
-   * Harvests one slice, or its sub-slices when it is over the cap, and returns its result
-   * count. Only slices harvested whole report SliceDone; on resume a split slice is probed
-   * again to find its parts, and a done part only for its count (`counted`). `retry`: page a
-   * slice that comes out short once more (listings removed while paging shift later ones
-   * onto pages already read).
+   * Harvests one slice, or its sub-slices when it is over the cap. Only slices harvested
+   * whole report SliceDone; a split slice never does, so on resume it is probed again to find
+   * its parts, and in a full run its parts must cover it. `retry`: page a slice that comes
+   * out short once more (listings removed while paging shift later ones onto pages already
+   * read).
    */
-  private async *slice(
-    slice: Slice,
-    retry = this.full,
-    counted = false,
-  ): AsyncGenerator<Observation, number> {
+  private async *slice(slice: Slice, retry = this.full): AsyncGenerator<Observation> {
     const key = sliceKey(slice);
-    const done = this.full && this.ctx.checkpoint.sliceDoneAt(key) !== null;
-    if (done && !counted) return 0;
+    if (this.full && this.ctx.checkpoint.sliceDoneAt(key) !== null) return;
     const first = await this.page(slice, 1);
-    if (done) return first.total;
     const overCap = this.overCap(first);
     const parts = overCap ? split(slice, first) : null;
     if (parts) {
-      let inParts = 0;
-      for (const part of parts) inParts += yield* this.slice(part, this.full, true);
-      // The parts partition the slice, so their counts add up to its own, give or take the
-      // listings that came and went meanwhile; a bigger gap means a filter misses listings.
-      if (first.total - inParts > Math.max(20, first.total * 0.02)) {
-        this.ctx.log.warn("autoscout24: sub-slices miss results", {
-          slice: key,
-          results: first.total,
-          inParts,
-        });
-        this.unfinished.push(key);
-      }
-      return first.total;
+      for (const part of parts) yield* this.slice(part);
+      // Incremental is no census, so it skips the recount.
+      if (this.full && !(await this.covered(slice, parts))) this.unfinished.push(key);
+      return;
     }
     const outcome = yield* this.pages(slice, first);
     if (outcome === "short" && retry && !overCap) {
       this.ctx.log.warn("autoscout24: slice came out short; harvesting it again", { slice: key });
-      return yield* this.slice(slice, false, counted);
+      return yield* this.slice(slice, false);
     }
     // Incremental is no census: a short slice under the cap only means listings moved.
     const whole = outcome !== "short" || (!this.full && !overCap);
     if (!whole) this.unfinished.push(key);
     else if (this.full) yield { kind: "SliceDone", slice: key };
     this.ctx.log.info("autoscout24 slice", { slice: key, results: first.total, outcome });
-    return first.total;
+  }
+
+  /**
+   * Whether `parts` reach every result of `slice`, as their counts show. A listing no part's
+   * filter matches (a make outside the taxonomy, a price outside every band) shows up as a
+   * deficit; the census cannot see it, so the slice fails the run. Counted after the parts
+   * are harvested, the parts between two counts of the slice, and they must reach the higher
+   * of the two: a listing that went before the second count could otherwise stand in for a
+   * missed one. The site gives no per-make counts, so the parts' counts are never taken at
+   * one instant: a part that gained a listing before its count and lost one after can still
+   * hide a missed one. Counted three times before giving up.
+   */
+  private async covered(slice: Slice, parts: readonly Slice[]): Promise<boolean> {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const before = (await this.page(slice, 1)).total;
+      let inParts = 0;
+      for (const part of parts) inParts += (await this.page(part, 1)).total;
+      const after = (await this.page(slice, 1)).total;
+      if (inParts >= Math.max(before, after)) return true;
+      this.ctx.log.warn("autoscout24: sub-slices miss results", {
+        slice: sliceKey(slice),
+        results: [before, after],
+        inParts,
+        attempt,
+      });
+    }
+    return false;
   }
 
   /**
@@ -217,21 +230,26 @@ class Harvest {
       if (page.listings.length === 0) break;
       ({ total, pages } = page);
       // Known means known before this run: the Ledger records each listing as it is yielded,
-      // and a page can repeat listings from earlier pages (sponsored placements).
-      const known =
-        !this.full &&
-        page.listings.every((raw) => {
-          const ref = refOf(raw);
-          return !this.yielded.has(ref) && this.ctx.checkpoint.isKnown(ref);
-        });
+      // and a page can repeat listings from earlier pages (sponsored placements). So each
+      // listing's status is taken when the run first meets it, before any is yielded.
+      const known = !this.full && page.listings.map((raw) => this.knewBefore(raw)).every(Boolean);
       for (const raw of page.listings) {
         seen.add(refOf(raw));
-        if (!this.full) this.yielded.add(refOf(raw));
         yield toListingSeen(raw, slice.condition, country);
       }
       if (known) return "stopped";
     }
     return total <= cap && seen.size >= total ? "complete" : "short";
+  }
+
+  private knewBefore(raw: Raw): boolean {
+    const ref = refOf(raw);
+    let known = this.knownBefore.get(ref);
+    if (known === undefined) {
+      known = this.ctx.checkpoint.isKnown(ref);
+      this.knownBefore.set(ref, known);
+    }
+    return known;
   }
 
   /** Pages any query is served: 4,000 results' worth, whatever the cap is set to. */

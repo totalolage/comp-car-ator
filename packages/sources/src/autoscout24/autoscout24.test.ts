@@ -22,6 +22,8 @@ import { type AutoScout24Options, autoscout24Source } from "./autoscout24.ts";
 // Bodies are trimmed to the __NEXT_DATA__ fields the adapter reads, with two photos per
 // listing and no seller contact details. de-full also holds the three country-wide first
 // pages (one per Condition), cut down to the two recorded makes: taxonomy and result counts.
+// The 4 new and 4 demo cars fit the test cap, so those two pages claim the full page
+// allowance (2,000 pages of 2) to be split as well.
 const now = new Date("2026-10-25T14:26:00Z");
 const deFull = new URL("./fixtures/de-full.cassette.json", import.meta.url);
 const atFull = new URL("./fixtures/at-full.cassette.json", import.meta.url);
@@ -109,10 +111,50 @@ function editPages(
   };
 }
 
+/** Serves the recorded page matching `match` once per count, with that count; the last repeats. */
+function countsInTurn(match: (query: URLSearchParams) => boolean, counts: number[]) {
+  return (cassette: Cassette) => {
+    const index = cassette.interactions.findIndex((i) =>
+      match(new URL(i.request.url).searchParams),
+    );
+    const recorded = cassette.interactions[index];
+    if (!recorded) throw new Error("fixture lacks the page");
+    const turns = counts.map((count) => {
+      const turn = structuredClone(recorded);
+      editPages(
+        () => true,
+        (props) => {
+          props.numberOfResults = count;
+        },
+      )({ version: 1, interactions: [turn] });
+      return turn;
+    });
+    cassette.interactions.splice(index, 1, ...turns);
+  };
+}
+
+/** The Ledger's checkpoint is live: a listing is known once recorded, i.e. once yielded. */
+function liveCheckpoint(inner: Source, knownBefore: Iterable<string> = []) {
+  const known = new Set(knownBefore);
+  const source: Source = {
+    ...inner,
+    async *harvest(ctx) {
+      for await (const o of inner.harvest(ctx)) {
+        yield o;
+        if (o.kind === "ListingSeen") known.add(o.ref);
+      }
+    },
+  };
+  return { source, isKnown: (ref: string) => known.has(ref) };
+}
+
 const slice = (offer: string, make: number, page?: number) => (query: URLSearchParams) =>
   query.get("offer") === offer &&
   query.get("mmmv") === `${make}|||` &&
   (page === undefined || query.get("page") === String(page));
+/** The country-wide used-car query, split by make when no makes are given. */
+const usedEverywhere = (query: URLSearchParams) =>
+  !query.has("mmmv") && query.get("offer") === "U,J,O";
 
 describe("autoscout24 source", () => {
   it("is one Source per country, scoped by the makes it covers", () => {
@@ -311,19 +353,17 @@ describe("autoscout24 source", () => {
     expect(all.error).toBeUndefined();
     expect(slices(all)).toEqual(slices(scoped));
     expect(refs(all)).toEqual(refs(scoped));
-    expect(all.urls.filter((url) => !params(url).has("mmmv"))).toHaveLength(3);
+    // Each Condition's first page, then its count before and after its parts.
+    expect(all.urls.filter((url) => !params(url).has("mmmv"))).toHaveLength(9);
   });
 
-  it("a full run fails when a split slice's parts miss many of its results", async () => {
-    const gap = editPages(
-      (query) => !query.has("mmmv") && query.get("offer") === "U,J,O",
-      (props) => {
-        props.numberOfResults = 100;
-      },
-    );
+  it("a full run fails when a split slice's parts miss even one of its results", async () => {
+    const gap = countsInTurn(usedEverywhere, [COUNTS.used + 1]);
     const source = autoscout24Source({ ...DE, makes: undefined });
     const run = await harvest(deFull, source, "full", {}, gap);
     expect(String(run.error)).toMatch(/not harvested whole: used$/);
+    // Probed, then counted before and after its parts three times before giving up.
+    expect(run.urls.filter((url) => usedEverywhere(params(url)))).toHaveLength(7);
     // The parts themselves are fine, so they stay done; resuming re-counts them and fails again.
     expect(slices(run)).toContain("used;make=51872");
     const done = slices(run);
@@ -336,6 +376,22 @@ describe("autoscout24 source", () => {
     );
     expect(String(resumed.error)).toMatch(/not harvested whole: used$/);
     expect(slices(resumed)).toEqual([]);
+  });
+
+  it("a split slice is recounted after its parts until its count holds still", async () => {
+    // A listing that goes between the counts before and after the parts could stand in for
+    // one they miss, so a recount it moves fails; the next one, after it went, holds.
+    const more = COUNTS.used + 1;
+    const settles = countsInTurn(usedEverywhere, [more, more, COUNTS.used]);
+    const source = autoscout24Source({ ...DE, makes: undefined });
+    const run = await harvest(deFull, source, "full", {}, settles);
+    expect(run.error).toBeUndefined();
+    expect(run.urls.filter((url) => usedEverywhere(params(url)))).toHaveLength(5);
+    // When it keeps moving, every recount fails and so does the run.
+    const used = COUNTS.used;
+    const moving = countsInTurn(usedEverywhere, [more, more, used, more, used, more, used]);
+    const failed = await harvest(deFull, source, "full", {}, moving);
+    expect(String(failed.error)).toMatch(/not harvested whole: used$/);
   });
 
   it("a slice over the cap that cannot be split further fails the full run", async () => {
@@ -458,24 +514,47 @@ describe("autoscout24 source", () => {
   });
 
   it("incremental: listings recorded during the run do not count as known before it", async () => {
-    // The Ledger's checkpoint is live: a listing is known once recorded, i.e. once yielded.
-    const recorded = new Set<string>();
     const inner = autoscout24Source(DE_INCREMENTAL);
-    const recording: Source = {
-      ...inner,
-      async *harvest(ctx) {
-        for await (const o of inner.harvest(ctx)) {
-          yield o;
-          if (o.kind === "ListingSeen") recorded.add(o.ref);
-        }
-      },
-    };
+    const { source, isKnown } = liveCheckpoint(inner);
     const plain = await harvest(deIncremental, inner, "incremental", { lastRunAt: tenDaysAgo });
-    const live = await harvest(deIncremental, recording, "incremental", {
+    const live = await harvest(deIncremental, source, "incremental", {
       lastRunAt: tenDaysAgo,
-      isKnown: (ref) => recorded.has(ref),
+      isKnown,
     });
     expect(live.urls).toEqual(plain.urls);
+  });
+
+  it("incremental: a page of known listings stops the query though it repeats one from an earlier page", async () => {
+    // A listing known before the run, on page 1 and again in page 2's first (sponsored) slot.
+    const repeated = "155cb87c-80dd-42e5-af7a-fd1e2bda3ecc";
+    // biome-ignore lint/suspicious/noExplicitAny: recorded site JSON.
+    let listing: any;
+    const sponsored = (cassette: Cassette) => {
+      editPages(slice("N", 51940, 1), (props) => {
+        // biome-ignore lint/suspicious/noExplicitAny: recorded site JSON.
+        listing = props.listings.find((l: any) => l.id === repeated);
+      })(cassette);
+      if (!listing) throw new Error("fixture lacks the listing");
+      editPages(slice("N", 51940, 2), (props) => {
+        props.listings[0] = listing;
+      })(cassette);
+    };
+    const { source, isKnown } = liveCheckpoint(autoscout24Source(DE_INCREMENTAL), [
+      repeated,
+      ...NEW_PAGE_2.slice(1),
+    ]);
+    const run = await harvest(
+      deIncremental,
+      source,
+      "incremental",
+      { lastRunAt: tenDaysAgo, isKnown },
+      sponsored,
+    );
+    expect(run.error).toBeUndefined();
+    const newPages = run.urls
+      .filter((url) => params(url).get("offer") === "N")
+      .map((url) => params(url).get("page"));
+    expect(newPages).toEqual(["1", "2"]);
   });
 
   it("incremental after more than 14 days searches without a time window", async () => {
