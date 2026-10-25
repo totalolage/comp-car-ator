@@ -1,3 +1,4 @@
+import { autoscout24Source } from "./autoscout24/autoscout24.ts";
 import { cnbSource } from "./cnb/cnb.ts";
 import type { Source, SourceId } from "./source.ts";
 import { tipcarsSource } from "./tipcars/tipcars.ts";
@@ -9,4 +10,6 @@ import { tipcarsSource } from "./tipcars/tipcars.ts";
 export const sources: Record<SourceId, () => Source> = {
   cnb: () => cnbSource(),
   tipcars: () => tipcarsSource(),
+  "autoscout24-de": () => autoscout24Source({ country: "DE" }),
+  "autoscout24-at": () => autoscout24Source({ country: "AT" }),
 };
