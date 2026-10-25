@@ -175,6 +175,8 @@ a:hover {
   padding: var(--s4) max(var(--gutter), calc((100% - var(--page-max)) / 2 + var(--gutter)));
   background: var(--paper);
   color: var(--ink);
+  /* Back on paper: undo the masthead's yellow ring. */
+  --focus: var(--focus-paper);
   border-bottom: 1px solid var(--rule-strong);
   box-shadow: 0 6px 16px -6px rgb(0 0 0 / 0.25);
   font-size: var(--text-sm);
@@ -394,10 +396,12 @@ main:focus {
 
 /* Dense data table -------------------------------------------------------------------- */
 
-/* Wide screens: the page scrolls and the header row sticks under the masthead. Narrow
-   screens: the table scrolls sideways in its own box (which rules out the sticky header). */
+/* A table wider than its column scrolls sideways in its own box, never the page. A box that
+   scrolls on one axis scrolls on both, so the header row sticks to the box's top instead of
+   the masthead; capping the box at the viewport below the masthead keeps it in view. */
 .table-scroll {
-  overflow: visible;
+  max-height: calc(100dvh - var(--masthead));
+  overflow: auto;
 }
 
 .data {
@@ -418,7 +422,7 @@ main:focus {
 
 .data thead th {
   position: sticky;
-  top: var(--masthead);
+  top: 0;
   background: var(--panel);
   border-bottom-color: var(--rule-strong);
   color: var(--ink-strong);
@@ -491,13 +495,5 @@ main:focus {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
     gap: 0 var(--s4);
-  }
-
-  .table-scroll {
-    overflow-x: auto;
-  }
-
-  .data thead th {
-    position: static;
   }
 }

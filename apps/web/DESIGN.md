@@ -33,7 +33,7 @@ Sentence case everywhere; no uppercase labels.
 │ Katalog › Škoda › Octavia                                                   (breadcrumb)  │
 │ Page title                                                                                │
 │ ┌ rail 15rem ──┐ ┌ results ─────────────────────────────────────────────────────────────┐ │
-│ │ facet groups │ │ count · dense table, sticky header row under the masthead            │ │
+│ │ facet groups │ │ count · dense table in .table-scroll, sticky header row              │ │
 │ └──────────────┘ └──────────────────────────────────────────────────────────────────────┘ │
 │ footer: data date, counts, note                                                            │
 └ tray slot (compare tray, #17) ─────────────────────────────────────────────────────────────┘
@@ -43,8 +43,10 @@ Sentence case everywhere; no uppercase labels.
   with their models (CSS columns) and body types, with Variant counts, plus recently viewed
   models. It is `<details>`, so it needs no script; the shell script only closes it on Escape
   or an outside click.
-- `.split` = rail + results. Below 48rem it stacks; the rail becomes a grid of facet groups and
-  tables scroll sideways inside `.table-scroll`.
+- `.split` = rail + results. Below 48rem it stacks and the rail becomes a grid of facet groups.
+- Tables sit in `.table-scroll`, a box at most one viewport tall (below the masthead) that
+  scrolls both ways: a table wider than its column never widens the page, and the header row
+  sticks to the top of the box at every width.
 - Content is fluid up to `--page-max` (100rem), with a 16px gutter (12px narrow).
 
 ## Components (classes in base.css)

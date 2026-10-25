@@ -221,22 +221,34 @@ function readList(raw: string, allowed: readonly string[] | null): string[] {
   return [...new Set(items)];
 }
 
-/** `min-max`, `min-`, `-max`; non-negative numbers only. Swapped ends are put in order. */
+/**
+ * `min-max`, `min-`, `-max`; non-negative numbers only. Swapped ends are put in order. A range
+ * with an end the writer could not write back (see `isEnd`) is dropped whole.
+ */
 function readRange(raw: string): Range | null {
   const match = /^\s*(\d+(?:\.\d+)?)?\s*-\s*(\d+(?:\.\d+)?)?\s*$/.exec(raw);
   if (!match) return null;
   let min = match[1] === undefined ? undefined : Number(match[1]);
   let max = match[2] === undefined ? undefined : Number(match[2]);
   if (min === undefined && max === undefined) return null;
+  if ((min !== undefined && !isEnd(min)) || (max !== undefined && !isEnd(max))) return null;
   if (min !== undefined && max !== undefined && min > max) [min, max] = [max, min];
   return { ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }) };
 }
 
 function writeRange(r: Range): string | null {
-  const ok = (n: number | undefined): n is number =>
-    n !== undefined && Number.isFinite(n) && n >= 0;
+  const ok = (n: number | undefined): n is number => n !== undefined && isEnd(n);
   if (!ok(r.min) && !ok(r.max)) return null;
   return `${ok(r.min) ? r.min : ""}-${ok(r.max) ? r.max : ""}`;
+}
+
+/**
+ * A range end both sides agree on: a non-negative safe-sized number that prints as plain
+ * digits, so what is written reads back unchanged. Excludes Infinity (a 400-digit endpoint),
+ * NaN, negatives and anything JavaScript prints in exponent form (1e21, 1e-7).
+ */
+function isEnd(n: number): boolean {
+  return n <= Number.MAX_SAFE_INTEGER && /^\d+(?:\.\d+)?$/.test(String(n));
 }
 
 function optionalSort<K extends string>(

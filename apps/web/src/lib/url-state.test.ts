@@ -84,6 +84,21 @@ describe("catalog URL state", () => {
     });
   });
 
+  it("drops range ends it could not write back, so a reread URL keeps its filters", () => {
+    const huge = "9".repeat(400); // Number() gives Infinity
+    for (const raw of [
+      `year=2015-2020&power=${huge}-`,
+      `year=2015-2020&power=-${huge}`,
+      "year=2015-2020&power=1000000000000000000000-", // prints as 1e+21
+      "year=2015-2020&power=0.0000001-", // prints as 1e-7
+      "year=2015-2020&power=-9007199254740993", // past the safe integers
+    ]) {
+      const state = readCatalogState(raw);
+      expect(state.filters).toEqual({ year: { min: 2015, max: 2020 } });
+      expect(readCatalogState(writeCatalogState(state))).toEqual(state);
+    }
+  });
+
   it("ignores sort values that are not own aliases", () => {
     for (const sort of ["constructor", "-toString", "__proto__", "powerKw"]) {
       expect(readCatalogState(`?sort=${sort}`).sort).toBeUndefined();

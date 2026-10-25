@@ -20,7 +20,8 @@
   --mark: light-dark(#ffe94a, #6b5c00);
   --mark-soft: light-dark(#ffffb5, #3d3600);
   --on-mark: light-dark(#000000, #ffffff);
-  --focus: light-dark(#006699, #7cc4e8);
+  --focus-paper: light-dark(#006699, #7cc4e8);
+  --focus: var(--focus-paper);
 
   /* Type: one workhorse sans at McMaster density (12px data), tabular figures in data */
   --font: Arial, "Helvetica Neue", Helvetica, "Liberation Sans", sans-serif;

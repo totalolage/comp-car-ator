@@ -53,7 +53,8 @@ export default function CatalogExplorer({ lang, initial, makeNames }: Props) {
     });
   }
 
-  const active = FACETS.some((f) => state.filters[f]?.length);
+  // Any applied filter counts, including URL-only ones the rail does not show (`?year=…`).
+  const active = writeCatalogState({ filters: state.filters }) !== "";
 
   return (
     <div class="split">
