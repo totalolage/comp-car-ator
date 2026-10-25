@@ -41,8 +41,8 @@ interface Profile {
  * Navigates a browser tab to the URL and returns the rendered document. A page that still shows
  * a challenge is polled until it clears or `challengeWaitMs` passes, then returned as it is so
  * the policy can escalate or report the block. Accept-Language becomes the browser's locale;
- * the other request headers go on the page's main-frame navigations only (and, as at T0, their
- * redirects), over the browser's own, so subresources keep the browser's fingerprint. Binary
+ * the other request headers go on the page's main-frame navigations only (and their redirects),
+ * over the browser's own, so subresources keep the browser's fingerprint. Binary
  * requests go through a request API context of their own that carries the browser's User-Agent
  * and cookies (and hands the cookies it changed back), so an abort or close() can dispose it
  * and close the connection.
@@ -300,7 +300,8 @@ async function userAgentOf(context: BrowserContext): Promise<string> {
  */
 async function handBack(context: BrowserContext, before: Cookie[], after: Cookie[]) {
   const key = (cookie: Cookie) => `${cookie.name}\0${cookie.domain}\0${cookie.path}`;
-  const stamp = (cookie: Cookie) => `${cookie.value}\0${cookie.expires}`;
+  const stamp = ({ value, expires, httpOnly, secure, sameSite }: Cookie) =>
+    JSON.stringify([value, expires, httpOnly, secure, sameSite]);
   const seeded = new Map(before.map((cookie) => [key(cookie), stamp(cookie)]));
   const kept = new Set(after.map(key));
   const changed = after.filter((cookie) => seeded.get(key(cookie)) !== stamp(cookie));

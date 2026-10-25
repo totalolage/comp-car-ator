@@ -217,12 +217,14 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
       if (req.url === "/a.pdf") {
         res.writeHead(200, {
           "content-type": "application/pdf",
-          "set-cookie": ["pdf=1", "page=; Max-Age=0"],
+          // A new cookie, a deletion, and an attribute-only change (now hidden from scripts).
+          "set-cookie": ["pdf=1", "page=; Max-Age=0", "flag=1; HttpOnly"],
         });
         res.end(Buffer.from([0x25, 0x50, 0x44, 0x46]));
         return;
       }
-      res.writeHead(200, { "content-type": "text/html", "set-cookie": "page=1" }).end("ok");
+      res.writeHead(200, { "content-type": "text/html", "set-cookie": ["page=1", "flag=1"] });
+      res.end("ok");
     });
     await http.get({ url: `${base}/page`, minTier: "T2" });
     const pdf = await http.get({
@@ -238,10 +240,16 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
       "x-test-token": "abc",
       "user-agent": expect.stringContaining("Chrome/"),
     });
-    handler = recording((_req, res) => res.end("ok"));
-    await http.get({ url: `${base}/after`, minTier: "T2" });
+    handler = recording((_req, res) => {
+      res.writeHead(200, { "content-type": "text/html" });
+      res.end(`<body><script>document.body.append("js sees: " + document.cookie)</script></body>`);
+    });
+    const after = await http.get({ url: `${base}/after`, minTier: "T2" });
     expect(seen.get("/after")?.cookie).toContain("pdf=1");
+    expect(seen.get("/after")?.cookie).toContain("flag=1");
     expect(seen.get("/after")?.cookie).not.toContain("page=");
+    expect(after.body).toContain("js sees: ");
+    expect(after.body).not.toContain("flag=1");
   }, 120_000);
 
   it("keeps a cookie a page changed while a binary fetch to another host ran", async () => {
