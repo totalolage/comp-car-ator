@@ -11,14 +11,14 @@ The codebase is a TypeScript pnpm workspace (Node 24) of deep modules, one packa
 | `@cca/sources`      | `Source.harvest(ctx) → AsyncIterable<Observation>`; registry `sources`                                       | Per-site pagination, parsing, query splitting, incremental stop rules                                   |
 | `@cca/ledger`       | `openLedger(path)` → `record(run, observations)`, `checkpoint(source)`, `snapshot()`                         | SQLite schema and migrations, batching, dedup, price history, gone inference, catalog merge, Resolution |
 | `@cca/resolver`     | `createResolver(catalog).resolve(descriptor, source?) → Resolution`                                          | Make aliases, model prefix match, generation by year, spec narrowing                                    |
-| `@cca/pricing`      | `landedPrice(input, env) → LandedResult`                                                                     | CZ/DE/AT VAT rules, the "new means of transport" test, fees                                             |
+| `@cca/pricing`      | `landedPrice(input, env) → LandedResult`; `PRICING_RULES` (each line's rule reference, ADR 0010)             | CZ/DE/AT VAT rules, the "new means of transport" test, fees                                             |
 | `@cca/bundle`       | Decoded document types; `encodeBundle(content) → files`; `openBundle(loader) → reader`                       | File layout, sharding, encoding, format versioning, read caching                                        |
 | `@cca/publisher`    | `publish(ledger, { now }) → files`                                                                           | Grouping by model, used-price statistics, landed prices, price history series                           |
 | `@cca/catalog`      | `openCatalog(loader)` → `query(q)`, `model(id).listings(q)`                                                  | Filter evaluation, disjunctive facet counts, range bounds, sort, paging                                 |
 | `@cca/ingest` (app) | CLI `run`, `publish`, `import`, `sample-bundle`                                                              | Composition only                                                                                        |
 | `web` (app)         | Static Astro site                                                                                            | Presentation over `@cca/catalog`                                                                        |
 
-Dependency direction: vocabulary ← http ← sources ← ledger (also ← resolver) ← publisher (also ← pricing, bundle) ← ingest; web → catalog → bundle → pricing (types) → vocabulary. The web never imports Node-only code; `@cca/bundle/node` holds the file-system helpers.
+Dependency direction: vocabulary ← http ← sources ← ledger (also ← resolver) ← publisher (also ← pricing, bundle) ← ingest; web → catalog → bundle → pricing (types and the rule table) → vocabulary. The web never imports Node-only code; `@cca/bundle/node` holds the file-system helpers.
 
 ## Deletion test
 

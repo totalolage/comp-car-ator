@@ -1,0 +1,23 @@
+# Landed price: one pure function, rule references in a table keyed by line code
+
+Pricing stays one pure function, `landedPrice(input, env) → LandedResult`, with no I/O and no seam: there is one rule set, not several adapters. Every rate, fee and threshold it uses lives in `PRICING_RULES` (`packages/pricing/src/rules.ts`) next to its sources and an as-of date, and every breakdown line's code is a key of that table, so `PRICING_RULES[line.code]` is the line's rule reference. We chose this over a `rule` field on each line because the reference is the same for every Listing: carrying it per line would repeat constant data across every Listing in the Bundle (ADR 0004) and change the Bundle format for no new information. The web reads the table from the same `@cca/pricing` build that the Publisher used, so a reference describes the rules that produced the numbers; when a rule changes, the next publish recomputes every landed price.
+
+Formula sources: `import-and-china.md` §4–§5 (DE→CZ, 2026-10-24) and `at-import-notes.md` (AT, 2026-10-25) in the research notes; the law and price lists are cited per entry in `rules.ts`.
+
+## Rules
+
+- **New means of transport** (ZDPH §19(1)(a), Directive 2006/112/EC Art. 2(2)(b), same test in Austria's UStG Binnenmarktregelung): new when ≤ 6 months since first registration OR ≤ 6,000 km; used only when both are exceeded. Registrations are known to the month, so the true age is taken as a range and a case the range cannot decide is priced as used and flagged `vatUncertain`. Absent registration counts as never registered only with Condition `new`.
+- **New**: the goods are the price net of the Market's VAT (exempt intra-EU supply) plus seller extras normalized the same way, and the buyer pays 21% Czech VAT on both. A private seller's agreed price is taxed as is, not divided. A margin-scheme or unknown-basis price from a dealer is taken as is and flagged `approximate` (a new car cannot be sold under the margin scheme; an unknown basis may include VAT).
+- **Used**: the goods are what the buyer pays, the Market's VAT included (a private buyer cannot reclaim it); no Czech VAT. A net price from a VAT payer gets the Market's VAT added (CZ 21%, DE 19%, AT 20%). A seller's VAT status comes from the Seller: a private seller cannot charge VAT, so their "net" is taken as is; an unknown seller quoting net is assumed a VAT payer. Both cases are flagged `approximate`.
+- **Czech Listings**: the asking price and seller extras as a private buyer pays them (the same net rule); no import fees and no transfer fee.
+- **Austria**: as Germany with 20% USt, plus NoVA. Austrian consumer prices include NoVA (PrAG §9). A delivery to another EU state is NoVA-exempt (NoVAG §3(2)(1)), and NoVA paid on a car registered in Austria for at most 48 months is refunded to whoever exports it (NoVAG §12a, from 2026-07-01). NoVA depends on CO₂, which `LandedInput` does not carry, so it stays in the price and the result is flagged `approximate` for new AT cars and for used ones not certainly older than 48 months. Older used AT cars are exact: the embedded NoVA is simply part of what the buyer pays.
+- **Fees**: transport 12,000 CZK unless the user sets one (indicative); evidenční kontrola 790 CZK, plus 2,490 technical inspection and 950 emissions unless a valid foreign inspection covers the Czech interval or the car is certainly younger than 36 months (no periodic inspection due yet in DE/AT/CZ); unknown validity on an older car charges the full set and flags `inspectionAssumed`. Registration 800 CZK. Eco fee 3,000 / 5,000 / 10,000 CZK for Euro 2 / 1 / below; none for Euro 3+ or a BEV; unknown Euro class shows 0 and flags `ecoFeeUncertain`.
+- **FX**: rates are per unit. The ČNB Source divides the fixing by its amount (HUF and others are quoted per 100); Pricing only multiplies.
+- **Rounding**: each line is rounded to whole CZK, half up, after conversion; Czech VAT is computed on the unrounded base; `totalCzk` is the sum of the rounded lines, so the breakdown always adds up.
+
+## Consequences
+
+- A rule change is a data change in `rules.ts` plus a test; the `satisfies` clause makes a new line code without a rule entry a type error.
+- Changing a rate or fee changes every landed price at the next publish; the sample Bundle must be regenerated when its numbers move.
+- Removing the AT NoVA approximation needs CO₂ in `LandedInput` (a contract change); the flag marks the affected Listings until then.
+- China and other third countries are out of scope (user decision); `landedPrice` returns `unsupported-market` for any other Market.
