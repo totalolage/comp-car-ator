@@ -67,9 +67,10 @@ export type LandedFlag =
   /** Registration date or odometer missing, so the new/used VAT test could not decide; priced as used. */
   | "vatUncertain"
   /**
-   * A simplification the other flags don't name: Austrian NoVA left in the price (new car, or
-   * registered ≤ 48 months, where export makes it exempt or refundable), or the seller's VAT
-   * status read from an unknown, margin or contradictory price basis.
+   * A simplification the other flags don't name: Austrian NoVA left in the price where export
+   * may remove it (a new car, or a used one whose refund BMF's 2022-07 cutoff does not rule
+   * out; never a BEV, which pays none), or the seller's VAT status read from an unknown,
+   * margin or contradictory price basis.
    */
   | "approximate";
 
@@ -135,8 +136,12 @@ function fromEu(
   const isNew = classification === true;
   if (isNew) flags.add("newVehicleVat");
   // Austrian prices carry NoVA, which export makes exempt (new) or may make refundable
-  // (used); without CO₂ data it stays in.
-  if (market === "AT" && (isNew || !novaRefundRuledOut(input.firstRegistration, env.today))) {
+  // (used); without CO₂ data it stays in. A BEV pays no NoVA, so there is none to remove.
+  if (
+    market === "AT" &&
+    input.fuel !== "bev" &&
+    (isNew || !novaRefundRuledOut(input.firstRegistration, env.today))
+  ) {
     flags.add("approximate");
   }
 

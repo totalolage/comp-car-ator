@@ -186,12 +186,16 @@ export const PRICING_RULES = {
    * its age cannot rule the refund out; only BMF's cutoff can: no refund on those exports
    * for a car first registered worldwide before `refundFirstRegisteredFrom`. Without CO₂
    * data the NoVA cannot be removed, so every case where it may apply is flagged
-   * `approximate`.
+   * `approximate`. A BEV is exempt outright (zero CO₂), so it has no NoVA to remove.
    */
   atNova: {
     refundRuleFrom: "2026-07-01",
     refundFirstRegisteredFrom: { year: 2022, month: 7 },
     sources: [
+      {
+        cite: "NoVAG 1991 §3(1)(1): vehicles with zero CO₂ emissions exempt",
+        url: "https://ris.bka.gv.at/eli/bgbl/1991/695/P3/NOR40273766",
+      },
       {
         cite: "NoVAG 1991 §3(2)(1): deliveries to the rest of the EU exempt",
         url: "https://www.ris.bka.gv.at/NormDokument.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10004698&Paragraf=3",

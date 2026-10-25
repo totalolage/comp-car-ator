@@ -408,6 +408,52 @@ const cases: Case[] = [
       total: 378_615,
     }),
   ),
+  // A BEV pays no NoVA (NoVAG §3(1)(1)), so no first registration leaves NoVA in its price.
+  ...(
+    [
+      [{ year: 2022, month: 9 }, "2026-10-01"],
+      [{ year: 2022, month: 7 }, undefined],
+      [{ year: 2022, month: 6 }, undefined],
+      [{ year: 2022 }, undefined],
+      [{ year: 2023, month: 5 }, undefined],
+      [{ year: 2022, month: 6 }, "2026-06-30"],
+    ] as const
+  ).map(
+    ([firstRegistration, today]): Case => ({
+      name: `AT used BEV, registered ${firstRegistration.year}-${"month" in firstRegistration ? firstRegistration.month : "??"}${today ? `, valued ${today}` : ""}: no NoVA, exact`,
+      input: { ...deUsed, market: "AT", fuel: "bev", firstRegistration, odometerKm: 50_000 },
+      ...(today ? { env: { today } } : {}),
+      lines: { goods: 365_025, ...FEES },
+      total: 378_615,
+    }),
+  ),
+  {
+    name: "AT new BEV, dealer gross: net of 20% USt, no NoVA to leave in",
+    input: {
+      ...deNew,
+      market: "AT",
+      fuel: "bev",
+      price: { amount: 36_000, currency: "EUR" },
+      firstRegistration: { year: 2026, month: 7 },
+      odometerKm: 2_000,
+    },
+    lines: { goods: 730_050, vatCz: 153_311, ...FEES },
+    flags: ["newVehicleVat"],
+    total: 896_951,
+  },
+  {
+    name: "AT new BEV, dealer margin basis: still approximate for the VAT basis",
+    input: {
+      ...deNew,
+      market: "AT",
+      fuel: "bev",
+      priceBasis: "margin",
+      price: { amount: 36_000, currency: "EUR" },
+    },
+    lines: { goods: 876_060, vatCz: 183_973, ...FEES },
+    flags: ["newVehicleVat", "approximate"],
+    total: 1_073_623,
+  },
 
   // Eco fee tiers (zákon 542/2020): a 2001 car without a valid inspection.
   {
