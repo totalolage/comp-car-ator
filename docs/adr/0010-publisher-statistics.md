@@ -31,17 +31,17 @@ Demonstrators never set a new price (they are discounted); German and Austrian n
 
 ## Scale
 
-Measured run with `packages/publisher/scripts/scale.ts` on a synthetic Ledger (`src/synthetic.ts`: Zipf-skewed model popularity, 3 Markets, price changes, gone Listings, 1% outliers, 12 photos per Listing):
+Measured run with `packages/publisher/scripts/scale.ts` on a synthetic Ledger (`src/synthetic.ts`: Zipf-skewed model popularity, 3 Markets, price changes, gone Listings, 1% outliers, 12 photos per Listing, Variants with full specs), Bundle in the columnar encoding of ADR 0004:
 
-| Measure            | Result                                                                                                                                     |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Synthetic Ledger   | 200,000 Listings (424,823 Observations over 180 daily runs), 50,000 Variants in 2,500 models, SQLite file 246 MB; generating it took 136 s |
-| `publish`          | 6.9 s, peak RSS 688 MB (Node 24.18, 12-core devbox under load from other jobs)                                                             |
-| Bundle             | 2,502 files, 119.5 MB raw, 12.1 MB gzip; 93,262 Listings published (active plus gone ≤ 30 days)                                            |
-| `catalog.json`     | 25.7 MB raw, 1.27 MB brotli                                                                                                                |
-| Largest model file | 6.8 MB raw, 0.32 MB brotli (the most popular model); median model file 15 KB                                                               |
+| Measure                       | Result                                                                                                           |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Synthetic Ledger              | 200,000 Listings (424,823 Observations over 180 daily runs), 50,000 Variants in 2,500 models, SQLite file 252 MB |
+| `publish`                     | 7.8 s, peak RSS 598 MB (Node 24.18, 12-core devbox shared with other jobs)                                       |
+| Bundle                        | 2,502 files, 54.6 MB raw, 9.8 MB gzip; 93,262 Listings published (active plus gone ≤ 30 days)                    |
+| `catalog.json` (50k Variants) | 10.3 MB raw, 1.44 MB gzip, 0.62 MB brotli; opening and decoding it in Node takes ~0.2 s                          |
+| Largest model file            | 2.25 MB raw, 0.39 MB gzip (the most popular model); median model file 10 KB                                      |
 
-Synthetic data repeats itself more than real listings, so real compressed sizes will be a few times larger (assume ~10× compression instead of ~20×: `catalog.json` ~2.5 MB, the largest model ~0.7 MB over the wire). Time and memory grow with the published Listings plus the history samples: one number per used Listing per week it was active, kept for every Listing the Ledger ever saw (~8 bytes each; a Listing on sale 2 months adds ~9). Extrapolated, not measured: a 1M-Listing Ledger with ~450k published Listings needs ~35 s and ~3.5 GB, dominated by the published rows; the history part stays under ~100 MB until the Ledger holds roughly ten million Listing-weeks. If it outgrows that, the fix inside the Publisher is a retention window for history. The ~26 MB `catalog.json` is the first thing to shrink (columnar, dictionary-encoded inside Bundle, per ADR 0004) if parse time or transfer becomes a problem.
+Before the columnar encoding the same Bundle was 119.5 MB raw and `catalog.json` 25.7 MB raw with sparser specs (stream 15 measured 41 MB with full specs). Synthetic data repeats itself more than real listings, so expect real compressed sizes up to ~2× these. Time and memory grow with the published Listings plus the history samples: one number per used Listing per week it was active, kept for every Listing the Ledger ever saw (~8 bytes each; a Listing on sale 2 months adds ~9). Extrapolated, not measured: a 1M-Listing Ledger with ~450k published Listings needs ~40 s and ~3 GB, dominated by the published rows; the history part stays under ~100 MB until the Ledger holds roughly ten million Listing-weeks. If it outgrows that, the fix inside the Publisher is a retention window for history.
 
 Vercel Hobby (checked 2026-10-25, vercel.com/docs/limits): no limit on build output file count (CLI uploads cap at 15,000 files of up to 100 MB each), automatic gzip/brotli for JSON, 100 GB/month transfer and 1M CDN requests/month. Transfer is the binding limit, so per-model files and `catalog.json` are sized by their compressed bytes.
 
