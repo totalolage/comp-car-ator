@@ -63,13 +63,20 @@ describe("catalog URL state", () => {
 
   it("writes nothing for an empty state or empty selections", () => {
     expect(writeCatalogState({})).toBe("");
-    expect(writeCatalogState({ filters: { fuel: [], year: {} }, compare: [] })).toBe("");
-    expect(readCatalogState("")).toEqual({ filters: {}, compare: [] });
+    expect(writeCatalogState({ filters: { fuel: [], year: {} } })).toBe("");
+    expect(readCatalogState("")).toEqual({ filters: {} });
+  });
+
+  it("tells an explicitly empty compare list from an absent one", () => {
+    expect(writeCatalogState({ compare: [] })).toBe("?cmp=");
+    expect(readCatalogState("?cmp=").compare).toEqual([]);
+    expect(readCatalogState("?fuel=diesel").compare).toBeUndefined();
   });
 
   it("reads hand-edited and legacy URLs leniently", () => {
     const state = readCatalogState(
-      "?fuel=diesel,,steam,diesel&body=WAGON&year=2020-2015&power=abc&km=-&sort=-nope&cmp=a,b,c,d,e&utm_source=x",
+      "?fuel=diesel,,steam,diesel&fuel=petrol&body=WAGON&year=2020-2015&power=abc&km=-&sort=-nope" +
+        "&cmp=a,b,c,d,e&utm_source=x&bad=%E0%A4%A",
     );
     expect(state).toEqual({
       filters: { fuel: ["diesel"], year: { min: 2015, max: 2020 } },
@@ -77,13 +84,26 @@ describe("catalog URL state", () => {
     });
   });
 
-  it("accepts a URLSearchParams and percent-encoded values", () => {
-    const state = readCatalogState(
-      new URLSearchParams("make=%C5%A1koda&model=skoda%2Foctavia&sort=year"),
-    );
-    expect(state.filters).toEqual({ make: ["škoda"], model: ["skoda/octavia"] });
+  it("ignores sort values that are not own aliases", () => {
+    for (const sort of ["constructor", "-toString", "__proto__", "powerKw"]) {
+      expect(readCatalogState(`?sort=${sort}`).sort).toBeUndefined();
+    }
+  });
+
+  it("keeps a comma inside a value apart from the list separator", () => {
+    const state = { filters: { source: ["a,b", "c"] } };
+    const url = writeCatalogState(state);
+    expect(url).toBe("?source=a%2Cb,c");
+    expect(readCatalogState(url)).toEqual(state);
+  });
+
+  it("decodes percent-encoded values and form-encoded spaces", () => {
+    const state = readCatalogState("make=%C5%A1koda&model=skoda%2Foctavia&source=x+y&sort=year");
+    expect(state.filters).toEqual({ make: ["škoda"], model: ["skoda/octavia"], source: ["x y"] });
     expect(state.sort).toEqual({ key: "year", dir: "asc" });
-    expect(writeCatalogState(state)).toBe("?make=%C5%A1koda&model=skoda/octavia&sort=year");
+    expect(writeCatalogState(state)).toBe(
+      "?make=%C5%A1koda&model=skoda/octavia&source=x%20y&sort=year",
+    );
   });
 });
 

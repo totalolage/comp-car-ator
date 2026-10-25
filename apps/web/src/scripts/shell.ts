@@ -5,10 +5,10 @@
  * built-in `prefetch` (astro.config.mjs).
  */
 import { type Lang, localePath } from "../i18n/locale.ts";
-import { openStore } from "../lib/store.ts";
+import { siteStore } from "../lib/store.ts";
 import { writeCatalogState } from "../lib/url-state.ts";
 
-const store = openStore();
+const store = siteStore();
 const lang = (document.body.dataset.lang ?? "cs") as Lang;
 
 // Language switch: same page in the other locale, with this page's query and hash. The

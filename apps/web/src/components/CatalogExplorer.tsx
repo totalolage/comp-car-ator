@@ -25,7 +25,7 @@ interface Props {
 export default function CatalogExplorer({ lang, initial, makeNames }: Props) {
   const t = i18n(lang);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
-  const [state, setState] = useState<CatalogState>({ filters: {}, compare: [] });
+  const [state, setState] = useState<CatalogState>({ filters: {} });
   const [result, setResult] = useState<VariantResult>(initial);
 
   useEffect(() => {

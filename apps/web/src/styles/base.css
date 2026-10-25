@@ -76,7 +76,8 @@ a:hover {
   z-index: 10;
   background: var(--sign);
   color: var(--on-sign);
-  --focus: var(--mark);
+  /* Yellow ring on green in both schemes. */
+  --focus: #ffe94a;
 }
 
 .masthead-bar {
@@ -128,7 +129,7 @@ a:hover {
   padding: 0 var(--s1);
   border-radius: 0.625rem;
   background: var(--mark);
-  color: #000;
+  color: var(--on-mark);
   font-size: var(--text-xs);
   line-height: 1.25rem;
   text-align: center;
@@ -334,11 +335,11 @@ main:focus {
 
 .facet-option:has(:checked) {
   background: var(--mark);
-  color: #000;
+  color: var(--on-mark);
 }
 
 .facet-option:has(:checked) .count {
-  color: #000;
+  color: var(--on-mark);
 }
 
 .facet-option input {

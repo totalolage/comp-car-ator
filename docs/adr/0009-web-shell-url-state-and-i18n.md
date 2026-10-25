@@ -9,13 +9,18 @@ that, each a small interface tested on its own:
   the sort and the compare list. `write` emits one canonical form (fixed parameter order,
   sorted lists, defaults omitted) so equal states give equal, short URLs
   (`?body=wagon&fuel=diesel&year=2015-2020&sort=-usedPrice&cmp=…`); `read` accepts anything a
-  hand-edited or old link holds and drops what is not in the vocabulary. Parameter names are
+  hand-edited or old link holds and drops what is not in the vocabulary. Values are split on
+  literal commas before decoding, so a `%2C` inside a value survives. `cmp` absent means the
+  view carries no compare list; `cmp=` means an explicitly empty one. Parameter names are
   short aliases of the catalog query engine's filter keys; `VariantFilters` and
   `ListingFilters` stay the definition of what a filter means.
-- `lib/store.ts`: `openStore(storage)` over one versioned key (`cca:v1`) holds the compare
-  list (max 4), recently viewed models and saved searches. Saved searches store the canonical
-  query string plus `lastTotal`, which is what deferred alerts will diff against. Corrupt
-  data, a full quota or disabled storage degrade to an in-memory store, never an error.
+- `lib/store.ts`: `siteStore()` holds the compare list (max 4), recently viewed models and
+  saved searches under one versioned localStorage key (`cca:v1`). There is one instance per
+  page, so islands and the shell script notify each other; other tabs arrive through the
+  `storage` event. `openStore(storage)` builds it over any `Storage` (tests use an in-memory
+  one). Saved searches store the canonical query string plus `lastTotal`, which is what
+  deferred alerts will diff against. Corrupt data, a full quota or disabled storage degrade
+  to an in-memory store, never an error.
 - `i18n/i18n.ts`: `i18n(lang)` gives strings with `{var}` interpolation, Czech plural forms
   (`one`/`few`/`other` keys picked by `Intl.PluralRules`), vocabulary labels, and CZK, money,
   km, kW, l/100 km and Prague-date formats. Components never call `Intl` themselves.
@@ -43,8 +48,9 @@ and hash, so switching language keeps the view.
   `history.replaceState`; new filters are a row in its field table plus a test case.
 - Static pages render unfiltered; an island applies the URL state after hydration, so a
   shared filtered link briefly shows the unfiltered first paint.
-- The compare tray (#17) reads the list from `cmp=` when present and from the store
-  otherwise; the header compare link already follows the store.
+- The compare tray (#17) reads the list from `cmp` when the URL has it (even empty) and from
+  the store otherwise; the header compare link already follows the store. Whoever owns the
+  catalog URL (today `CatalogExplorer`) must write the tray's `compare` back with the filters.
 - Message catalogs ship to islands as one shared chunk with both languages (about 3 kB
   gzipped today); the shell script imports only `i18n/locale.ts`.
 - A performance budget per page is enforced at build time (`apps/web/DESIGN.md`).

@@ -20,6 +20,7 @@
   --on-sign: #ffffff;
   --mark: light-dark(#ffe94a, #6b5c00);
   --mark-soft: light-dark(#fff7bf, #3d3600);
+  --on-mark: light-dark(#000000, #ffffff);
   --focus: light-dark(#0a4da0, #8fb9ff);
 
   /* Type: one workhorse sans, a tight 1.125 scale, tabular figures in data */

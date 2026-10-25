@@ -49,6 +49,17 @@ export interface SiteStore {
 
 const KEY = "cca:v1";
 
+let shared: SiteStore | undefined;
+
+/**
+ * The page's store over window.localStorage. Every island and script on a page uses this one
+ * instance so a change in one notifies the others; other tabs arrive via the storage event.
+ */
+export function siteStore(): SiteStore {
+  shared ??= openStore();
+  return shared;
+}
+
 interface Data {
   compare: VariantId[];
   recents: Recent[];
@@ -56,8 +67,8 @@ interface Data {
 }
 
 /**
- * Opens the store over `storage` (window.localStorage in the browser, any Storage in tests).
- * `now` stamps recents and saved searches.
+ * Opens a store over `storage` (any Storage; tests pass an in-memory one). Pages use
+ * `siteStore()`. `now` stamps recents and saved searches.
  */
 export function openStore(
   storage: Storage | null = browserStorage(),
@@ -71,7 +82,7 @@ export function openStore(
   function load(): Data {
     if (!backing) return memory;
     try {
-      return sanitize(JSON.parse(storage.getItem(KEY) ?? "null"));
+      return sanitize(JSON.parse(backing.getItem(KEY) ?? "null"));
     } catch {
       return empty();
     }

@@ -6,9 +6,10 @@
  *
  *   ?make=skoda,volkswagen&fuel=diesel&year=2015-2020&power=-110&sort=-usedPrice&cmp=a,b
  *
- * Lists are comma-separated, ranges are `min-max` with either end optional, a sort key with
- * a leading `-` is descending. Parameter names are short aliases of the query engine's
- * filter keys; the engine's own types stay the source of truth for what a filter means.
+ * Lists are comma-separated (a comma inside a value is percent-encoded and survives), ranges
+ * are `min-max` with either end optional, a sort key with a leading `-` is descending.
+ * Parameter names are short aliases of the query engine's filter keys; the engine's own
+ * types stay the source of truth for what a filter means.
  */
 import type {
   ListingFilters,
@@ -27,7 +28,11 @@ export const COMPARE_MAX = 4;
 export interface CatalogState {
   filters: VariantFilters;
   sort?: Sort<VariantSortKey>;
-  compare: VariantId[];
+  /**
+   * The compare list this view carries. Undefined when the URL has none (the tray then shows
+   * the remembered list); `[]` when the URL says "nothing to compare" (`cmp=`).
+   */
+  compare?: VariantId[];
 }
 
 /** State of a model page's listing table. */
@@ -36,12 +41,14 @@ export interface ListingState {
   sort?: Sort<ListingSortKey>;
 }
 
-export function readCatalogState(search: string | URLSearchParams): CatalogState {
-  const params = toParams(search);
+/** Reads `location.search` (or any query string, with or without the leading `?`). */
+export function readCatalogState(search: string): CatalogState {
+  const params = parseQuery(search);
+  const cmp = params.get("cmp");
   return {
     filters: readFields(params, VARIANT_FIELDS) as VariantFilters,
     ...optionalSort(params, VARIANT_SORT),
-    compare: readList(params.get("cmp"), null).slice(0, COMPARE_MAX),
+    ...(cmp === undefined ? {} : { compare: readList(cmp, null).slice(0, COMPARE_MAX) }),
   };
 }
 
@@ -50,13 +57,15 @@ export function writeCatalogState(state: Partial<CatalogState>): string {
   const parts = writeFields(state.filters ?? {}, VARIANT_FIELDS);
   if (state.sort) parts.push(writeSort(state.sort, VARIANT_SORT));
   // Compare order is the order the person added them in; keep it.
-  const compare = [...new Set(state.compare ?? [])].slice(0, COMPARE_MAX);
-  if (compare.length) parts.push(`cmp=${compare.map(encodeValue).join(",")}`);
+  if (state.compare) {
+    const compare = [...new Set(state.compare)].slice(0, COMPARE_MAX);
+    parts.push(`cmp=${compare.map(encodeValue).join(",")}`);
+  }
   return parts.length ? `?${parts.join("&")}` : "";
 }
 
-export function readListingState(search: string | URLSearchParams): ListingState {
-  const params = toParams(search);
+export function readListingState(search: string): ListingState {
+  const params = parseQuery(search);
   return {
     filters: readFields(params, LISTING_FIELDS) as ListingFilters,
     ...optionalSort(params, LISTING_SORT),
@@ -141,20 +150,40 @@ const LISTING_SORT: Record<string, ListingSortKey> = {
 
 // --- codec ----------------------------------------------------------------------------
 
-function toParams(search: string | URLSearchParams): URLSearchParams {
-  return typeof search === "string" ? new URLSearchParams(search) : search;
+/**
+ * Parameter name → raw (still percent-encoded) value; the first occurrence wins. Values stay
+ * encoded so list splitting sees only the literal commas the writer put there.
+ */
+function parseQuery(search: string): Map<string, string> {
+  const params = new Map<string, string>();
+  for (const pair of search.replace(/^\?/, "").split("&")) {
+    if (!pair) continue;
+    const eq = pair.indexOf("=");
+    const name = decode(eq < 0 ? pair : pair.slice(0, eq));
+    if (name !== null && !params.has(name)) params.set(name, eq < 0 ? "" : pair.slice(eq + 1));
+  }
+  return params;
 }
 
-function readFields(params: URLSearchParams, fields: Field[]): Record<string, unknown> {
+/** Form-style decoding; null for malformed escapes. */
+function decode(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw.replaceAll("+", " "));
+  } catch {
+    return null;
+  }
+}
+
+function readFields(params: Map<string, string>, fields: Field[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const field of fields) {
     const raw = params.get(field.param);
-    if (raw === null) continue;
+    if (raw === undefined) continue;
     if (field.kind === "list") {
       const values = readList(raw, field.values);
       if (values.length) out[field.key] = values;
     } else if (field.kind === "range") {
-      const parsed = readRange(raw);
+      const parsed = readRange(decode(raw) ?? "");
       if (parsed) out[field.key] = parsed;
     } else if (raw === "1") {
       out[field.key] = true;
@@ -183,12 +212,11 @@ function writeFields(filters: object, fields: Field[]): string[] {
   return parts;
 }
 
-/** Splits a comma list, dropping blanks, duplicates and values outside `allowed`. */
-function readList(raw: string | null, allowed: readonly string[] | null): string[] {
-  if (!raw) return [];
+/** Splits a raw comma list, dropping blanks, duplicates and values outside `allowed`. */
+function readList(raw: string, allowed: readonly string[] | null): string[] {
   const items = raw
     .split(",")
-    .map((s) => s.trim())
+    .map((s) => decode(s)?.trim() ?? "")
     .filter((s) => s !== "" && (allowed === null || allowed.includes(s)));
   return [...new Set(items)];
 }
@@ -212,13 +240,15 @@ function writeRange(r: Range): string | null {
 }
 
 function optionalSort<K extends string>(
-  params: URLSearchParams,
+  params: Map<string, string>,
   aliases: Record<string, K>,
 ): { sort?: Sort<K> } {
-  const raw = params.get("sort");
+  const raw = decode(params.get("sort") ?? "");
   if (!raw) return {};
   const desc = raw.startsWith("-");
-  const key = aliases[desc ? raw.slice(1) : raw];
+  const alias = desc ? raw.slice(1) : raw;
+  // Own keys only: `?sort=constructor` must not reach the engine.
+  const key = Object.hasOwn(aliases, alias) ? aliases[alias] : undefined;
   return key ? { sort: { key, dir: desc ? "desc" : "asc" } } : {};
 }
 

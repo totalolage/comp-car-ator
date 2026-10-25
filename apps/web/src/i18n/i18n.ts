@@ -16,9 +16,9 @@ import {
 /** Printed for a missing value. */
 export const MISSING = "–";
 
-/** Message keys that have plural forms: `<key>.one`, `<key>.few`, `<key>.other`. */
+/** Counted nouns: `count.<noun>.one|few|other` in the catalogs, e.g. "count.listings". */
 export type PluralKey = PluralBase<MessageKey>;
-type PluralBase<K> = K extends `${infer P}.other` ? P : never;
+type PluralBase<K> = K extends `count.${infer P}.other` ? `count.${P}` : never;
 
 export interface I18n {
   lang: Lang;
