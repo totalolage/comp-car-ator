@@ -5,81 +5,171 @@ import {
   modelIdOf,
   type VariantSpec,
   variantIdOf,
+  type VehicleDescriptor,
 } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
 import { createResolver } from "./index.ts";
 
-function variant(
-  spec: Omit<VariantSpec, "years"> & { years?: VariantSpec["years"] },
-): CatalogVariant {
-  const full = { years: { from: spec.generation.from }, ...spec } as VariantSpec;
-  return {
-    ...full,
-    id: variantIdOf(full),
-    makeId: makeIdOf(full.make),
-    modelId: modelIdOf(full.make, full.model),
-    generationId: generationIdOf(full),
-  };
+type Gen = VariantSpec["generation"];
+type Row = Pick<VariantSpec, "body" | "fuel" | "powerKw" | "transmission"> & {
+  years?: VariantSpec["years"];
+};
+
+function variants(make: string, model: string, generation: Gen, rows: Row[]): CatalogVariant[] {
+  return rows.map((row) => {
+    const spec: VariantSpec = {
+      make,
+      model,
+      generation,
+      years: { from: generation.from, to: generation.to },
+      ...row,
+    };
+    return {
+      ...spec,
+      id: variantIdOf(spec),
+      makeId: makeIdOf(make),
+      modelId: modelIdOf(make, model),
+      generationId: generationIdOf(spec),
+    };
+  });
 }
 
-const mk8 = { slug: "mk8", name: "Golf VIII", from: 2020 };
+const octavia3 = { slug: "mk3", name: "Octavia III", from: 2013, to: 2020 };
+const octavia4 = { slug: "mk4", name: "Octavia IV", from: 2020 };
+const golf7 = { slug: "mk7", name: "Golf VII", from: 2012, to: 2020 };
+const golf8 = { slug: "mk8", name: "Golf VIII", from: 2020 };
+
 const catalog = [
-  variant({
-    make: "Volkswagen",
-    model: "Golf",
-    generation: mk8,
-    body: "hatchback",
-    fuel: "petrol",
-    powerKw: 110,
-    transmission: "automatic",
-  }),
-  variant({
-    make: "Volkswagen",
-    model: "Golf",
-    generation: mk8,
-    body: "hatchback",
-    fuel: "diesel",
-    powerKw: 85,
-    transmission: "manual",
-  }),
-  variant({
-    make: "Volkswagen",
-    model: "Golf",
-    generation: mk8,
-    body: "wagon",
-    fuel: "diesel",
-    powerKw: 110,
-    transmission: "automatic",
-  }),
+  ...variants("Škoda", "Octavia", octavia3, [
+    { body: "wagon", fuel: "diesel", powerKw: 110, transmission: "automatic" },
+    { body: "hatchback", fuel: "diesel", powerKw: 110, transmission: "automatic" },
+    { body: "wagon", fuel: "diesel", powerKw: 135, transmission: "automatic" },
+  ]),
+  ...variants("Škoda", "Octavia", octavia4, [
+    { body: "wagon", fuel: "diesel", powerKw: 110, transmission: "automatic" },
+    { body: "hatchback", fuel: "diesel", powerKw: 110, transmission: "automatic" },
+    { body: "wagon", fuel: "diesel", powerKw: 147, transmission: "automatic" },
+    { body: "wagon", fuel: "phev", powerKw: 150, transmission: "automatic" },
+  ]),
+  ...variants("Škoda", "Kodiaq", { slug: "mk1", name: "Kodiaq I", from: 2016, to: 2024 }, [
+    { body: "suv", fuel: "diesel", powerKw: 140, transmission: "automatic" },
+    { body: "suv", fuel: "diesel", powerKw: 110, transmission: "manual" },
+    { body: "suv", fuel: "diesel", powerKw: 110, transmission: "automatic" },
+  ]),
+  ...variants("Volkswagen", "Golf", golf7, [
+    { body: "hatchback", fuel: "diesel", powerKw: 110, transmission: "manual" },
+  ]),
+  ...variants("Volkswagen", "Golf", golf8, [
+    { body: "hatchback", fuel: "diesel", powerKw: 85, transmission: "manual" },
+    { body: "hatchback", fuel: "diesel", powerKw: 110, transmission: "manual" },
+    { body: "wagon", fuel: "diesel", powerKw: 110, transmission: "automatic" },
+    { body: "hatchback", fuel: "petrol", powerKw: 110, transmission: "automatic" },
+    { body: "hatchback", fuel: "petrol", powerKw: 113, transmission: "automatic" },
+  ]),
+  ...variants("Volkswagen", "Tiguan", { slug: "mk2", name: "Tiguan II", from: 2016, to: 2024 }, [
+    { body: "suv", fuel: "petrol", powerKw: 140, transmission: "automatic" },
+  ]),
+  ...variants("Mercedes-Benz", "C-Klasse", { slug: "w206", name: "W206", from: 2021 }, [
+    { body: "sedan", fuel: "diesel", powerKw: 147, transmission: "automatic" },
+  ]),
+  ...variants("BMW", "Řada 3", { slug: "g20", name: "G20", from: 2019 }, [
+    { body: "sedan", fuel: "diesel", powerKw: 140, transmission: "automatic" },
+  ]),
+  ...variants("Land Rover", "Range Rover", { slug: "l405", name: "L405", from: 2012, to: 2021 }, [
+    { body: "suv", fuel: "diesel", powerKw: 225, transmission: "automatic" },
+  ]),
 ];
 const resolver = createResolver(catalog);
+const resolve = (vehicle: VehicleDescriptor) => resolver.resolve(vehicle);
+const variantOf = (vehicle: VehicleDescriptor) => {
+  const r = resolve(vehicle);
+  return r.status === "matched" ? r.variantId : r;
+};
+
+const kodiaq = { make: "Škoda", model: "Kodiaq", fuel: "diesel", transmission: "automatic" } as const;
 
 describe("Resolver", () => {
-  it("matches a fully described listing, with make aliases and model suffixes", () => {
-    expect(
-      resolver.resolve({
-        make: "VW",
-        model: "Golf Variant",
-        fuel: "diesel",
-        powerKw: 110,
-        transmission: "automatic",
-      }),
-    ).toEqual({
+  it("matches a fully described listing", () => {
+    expect(resolve({ ...kodiaq, powerKw: 140, firstRegistration: { year: 2018 } })).toEqual({
       status: "matched",
-      makeId: "volkswagen",
-      modelId: "volkswagen/golf",
-      variantId: "volkswagen/golf/mk8/wagon-diesel-110kw-automatic",
+      makeId: "skoda",
+      modelId: "skoda/kodiaq",
+      variantId: "skoda/kodiaq/mk1/suv-diesel-140kw-automatic",
     });
   });
 
-  it("tolerates small power differences (kW/PS rounding)", () => {
-    expect(
-      resolver.resolve({ make: "Volkswagen", model: "Golf", fuel: "diesel", powerKw: 86 }).status,
-    ).toBe("matched");
+  it("reads make and model through diacritics, case and aliases", () => {
+    const tiguan = "volkswagen/tiguan/mk2/suv-petrol-140kw-automatic";
+    const petrol = { fuel: "petrol", powerKw: 140, transmission: "automatic" } as const;
+    expect(variantOf({ make: "VW", model: "TIGUAN", ...petrol })).toBe(tiguan);
+    expect(variantOf({ make: "volkswagen", model: "tiguan", ...petrol })).toBe(tiguan);
+    expect(variantOf({ make: "SKODA", model: "kodiaq", ...kodiaq, powerKw: 140 })).toBe(
+      "skoda/kodiaq/mk1/suv-diesel-140kw-automatic",
+    );
+    // Sauto's Czech class names, AutoScout24's engine badges, English names: one Model each.
+    const c = { fuel: "diesel", powerKw: 147, transmission: "automatic" } as const;
+    for (const model of ["Třídy C", "C 220", "C-Class", "C-Klasse", "c220d"]) {
+      expect(variantOf({ make: "Mercedes", model, ...c })).toBe(
+        "mercedes-benz/c-klasse/w206/sedan-diesel-147kw-automatic",
+      );
+    }
+    const bmw = { fuel: "diesel", powerKw: 140, transmission: "automatic" } as const;
+    for (const model of ["320", "320d", "3er", "3 Series", "Řada 3"]) {
+      expect(variantOf({ make: "BMW", model, ...bmw })).toBe(
+        "bmw/rada-3/g20/sedan-diesel-140kw-automatic",
+      );
+    }
   });
 
-  it("falls back to the model when several Variants fit", () => {
-    expect(resolver.resolve({ make: "Volkswagen", model: "Golf", fuel: "diesel" })).toEqual({
+  it("reads power, gearbox, body and generation from trim noise", () => {
+    expect(
+      variantOf({
+        make: "Škoda",
+        model: "Octavia Combi",
+        trim: "2,0 TDI 147kW DSG RS",
+        fuel: "diesel",
+        firstRegistration: { year: 2022 },
+      }),
+    ).toBe("skoda/octavia/mk4/wagon-diesel-147kw-automatic");
+    expect(
+      variantOf({ make: "VW", model: "Golf", trim: "VIII 2.0 TDI 115 PS", fuel: "diesel" }),
+    ).toBe("volkswagen/golf/mk8/hatchback-diesel-85kw-manual");
+    expect(
+      variantOf({ make: "VW", model: "Golf Variant", trim: "Style 7-DSG 110 kW", fuel: "diesel" }),
+    ).toBe("volkswagen/golf/mk8/wagon-diesel-110kw-automatic");
+  });
+
+  it("lets stated fields win over trim text", () => {
+    expect(
+      variantOf({ ...kodiaq, transmission: "manual", trim: "2.0 TDI 110 kW DSG", powerKw: 110 }),
+    ).toBe("skoda/kodiaq/mk1/suv-diesel-110kw-manual");
+  });
+
+  it("drops a hint the text states two conflicting ways", () => {
+    expect(resolve({ ...kodiaq, trim: "110 kW, dříve 140 kW" })).toMatchObject({
+      status: "model",
+      reason: "ambiguous",
+    });
+  });
+
+  it("tolerates power within 3 kW and no more", () => {
+    expect(variantOf({ ...kodiaq, powerKw: 137 })).toBe(
+      "skoda/kodiaq/mk1/suv-diesel-140kw-automatic",
+    );
+    expect(resolve({ ...kodiaq, powerKw: 136 })).toMatchObject({ reason: "no-variant" });
+  });
+
+  it("never picks between Variants that both fit, even if one is closer", () => {
+    // 110 kW and 113 kW petrol Golfs are both within tolerance of 111.
+    expect(
+      resolve({
+        make: "VW",
+        model: "Golf",
+        fuel: "petrol",
+        powerKw: 111,
+        transmission: "automatic",
+      }),
+    ).toEqual({
       status: "model",
       makeId: "volkswagen",
       modelId: "volkswagen/golf",
@@ -87,35 +177,131 @@ describe("Resolver", () => {
     });
   });
 
-  it("falls back to the model when no Variant fits", () => {
-    expect(
-      resolver.resolve({ make: "Volkswagen", model: "Golf", fuel: "petrol", powerKw: 180 }),
-    ).toMatchObject({
+  it("needs fuel and power before matching, even when one Variant is left", () => {
+    // Only one Tiguan in the catalog, but the listing does not say which engine it has.
+    expect(resolve({ make: "VW", model: "Tiguan", fuel: "petrol" })).toMatchObject({
       status: "model",
-      reason: "no-variant",
+      reason: "ambiguous",
+    });
+    expect(resolve({ make: "VW", model: "Tiguan", powerKw: 140 })).toMatchObject({
+      status: "model",
+      reason: "ambiguous",
     });
   });
 
-  it("reports unknown makes and models", () => {
-    expect(resolver.resolve({ make: "Lada", model: "Niva" })).toEqual({
+  describe("generation boundary years", () => {
+    const octavia = {
+      make: "Škoda",
+      model: "Octavia Combi",
+      fuel: "diesel",
+      powerKw: 110,
+      transmission: "automatic",
+    } as const;
+
+    it("matches by year away from the boundary", () => {
+      expect(variantOf({ ...octavia, firstRegistration: { year: 2017 } })).toBe(
+        "skoda/octavia/mk3/wagon-diesel-110kw-automatic",
+      );
+      expect(variantOf({ ...octavia, firstRegistration: { year: 2022 } })).toBe(
+        "skoda/octavia/mk4/wagon-diesel-110kw-automatic",
+      );
+    });
+
+    it("gives registration a year either side, so boundary years stay ambiguous", () => {
+      for (const year of [2019, 2020, 2021]) {
+        expect(resolve({ ...octavia, firstRegistration: { year } })).toMatchObject({
+          reason: "ambiguous",
+        });
+      }
+    });
+
+    it("holds manufacture year to the production years", () => {
+      expect(variantOf({ ...octavia, manufactureYear: 2021 })).toBe(
+        "skoda/octavia/mk4/wagon-diesel-110kw-automatic",
+      );
+    });
+
+    it("settles a boundary year with a generation named in the text", () => {
+      const year = { firstRegistration: { year: 2020 } };
+      expect(variantOf({ ...octavia, ...year, trim: "IV 2.0 TDI" })).toBe(
+        "skoda/octavia/mk4/wagon-diesel-110kw-automatic",
+      );
+      expect(variantOf({ ...octavia, ...year, trim: "Mk3 2.0 TDI" })).toBe(
+        "skoda/octavia/mk3/wagon-diesel-110kw-automatic",
+      );
+    });
+
+    it("does not read Škoda's iV plug-in badge or engine numbers as a generation", () => {
+      expect(
+        variantOf({ ...octavia, fuel: "phev", powerKw: 150, trim: "iV 1.4 TSI", modelYear: 2021 }),
+      ).toBe("skoda/octavia/mk4/wagon-phev-150kw-automatic");
+      expect(resolve({ ...octavia, firstRegistration: { year: 2020 }, trim: "3 4 2.0" })).toMatchObject(
+        { reason: "ambiguous" },
+      );
+    });
+
+    it("finds no Variant when the named generation contradicts the year", () => {
+      expect(resolve({ ...octavia, firstRegistration: { year: 2023 }, trim: "III" })).toMatchObject({
+        status: "model",
+        reason: "no-variant",
+      });
+    });
+  });
+
+  it("resolves the same car from Sauto and AutoScout24 to the same Variant", () => {
+    const sauto: VehicleDescriptor = {
+      make: "Škoda",
+      model: "Kodiaq",
+      trim: "2,0 TDI 140kW DSG 4x4 CZ Style",
+      sourceTaxonomy: { make: "70", model: "705" },
+      firstRegistration: { year: 2017, month: 9 },
+      manufactureYear: 2017,
+      fuel: "diesel",
+      transmission: "automatic",
+    };
+    const autoscout: VehicleDescriptor = {
+      make: "Skoda",
+      model: "Kodiaq",
+      trim: "2.0 TDI 4x4 Style DSG *AHK*NAVI*",
+      sourceTaxonomy: { make: "65", model: "21197" },
+      firstRegistration: { year: 2017, month: 9 },
+      fuel: "diesel",
+      powerKw: 140,
+      transmission: "automatic",
+    };
+    expect(resolver.resolve(sauto, "sauto")).toEqual(
+      resolver.resolve(autoscout, "autoscout24-de"),
+    );
+    expect(variantOf(sauto)).toBe("skoda/kodiaq/mk1/suv-diesel-140kw-automatic");
+  });
+
+  it("reports unknown makes and models without falling back to a shorter model", () => {
+    expect(resolve({ make: "Lada", model: "Niva" })).toEqual({
       status: "unmatched",
       reason: "unknown-make",
     });
-    expect(resolver.resolve({ make: "VW", model: "Polo" })).toEqual({
+    expect(resolve({ make: "VW", model: "Polo" })).toEqual({
       status: "unmatched",
       reason: "unknown-model",
     });
+    // "Range Rover Sport" shares engines with the Range Rover but is another Model.
+    expect(
+      resolve({
+        make: "Land Rover",
+        model: "Range Rover Sport",
+        fuel: "diesel",
+        powerKw: 225,
+        transmission: "automatic",
+      }),
+    ).toEqual({ status: "unmatched", reason: "unknown-model" });
   });
 
-  it("ignores Variants outside the listing's year", () => {
-    expect(
-      resolver.resolve({
-        make: "VW",
-        model: "Golf",
-        fuel: "diesel",
-        powerKw: 85,
-        firstRegistration: { year: 2015 },
-      }).status,
-    ).toBe("model");
+  it("does not depend on catalog order", () => {
+    const reversed = createResolver([...catalog].reverse());
+    const listing = { make: "Mercedes-Benz", model: "C 220 d", fuel: "diesel", powerKw: 147 } as const;
+    expect(reversed.resolve(listing)).toEqual(resolver.resolve(listing));
+    expect(reversed.resolve({ make: "VW", model: "Golf" })).toEqual(
+      resolver.resolve({ make: "VW", model: "Golf" }),
+    );
   });
 });

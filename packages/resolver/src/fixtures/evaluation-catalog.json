@@ -1,0 +1,626 @@
+{
+  "about": "Hand-built evaluation catalog: realistic Variants (public spec sheets, CZ/DE market) for the models in listings.json, including neighbours that make listings ambiguous. Each variant line is 'bodies fuel kW transmissions [years]'; comma lists expand to every combination; years default to the generation's.",
+  "makes": {
+    "Škoda": {
+      "Octavia": [
+        ["mk3", "Octavia III", 2013, 2020, [
+          "hatchback,wagon petrol 85 manual,automatic 2017-2020",
+          "hatchback,wagon petrol 77 manual 2013-2015",
+          "hatchback,wagon petrol 110 manual,automatic",
+          "hatchback,wagon petrol 132 manual,automatic",
+          "hatchback,wagon petrol 162 manual,automatic 2013-2016",
+          "hatchback,wagon petrol 169 manual,automatic 2017-2020",
+          "hatchback,wagon diesel 81 manual,automatic 2013-2017",
+          "hatchback,wagon diesel 85 manual,automatic 2017-2020",
+          "hatchback,wagon diesel 110 manual,automatic",
+          "hatchback,wagon diesel 135 manual,automatic"
+        ]],
+        ["mk4", "Octavia IV", 2020, null, [
+          "hatchback,wagon petrol 81 manual,automatic",
+          "hatchback,wagon petrol 110 manual,automatic",
+          "hatchback,wagon petrol 140 automatic",
+          "hatchback,wagon petrol 180 automatic 2020-2024",
+          "hatchback,wagon petrol 195 automatic 2024-",
+          "hatchback,wagon phev 150 automatic 2020-2023",
+          "hatchback,wagon diesel 85 manual,automatic",
+          "hatchback,wagon diesel 110 manual,automatic",
+          "hatchback,wagon diesel 147 automatic"
+        ]]
+      ],
+      "Kodiaq": [
+        ["mk1", "Kodiaq I", 2016, 2024, [
+          "suv petrol 110 manual,automatic",
+          "suv petrol 132 automatic 2016-2020",
+          "suv petrol 140 automatic 2020-2024",
+          "suv petrol 180 automatic 2021-2024",
+          "suv diesel 85 manual,automatic 2017-2020",
+          "suv diesel 110 manual,automatic",
+          "suv diesel 140 automatic 2016-2020",
+          "suv diesel 147 automatic 2020-2024",
+          "suv diesel 176 automatic 2018-2020"
+        ]],
+        ["mk2", "Kodiaq II", 2024, null, [
+          "suv petrol 110 automatic",
+          "suv petrol 150 automatic",
+          "suv petrol 195 automatic 2025-",
+          "suv phev 150 automatic",
+          "suv diesel 110 automatic",
+          "suv diesel 142 automatic"
+        ]]
+      ],
+      "Superb": [
+        ["mk3", "Superb III", 2015, 2024, [
+          "hatchback,wagon petrol 110 manual,automatic",
+          "hatchback,wagon petrol 132 automatic 2015-2019",
+          "hatchback,wagon petrol 140 automatic 2019-2024",
+          "hatchback,wagon petrol 162 automatic 2015-2019",
+          "hatchback,wagon petrol 200 automatic 2015-2019",
+          "hatchback,wagon petrol 206 automatic 2019-2024",
+          "hatchback,wagon phev 160 automatic 2019-2024",
+          "hatchback,wagon diesel 88 manual,automatic 2015-2019",
+          "hatchback,wagon diesel 110 manual,automatic",
+          "hatchback,wagon diesel 140 automatic 2015-2019",
+          "hatchback,wagon diesel 147 automatic 2019-2024"
+        ]],
+        ["mk4", "Superb IV", 2024, null, [
+          "hatchback,wagon petrol 110 automatic",
+          "hatchback,wagon petrol 150 automatic",
+          "hatchback,wagon phev 150 automatic",
+          "hatchback,wagon diesel 110 automatic",
+          "hatchback,wagon diesel 142 automatic"
+        ]]
+      ],
+      "Fabia": [
+        ["mk3", "Fabia III", 2014, 2021, [
+          "hatchback,wagon petrol 44 manual",
+          "hatchback,wagon petrol 55 manual",
+          "hatchback,wagon petrol 66 manual 2014-2018",
+          "hatchback,wagon petrol 70 manual 2017-2021",
+          "hatchback,wagon petrol 81 manual,automatic",
+          "hatchback,wagon diesel 66 manual",
+          "hatchback,wagon diesel 77 manual,automatic"
+        ]],
+        ["mk4", "Fabia IV", 2021, null, [
+          "hatchback petrol 48 manual",
+          "hatchback petrol 59 manual",
+          "hatchback petrol 70 manual",
+          "hatchback petrol 81 manual,automatic",
+          "hatchback petrol 110 automatic"
+        ]]
+      ],
+      "Kamiq": [
+        ["mk1", "Kamiq", 2019, null, [
+          "suv petrol 70 manual",
+          "suv petrol 81 manual,automatic",
+          "suv petrol 110 manual,automatic",
+          "suv diesel 85 manual,automatic 2019-2021",
+          "suv cng 66 manual 2019-2022"
+        ]]
+      ],
+      "Karoq": [
+        ["mk1", "Karoq", 2017, null, [
+          "suv petrol 81 manual,automatic",
+          "suv petrol 110 manual,automatic",
+          "suv petrol 140 automatic 2019-",
+          "suv diesel 85 manual,automatic",
+          "suv diesel 110 manual,automatic",
+          "suv diesel 140 automatic 2017-2020",
+          "suv diesel 147 automatic 2020-"
+        ]]
+      ],
+      "Scala": [
+        ["mk1", "Scala", 2019, null, [
+          "hatchback petrol 70 manual",
+          "hatchback petrol 81 manual,automatic",
+          "hatchback petrol 110 manual,automatic",
+          "hatchback diesel 85 manual,automatic 2019-2021",
+          "hatchback cng 66 manual 2019-2022"
+        ]]
+      ],
+      "Yeti": [
+        ["mk1", "Yeti", 2009, 2017, [
+          "suv petrol 77 manual",
+          "suv petrol 81 manual,automatic 2013-2017",
+          "suv petrol 90 manual,automatic 2015-2017",
+          "suv petrol 118 manual,automatic",
+          "suv diesel 77 manual",
+          "suv diesel 81 manual",
+          "suv diesel 103 manual,automatic",
+          "suv diesel 125 manual"
+        ]]
+      ]
+    },
+    "Volkswagen": {
+      "Golf": [
+        ["mk7", "Golf VII", 2012, 2020, [
+          "hatchback,wagon petrol 63 manual 2012-2017",
+          "hatchback,wagon petrol 85 manual,automatic 2017-2020",
+          "hatchback,wagon petrol 92 manual,automatic 2012-2017",
+          "hatchback,wagon petrol 96 manual,automatic 2017-2020",
+          "hatchback,wagon petrol 110 manual,automatic",
+          "hatchback petrol 162 manual,automatic 2012-2016",
+          "hatchback petrol 169 manual,automatic 2013-2017",
+          "hatchback petrol 180 manual,automatic 2017-2020",
+          "hatchback,wagon petrol 228 automatic 2017-2020",
+          "hatchback,wagon diesel 77 manual,automatic 2012-2017",
+          "hatchback,wagon diesel 85 manual,automatic 2017-2020",
+          "hatchback,wagon diesel 110 manual,automatic"
+        ]],
+        ["mk8", "Golf VIII", 2020, null, [
+          "hatchback,wagon petrol 66 manual 2020-2024",
+          "hatchback,wagon petrol 81 manual,automatic",
+          "hatchback,wagon petrol 96 manual,automatic 2020-2024",
+          "hatchback,wagon petrol 85 automatic 2024-",
+          "hatchback,wagon petrol 110 manual,automatic",
+          "hatchback petrol 180 automatic 2020-2024",
+          "hatchback petrol 195 automatic 2024-",
+          "hatchback,wagon petrol 235 automatic",
+          "hatchback phev 150 automatic",
+          "hatchback phev 180 automatic",
+          "hatchback,wagon diesel 85 manual,automatic",
+          "hatchback,wagon diesel 110 manual,automatic",
+          "hatchback,wagon diesel 147 automatic"
+        ]]
+      ],
+      "Passat": [
+        ["b8", "Passat B8", 2014, 2023, [
+          "sedan,wagon petrol 110 manual,automatic",
+          "sedan,wagon petrol 132 automatic 2015-2019",
+          "sedan,wagon petrol 140 automatic 2019-2023",
+          "sedan,wagon petrol 206 automatic 2019-2023",
+          "sedan,wagon phev 160 automatic",
+          "sedan,wagon diesel 88 manual,automatic 2014-2019",
+          "sedan,wagon diesel 90 manual,automatic 2019-2023",
+          "sedan,wagon diesel 110 manual,automatic",
+          "sedan,wagon diesel 140 automatic 2014-2019",
+          "sedan,wagon diesel 147 automatic 2019-2023"
+        ]],
+        ["b9", "Passat B9", 2023, null, [
+          "wagon petrol 110 automatic",
+          "wagon petrol 150 automatic",
+          "wagon phev 150 automatic",
+          "wagon phev 200 automatic",
+          "wagon diesel 110 automatic",
+          "wagon diesel 142 automatic"
+        ]]
+      ],
+      "Tiguan": [
+        ["mk1", "Tiguan I", 2007, 2016, [
+          "suv petrol 90 manual",
+          "suv petrol 110 manual,automatic",
+          "suv petrol 118 manual,automatic",
+          "suv petrol 132 automatic",
+          "suv petrol 147 automatic 2007-2011",
+          "suv diesel 81 manual",
+          "suv diesel 103 manual,automatic",
+          "suv diesel 125 automatic"
+        ]],
+        ["mk2", "Tiguan II", 2016, 2024, [
+          "suv petrol 92 manual 2016-2018",
+          "suv petrol 110 manual,automatic",
+          "suv petrol 132 automatic 2016-2018",
+          "suv petrol 140 automatic 2018-2024",
+          "suv petrol 162 automatic 2016-2020",
+          "suv petrol 180 automatic 2020-2024",
+          "suv petrol 235 automatic 2020-2024",
+          "suv phev 180 automatic 2020-2024",
+          "suv diesel 85 manual",
+          "suv diesel 110 manual,automatic",
+          "suv diesel 140 automatic 2016-2020",
+          "suv diesel 147 automatic 2020-2024",
+          "suv diesel 176 automatic 2016-2020"
+        ]],
+        ["mk3", "Tiguan III", 2024, null, [
+          "suv petrol 110 automatic",
+          "suv petrol 150 automatic",
+          "suv petrol 195 automatic",
+          "suv phev 150 automatic",
+          "suv phev 200 automatic",
+          "suv diesel 110 automatic",
+          "suv diesel 142 automatic"
+        ]]
+      ],
+      "Tiguan Allspace": [
+        ["mk1", "Tiguan Allspace", 2017, 2024, [
+          "suv petrol 110 automatic",
+          "suv petrol 132 automatic 2017-2019",
+          "suv petrol 140 automatic 2019-2024",
+          "suv petrol 162 automatic 2017-2020",
+          "suv petrol 180 automatic 2020-2024",
+          "suv diesel 110 manual,automatic",
+          "suv diesel 140 automatic 2017-2020",
+          "suv diesel 147 automatic 2020-2024"
+        ]]
+      ],
+      "T-Roc": [
+        ["mk1", "T-Roc", 2017, 2025, [
+          "suv petrol 85 manual 2017-2019",
+          "suv petrol 81 manual 2019-2025",
+          "suv petrol 110 manual,automatic",
+          "suv petrol 140 automatic",
+          "suv petrol 221 automatic 2019-2025",
+          "convertible petrol 81 manual 2020-2025",
+          "convertible petrol 110 manual,automatic 2020-2025",
+          "suv diesel 85 manual,automatic",
+          "suv diesel 110 manual,automatic"
+        ]],
+        ["mk2", "T-Roc II", 2025, null, [
+          "suv petrol 85 automatic",
+          "suv petrol 110 automatic"
+        ]]
+      ],
+      "Taigo": [
+        ["mk1", "Taigo", 2021, null, [
+          "suv petrol 70 manual",
+          "suv petrol 81 manual,automatic",
+          "suv petrol 110 automatic"
+        ]]
+      ],
+      "Polo": [
+        ["mk4", "Polo IV", 2001, 2009, [
+          "hatchback petrol 40 manual",
+          "hatchback petrol 47 manual",
+          "hatchback petrol 55 manual,automatic",
+          "hatchback diesel 51 manual",
+          "hatchback diesel 59 manual"
+        ]],
+        ["mk5", "Polo V", 2009, 2017, [
+          "hatchback petrol 44 manual",
+          "hatchback petrol 51 manual",
+          "hatchback petrol 55 manual 2014-2017",
+          "hatchback petrol 66 manual,automatic",
+          "hatchback petrol 81 manual,automatic",
+          "hatchback petrol 132 manual,automatic",
+          "hatchback diesel 55 manual",
+          "hatchback diesel 66 manual",
+          "hatchback diesel 77 manual,automatic"
+        ]],
+        ["mk6", "Polo VI", 2017, null, [
+          "hatchback petrol 48 manual",
+          "hatchback petrol 59 manual",
+          "hatchback petrol 70 manual,automatic",
+          "hatchback petrol 81 manual,automatic",
+          "hatchback petrol 110 automatic 2017-2021",
+          "hatchback petrol 147 automatic 2017-2021",
+          "hatchback petrol 152 automatic 2021-",
+          "hatchback diesel 59 manual 2017-2021",
+          "hatchback diesel 70 manual,automatic 2017-2021"
+        ]]
+      ],
+      "ID.3": [
+        ["mk1", "ID.3", 2020, null, [
+          "hatchback bev 107 automatic",
+          "hatchback bev 110 automatic 2023-",
+          "hatchback bev 124 automatic 2020-2023",
+          "hatchback bev 150 automatic",
+          "hatchback bev 170 automatic 2023-",
+          "hatchback bev 240 automatic 2024-"
+        ]]
+      ],
+      "ID.4": [
+        ["mk1", "ID.4", 2021, null, [
+          "suv bev 109 automatic",
+          "suv bev 128 automatic",
+          "suv bev 132 automatic 2021-2023",
+          "suv bev 150 automatic 2021-2023",
+          "suv bev 210 automatic 2023-",
+          "suv bev 220 automatic"
+        ]]
+      ],
+      "Arteon": [
+        ["mk1", "Arteon", 2017, 2024, [
+          "hatchback petrol 110 automatic",
+          "hatchback petrol 140 automatic",
+          "hatchback petrol 206 automatic",
+          "hatchback petrol 235 automatic 2020-2024",
+          "hatchback phev 160 automatic 2020-2024",
+          "hatchback diesel 110 automatic",
+          "hatchback diesel 140 automatic 2017-2020",
+          "hatchback diesel 147 automatic 2020-2024",
+          "wagon petrol 110,140,206,235 automatic 2020-2024",
+          "wagon phev 160 automatic 2020-2024",
+          "wagon diesel 110,147 automatic 2020-2024"
+        ]]
+      ],
+      "Touareg": [
+        ["mk2", "Touareg II", 2010, 2018, [
+          "suv diesel 150,180,193,250 automatic",
+          "suv petrol 206 automatic",
+          "suv hev 279 automatic"
+        ]],
+        ["mk3", "Touareg III", 2018, null, [
+          "suv diesel 150,170,210 automatic",
+          "suv petrol 250 automatic",
+          "suv phev 280,340 automatic"
+        ]]
+      ]
+    },
+    "Audi": {
+      "A4": [
+        ["b7", "A4 B7", 2004, 2008, [
+          "sedan,wagon petrol 75,96,147 manual,automatic",
+          "sedan,wagon diesel 85,100,103 manual,automatic",
+          "sedan,wagon diesel 150,171 automatic"
+        ]],
+        ["b8", "A4 B8", 2007, 2015, [
+          "sedan petrol 88,118,132,155 manual,automatic",
+          "sedan diesel 88,100,105,110,130 manual,automatic",
+          "sedan diesel 150,176,180 automatic",
+          "wagon petrol 88,118,132,155 manual,automatic 2008-2015",
+          "wagon diesel 88,100,105,110,130 manual,automatic 2008-2015",
+          "wagon diesel 150,176,180 automatic 2008-2015"
+        ]],
+        ["b9", "A4 B9", 2015, 2024, [
+          "sedan,wagon petrol 110 manual,automatic",
+          "sedan,wagon petrol 140,185 automatic",
+          "sedan,wagon diesel 100 manual,automatic",
+          "sedan,wagon diesel 110 manual,automatic 2015-2019",
+          "sedan,wagon diesel 120 automatic 2019-2024",
+          "sedan,wagon diesel 140,170,210 automatic"
+        ]]
+      ],
+      "Q3": [
+        ["8u", "Q3 I (8U)", 2011, 2018, [
+          "suv petrol 110,125,132 manual,automatic",
+          "suv diesel 103,110,130 manual,automatic"
+        ]],
+        ["f3", "Q3 II (F3)", 2018, 2025, [
+          "suv petrol 110 manual,automatic",
+          "suv petrol 140,169 automatic",
+          "suv phev 180 automatic 2021-2025",
+          "suv diesel 110 manual,automatic",
+          "suv diesel 140 automatic"
+        ]],
+        ["mk3", "Q3 III", 2025, null, [
+          "suv petrol 110,150 automatic",
+          "suv phev 200 automatic",
+          "suv diesel 110 automatic"
+        ]]
+      ]
+    },
+    "BMW": {
+      "1 Series": [
+        ["e87", "1 Series E87", 2004, 2011, [
+          "hatchback petrol 85,90,105,125 manual,automatic",
+          "hatchback diesel 85,105,130 manual,automatic",
+          "coupe,convertible petrol 105,125 manual,automatic 2007-2011",
+          "coupe,convertible diesel 105,130 manual,automatic 2007-2011"
+        ]],
+        ["f20", "1 Series F20", 2011, 2019, [
+          "hatchback petrol 80,100,125 manual,automatic",
+          "hatchback diesel 85,110,140 manual,automatic"
+        ]],
+        ["f40", "1 Series F40", 2019, 2024, [
+          "hatchback petrol 80,103 manual,automatic",
+          "hatchback petrol 131,225 automatic",
+          "hatchback diesel 85,110 manual,automatic",
+          "hatchback diesel 140 automatic"
+        ]]
+      ],
+      "5 Series": [
+        ["e60", "5 Series E60", 2003, 2010, [
+          "sedan,wagon petrol 125,140,160,190,200 manual,automatic",
+          "sedan,wagon diesel 120,145,170,173,210 manual,automatic"
+        ]],
+        ["f10", "5 Series F10", 2010, 2017, [
+          "sedan,wagon petrol 135,150,190,225 manual,automatic",
+          "sedan,wagon diesel 135,140,160,165,180,190,230 manual,automatic"
+        ]],
+        ["g30", "5 Series G30", 2017, 2023, [
+          "sedan,wagon petrol 135,185 automatic",
+          "sedan,wagon phev 185 automatic",
+          "sedan,wagon diesel 140,170,195,210,235 automatic"
+        ]]
+      ],
+      "X3": [
+        ["f25", "X3 F25", 2010, 2017, [
+          "suv petrol 135,180 manual,automatic",
+          "suv diesel 110,135,140 manual,automatic",
+          "suv diesel 190,230 automatic"
+        ]],
+        ["g01", "X3 G01", 2017, 2024, [
+          "suv petrol 135,185,260 automatic",
+          "suv phev 215 automatic",
+          "suv diesel 140,195,240 automatic"
+        ]],
+        ["g45", "X3 G45", 2024, null, [
+          "suv petrol 153,293 automatic",
+          "suv phev 220 automatic",
+          "suv diesel 145 automatic"
+        ]]
+      ],
+      "X5": [
+        ["e70", "X5 E70", 2006, 2013, [
+          "suv diesel 173,180,210 automatic",
+          "suv diesel 280 automatic 2012-2013",
+          "suv petrol 200,225,300,408 automatic"
+        ]],
+        ["f15", "X5 F15", 2013, 2018, [
+          "suv diesel 160,190,230,280 automatic",
+          "suv petrol 225,330 automatic",
+          "suv phev 230 automatic"
+        ]],
+        ["g05", "X5 G05", 2018, null, [
+          "suv diesel 170,195,210,250,294 automatic",
+          "suv petrol 250,390 automatic",
+          "suv phev 290 automatic"
+        ]]
+      ]
+    },
+    "Mercedes-Benz": {
+      "A-Class": [
+        ["w176", "A-Class W176", 2012, 2018, [
+          "hatchback petrol 75,90,115 manual,automatic",
+          "hatchback petrol 155,265,280 automatic",
+          "hatchback diesel 80,100,125 manual,automatic"
+        ]],
+        ["w177", "A-Class W177", 2018, null, [
+          "hatchback,sedan petrol 80,100,120 manual,automatic",
+          "hatchback,sedan petrol 165,225,310 automatic",
+          "hatchback,sedan phev 160 automatic",
+          "hatchback,sedan diesel 85,110,140 automatic"
+        ]]
+      ],
+      "C-Class": [
+        ["w205", "C-Class W205", 2014, 2021, [
+          "sedan,wagon,coupe,convertible petrol 115,135,155,190,270,287,375 automatic",
+          "sedan,wagon diesel 100,125,143,150 automatic",
+          "sedan,wagon phev 155,235 automatic"
+        ]],
+        ["w206", "C-Class W206", 2021, null, [
+          "sedan,wagon petrol 125,150,190,300 automatic",
+          "sedan,wagon phev 230,280 automatic",
+          "sedan,wagon diesel 120,147,195 automatic"
+        ]]
+      ],
+      "E-Class": [
+        ["w213", "E-Class W213", 2016, 2023, [
+          "sedan,wagon,coupe,convertible petrol 135,190,245,270 automatic",
+          "sedan,wagon,coupe,convertible diesel 110,143,180,210,243 automatic",
+          "sedan,wagon phev 235 automatic"
+        ]],
+        ["w214", "E-Class W214", 2023, null, [
+          "sedan,wagon petrol 150,280 automatic",
+          "sedan,wagon diesel 145 automatic",
+          "sedan,wagon phev 230,280 automatic"
+        ]]
+      ],
+      "CLA": [
+        ["c117", "CLA C117", 2013, 2019, [
+          "sedan petrol 90,115,155,160,265,280 automatic",
+          "sedan diesel 100,125 automatic",
+          "wagon petrol 90,115,155,160,265,280 automatic 2015-2019",
+          "wagon diesel 100,125 automatic 2015-2019"
+        ]],
+        ["c118", "CLA C118", 2019, null, [
+          "sedan,wagon petrol 100,120,165,225,285,310 automatic",
+          "sedan,wagon phev 160 automatic",
+          "sedan,wagon diesel 85,110,140 automatic"
+        ]]
+      ],
+      "T-Class": [
+        ["w420", "T-Class W420", 2022, null, [
+          "mpv petrol 75 manual",
+          "mpv petrol 96 manual,automatic",
+          "mpv diesel 70 manual",
+          "mpv diesel 85 manual,automatic",
+          "mpv bev 90 automatic"
+        ]]
+      ],
+      "GLB": [
+        ["x247", "GLB X247", 2019, null, [
+          "suv petrol 100,120,165,225 automatic",
+          "suv diesel 85,110,140 automatic"
+        ]]
+      ],
+      "GLC": [
+        ["x253", "GLC X253", 2015, 2022, [
+          "suv,coupe petrol 135,155,190,270,287 automatic",
+          "suv,coupe phev 235 automatic",
+          "suv,coupe diesel 100,125,143,150,190 automatic"
+        ]],
+        ["x254", "GLC X254", 2022, null, [
+          "suv,coupe petrol 150,190,310 automatic",
+          "suv,coupe phev 230 automatic",
+          "suv,coupe diesel 145,195 automatic"
+        ]]
+      ]
+    },
+    "Hyundai": {
+      "Tucson": [
+        ["tl", "Tucson III (TL)", 2015, 2020, [
+          "suv petrol 97 manual",
+          "suv petrol 130 manual,automatic",
+          "suv diesel 85 manual",
+          "suv diesel 100,136 manual,automatic"
+        ]],
+        ["nx4", "Tucson IV (NX4)", 2020, null, [
+          "suv petrol 110 manual,automatic",
+          "suv petrol 132 automatic",
+          "suv hev 169 automatic",
+          "suv phev 195 automatic",
+          "suv diesel 85 manual",
+          "suv diesel 100 automatic"
+        ]]
+      ],
+      "i30": [
+        ["fd", "i30 I (FD)", 2007, 2012, [
+          "hatchback,wagon petrol 80,90 manual,automatic",
+          "hatchback,wagon diesel 66,85,103 manual,automatic"
+        ]],
+        ["pd", "i30 III (PD)", 2017, null, [
+          "hatchback,wagon petrol 74,88 manual",
+          "hatchback,wagon petrol 103,117 manual,automatic",
+          "hatchback petrol 202 manual,automatic",
+          "hatchback,wagon diesel 70 manual",
+          "hatchback,wagon diesel 85,100 manual,automatic"
+        ]]
+      ]
+    },
+    "Tesla": {
+      "Model 3": [
+        ["mk1", "Model 3", 2019, 2023, [
+          "sedan bev 208,250,350,377 automatic"
+        ]],
+        ["highland", "Model 3 Highland", 2023, null, [
+          "sedan bev 208,366,460 automatic"
+        ]]
+      ]
+    },
+    "Peugeot": {
+      "3008": [
+        ["mk2", "3008 II", 2016, 2024, [
+          "suv petrol 96 manual,automatic",
+          "suv petrol 133 automatic",
+          "suv diesel 96 manual,automatic",
+          "suv diesel 130 automatic",
+          "suv phev 165,220 automatic 2019-2024"
+        ]]
+      ],
+      "5008": [
+        ["mk2", "5008 II", 2017, 2024, [
+          "suv petrol 96 manual,automatic",
+          "suv petrol 133 automatic",
+          "suv diesel 96 manual,automatic",
+          "suv diesel 130 automatic"
+        ]]
+      ]
+    },
+    "Seat": {
+      "Leon": [
+        ["mk3", "Leon III", 2012, 2020, [
+          "hatchback,wagon petrol 81,92,110,132 manual,automatic",
+          "hatchback petrol 195,206,213,221 manual,automatic",
+          "wagon petrol 221 automatic 2017-2020",
+          "hatchback,wagon diesel 81,85,110,135 manual,automatic"
+        ]],
+        ["mk4", "Leon IV", 2020, null, [
+          "hatchback,wagon petrol 81,96,110 manual,automatic",
+          "hatchback,wagon petrol 140 automatic",
+          "hatchback,wagon phev 150 automatic",
+          "hatchback,wagon diesel 85,110 manual,automatic"
+        ]]
+      ]
+    },
+    "Cupra": {
+      "Formentor": [
+        ["mk1", "Formentor", 2020, null, [
+          "suv petrol 110,140,180 automatic",
+          "suv petrol 228 automatic 2020-2024",
+          "suv petrol 245 automatic 2024-",
+          "suv phev 150,180 automatic",
+          "suv diesel 110 manual,automatic"
+        ]]
+      ]
+    },
+    "Land Rover": {
+      "Range Rover": [
+        ["l405", "Range Rover L405", 2012, 2021, [
+          "suv diesel 190,225,250 automatic",
+          "suv petrol 250,375 automatic",
+          "suv phev 297 automatic"
+        ]]
+      ]
+    }
+  }
+}

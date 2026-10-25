@@ -1,0 +1,1915 @@
+{
+  "about": "Real listing descriptors from Sauto and AutoScout24-DE search pages (2026-10-24 probes), mapped onto VehicleDescriptor as the Source adapters do, hand-labelled: expect is the true Variant id when the listing pins it down for someone who knows the model range, model:<modelId> when it does not, unmatched when the make or model is missing from the catalog.",
+  "listings": [
+    {
+      "ref": "autoscout24-de:7efca06a-ca09-4cb1-8120-5c54d977b1b9",
+      "expect": "skoda/octavia/mk3/hatchback-petrol-110kw-manual",
+      "note": "\"Lim.\" on an Octavia is the liftback",
+      "vehicle": {
+        "make": "Skoda",
+        "model": "Octavia",
+        "trim": "Lim. Style+KLIMAA.+PDC+ALU+AHK+1.HAND",
+        "sourceTaxonomy": {
+          "make": "65",
+          "model": "15222"
+        },
+        "firstRegistration": {
+          "year": 2017,
+          "month": 9
+        },
+        "fuel": "petrol",
+        "powerKw": 110,
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "autoscout24-de:d2a8f3ba-7cfc-4411-8954-d32da3253a6d",
+      "expect": "model:skoda/octavia",
+      "note": "Octavia II RS, generation not in catalog",
+      "vehicle": {
+        "make": "Skoda",
+        "model": "Octavia",
+        "trim": "2.0 TSI RS",
+        "sourceTaxonomy": {
+          "make": "65",
+          "model": "15222"
+        },
+        "firstRegistration": {
+          "year": 2012,
+          "month": 4
+        },
+        "fuel": "petrol",
+        "powerKw": 147,
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "sauto:210035792",
+      "expect": "model:skoda/octavia",
+      "note": "no power, body unknown",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Octavia",
+        "trim": "2,0 TDI RS 4x4 DSG Virtual LED",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "705"
+        },
+        "manufactureYear": 2020,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210082238",
+      "expect": "model:skoda/octavia",
+      "note": "body unknown",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Octavia",
+        "trim": "2,0 TDI 147kW DSG 4x4 RS DPH",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "705"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 2
+        },
+        "manufactureYear": 2023,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210104915",
+      "expect": "model:skoda/octavia",
+      "note": "body unknown",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Octavia",
+        "trim": "2,0 TDI 110kW 1.Maj Style DPH",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "705"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 10
+        },
+        "manufactureYear": 2023,
+        "fuel": "diesel",
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "sauto:211339125",
+      "expect": "model:skoda/octavia",
+      "note": "no power",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Octavia",
+        "trim": "1.6TDi",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "705"
+        },
+        "manufactureYear": 2019,
+        "fuel": "diesel",
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "sauto:210001455",
+      "expect": "skoda/kodiaq/mk1/suv-diesel-140kw-automatic",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Kodiaq",
+        "trim": "2,0 TDI 140kW DSG 4x4 CZ Style",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "7595"
+        },
+        "firstRegistration": {
+          "year": 2017,
+          "month": 9
+        },
+        "manufactureYear": 2017,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210018408",
+      "expect": "model:skoda/kodiaq",
+      "note": "no power",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Kodiaq",
+        "trim": "2,0 TDI DSG 4x4 L&K DPH CZ 1Ma",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "7595"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 10
+        },
+        "manufactureYear": 2022,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210054245",
+      "expect": "skoda/kodiaq/mk1/suv-diesel-147kw-automatic",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Kodiaq",
+        "trim": "2,0 TDI 147kW 4x4 DSG L&K DPH",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "7595"
+        },
+        "manufactureYear": 2022,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210061331",
+      "expect": "model:skoda/kodiaq",
+      "note": "no power",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Kodiaq",
+        "trim": "2,0 TSI 4x4 DSG Style Plus DPH",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "7595"
+        },
+        "firstRegistration": {
+          "year": 2021,
+          "month": 6
+        },
+        "manufactureYear": 2021,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210114692",
+      "expect": "model:skoda/kodiaq",
+      "note": "no power",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Kodiaq",
+        "trim": "2,0 TDI DSG 4x4 Style Plus DPH",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "7595"
+        },
+        "firstRegistration": {
+          "year": 2017,
+          "month": 8
+        },
+        "manufactureYear": 2017,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210127133",
+      "expect": "skoda/kodiaq/mk1/suv-diesel-147kw-automatic",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Kodiaq",
+        "trim": "2,0 TDI 147kW DSG Style 4x4 DP",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "7595"
+        },
+        "firstRegistration": {
+          "year": 2021,
+          "month": 12
+        },
+        "manufactureYear": 2021,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210145946",
+      "expect": "skoda/kodiaq/mk1/suv-petrol-110kw-automatic",
+      "note": "built 2023, before Kodiaq II",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Kodiaq",
+        "trim": "1,5 TSI 110kW DSG Sportline DP",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "7595"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 2
+        },
+        "manufactureYear": 2023,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210148409",
+      "expect": "skoda/kodiaq/mk1/suv-diesel-147kw-automatic",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Kodiaq",
+        "trim": "2,0 TDI 147kW DSG Style 4x4 DP",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "7595"
+        },
+        "firstRegistration": {
+          "year": 2021,
+          "month": 9
+        },
+        "manufactureYear": 2021,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:211108773",
+      "expect": "model:skoda/kodiaq",
+      "note": "no power",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Kodiaq",
+        "trim": "Style Plus, záruka, tažné",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "7595"
+        },
+        "firstRegistration": {
+          "year": 2024,
+          "month": 1
+        },
+        "manufactureYear": 2024,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:211147554",
+      "expect": "model:skoda/kodiaq",
+      "note": "no power",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Kodiaq",
+        "trim": "2.0 TDI L&K 4x4 DSG DPH",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "7595"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 5
+        },
+        "manufactureYear": 2022,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:209517873",
+      "expect": "model:skoda/superb",
+      "note": "body unknown",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Superb",
+        "trim": "2.0 TSI 200kW DSG SportLine",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "708"
+        },
+        "firstRegistration": {
+          "year": 2019,
+          "month": 12
+        },
+        "manufactureYear": 2019,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210018636",
+      "expect": "model:skoda/superb",
+      "note": "body unknown",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Superb",
+        "trim": "2,0 TDI 147kW 4x4 L&K DSG DPH",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "708"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 12
+        },
+        "manufactureYear": 2022,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:211339080",
+      "expect": "model:skoda/superb",
+      "note": "206 kW not built in 2017",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Superb",
+        "trim": "2,0 TSI 206KW SPORTLINE CZ",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "708"
+        },
+        "firstRegistration": {
+          "year": 2017,
+          "month": 6
+        },
+        "manufactureYear": 2017,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:294e7311-7d64-439e-95d8-11ffc7155834",
+      "expect": "model:skoda/fabia",
+      "note": "70 kW never had an automatic",
+      "vehicle": {
+        "make": "Skoda",
+        "model": "Fabia",
+        "trim": "1.0 TSI Style SHZ KAM PDC KLIMA",
+        "sourceTaxonomy": {
+          "make": "65",
+          "model": "15878"
+        },
+        "firstRegistration": {
+          "year": 2021,
+          "month": 5
+        },
+        "fuel": "petrol",
+        "powerKw": 70,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:e76230ae-e6a2-4173-932a-43a84a02602c",
+      "expect": "model:skoda/fabia",
+      "note": "body unknown",
+      "vehicle": {
+        "make": "Skoda",
+        "model": "Fabia",
+        "trim": "1.0 Ambition *KAMERA*SMART-LINK*SITZHEIZUNG*",
+        "sourceTaxonomy": {
+          "make": "65",
+          "model": "15878"
+        },
+        "firstRegistration": {
+          "year": 2019,
+          "month": 11
+        },
+        "fuel": "petrol",
+        "powerKw": 70,
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "sauto:211263414",
+      "expect": "skoda/fabia/mk3/hatchback-petrol-81kw-manual",
+      "note": "Monte Carlo is hatchback only",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Fabia",
+        "trim": "1.2TSI 81KW 1.MAJ MONTE CARLO",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "707"
+        },
+        "firstRegistration": {
+          "year": 2015,
+          "month": 8
+        },
+        "manufactureYear": 2015,
+        "fuel": "petrol",
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "sauto:210085895",
+      "expect": "skoda/kamiq/mk1/suv-petrol-110kw-automatic",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Kamiq",
+        "trim": "1,5 TSI 110kW DSG Style Kůže",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "8290"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 3
+        },
+        "manufactureYear": 2022,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210047211",
+      "expect": "model:skoda/karoq",
+      "note": "no power",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Karoq",
+        "trim": "2,0 TDI DSG 4x4 Sportline DPH",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "7665"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 5
+        },
+        "manufactureYear": 2022,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210048408",
+      "expect": "skoda/scala/mk1/hatchback-petrol-110kw-manual",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Scala",
+        "trim": "1,5 TSI 110kW Style CZ 1.Maj.",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "8155"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 1
+        },
+        "manufactureYear": 2023,
+        "fuel": "petrol",
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "autoscout24-de:b3866913-9ee0-4e35-8a34-1d4b81f8af13",
+      "expect": "skoda/yeti/mk1/suv-diesel-81kw-manual",
+      "vehicle": {
+        "make": "Skoda",
+        "model": "Yeti",
+        "trim": "2.0 TDI Ambition 4x4*TEMPO*PDC*SHZ*",
+        "sourceTaxonomy": {
+          "make": "65",
+          "model": "19236"
+        },
+        "firstRegistration": {
+          "year": 2016,
+          "month": 3
+        },
+        "fuel": "diesel",
+        "powerKw": 81,
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "sauto:211339119",
+      "expect": "model:skoda/yeti",
+      "note": "no power",
+      "vehicle": {
+        "make": "Škoda",
+        "model": "Yeti",
+        "trim": "2.0 TDi 4x4",
+        "sourceTaxonomy": {
+          "make": "93",
+          "model": "1703"
+        },
+        "manufactureYear": 2010,
+        "fuel": "diesel",
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "autoscout24-de:50998a33-933d-456e-891a-71b53d954cc5",
+      "expect": "volkswagen/golf/mk8/wagon-diesel-85kw-manual",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Golf",
+        "trim": "VIII Variant 2.0 TDI Life VIRTUAL*NAVI*LED*ACC*...",
+        "sourceTaxonomy": {
+          "make": "74",
+          "model": "100101"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 6
+        },
+        "fuel": "diesel",
+        "powerKw": 85,
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "autoscout24-de:60cc45d0-34d1-48b4-9ad8-88f67942f94e",
+      "expect": "model:volkswagen/golf",
+      "note": "body unknown",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Golf",
+        "trim": "Life 1.5 eTSI 115 PS DSG AHK NAVI KAMERA",
+        "sourceTaxonomy": {
+          "make": "74",
+          "model": "100101"
+        },
+        "firstRegistration": {
+          "year": 2026,
+          "month": 1
+        },
+        "fuel": "petrol",
+        "powerKw": 85,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:209995827",
+      "expect": "model:volkswagen/golf",
+      "note": "body unknown",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Golf",
+        "trim": "1,5 TSI 110kW CZ LED 1.Maj",
+        "sourceTaxonomy": {
+          "make": "103",
+          "model": "759"
+        },
+        "firstRegistration": {
+          "year": 2021,
+          "month": 8
+        },
+        "manufactureYear": 2021,
+        "fuel": "petrol",
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "sauto:210094154",
+      "expect": "model:volkswagen/golf",
+      "note": "no power",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Golf",
+        "trim": "2,0 TSI GTI DSG Performance",
+        "sourceTaxonomy": {
+          "make": "103",
+          "model": "759"
+        },
+        "firstRegistration": {
+          "year": 2019,
+          "month": 11
+        },
+        "manufactureYear": 2019,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210082163",
+      "expect": "model:volkswagen/passat",
+      "note": "body unknown",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Passat",
+        "trim": "1,5 TSI 110kW DSG Business DPH",
+        "sourceTaxonomy": {
+          "make": "103",
+          "model": "762"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 5
+        },
+        "manufactureYear": 2022,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210005961",
+      "expect": "model:volkswagen/tiguan",
+      "note": "no power",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Tiguan",
+        "trim": "2,0 TSI DSG 4x4 Kůže Panorama",
+        "sourceTaxonomy": {
+          "make": "103",
+          "model": "1583"
+        },
+        "manufactureYear": 2013,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:211339098",
+      "expect": "model:volkswagen/tiguan",
+      "note": "no power",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Tiguan",
+        "trim": "2,0 TDi R-Line*Nez.Topení DCC",
+        "sourceTaxonomy": {
+          "make": "103",
+          "model": "1583"
+        },
+        "firstRegistration": {
+          "year": 2024,
+          "month": 12
+        },
+        "manufactureYear": 2024,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:96472848-769c-41aa-9150-c12de786f970",
+      "expect": "volkswagen/tiguan-allspace/mk1/suv-petrol-140kw-automatic",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Tiguan Allspace",
+        "trim": "R-Line 4Motion*7-SITZER*PANO*ACC",
+        "sourceTaxonomy": {
+          "make": "74",
+          "model": "100158"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 5
+        },
+        "fuel": "petrol",
+        "powerKw": 140,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210089624",
+      "expect": "volkswagen/tiguan-allspace/mk1/suv-petrol-140kw-automatic",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Tiguan Allspace",
+        "trim": "2,0 TSI 140kW DSG 4M DPH IQ",
+        "sourceTaxonomy": {
+          "make": "103",
+          "model": "8471"
+        },
+        "manufactureYear": 2022,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:f3724907-d37d-4974-95dd-8b9a0fa3147c",
+      "expect": "volkswagen/t-roc/mk2/suv-petrol-110kw-automatic",
+      "note": "eTSI in late 2026 is the new T-Roc",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "T-Roc",
+        "trim": "R-Line 1.5 eTSI DSG AHK SIH EPH LED ACC Klima Alu",
+        "sourceTaxonomy": {
+          "make": "74",
+          "model": "74667"
+        },
+        "firstRegistration": {
+          "year": 2026,
+          "month": 10
+        },
+        "fuel": "petrol",
+        "powerKw": 110,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:211339077",
+      "expect": "model:volkswagen/t-roc",
+      "note": "SUV or Cabriolet",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "T-Roc",
+        "trim": "1,0 TSI 81kW R Virtual DPH",
+        "sourceTaxonomy": {
+          "make": "103",
+          "model": "7802"
+        },
+        "manufactureYear": 2023,
+        "fuel": "petrol",
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "autoscout24-de:f1bd224d-92de-48bd-a80f-df3695ef3326",
+      "expect": "volkswagen/taigo/mk1/suv-petrol-110kw-automatic",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Taigo",
+        "trim": "1.5 TSI DSG Style / Navi LED",
+        "sourceTaxonomy": {
+          "make": "74",
+          "model": "75946"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 10
+        },
+        "fuel": "petrol",
+        "powerKw": 110,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:42370b02-3571-4910-9326-3d34c74008f3",
+      "expect": "volkswagen/polo/mk6/hatchback-petrol-70kw-manual",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Polo",
+        "trim": "1.0 TSI Highline Navi/ACC/Klimaautomatik Highline",
+        "sourceTaxonomy": {
+          "make": "74",
+          "model": "100099"
+        },
+        "firstRegistration": {
+          "year": 2021,
+          "month": 7
+        },
+        "fuel": "petrol",
+        "powerKw": 70,
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "autoscout24-de:4c38afef-fdb9-4093-82cb-2bff295067a5",
+      "expect": "volkswagen/polo/mk5/hatchback-petrol-44kw-manual",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Polo",
+        "trim": "V Style TOP - 53.000 km !",
+        "sourceTaxonomy": {
+          "make": "74",
+          "model": "100099"
+        },
+        "firstRegistration": {
+          "year": 2013,
+          "month": 2
+        },
+        "fuel": "petrol",
+        "powerKw": 44,
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "autoscout24-de:73b81542-32f9-4eac-a28a-0b139ccf11ca",
+      "expect": "volkswagen/polo/mk4/hatchback-petrol-40kw-manual",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Polo",
+        "trim": "1.2 KLIMA*PDC*Servo*TÜV 04.27*",
+        "sourceTaxonomy": {
+          "make": "74",
+          "model": "100099"
+        },
+        "firstRegistration": {
+          "year": 2007,
+          "month": 6
+        },
+        "fuel": "petrol",
+        "powerKw": 40,
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "autoscout24-de:e19d5b55-2d18-4548-b120-924af5af4cb1",
+      "expect": "volkswagen/polo/mk6/hatchback-petrol-59kw-manual",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Polo",
+        "trim": "Life Rear View  Nebelscheinwerfer SHZ SPHA",
+        "sourceTaxonomy": {
+          "make": "74",
+          "model": "100099"
+        },
+        "firstRegistration": {
+          "year": 2024,
+          "month": 10
+        },
+        "fuel": "petrol",
+        "powerKw": 59,
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "autoscout24-de:a40f8c1e-ab5b-4e59-bff2-7927a64dbaf7",
+      "expect": "volkswagen/id-3/mk1/hatchback-bev-150kw-automatic",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "ID.3",
+        "trim": "Pro Performance*WÄRMEPUMPE*LED*KAMERA*PDC*S",
+        "sourceTaxonomy": {
+          "make": "74",
+          "model": "75602"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 9
+        },
+        "fuel": "bev",
+        "powerKw": 150,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:e88a4994-fa99-4349-b18c-0285c4dfa6c4",
+      "expect": "volkswagen/id-4/mk1/suv-bev-150kw-automatic",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "ID.4",
+        "trim": "PRO PERFORMANCE 150KW LED+NAVI+SHZ+AHK+WäPu",
+        "sourceTaxonomy": {
+          "make": "74",
+          "model": "75645"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 12
+        },
+        "fuel": "bev",
+        "powerKw": 150,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:34632d9f-0727-4352-9b65-d68e1002b3ad",
+      "expect": "volkswagen/arteon/mk1/wagon-petrol-140kw-automatic",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Arteon",
+        "trim": "Shooting Brake R-Line TSI Pano AHK Matrix",
+        "sourceTaxonomy": {
+          "make": "74",
+          "model": "74550"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 10
+        },
+        "fuel": "petrol",
+        "powerKw": 140,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210019707",
+      "expect": "volkswagen/touareg/mk3/suv-diesel-170kw-automatic",
+      "vehicle": {
+        "make": "Volkswagen",
+        "model": "Touareg",
+        "trim": "3,0 TDI 170kW 4x4 Tažné CZ",
+        "sourceTaxonomy": {
+          "make": "103",
+          "model": "1582"
+        },
+        "firstRegistration": {
+          "year": 2019,
+          "month": 9
+        },
+        "manufactureYear": 2019,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:5b1db7ac-db8b-4ae6-9f9d-055452030fcf",
+      "expect": "model:audi/a4",
+      "note": "body unknown",
+      "vehicle": {
+        "make": "Audi",
+        "model": "A4",
+        "trim": "35 TDI MATRIX NAVI+ AHK ACC",
+        "sourceTaxonomy": {
+          "make": "9",
+          "model": "1626"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 8
+        },
+        "fuel": "diesel",
+        "powerKw": 120,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:a7beeedf-b3ea-45a1-8d75-a9a3aef3f3c5",
+      "expect": "audi/a4/b9/wagon-petrol-110kw-automatic",
+      "vehicle": {
+        "make": "Audi",
+        "model": "A4",
+        "trim": "Avant Sport |AHK|LED|NAVI|2.HD|TEMPO|TÜV NEU|",
+        "sourceTaxonomy": {
+          "make": "9",
+          "model": "1626"
+        },
+        "firstRegistration": {
+          "year": 2018,
+          "month": 3
+        },
+        "fuel": "petrol",
+        "powerKw": 110,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:cce6b5bd-103e-40cd-a73d-f322b7598b91",
+      "expect": "audi/a4/b7/wagon-diesel-103kw-manual",
+      "note": "2.0 TDI 140 PS in 2007 is the B7",
+      "vehicle": {
+        "make": "Audi",
+        "model": "A4",
+        "trim": "Avant 2.0 TDI AHK PDC SHZ Tüv 03/27",
+        "sourceTaxonomy": {
+          "make": "9",
+          "model": "1626"
+        },
+        "firstRegistration": {
+          "year": 2007,
+          "month": 10
+        },
+        "fuel": "diesel",
+        "powerKw": 103,
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "sauto:210012108",
+      "expect": "model:audi/a4",
+      "note": "body unknown",
+      "vehicle": {
+        "make": "Audi",
+        "model": "A4",
+        "trim": "3,0 TDI 180kW Aut. quattro",
+        "sourceTaxonomy": {
+          "make": "2",
+          "model": "15"
+        },
+        "firstRegistration": {
+          "year": 2013,
+          "month": 2
+        },
+        "manufactureYear": 2013,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:0771512e-fffd-455c-bc82-43aa00ecdac8",
+      "expect": "audi/q3/f3/suv-diesel-110kw-automatic",
+      "vehicle": {
+        "make": "Audi",
+        "model": "Q3",
+        "trim": "advanced 35 TDI S tr. LED NAVI RFK VIRTUAL",
+        "sourceTaxonomy": {
+          "make": "9",
+          "model": "19715"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 6
+        },
+        "fuel": "diesel",
+        "powerKw": 110,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:9f75ce1c-afa7-4049-8255-14179afc64d7",
+      "expect": "audi/q3/f3/suv-diesel-110kw-automatic",
+      "vehicle": {
+        "make": "Audi",
+        "model": "Q3",
+        "trim": "35 TDI quattro / Navi 1. Hand",
+        "sourceTaxonomy": {
+          "make": "9",
+          "model": "19715"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 8
+        },
+        "fuel": "diesel",
+        "powerKw": 110,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:cef7c0ed-7945-4836-8bf0-5cbd8047ab88",
+      "expect": "bmw/1-series/f40/hatchback-petrol-103kw-automatic",
+      "note": "103 kW 118i is the F40",
+      "vehicle": {
+        "make": "BMW",
+        "model": "118",
+        "trim": "118i Sport Line Aut.*NAVI*LED*PDC*TEMPO*SHZ*LHZ*",
+        "sourceTaxonomy": {
+          "make": "13",
+          "model": "100037"
+        },
+        "firstRegistration": {
+          "year": 2019,
+          "month": 11
+        },
+        "fuel": "petrol",
+        "powerKw": 103,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:211338891",
+      "expect": "bmw/1-series/e87/hatchback-petrol-90kw-manual",
+      "vehicle": {
+        "make": "BMW",
+        "model": "Řada 1",
+        "trim": "2.0, 90kW, MT6, CZ, servisován",
+        "sourceTaxonomy": {
+          "make": "5",
+          "model": "48"
+        },
+        "firstRegistration": {
+          "year": 2010,
+          "month": 8
+        },
+        "manufactureYear": 2010,
+        "fuel": "petrol",
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "autoscout24-de:68c342bc-1a3f-4910-a710-1135435ef542",
+      "expect": "model:bmw/5-series",
+      "note": "sedan or Touring",
+      "vehicle": {
+        "make": "BMW",
+        "model": "530",
+        "trim": "530 i xDrive",
+        "sourceTaxonomy": {
+          "make": "13",
+          "model": "100039"
+        },
+        "firstRegistration": {
+          "year": 2008,
+          "month": 5
+        },
+        "fuel": "petrol",
+        "powerKw": 200,
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "sauto:210023535",
+      "expect": "model:bmw/5-series",
+      "note": "sedan or Touring",
+      "vehicle": {
+        "make": "BMW",
+        "model": "Řada 5",
+        "trim": "2,0 525d 170kW Aut. Navi LED",
+        "sourceTaxonomy": {
+          "make": "5",
+          "model": "40"
+        },
+        "firstRegistration": {
+          "year": 2018,
+          "month": 6
+        },
+        "manufactureYear": 2018,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:1c4d95e8-a8ea-4a75-9d28-42599580bbc4",
+      "expect": "bmw/x3/f25/suv-diesel-140kw-automatic",
+      "note": "registered before the G01 launch",
+      "vehicle": {
+        "make": "BMW",
+        "model": "X3",
+        "trim": "xDrive 20 d*Automatik*Kamera*Scheckheft*",
+        "sourceTaxonomy": {
+          "make": "13",
+          "model": "18387"
+        },
+        "firstRegistration": {
+          "year": 2017,
+          "month": 6
+        },
+        "fuel": "diesel",
+        "powerKw": 140,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:6407db8b-3d92-48e8-b8f4-1603841dae03",
+      "expect": "bmw/x3/g45/suv-diesel-145kw-automatic",
+      "vehicle": {
+        "make": "BMW",
+        "model": "X3",
+        "trim": "X3 20d xDrive M Sportpaket StHz AHK Pano",
+        "sourceTaxonomy": {
+          "make": "13",
+          "model": "18387"
+        },
+        "firstRegistration": {
+          "year": 2026,
+          "month": 2
+        },
+        "fuel": "diesel",
+        "powerKw": 145,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210048276",
+      "expect": "model:bmw/x5",
+      "note": "E70 or F15 M50d",
+      "vehicle": {
+        "make": "BMW",
+        "model": "X5",
+        "trim": "3,0 M50d 280kW XDrive Panorama",
+        "sourceTaxonomy": {
+          "make": "5",
+          "model": "1444"
+        },
+        "firstRegistration": {
+          "year": 2013,
+          "month": 12
+        },
+        "manufactureYear": 2013,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:211228581",
+      "expect": "unmatched",
+      "note": "M2 not in catalog",
+      "vehicle": {
+        "make": "BMW",
+        "model": "M2",
+        "trim": "Competition MHD Stage 2+",
+        "sourceTaxonomy": {
+          "make": "5",
+          "model": "7585"
+        },
+        "firstRegistration": {
+          "year": 2019,
+          "month": 11
+        },
+        "manufactureYear": 2019,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:9ebbda55-e791-48fe-8d28-ba5a4b4784c9",
+      "expect": "mercedes-benz/a-class/w176/hatchback-petrol-90kw-manual",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "A 180",
+        "trim": "BlueEfficiency Navi TÜV 2.Hand Euro 6",
+        "sourceTaxonomy": {
+          "make": "47",
+          "model": "100054"
+        },
+        "firstRegistration": {
+          "year": 2014,
+          "month": 7
+        },
+        "fuel": "petrol",
+        "powerKw": 90,
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "sauto:210019569",
+      "expect": "model:mercedes-benz/a-class",
+      "note": "no power",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "Třídy A",
+        "trim": "1,3 200  Aut. CZ AMG Sport DPH",
+        "sourceTaxonomy": {
+          "make": "51",
+          "model": "422"
+        },
+        "firstRegistration": {
+          "year": 2018,
+          "month": 11
+        },
+        "manufactureYear": 2018,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:ed5db87a-dd8d-4328-b958-13052cc1b072",
+      "expect": "model:mercedes-benz/c-class",
+      "note": "hybrid kind and body unknown",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "C 300",
+        "trim": "e*1.Hd.*Pano*MwSt.*R-Kam*LED*Voll*AMG*",
+        "sourceTaxonomy": {
+          "make": "47",
+          "model": "100056"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 10
+        },
+        "powerKw": 230,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:211283442",
+      "expect": "model:mercedes-benz/c-class",
+      "note": "no power",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "Třídy C",
+        "trim": "AMG, záruka + servis 01/2028",
+        "sourceTaxonomy": {
+          "make": "51",
+          "model": "430"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 1
+        },
+        "manufactureYear": 2022,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:211273620",
+      "expect": "model:mercedes-benz/e-class",
+      "note": "no power",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "Třídy E",
+        "trim": "E 400 d 4MATIC AMG Line",
+        "sourceTaxonomy": {
+          "make": "51",
+          "model": "431"
+        },
+        "manufactureYear": 2020,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:3bf4ad9f-3e5c-414d-80fa-a84624ba0a25",
+      "expect": "model:mercedes-benz/e-class",
+      "note": "body unknown",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "E 450",
+        "trim": "4Matic 9G-Tronic AMG Leder/Distronic/Burme",
+        "sourceTaxonomy": {
+          "make": "47",
+          "model": "100061"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 5
+        },
+        "fuel": "petrol",
+        "powerKw": 270,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:208626641",
+      "expect": "model:mercedes-benz/cla",
+      "note": "Coupé or Shooting Brake",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "CLA",
+        "trim": "2,0 45 AMG 280kW 4MATIC LED",
+        "sourceTaxonomy": {
+          "make": "51",
+          "model": "6617"
+        },
+        "firstRegistration": {
+          "year": 2018,
+          "month": 5
+        },
+        "manufactureYear": 2018,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210035475",
+      "expect": "mercedes-benz/cla/c117/wagon-petrol-160kw-automatic",
+      "note": "SB = Shooting Brake",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "CLA",
+        "trim": "2,0 250 160kW 4M AMG Sport SB",
+        "sourceTaxonomy": {
+          "make": "51",
+          "model": "6617"
+        },
+        "manufactureYear": 2016,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:209671317",
+      "expect": "model:mercedes-benz/cla",
+      "note": "Coupé or Shooting Brake",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "CLA",
+        "trim": "2,0 35 AMG 225kW 4Matic DPH CZ",
+        "sourceTaxonomy": {
+          "make": "51",
+          "model": "6617"
+        },
+        "firstRegistration": {
+          "year": 2020,
+          "month": 5
+        },
+        "manufactureYear": 2020,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:31a2084d-c6b2-410a-9d14-54d004131ac3",
+      "expect": "mercedes-benz/t-class/w420/mpv-diesel-85kw-automatic",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "T-Klasse",
+        "trim": "d Progressive standard AUT Fernlichtass.",
+        "sourceTaxonomy": {
+          "make": "47",
+          "model": "76282"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 6
+        },
+        "fuel": "diesel",
+        "powerKw": 85,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:35d071e9-ef3c-4fad-989b-19c74063fb2d",
+      "expect": "mercedes-benz/glb/x247/suv-petrol-120kw-automatic",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "GLB 200",
+        "trim": "Progressive 360°+MBUX+19+LED+Sitzhzg",
+        "sourceTaxonomy": {
+          "make": "47",
+          "model": "100149"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 10
+        },
+        "fuel": "petrol",
+        "powerKw": 120,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:0cc57c47-385d-4a9e-81fa-19e933df3f82",
+      "expect": "mercedes-benz/glb/x247/suv-petrol-165kw-automatic",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "GLB 250",
+        "trim": "4M Progressive/LED/360/Night/Distr/Keyl",
+        "sourceTaxonomy": {
+          "make": "47",
+          "model": "100149"
+        },
+        "firstRegistration": {
+          "year": 2025,
+          "month": 6
+        },
+        "fuel": "petrol",
+        "powerKw": 165,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:211213182",
+      "expect": "model:mercedes-benz/glc",
+      "note": "no power",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "GLC",
+        "trim": "43 AMG, Premium Plus, DPH",
+        "sourceTaxonomy": {
+          "make": "51",
+          "model": "7249"
+        },
+        "firstRegistration": {
+          "year": 2020,
+          "month": 6
+        },
+        "manufactureYear": 2020,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:208887525",
+      "expect": "unmatched",
+      "note": "CLE is neither CL nor C",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "CLE",
+        "trim": "2,0 300 4Matic AMG Premium Plu",
+        "sourceTaxonomy": {
+          "make": "51",
+          "model": "9318"
+        },
+        "firstRegistration": {
+          "year": 2025,
+          "month": 1
+        },
+        "manufactureYear": 2025,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:137664912",
+      "expect": "unmatched",
+      "note": "CL not in catalog",
+      "vehicle": {
+        "make": "Mercedes-Benz",
+        "model": "CL",
+        "trim": "55 AMG 5,5 CZ 30'900km Serv.kn",
+        "sourceTaxonomy": {
+          "make": "51",
+          "model": "1180"
+        },
+        "firstRegistration": {
+          "year": 2001,
+          "month": 10
+        },
+        "manufactureYear": 2001,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:209979249",
+      "expect": "hyundai/tucson/nx4/suv-petrol-110kw-manual",
+      "vehicle": {
+        "make": "Hyundai",
+        "model": "Tucson",
+        "trim": "1,6 T-GDI 110 kW Smart DPH 1.M",
+        "sourceTaxonomy": {
+          "make": "31",
+          "model": "1465"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 8
+        },
+        "manufactureYear": 2023,
+        "fuel": "petrol",
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "sauto:210063383",
+      "expect": "model:hyundai/tucson",
+      "note": "no power",
+      "vehicle": {
+        "make": "Hyundai",
+        "model": "Tucson",
+        "trim": "1,6 CRDi 4x4 Aut. N line DPH",
+        "sourceTaxonomy": {
+          "make": "31",
+          "model": "1465"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 12
+        },
+        "manufactureYear": 2022,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:17f07b39-0612-44b8-abf7-5dacafa326ae",
+      "expect": "hyundai/tucson/tl/suv-petrol-130kw-automatic",
+      "vehicle": {
+        "make": "Hyundai",
+        "model": "TUCSON",
+        "trim": "Style 4WD",
+        "sourceTaxonomy": {
+          "make": "33",
+          "model": "18493"
+        },
+        "firstRegistration": {
+          "year": 2018,
+          "month": 8
+        },
+        "fuel": "petrol",
+        "powerKw": 130,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:3ef51c04-834a-4655-b995-5cf853699b46",
+      "expect": "hyundai/tucson/nx4/suv-petrol-110kw-automatic",
+      "vehicle": {
+        "make": "Hyundai",
+        "model": "TUCSON",
+        "trim": "T-GDI DCT Trend Navi+virtCP+ACC+Kamera+SHZ+PDC+Kli",
+        "sourceTaxonomy": {
+          "make": "33",
+          "model": "18493"
+        },
+        "firstRegistration": {
+          "year": 2026,
+          "month": 5
+        },
+        "fuel": "petrol",
+        "powerKw": 110,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:208598531",
+      "expect": "model:hyundai/i30",
+      "note": "body unknown",
+      "vehicle": {
+        "make": "Hyundai",
+        "model": "i30",
+        "trim": "1,6 CRDi 85kW Aut. Style CZ",
+        "sourceTaxonomy": {
+          "make": "31",
+          "model": "1376"
+        },
+        "firstRegistration": {
+          "year": 2021,
+          "month": 10
+        },
+        "manufactureYear": 2021,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:211286994",
+      "expect": "model:hyundai/i30",
+      "note": "body unknown",
+      "vehicle": {
+        "make": "Hyundai",
+        "model": "i30",
+        "trim": "1.6CRDI 85KW,SPOLEHLIVÉ,PĚKNÉ",
+        "sourceTaxonomy": {
+          "make": "31",
+          "model": "1376"
+        },
+        "firstRegistration": {
+          "year": 2010,
+          "month": 12
+        },
+        "manufactureYear": 2010,
+        "fuel": "diesel",
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "autoscout24-de:f244fd0d-dd58-4615-b626-8990ba72614a",
+      "expect": "tesla/model-3/mk1/sedan-bev-350kw-automatic",
+      "vehicle": {
+        "make": "Tesla",
+        "model": "Model 3",
+        "trim": "Long Range AWD *FSD *AHK* Mwst.ausweisb.",
+        "sourceTaxonomy": {
+          "make": "51520",
+          "model": "201429"
+        },
+        "firstRegistration": {
+          "year": 2019,
+          "month": 7
+        },
+        "fuel": "bev",
+        "powerKw": 350,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:c62159b7-3de4-4000-b54b-f5f0c73718f8",
+      "expect": "peugeot/5008/mk2/suv-diesel-96kw-automatic",
+      "vehicle": {
+        "make": "Peugeot",
+        "model": "5008",
+        "trim": "1.5 BlueHDi 130 GT",
+        "sourceTaxonomy": {
+          "make": "55",
+          "model": "201155"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 6
+        },
+        "fuel": "diesel",
+        "powerKw": 96,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210151394",
+      "expect": "peugeot/5008/mk2/suv-diesel-96kw-manual",
+      "vehicle": {
+        "make": "Peugeot",
+        "model": "5008",
+        "trim": "1,5 HDI 96kW Allure 7-Míst DPH",
+        "sourceTaxonomy": {
+          "make": "70",
+          "model": "5190"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 2
+        },
+        "manufactureYear": 2022,
+        "fuel": "diesel",
+        "transmission": "manual"
+      }
+    },
+    {
+      "ref": "sauto:209607486",
+      "expect": "model:peugeot/3008",
+      "note": "hybrid kind unclear",
+      "vehicle": {
+        "make": "Peugeot",
+        "model": "3008",
+        "trim": "GT 1,6 PureTech 133kW Automat",
+        "sourceTaxonomy": {
+          "make": "70",
+          "model": "1670"
+        },
+        "firstRegistration": {
+          "year": 2021,
+          "month": 10
+        },
+        "manufactureYear": 2021,
+        "fuel": "hev",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210032874",
+      "expect": "model:seat/leon",
+      "note": "body unknown",
+      "vehicle": {
+        "make": "Seat",
+        "model": "Leon",
+        "trim": "2,0 TDI 110kW DSG FR CZ DPH",
+        "sourceTaxonomy": {
+          "make": "86",
+          "model": "668"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 7
+        },
+        "manufactureYear": 2023,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210130190",
+      "expect": "seat/leon/mk3/wagon-petrol-221kw-automatic",
+      "note": "4Drive Cupra 300 is the ST only",
+      "vehicle": {
+        "make": "Seat",
+        "model": "Leon",
+        "trim": "2,0 TSI Cupra 221kW 4Drive DSG",
+        "sourceTaxonomy": {
+          "make": "86",
+          "model": "668"
+        },
+        "manufactureYear": 2019,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210763700",
+      "expect": "cupra/formentor/mk1/suv-diesel-110kw-automatic",
+      "vehicle": {
+        "make": "Cupra",
+        "model": "Formentor",
+        "trim": "2.0 TDI 110kw DSG 4x4 PPF",
+        "sourceTaxonomy": {
+          "make": "1354",
+          "model": "8418"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 5
+        },
+        "manufactureYear": 2022,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:ed2133f2-4e1b-4204-8ad7-6d6c5dc543bf",
+      "expect": "cupra/formentor/mk1/suv-petrol-228kw-automatic",
+      "vehicle": {
+        "make": "CUPRA",
+        "model": "Formentor",
+        "trim": "VZ 4Drive *Navi*Full-Link*AHK*Winterp.*",
+        "sourceTaxonomy": {
+          "make": "51802",
+          "model": "200362"
+        },
+        "firstRegistration": {
+          "year": 2023,
+          "month": 5
+        },
+        "fuel": "petrol",
+        "powerKw": 228,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210145280",
+      "expect": "unmatched",
+      "note": "Range Rover Sport, only Range Rover in catalog",
+      "vehicle": {
+        "make": "Land Rover",
+        "model": "Range Rover Sport",
+        "trim": "3,0 SDV6 HSE 225kW CZ Dynamic",
+        "sourceTaxonomy": {
+          "make": "391",
+          "model": "5961"
+        },
+        "firstRegistration": {
+          "year": 2016,
+          "month": 6
+        },
+        "manufactureYear": 2016,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210970317",
+      "expect": "unmatched",
+      "note": "Range Rover Sport",
+      "vehicle": {
+        "make": "Land Rover",
+        "model": "Range Rover Sport",
+        "trim": "Autobiography, panorama",
+        "sourceTaxonomy": {
+          "make": "391",
+          "model": "5961"
+        },
+        "firstRegistration": {
+          "year": 2019,
+          "month": 1
+        },
+        "manufactureYear": 2018,
+        "fuel": "diesel",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "sauto:210624695",
+      "expect": "unmatched",
+      "note": "Range Rover Velar",
+      "vehicle": {
+        "make": "Land Rover",
+        "model": "Range Rover Velar",
+        "trim": "R-Dynamic, 294kW, TAŽNÉ",
+        "sourceTaxonomy": {
+          "make": "391",
+          "model": "8034"
+        },
+        "firstRegistration": {
+          "year": 2022,
+          "month": 8
+        },
+        "manufactureYear": 2022,
+        "fuel": "petrol",
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:f94c8150-d655-4741-b147-7a45175b2bfb",
+      "expect": "unmatched",
+      "note": "Xpeng not in catalog",
+      "vehicle": {
+        "make": "Xpeng",
+        "model": "G6",
+        "trim": "AWD Performance *Premiumsitze*el. AHK*Pano*",
+        "sourceTaxonomy": {
+          "make": "51940",
+          "model": "201595"
+        },
+        "fuel": "bev",
+        "powerKw": 358,
+        "transmission": "automatic"
+      }
+    },
+    {
+      "ref": "autoscout24-de:f557a042-18c9-4437-8c5e-57406e8a079d",
+      "expect": "unmatched",
+      "note": "KGM not in catalog",
+      "vehicle": {
+        "make": "KGM",
+        "model": "Musso",
+        "trim": "Grand 4WD Autm. Core",
+        "sourceTaxonomy": {
+          "make": "51975",
+          "model": "202965"
+        },
+        "fuel": "diesel",
+        "powerKw": 149,
+        "transmission": "automatic"
+      }
+    }
+  ]
+}
