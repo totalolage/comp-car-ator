@@ -278,7 +278,12 @@ const cases: Case[] = [
   },
   {
     name: "DE private seller quoting net, new: the agreed price either way",
-    input: { ...deNew, seller: "private", priceBasis: "net", price: { amount: 30_000, currency: "EUR" } },
+    input: {
+      ...deNew,
+      seller: "private",
+      priceBasis: "net",
+      price: { amount: 30_000, currency: "EUR" },
+    },
     lines: { goods: 730_050, vatCz: 153_311, ...FEES },
     flags: ["newVehicleVat"],
     total: 896_951,
@@ -344,7 +349,12 @@ const cases: Case[] = [
 
   {
     name: "AT new, dealer net: 20% USt never added, NoVA may be in",
-    input: { ...deNew, market: "AT", priceBasis: "net", price: { amount: 30_000, currency: "EUR" } },
+    input: {
+      ...deNew,
+      market: "AT",
+      priceBasis: "net",
+      price: { amount: 30_000, currency: "EUR" },
+    },
     lines: { goods: 730_050, vatCz: 153_311, ...FEES },
     flags: ["newVehicleVat", "approximate"],
     total: 896_951,
