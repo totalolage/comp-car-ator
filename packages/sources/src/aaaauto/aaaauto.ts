@@ -27,7 +27,8 @@
  *   open above) and `demo`. A slice is paged to its end, then its listings come out, then
  *   SliceDone. Slices done earlier in the census are skipped. A slice with fewer distinct cars
  *   than it reports (one removed meanwhile shifts the next across a page boundary) is paged
- *   once more; still short, it stays not done and the run fails after the other slices.
+ *   once more; still short, it stays not done, its listings come out after the other
+ *   slices, and the run fails.
  * - incremental: both lists newest first, yielding the listings not known before, each list
  *   stopping at a page that has known listings and no new one.
  *
@@ -106,16 +107,26 @@ class Harvest {
       yield* this.incremental(DEMO);
       return;
     }
-    const short: string[] = [];
+    // A short slice's listings come out after every slice that is done: the Ledger counts the
+    // Observations before a SliceDone towards that slice, and a rejected one among a short
+    // slice's would keep the next slice not done.
+    const short: { list: List; cars: Raw[] }[] = [];
     for (const list of this.slices()) {
       if (this.ctx.checkpoint.sliceDoneAt(list.key)) continue;
       const { cars, complete } = await this.census(list);
+      if (!complete) {
+        short.push({ list, cars });
+        continue;
+      }
       for (const car of cars) yield* this.listing(car, list);
-      if (complete) yield { kind: "SliceDone", slice: list.key };
-      else short.push(list.key);
+      yield { kind: "SliceDone", slice: list.key };
+    }
+    for (const { list, cars } of short) {
+      for (const car of cars) yield* this.listing(car, list);
     }
     if (short.length > 0) {
-      throw new Error(`AAA Auto slices yielded fewer listings than reported: ${short.join(", ")}`);
+      const keys = short.map((s) => s.list.key).join(", ");
+      throw new Error(`AAA Auto slices yielded fewer listings than reported: ${keys}`);
     }
   }
 

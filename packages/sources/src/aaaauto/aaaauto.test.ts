@@ -332,7 +332,7 @@ describe("aaaauto source", () => {
     expect(urls.some((u) => u.includes("/2004?"))).toBe(false);
   });
 
-  it("a car whose price does not parse comes out as a ListingSeen the Ledger rejects; the run goes on", async () => {
+  it("a car whose price does not parse comes out without a ref, which the Ledger rejects; the run goes on", async () => {
     const cassette = edit(
       await loadCassette(full),
       Y2005_1,
@@ -343,13 +343,15 @@ describe("aaaauto source", () => {
     );
     const os = await harvest(cassette, { mode: "full" });
     const seen = listings(os);
-    expect(seen.filter((o) => o.ref === "")).toHaveLength(1);
+    const placeholder = seen.filter((o) => o.ref === "");
+    expect(placeholder).toHaveLength(1);
+    expect(placeholder[0]?.price.amount).toBeNaN();
     expect(seen).toHaveLength(80);
     // Its ref still counts towards the slice; the Ledger keeps the slice not done.
     expect(slicesDone(os)).toEqual(FULL_SLICES);
   });
 
-  it("a slice that stays short of its count is paged twice, then fails the run after the others", async () => {
+  it("a slice that stays short of its count is paged twice, then comes out after the others and fails the run", async () => {
     // A car without an id cannot count towards its slice (and is rejected): every pass sees
     // one listing less than the slice reports.
     const cassette = edit(
@@ -364,7 +366,15 @@ describe("aaaauto source", () => {
     );
     expect(slicesDone(os)).toEqual(["year:2005"]);
     expect(urls.filter((u) => u.endsWith(Y2004))).toHaveLength(2);
-    expect(listings(os).filter((o) => o.ref === "")).toHaveLength(1);
+    // Its listings, the rejected one among them, follow year:2005's SliceDone, so the Ledger
+    // does not count the rejection towards year:2005.
+    const done2005 = os.findIndex((o) => o.kind === "SliceDone");
+    const placeholder = os.findIndex((o) => o.kind === "ListingSeen" && o.ref === "");
+    expect(placeholder).toBeGreaterThan(done2005);
+    const after = listings(os.slice(done2005));
+    expect(after).toHaveLength(24);
+    const mapped = after.filter((o) => o.ref !== "");
+    expect(mapped.every((o) => o.vehicle.firstRegistration?.year === 2004)).toBe(true);
   });
 
   it("a slice short on its first pass and whole on its second is done", async () => {
