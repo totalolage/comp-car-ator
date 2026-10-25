@@ -76,9 +76,9 @@ const ENGINE_LAYOUT = /^[vw]\d{1,2}$/i;
  * 4. One fitting Variant is a match only if fuel and power are known and the text names at
  *    most one generation, all of them known to the catalog ("Octavia III" when the catalog
  *    has only the IV is not evidence for the IV). A word claims a generation when it is a
- *    Roman numeral in either case ("IV", "iv", not Škoda's "iV") or "Mk7", a lone "I" next to
- *    the model name, or one of the make's chassis codes in aliases.ts ("W212", whether or not
- *    the catalog has it). Otherwise, or when several fit, the listing resolves to the Model.
+ *    Roman numeral ("IV", "iv", not Škoda's "iV") or "Mk7", a lone "I", "i" or "v" next to the
+ *    model name, or one of the make's chassis codes in aliases.ts ("W212", whether or not the
+ *    catalog has it). Otherwise, or when several fit, the listing resolves to the Model.
  *    Fitting Variants are never ranked.
  * TODO(wave1-stream11): per-source `sourceTaxonomy` aliases once a Source needs them.
  */
@@ -121,16 +121,15 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
       const body = vehicle.body ?? hints.body;
       const powerKw =
         vehicle.powerKw !== undefined && vehicle.powerKw > 0 ? vehicle.powerKw : hints.powerKw;
-      // A lone "I" is generation I only as the first trim word or right after the model name.
+      // A lone "I" is generation I only as the first trim word or right after the model name;
+      // a lower-case "i" or "v" only right after it ("Golf v", not "v záruce").
       const modelWords = readHints(vehicle.model).words.length;
-      const words = hints.words.filter((w, i) => {
+      const words = hints.words.flatMap((w, i) => {
         const before = hints.words[i - 1];
-        return (
-          w !== "I" ||
-          i === modelWords ||
-          before === undefined ||
-          model.nameWords.has(before.toLowerCase())
-        );
+        const afterName = before !== undefined && model.nameWords.has(before.toLowerCase());
+        if (w === "I") return i === modelWords || before === undefined || afterName ? [w] : [];
+        if (w === "i" || w === "v") return afterName ? [w.toUpperCase()] : [w];
+        return [w];
       });
       const named = [...model.generationWords]
         .filter(([, names]) => names.some((name) => words.includes(name)))

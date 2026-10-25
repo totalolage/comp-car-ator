@@ -300,6 +300,24 @@ describe("Resolver", () => {
         status: "matched",
         variantId: "skoda/octavia/mk3/wagon-phev-150kw-automatic",
       });
+      // Lower-case "iv" is read as the generation even where it may be the badge typed loosely.
+      expect(
+        octaviaIII.resolve({ make: "Škoda", model: "Octavia iv", fuel: "phev", powerKw: 150 }),
+      ).toMatchObject({ status: "model", reason: "ambiguous" });
+      // A lower-case "v" names a generation only right after the model name.
+      expect(
+        octaviaIII.resolve({ ...petrol, model: "Octavia v" } as VehicleDescriptor),
+      ).toMatchObject({ status: "model", reason: "ambiguous" });
+      expect(
+        octaviaIII.resolve({
+          ...petrol,
+          model: "Octavia",
+          trim: "Combi v záruce",
+        } as VehicleDescriptor),
+      ).toMatchObject({
+        status: "matched",
+        variantId: "skoda/octavia/mk3/wagon-petrol-110kw-automatic",
+      });
     });
 
     it("does not match when the text names a generation the catalog lacks, or two", () => {
