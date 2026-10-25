@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { detectChallenge } from "./challenge.ts";
+import { chunksOf, relayChunks, streams } from "./chunks.ts";
 import {
   type Http,
   HttpBlockedError,
@@ -44,7 +45,7 @@ export function createReplayHttp(cassette: Cassette): Http {
   const served = new Map<string, number>();
   return {
     async get(input) {
-      const { url, signal, binary } = normalizeRequest(input);
+      const { url, signal, binary, stream } = normalizeRequest(input);
       signal?.throwIfAborted();
       const key = matchKey(url);
       const candidates = byUrl.get(key);
@@ -54,7 +55,15 @@ export function createReplayHttp(cassette: Cassette): Http {
       const { response } = candidates[index] as Interaction;
       const marker = detectChallenge(response);
       if (marker) throw new HttpBlockedError(url, response.tier, marker);
-      return toPage(response, binary ?? false);
+      const page = toPage(response, binary ?? false);
+      if (stream) {
+        // As live: a streamed body has no text, and arrives in 64 KiB pieces.
+        const { body, bodyBase64 } = response;
+        const bytes = Buffer.from(bodyBase64 ?? body, bodyBase64 !== undefined ? "base64" : "utf8");
+        if (streams(response.status, response.headers["content-type"])) page.body = "";
+        page.chunks = relayChunks(chunksOf(new Uint8Array(bytes)), signal);
+      }
+      return page;
     },
   };
 }
@@ -67,8 +76,20 @@ export function recordingHttp(inner: Http): { http: Http; cassette(): Cassette }
       async get(input) {
         const request = normalizeRequest(input);
         const page = await inner.get(request);
-        interactions.push(toInteraction(request.url, page));
-        return page;
+        const interaction = toInteraction(request.url, page);
+        interactions.push(interaction);
+        if (!page.chunks) return page;
+        // A streamed body lands in the cassette when the consumer finishes or stops reading,
+        // as far as it read; it is held in memory meanwhile, so record small fixtures only.
+        const read: Uint8Array[] = [];
+        const chunks = relayChunks(page.chunks, undefined, {
+          chunk: (chunk) => read.push(chunk),
+          end: () => {
+            interaction.response.body = "";
+            interaction.response.bodyBase64 = Buffer.concat(read).toString("base64");
+          },
+        });
+        return { ...page, chunks };
       },
     },
     cassette: () => ({ version: 1, interactions: [...interactions] }),
@@ -89,7 +110,7 @@ export async function saveCassette(path: string | URL, cassette: Cassette): Prom
 export function toInteraction(url: string, page: Page): Interaction {
   // Cookies are session state, not fixture data; keep them out of committed cassettes.
   const { "set-cookie": _cookie, ...headers } = page.headers;
-  const { bytes, ...rest } = page;
+  const { bytes, chunks: _chunks, ...rest } = page;
   return {
     request: { url },
     response: {

@@ -23,6 +23,14 @@ export interface HttpRequest {
    */
   hostIntervalMs?: number;
   /**
+   * Deliver the body as `Page.chunks` instead of buffering it, for downloads too large for
+   * memory (the vehicle register CSV). Retries, escalation and challenge detection happen on
+   * the status and headers, before the first byte. The live adapter's timeout then limits the
+   * wait for the headers and for each chunk, not the whole download; streamed responses are
+   * never cached.
+   */
+  stream?: boolean;
+  /**
    * Aborts in-flight fetches, pacing and backoff waits; `get` then rejects with the abort reason.
    * A request still queued for its host's pacing slot rejects at once and frees its place.
    */
@@ -41,8 +49,20 @@ export interface Page {
    * the server answered with a text type (a challenge or error page).
    */
   body: string;
-  /** Raw bytes, present only when the request asked for `binary`. */
+  /**
+   * Raw bytes, present only when the request asked for `binary`; with `stream` too, only when
+   * the body was read in full (`chunks` always has it).
+   */
   bytes?: Uint8Array;
+  /**
+   * The raw body, present only when the request asked for `stream`; iterate it once. A 2xx
+   * response that is not HTML streams from the network (`body` is ""); any other response
+   * was read in full for challenge detection, so `body` has its text and `chunks` replays it.
+   * Aborting the request's signal stops the iteration with the abort reason. Read it to the end
+   * or stop it (`break` in `for await`, or its iterator's `return()`): a stream left unread
+   * holds its connection open until the request's signal aborts.
+   */
+  chunks?: AsyncIterable<Uint8Array>;
   tier: Tier;
 }
 

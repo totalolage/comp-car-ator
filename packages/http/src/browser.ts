@@ -131,14 +131,16 @@ export function createBrowserFetcher(
     return closing;
   }
 
-  const fetch: TierFetcher = async ({ url, headers, binary, signal }) => {
+  const fetch: TierFetcher = async ({ url, headers, binary, stream, signal }) => {
     clearTimeout(idleTimer);
     active++;
     try {
       const locale = headers["accept-language"]?.split(",")[0]?.trim() || "cs-CZ";
       const current = await profile(locale);
       signal?.throwIfAborted();
-      if (binary) return await fetchBinary(current, requests, url, headers, timeoutMs, signal);
+      // T2 cannot stream: a stream request is read in full, then served as chunks.
+      if (binary || stream)
+        return await fetchBinary(current, requests, url, headers, timeoutMs, signal);
       const page = await current.context.newPage();
       if (signal?.aborted) {
         await page.close().catch(() => {});
@@ -266,7 +268,8 @@ async function fetchBinary(
     const bytes = new Uint8Array(await response.body());
     await handBack(context, await cookies, (await api.storageState()).cookies);
     const responseHeaders = response.headers();
-    const text = /^text\//i.test(responseHeaders["content-type"] ?? "");
+    // Text or HTML (a challenge or error page) keeps its text for challenge detection.
+    const text = /^text\/|html/i.test(responseHeaders["content-type"] ?? "");
     return {
       url: response.url(),
       status: response.status(),
