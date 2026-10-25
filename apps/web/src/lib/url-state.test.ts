@@ -128,6 +128,10 @@ describe("listing URL state", () => {
     expect(readListingState(url)).toEqual(state);
   });
 
+  it("reads a percent-encoded flag", () => {
+    expect(readListingState("?gone=%31").filters).toEqual({ includeGone: true });
+  });
+
   it("drops values outside the vocabulary and catalog-only sort keys", () => {
     expect(readListingState("?condition=new,mint&gone=yes&sort=-power")).toEqual({
       filters: { condition: ["new"] },

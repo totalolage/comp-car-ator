@@ -185,7 +185,7 @@ function readFields(params: Map<string, string>, fields: Field[]): Record<string
     } else if (field.kind === "range") {
       const parsed = readRange(decode(raw) ?? "");
       if (parsed) out[field.key] = parsed;
-    } else if (raw === "1") {
+    } else if (decode(raw) === "1") {
       out[field.key] = true;
     }
   }
