@@ -394,6 +394,9 @@ describe("Resolver", () => {
     // Both spellings name their generation W206: one generation, not two.
     expect(
       createResolver(spellings).resolve({ ...listing, body: "sedan", trim: "W206 AMG Line" }),
-    ).toMatchObject({ status: "matched", variantId: "mercedes-benz/c-klasse/w206/sedan-diesel-147kw-automatic" });
+    ).toMatchObject({
+      status: "matched",
+      variantId: "mercedes-benz/c-klasse/w206/sedan-diesel-147kw-automatic",
+    });
   });
 });

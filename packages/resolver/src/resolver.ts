@@ -127,7 +127,10 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
       );
       const only = fits.length === 1 ? fits[0] : undefined;
       const evidence =
-        fuel !== undefined && powerKw !== undefined && generationSlugs(named) <= 1 && !unknownGeneration;
+        fuel !== undefined &&
+        powerKw !== undefined &&
+        generationSlugs(named) <= 1 &&
+        !unknownGeneration;
       if (only && evidence) {
         return {
           status: "matched",
