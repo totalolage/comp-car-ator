@@ -27,7 +27,15 @@ const catalog = await buildCatalog();
 const scope = category?.scope;
 const query = catalogQuery({ filters: {} }, scope);
 const result = catalog.query(query);
-const initial = { ...result, rows: result.rows.map(firstPaintRow) };
+// The model facet shows only once a make is chosen; leave its (long) counts out until then.
+const initial = {
+  ...result,
+  rows: result.rows.map(firstPaintRow),
+  facets: {
+    ...result.facets,
+    values: { ...result.facets.values, model: scope?.make ? result.facets.values.model : [] },
+  },
+};
 // Names for the first paint's facets: makes, or on a make's page that make's models.
 const names: Names = {};
 for (const v of catalog.query({ ...query, limit: Number.MAX_SAFE_INTEGER }).rows) {

@@ -31,6 +31,7 @@ import {
   PAGE,
   RAIL,
   type RangeFacet,
+  rangeFromText,
   withoutScope,
 } from "../lib/catalog-view.ts";
 import { siteStore } from "../lib/store.ts";
@@ -52,6 +53,8 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
   const [state, setState] = useState<CatalogState>({ filters: {} });
   const [limit, setLimit] = useState(PAGE);
   const [railOpen, setRailOpen] = useState(false);
+  // Bumped by "clear filters" so range fields drop half-typed text too.
+  const [resets, setResets] = useState(0);
 
   useEffect(() => {
     setState(withoutScope(readCatalogState(location.search), scope));
@@ -117,7 +120,10 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
   // Any applied filter counts, including URL-only ones the rail does not show.
   const active = writeCatalogState({ filters }) !== "";
   const activeCount = Object.keys(filters).length;
-  const clear = () => update(() => ({}));
+  const clear = () => {
+    setResets((n) => n + 1);
+    update(() => ({}));
+  };
 
   return (
     <div class="split">
@@ -137,7 +143,7 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
           if (facet.kind === "range") {
             return (
               <RangeFilter
-                key={facet.key}
+                key={`${facet.key}-${resets}`}
                 facet={facet.key}
                 value={filters[facet.key]}
                 bounds={result.facets.ranges[facet.key]}
@@ -300,9 +306,9 @@ function SortHeader(props: {
 }
 
 /**
- * Two number fields, from and to. Each keystroke that parses narrows the table at once; the
- * typed text is kept as typed ("1," while writing 1,5) and only reset when the filter changes
- * from elsewhere (clear, a band pick).
+ * Two number fields, from and to. Each keystroke that makes a range narrows the table at once;
+ * the typed text is kept as typed ("1," while writing 1,5, or a "from" above the "to") and is
+ * reset when the filter changes from elsewhere (a band pick) or the rail is cleared.
  */
 function RangeFilter(props: {
   facet: RangeFacet;
@@ -317,24 +323,28 @@ function RangeFilter(props: {
   const typed = useRef(draft);
   typed.current = draft;
   useEffect(() => {
-    const { min, max } = typed.current;
-    if (parse(min) !== value?.min || parse(max) !== value?.max)
+    const current = rangeFromText(typed.current.min, typed.current.max);
+    if (current === null || current?.min !== value?.min || current?.max !== value?.max)
       setDraft({ min: text(value?.min), max: text(value?.max) });
   }, [value?.min, value?.max]);
   if (!bounds && !value) return null;
 
+  const range = rangeFromText(draft.min, draft.max);
   const edit = (end: "min" | "max", input: string) => {
     const next = { ...draft, [end]: input };
     setDraft(next);
-    const min = parse(next.min);
-    const max = parse(next.max);
-    if (min === null || max === null) return; // not a number yet
-    onChange({ ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }) });
+    const parsed = rangeFromText(next.min, next.max);
+    if (parsed !== null) onChange(parsed); // else keep the text until it makes a range
   };
   const legend = t.t(`facet.${facet}`);
   const digits = facet === "consumptionL100km" ? 1 : 0;
+  // Years print bare (2020, not 2 020); other bounds in the page's number format.
   const bound = (n: number | undefined) =>
-    n === undefined ? "" : t.number(facet === "consumptionL100km" ? n : Math.round(n), digits);
+    n === undefined
+      ? ""
+      : facet === "year"
+        ? String(n)
+        : t.number(digits ? n : Math.round(n), digits);
 
   return (
     <fieldset class="facet" data-facet={facet}>
@@ -349,6 +359,7 @@ function RangeFilter(props: {
             aria-label={`${legend}: ${t.t(end === "min" ? "range.min" : "range.max")}`}
             placeholder={`${t.t(end === "min" ? "range.min" : "range.max")} ${bound(bounds?.[end])}`}
             value={draft[end]}
+            aria-invalid={range === null}
             disabled={disabled}
             onInput={(e) => edit(end, (e.target as HTMLInputElement).value)}
           />
@@ -379,12 +390,4 @@ function RangeFilter(props: {
 
 function text(n: number | undefined): string {
   return n === undefined ? "" : String(n);
-}
-
-/** undefined for an empty field, null for text that is not a non-negative number. */
-function parse(input: string): number | undefined | null {
-  const clean = input.replace(/[\s ]/g, "").replace(",", ".");
-  if (clean === "") return undefined;
-  const n = Number(clean);
-  return Number.isFinite(n) && n >= 0 ? n : null;
 }

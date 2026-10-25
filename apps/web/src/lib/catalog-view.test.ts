@@ -18,6 +18,7 @@ import {
   nextSort,
   odometerBands,
   RAIL,
+  rangeFromText,
   withoutScope,
 } from "./catalog-view.ts";
 import { type CatalogState, readCatalogState, writeCatalogState } from "./url-state.ts";
@@ -212,5 +213,29 @@ describe("odometer quick picks", () => {
     // A band is a km range the URL carries like any typed one.
     const state = { filters: { odometerKm: bands[1]?.range } };
     expect(readCatalogState(writeCatalogState(state))).toEqual(state);
+  });
+});
+
+describe("typed ranges", () => {
+  it("reads Czech and English number styles", () => {
+    expect(rangeFromText("300 000", "")).toEqual({ min: 300_000 });
+    expect(rangeFromText("", "5,5")).toEqual({ max: 5.5 });
+    expect(rangeFromText("1.5", "7")).toEqual({ min: 1.5, max: 7 });
+    expect(rangeFromText(" ", "")).toBeUndefined();
+    // Mid-typing "1,5": "1," already narrows to 1 while the field keeps the comma.
+    expect(rangeFromText("1,", "")).toEqual({ min: 1 });
+  });
+
+  it("makes no range from text a restored URL would read differently", () => {
+    // Non-numbers, negative, reversed or unwritable ends stay as text until they are a range.
+    for (const [min, max] of [
+      ["abc", ""],
+      ["-5", ""],
+      ["2020", "2010"],
+      ["1e21", ""],
+      ["", "99999999999999999"],
+    ] as const) {
+      expect([min, max, rangeFromText(min, max)]).toEqual([min, max, null]);
+    }
   });
 });

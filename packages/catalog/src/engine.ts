@@ -5,6 +5,8 @@
  * The first query over a row array reads every row through `defs` once and keeps the result
  * as columns (values, interval ends, identities), so later queries over the same array are
  * flat loops with no per-row allocation: the catalog page runs one on every facet click.
+ * Rows are therefore treated as immutable: the catalog never changes a row array or row
+ * after its first query, and callers must not change the rows a result returns.
  */
 import type { FacetCount, Range, Sort } from "./types.ts";
 

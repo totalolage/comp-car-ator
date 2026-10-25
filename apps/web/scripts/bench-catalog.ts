@@ -4,9 +4,12 @@
 // "max" includes the first use of each sort order, which the engine computes once and keeps.
 //
 //   node apps/web/scripts/bench-catalog.ts [variants=50000] [runs=20]
+
+import { gzipSync } from "node:zlib";
 import { type BundleContent, encodeBundle, memoryLoader, type VariantRow } from "@cca/bundle";
 import { openCatalog, type VariantQuery } from "@cca/catalog";
 import { BODIES, FUELS, MARKETS, TRANSMISSIONS } from "@cca/vocabulary";
+import { catalogQuery, firstPaintRow } from "../src/lib/catalog-view.ts";
 
 const VARIANTS = Number(process.argv[2] ?? 50_000);
 const RUNS = Number(process.argv[3] ?? 20);
@@ -155,3 +158,15 @@ for (const [name, query] of cases) {
     `${name.padEnd(42)} ${String(total).padStart(6)} ${median.toFixed(1).padStart(11)} ${max.toFixed(1).padStart(8)}`,
   );
 }
+
+// The catalog page's first paint: the island's serialized props (rows cut by firstPaintRow,
+// facet counts without the model facet), as CatalogPage.astro builds them.
+const first = catalog.query(catalogQuery({ filters: {} }));
+const props = JSON.stringify({
+  ...first,
+  rows: first.rows.map(firstPaintRow),
+  facets: { ...first.facets, values: { ...first.facets.values, model: [] } },
+});
+console.log(
+  `first-paint props: ${(props.length / 1000).toFixed(0)} kB raw, ${(gzipSync(props).length / 1000).toFixed(1)} kB gzip`,
+);
