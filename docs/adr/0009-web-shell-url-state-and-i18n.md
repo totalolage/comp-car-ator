@@ -62,7 +62,8 @@ and hash, so switching language keeps the view.
   list back as `cmp` with the filters, so the tray changes the list only through the store.
 - Facet counts in the catalog rail are per value: how many Variants have that value under
   every other facet's filters (the engine's disjunctive counts, unchanged). Checking or
-  unchecking a value never changes the counts in its own facet. In a facet with a checked
+  unchecking a value never changes the counts in its own facet (clearing the last make also
+  clears the model choice, so the make counts then widen with it). In a facet with a checked
   value, unchecked make, model, body, fuel and transmission options read "+N": each Variant
   has one such value, so checking it adds exactly N. Listing country and source keep the
   plain count there, since their Variants overlap and a click adds at most N. The rail

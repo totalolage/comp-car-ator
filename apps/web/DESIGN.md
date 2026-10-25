@@ -62,7 +62,7 @@ Sentence case everywhere; no uppercase labels.
   production years, power, new price, used price, odometer (with one quick pick per Bundle
   odometer band), seats, consumption, listing country, listing source. Counts are per value:
   how many Variants have it under the other facets' filters, so checking a value never
-  changes its own facet's counts. In a facet with a checked value, unchecked make, model,
+  changes its own facet's counts (clearing the last make also drops the model choice). In a facet with a checked value, unchecked make, model,
   body, fuel and transmission options show "+N", exactly what checking them adds; country
   and source counts overlap, so they stay plain. A footnote under the rail says this, and
   each checkbox's accessible name carries the count's meaning (ADR 0009). Enum options keep a fixed

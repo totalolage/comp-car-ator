@@ -220,6 +220,27 @@ describe("catalog view over the query engine", () => {
     expect(writeCatalogState({ filters: cleared })).toBe("?fuel=diesel");
     expect(total(cleared)).toBe(total(start));
     expect(optionsOf(cleared, "make").every((o) => !o.checked && !o.adds)).toBe(true);
+    expect(counts(cleared, "make")).toEqual(makes);
+  });
+
+  it("adds exactly +N for a model on a make's category page", () => {
+    const scope: VariantFilters = { make: ["skoda"] };
+    const view = (filters: VariantFilters) => {
+      const result = catalog.query(catalogQuery({ filters }, scope, 0));
+      return {
+        total: result.total,
+        models: facetOptions("model", result, { ...filters, ...scope }, {}, t),
+      };
+    };
+    const [first, second] = view({}).models;
+    if (!first || !second) throw new Error("the test catalog has several Škoda models");
+    const one = toggleValue({}, "model", first.value);
+    expect(writeCatalogState({ filters: one })).toBe(`?model=${first.value}`);
+    const before = view(one);
+    const added = before.models.find((o) => o.value === second.value);
+    expect(added).toMatchObject({ checked: false, adds: true });
+    const after = view(toggleValue(one, "model", second.value));
+    expect(after.total).toBe(before.total + (added?.count ?? Number.NaN));
   });
 
   it("narrows rows and counts together", () => {
