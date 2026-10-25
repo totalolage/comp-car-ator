@@ -58,7 +58,8 @@ export interface VariantRow {
   body: Body;
   fuel: Fuel;
   powerKw: number;
-  transmission: Transmission;
+  /** Gearboxes the catalog states; absent when no catalog Source states them. */
+  transmissions?: Transmission[];
   drive?: Drive;
   engineCc?: number;
   seats?: number;

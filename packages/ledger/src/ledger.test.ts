@@ -37,7 +37,6 @@ const octavia: CatalogEntry = {
     body: "wagon",
     fuel: "diesel",
     powerKw: 110,
-    transmission: "automatic",
     years: { from: 2020 },
   },
 };
@@ -151,14 +150,12 @@ describe("Ledger", () => {
     expect([...ledger.snapshot().listings()][0]?.resolution.status).toBe("unmatched");
     await run("rsv", "full", "2026-10-11", [octavia]);
     const snapshot = ledger.snapshot();
-    expect(snapshot.catalog.map((v) => v.id)).toEqual([
-      "skoda/octavia/mk4/wagon-diesel-110kw-automatic",
-    ]);
+    expect(snapshot.catalog.map((v) => v.id)).toEqual(["skoda/octavia/mk4/wagon-diesel-110kw"]);
     expect([...snapshot.listings()][0]?.resolution).toEqual({
       status: "matched",
       makeId: "skoda",
       modelId: "skoda/octavia",
-      variantId: "skoda/octavia/mk4/wagon-diesel-110kw-automatic",
+      variantId: "skoda/octavia/mk4/wagon-diesel-110kw",
     });
   });
 
@@ -171,6 +168,26 @@ describe("Ledger", () => {
       { ...octavia, variant: { ...octavia.variant, co2GKm: 126 } },
     ]);
     expect(ledger.snapshot().catalog).toMatchObject([{ seats: 5, co2GKm: 126 }]);
+  });
+
+  it("collects the gearboxes every source states for one Variant", async () => {
+    ledger = openLedger(":memory:");
+    const summary = await run("skoda-prices", "full", "2026-10-01", [
+      { ...octavia, variant: { ...octavia.variant, transmissions: ["manual"] } },
+      { ...octavia, variant: { ...octavia.variant, transmissions: [] } },
+      { ...octavia, variant: { ...octavia.variant, transmissions: ["cvt" as "manual"] } },
+    ]);
+    expect(summary.rejected.map((r) => r.reason)).toEqual([
+      "transmissions must be a non-empty list of known transmissions",
+      "transmissions must be a non-empty list of known transmissions",
+    ]);
+    await run("rsv", "full", "2026-10-02", [octavia]);
+    await run("vw-prices", "full", "2026-10-03", [
+      { ...octavia, variant: { ...octavia.variant, transmissions: ["automatic", "manual"] } },
+    ]);
+    expect(ledger.snapshot().catalog).toMatchObject([
+      { id: "skoda/octavia/mk4/wagon-diesel-110kw", transmissions: ["automatic", "manual"] },
+    ]);
   });
 
   it("fills missing Specs from partial VariantFacts without overriding CatalogEntries", async () => {

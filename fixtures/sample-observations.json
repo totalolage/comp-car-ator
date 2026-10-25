@@ -18,7 +18,9 @@
             "body": "wagon",
             "fuel": "diesel",
             "powerKw": 110,
-            "transmission": "automatic",
+            "transmissions": [
+              "automatic"
+            ],
             "years": {
               "from": 2020
             },
@@ -44,7 +46,9 @@
             "body": "wagon",
             "fuel": "petrol",
             "powerKw": 110,
-            "transmission": "automatic",
+            "transmissions": [
+              "automatic"
+            ],
             "years": {
               "from": 2020
             },
@@ -70,7 +74,9 @@
             "body": "hatchback",
             "fuel": "petrol",
             "powerKw": 85,
-            "transmission": "manual",
+            "transmissions": [
+              "manual"
+            ],
             "years": {
               "from": 2020
             },
@@ -96,7 +102,9 @@
             "body": "hatchback",
             "fuel": "petrol",
             "powerKw": 70,
-            "transmission": "manual",
+            "transmissions": [
+              "manual"
+            ],
             "years": {
               "from": 2021
             },
@@ -122,7 +130,9 @@
             "body": "hatchback",
             "fuel": "petrol",
             "powerKw": 110,
-            "transmission": "automatic",
+            "transmissions": [
+              "automatic"
+            ],
             "years": {
               "from": 2020
             },
@@ -148,7 +158,9 @@
             "body": "hatchback",
             "fuel": "diesel",
             "powerKw": 85,
-            "transmission": "manual",
+            "transmissions": [
+              "manual"
+            ],
             "years": {
               "from": 2020
             },
@@ -174,7 +186,9 @@
             "body": "wagon",
             "fuel": "diesel",
             "powerKw": 110,
-            "transmission": "automatic",
+            "transmissions": [
+              "automatic"
+            ],
             "years": {
               "from": 2020
             },
@@ -200,7 +214,9 @@
             "body": "wagon",
             "fuel": "hev",
             "powerKw": 103,
-            "transmission": "automatic",
+            "transmissions": [
+              "automatic"
+            ],
             "years": {
               "from": 2023
             },
@@ -226,7 +242,9 @@
             "body": "hatchback",
             "fuel": "hev",
             "powerKw": 90,
-            "transmission": "automatic",
+            "transmissions": [
+              "automatic"
+            ],
             "years": {
               "from": 2019,
               "to": 2022
@@ -253,7 +271,9 @@
             "body": "hatchback",
             "fuel": "petrol",
             "powerKw": 88,
-            "transmission": "manual",
+            "transmissions": [
+              "manual"
+            ],
             "years": {
               "from": 2017
             },

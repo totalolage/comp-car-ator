@@ -51,7 +51,7 @@ describe("ingest pipeline", () => {
           body: "hatchback",
           fuel: "petrol",
           powerKw: 110,
-          transmission: "automatic",
+          transmissions: ["automatic"],
           years: { from: 2020 },
         },
       },
@@ -85,9 +85,7 @@ describe("ingest pipeline", () => {
 
     expect(catalog.manifest.fx.EUR).toEqual({ czkPerUnit: 24.335, validFor: "2026-10-23" });
     const result = catalog.query({ filters: { market: ["DE"] } });
-    expect(result.rows.map((r) => r.id)).toEqual([
-      "volkswagen/golf/mk8/hatchback-petrol-110kw-automatic",
-    ]);
+    expect(result.rows.map((r) => r.id)).toEqual(["volkswagen/golf/mk8/hatchback-petrol-110kw"]);
     expect(result.rows[0]?.used?.priceCzk?.median).toBe(365_025);
 
     const [listing] = (await catalog.model("volkswagen/golf"))?.listings().rows ?? [];

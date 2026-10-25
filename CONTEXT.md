@@ -19,7 +19,7 @@ One design cycle of a Model with its own production years (Octavia IV, Golf VIII
 _Avoid_: mark, series, platform
 
 **Variant**:
-The unit of the catalog: one Generation in one technical configuration, identified by body, fuel, power and transmission. Trim and colour are not part of it.
+The unit of the catalog: one Generation in one technical configuration, identified by body, fuel and power. Trim, transmission and colour are not part of it; the gearboxes a Variant is offered with are a Spec, stated only by Sources that know them.
 _Avoid_: version, model (for this meaning), type, configuration
 
 **Trim**:

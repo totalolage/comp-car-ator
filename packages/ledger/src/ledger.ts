@@ -186,9 +186,15 @@ export function openLedger(path: string): Ledger {
     for (const row of rows) {
       // Field-level merge; later updates win. TODO(wave1-stream8): per-field source priority.
       const spec = JSON.parse(row.data) as VariantSpec;
+      const earlier = merged.get(row.variant_id);
+      // Gearboxes accumulate: each Source states the ones it offers.
+      const transmissions = [
+        ...new Set([...(earlier?.transmissions ?? []), ...(spec.transmissions ?? [])]),
+      ].sort();
       merged.set(row.variant_id, {
-        ...merged.get(row.variant_id),
+        ...earlier,
         ...defined(spec),
+        ...(transmissions.length > 0 ? { transmissions } : {}),
       } as VariantSpec);
     }
     const variants: CatalogVariant[] = [...merged].map(([id, spec]) => ({

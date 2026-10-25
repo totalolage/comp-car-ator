@@ -17,7 +17,7 @@ const tiguanEntry: Observation = {
     body: "suv",
     fuel: "diesel",
     powerKw: 142,
-    transmission: "automatic",
+    transmissions: ["automatic"],
     years: { from: 2024 },
   },
 };
@@ -30,11 +30,11 @@ const golfEntry: Observation = {
     body: "hatchback",
     fuel: "petrol",
     powerKw: 110,
-    transmission: "manual",
+    transmissions: ["manual"],
     years: { from: 2020 },
   },
 };
-const tiguanId = "volkswagen/tiguan/mk3/suv-diesel-142kw-automatic";
+const tiguanId = "volkswagen/tiguan/mk3/suv-diesel-142kw";
 const eurRate: Observation = {
   kind: "FxRate",
   currency: "EUR",
