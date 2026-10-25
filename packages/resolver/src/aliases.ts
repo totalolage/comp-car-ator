@@ -1,3 +1,5 @@
+import type { FuelWording } from "./hints.ts";
+
 /**
  * Curated make and model aliases across CZ/DE/AT listing sites and catalog Sources.
  * Bump ALIASES_VERSION on every change: a new alias can move a Listing from Model to Variant
@@ -7,7 +9,7 @@
  * entry is the group's key; it does not have to be the catalog's spelling, because catalog
  * names are looked up through the same groups. Slugs not in any group stand for themselves.
  */
-export const ALIASES_VERSION = 2;
+export const ALIASES_VERSION = 3;
 
 export const MAKE_GROUPS: readonly (readonly string[])[] = [
   ["volkswagen", "vw"],
@@ -100,4 +102,18 @@ export const CHASSIS_CODES: Readonly<Record<string, RegExp>> = {
   "land-rover": /^l\d{3}$/i,
   hyundai: /^[a-z]{2}\d$/i,
   kia: /^[a-z]{2}\d$/i,
+};
+
+const badge = (word: string) => new RegExp(`(?<![a-z0-9])${word}(?![a-z0-9])`, "i");
+
+/**
+ * Electrified badges one make owns, with the fuels each allows ("GTE" is a plug-in
+ * Volkswagen but a petrol Opel). Read only in that make's listings, with case kept: Škoda's
+ * "iV" is the badge, "IV" and "iv" a generation. Keyed by make group key.
+ */
+export const FUEL_BADGES: Readonly<Record<string, readonly FuelWording[]>> = {
+  volkswagen: [[["phev"], badge("gte")]],
+  skoda: [[["phev", "bev"], /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/]],
+  audi: [[["hev", "phev", "bev", "reev"], badge("e-?tron")]],
+  renault: [[["hev", "phev", "bev", "reev"], badge("e-?tech")]],
 };

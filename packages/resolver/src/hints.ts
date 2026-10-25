@@ -11,7 +11,11 @@ export interface Hints {
   fuels?: readonly Fuel[];
   transmission?: Transmission;
   powerKw?: number;
-  /** Words with their case kept and diacritics stripped, for generation names ("IV", "Mk8"). */
+  /**
+   * Words with their case kept and diacritics stripped, for generation names ("IV", "Mk8").
+   * Lower-case Roman numerals of two or more letters are upper-cased ("iv" → "IV"); mixed
+   * case ("iV", "iX") is a badge or a model name and stays as written.
+   */
   words: string[];
 }
 
@@ -40,23 +44,22 @@ const FUEL: [Fuel, RegExp][] = [
   ["petrol", word("e?tsi|tfsi|fsi|mpi|tce|puretech|ecoboost|t-gdi|gdi|benzin")],
 ];
 
+/** Wording about propulsion and the fuels it allows. */
+export type FuelWording = readonly [allowed: readonly Fuel[], pattern: RegExp];
+
 /**
  * Hybrid and electric wording, with the fuels each allows; a text naming several allows what
- * they share. Mild hybrids ("eTSI", "mHEV") are catalogued under their combustion fuel.
+ * they share. Mild hybrids ("eTSI", "mHEV") are catalogued under their combustion fuel. One
+ * make's badges ("GTE", "iV") are in aliases.ts: an Opel GTE is a petrol car.
  */
-const ELECTRIFIED: [Fuel[], RegExp][] = [
-  [["phev"], word("plug-? ?in|phev|e-?hybrid|gte")],
+const ELECTRIFIED: FuelWording[] = [
+  [["phev"], word("plug-? ?in|phev|e-?hybrid")],
   [["bev"], word("bev|ev")],
   [["hev"], word("hev|full ?hybrid|voll-?hybrid[a-z]*|self-? ?charging")],
   [["hev", "phev"], word("(?<!mild[- ]?)hybrid[a-z]*")],
-  [
-    ["hev", "phev", "bev", "reev"],
-    word("elektro|elektroauto|elektromotor|elektrisch|e-?tron|e-?tech"),
-  ],
+  [["hev", "phev", "bev", "reev"], word("elektro|elektroauto|elektromotor|elektrisch")],
   [["petrol", "diesel", "hev"], word("mhev|mild[- ]?hybrid|48 ?v|etsi")],
 ];
-/** Škoda's "iV" badge (plug-in or electric), in its own casing: "IV" and "iv" are generations. */
-const IV_BADGE: [Fuel[], RegExp] = [["phev", "bev"], /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/];
 
 const TRANSMISSION: [Transmission, RegExp][] = [
   [
@@ -77,9 +80,9 @@ const PS_TO_KW = 0.73549875;
  * Reads the hints in listing text. A hint the text states two conflicting ways
  * ("DSG ... Schaltgetriebe", "110 kW ... 22 kW") is dropped rather than guessed. Next to
  * hybrid or electric wording an engine code says nothing about fuel: a "1.4 TSI Plug-in
- * Hybrid" is not a petrol car.
+ * Hybrid" is not a petrol car. `badges` is the make's own wording, matched with case kept.
  */
-export function readHints(text: string): Hints {
+export function readHints(text: string, badges: readonly FuelWording[] = []): Hints {
   const folded = fold(text);
   const lower = folded.toLowerCase();
   const powers = [
@@ -88,10 +91,10 @@ export function readHints(text: string): Hints {
   ];
   const fuels = [
     ...ELECTRIFIED.filter(([, pattern]) => pattern.test(lower)),
-    ...(IV_BADGE[1].test(folded) ? [IV_BADGE] : []),
+    ...badges.filter(([, pattern]) => pattern.test(folded)),
   ]
     .map(([allowed]) => allowed)
-    .reduce<Fuel[] | undefined>(
+    .reduce<readonly Fuel[] | undefined>(
       (open, allowed) => (open ?? allowed).filter((f) => allowed.includes(f)),
       undefined,
     );
@@ -110,7 +113,8 @@ export function readHints(text: string): Hints {
       // "I. majitel" is the first owner, not generation I.
       .replace(/\b[IVX]+\.\s*maj[a-z]*/gi, " ")
       .split(/[^A-Za-z0-9]+/)
-      .filter(Boolean),
+      .filter(Boolean)
+      .map((w) => (/^(?:ii|iii|iv|vi|vii|viii|ix)$/.test(w) ? w.toUpperCase() : w)),
   };
 }
 

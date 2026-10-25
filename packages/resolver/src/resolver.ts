@@ -7,7 +7,13 @@ import {
   type VariantId,
   type VehicleDescriptor,
 } from "@cca/vocabulary";
-import { CHASSIS_CODES, MAKE_GROUPS, MODEL_ALIASES, type ModelAliases } from "./aliases.ts";
+import {
+  CHASSIS_CODES,
+  FUEL_BADGES,
+  MAKE_GROUPS,
+  MODEL_ALIASES,
+  type ModelAliases,
+} from "./aliases.ts";
 import { fold, readHints } from "./hints.ts";
 
 /**
@@ -61,17 +67,19 @@ const ENGINE_LAYOUT = /^[vw]\d{1,2}$/i;
  * 2. Fields the descriptor leaves undefined are read from its model and trim text when the
  *    text states them once: power ("110kW", "150 PS"), transmission ("DSG"), body ("Combi"),
  *    fuel ("TDI"), and a generation name ("VIII", "Mk8"). Stated fields win over text.
- *    Hybrid or electric wording ("Plug-in Hybrid", "GTE", "mHEV") limits the fuel to what it
- *    allows, stated or not, and an engine code next to it ("TSI") says nothing about fuel.
+ *    Hybrid or electric wording ("Plug-in Hybrid", "mHEV", and the make's own badges in
+ *    aliases.ts: Volkswagen "GTE", Škoda "iV") limits the fuel to what it allows, stated or
+ *    not, and an engine code next to it ("TSI") says nothing about fuel.
  * 3. A Variant fits when every known field agrees: fuel, transmission and body equal, power
  *    within 3 kW, year inside the Variant's production years (manufacture year exactly,
  *    registration or model year ±1), and generation equal when the text names one.
  * 4. One fitting Variant is a match only if fuel and power are known and the text names at
  *    most one generation, all of them known to the catalog ("Octavia III" when the catalog
  *    has only the IV is not evidence for the IV). A word claims a generation when it is a
- *    Roman numeral or "Mk7", a lone "I" next to the model name, or one of the make's
- *    chassis codes in aliases.ts ("W212", whether or not the catalog has it). Otherwise, or when several
- *    fit, the listing resolves to the Model. Fitting Variants are never ranked.
+ *    Roman numeral in either case ("IV", "iv", not Škoda's "iV") or "Mk7", a lone "I" next to
+ *    the model name, or one of the make's chassis codes in aliases.ts ("W212", whether or not
+ *    the catalog has it). Otherwise, or when several fit, the listing resolves to the Model.
+ *    Fitting Variants are never ranked.
  * TODO(wave1-stream11): per-source `sourceTaxonomy` aliases once a Source needs them.
  */
 export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
@@ -107,7 +115,7 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
       const model = findModel(makeKey, models, vehicle.model);
       if (!model) return { status: "unmatched", reason: "unknown-model" };
 
-      const hints = readHints(`${vehicle.model} ${vehicle.trim ?? ""}`);
+      const hints = readHints(`${vehicle.model} ${vehicle.trim ?? ""}`, FUEL_BADGES[makeKey]);
       const fuel = vehicle.fuel ?? hints.fuel;
       const transmission = vehicle.transmission ?? hints.transmission;
       const body = vehicle.body ?? hints.body;

@@ -274,6 +274,34 @@ describe("Resolver", () => {
       ).toMatchObject({ reason: "ambiguous" });
     });
 
+    it("reads a lower-case Roman numeral as a generation, but not Škoda's iV badge", () => {
+      const octaviaIII = createResolver(
+        variants("Škoda", "Octavia", octavia3, [
+          { body: "wagon", fuel: "petrol", powerKw: 110, transmission: "automatic" },
+          { body: "wagon", fuel: "phev", powerKw: 150, transmission: "automatic" },
+        ]),
+      );
+      const petrol = { make: "Škoda", fuel: "petrol", powerKw: 110, transmission: "automatic" };
+      for (const model of ["Octavia iv", "Octavia IV", "Octavia ii"]) {
+        expect(octaviaIII.resolve({ ...petrol, model } as VehicleDescriptor)).toMatchObject({
+          status: "model",
+          reason: "ambiguous",
+        });
+      }
+      expect(
+        octaviaIII.resolve({ ...petrol, model: "Octavia iii" } as VehicleDescriptor),
+      ).toMatchObject({
+        status: "matched",
+        variantId: "skoda/octavia/mk3/wagon-petrol-110kw-automatic",
+      });
+      expect(
+        octaviaIII.resolve({ make: "Škoda", model: "Octavia iV", fuel: "phev", powerKw: 150 }),
+      ).toMatchObject({
+        status: "matched",
+        variantId: "skoda/octavia/mk3/wagon-phev-150kw-automatic",
+      });
+    });
+
     it("does not match when the text names a generation the catalog lacks, or two", () => {
       // The catalog has Kodiaq I only; "Kodiaq II" is no evidence for it.
       expect(resolve({ ...kodiaq, powerKw: 140, trim: "II 2.0 TDI" })).toMatchObject({
@@ -432,6 +460,33 @@ describe("Resolver", () => {
           reason: "no-variant",
         });
       }
+    });
+
+    it("reads a make's own badge only for that make: an Opel GTE is petrol", () => {
+      const opel = createResolver([
+        ...variants("Opel", "Astra", { slug: "c", name: "Astra C", from: 1984, to: 1991 }, [
+          { body: "hatchback", fuel: "petrol", powerKw: 110, transmission: "manual" },
+        ]),
+        ...variants("Opel", "Kadett", { slug: "e", name: "Kadett E", from: 1984, to: 1991 }, [
+          { body: "hatchback", fuel: "petrol", powerKw: 110, transmission: "manual" },
+        ]),
+      ]);
+      for (const model of ["Astra", "Kadett"]) {
+        expect(
+          opel.resolve({
+            make: "Opel",
+            model,
+            trim: "GTE",
+            fuel: "petrol",
+            powerKw: 110,
+            transmission: "manual",
+          }),
+        ).toMatchObject({ status: "matched" });
+      }
+      expect(golf.resolve({ ...vw, trim: "GTE 150 kW DSG" })).toMatchObject({
+        status: "matched",
+        variantId: "volkswagen/golf/mk8/hatchback-phev-150kw-automatic",
+      });
     });
 
     it("reads a plug-in hybrid from its wording, and a mild hybrid by its stated fuel", () => {
