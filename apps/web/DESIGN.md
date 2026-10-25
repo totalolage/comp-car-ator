@@ -12,7 +12,7 @@ a URL. No product cards, no hero, no imagery in the shell. Tokens live in
 - **Motorway-sign green** (`--sign`) is the masthead band and nothing else; it marks "site
   chrome" the way the green D-road signs mark the motorway.
 - **Highlighter yellow** (`--mark`) marks what the person chose or what differs: checked
-  facets, the compare count, table row hover (soft tint). The compare tray (#17) uses it for
+  facets, the compare count, table row and facet hover (McMaster's pale `#FFFFB5`). The compare tray (#17) uses it for
   diff highlighting. Never decoration.
 - **Links are blue** (`--link`), underlined on hover. Everything clickable that navigates is a
   plain link so it prefetches on hover and works without JavaScript.
@@ -20,8 +20,10 @@ a URL. No product cards, no hero, no imagery in the shell. Tokens live in
 ## Type
 
 One workhorse sans (Arial / Helvetica / Liberation Sans), no web fonts. Fixed rem scale,
-ratio about 1.125: 12 (counts, footnotes), 13 (tables, facets), 14 (body), 16 (section
-titles), 22 px (page title, bold). Numbers in tables use tabular figures and right-align.
+McMaster's density: 11 (counts, footnotes), 12 (tables, facets; McMaster measures 12px
+Arial), 13 (body), 15 (section titles), 20 px (page title, bold). Text is `#333`, links
+`#006699`, facet heading bands and table headers `#EEE`, hover `#FFFFB5`, all as measured
+on mcmaster.com (2026-10-25). Numbers in tables use tabular figures and right-align.
 Sentence case everywhere; no uppercase labels.
 
 ## Layout
@@ -30,7 +32,7 @@ Sentence case everywhere; no uppercase labels.
 ┌ masthead (green, 40px, sticky): wordmark · Kategorie ▾ ·········· Porovnání (n) · English ┐
 │ Katalog › Škoda › Octavia                                                   (breadcrumb)  │
 │ Page title                                                                                │
-│ ┌ rail 13.5rem ┐ ┌ results ─────────────────────────────────────────────────────────────┐ │
+│ ┌ rail 15rem ──┐ ┌ results ─────────────────────────────────────────────────────────────┐ │
 │ │ facet groups │ │ count · dense table, sticky header row under the masthead            │ │
 │ └──────────────┘ └──────────────────────────────────────────────────────────────────────┘ │
 │ footer: data date, counts, note                                                            │
@@ -50,7 +52,7 @@ Sentence case everywhere; no uppercase labels.
 `masthead`, `menu` / `menu-panel` / `tree`, `crumbs`, `page-title`, `page-summary`,
 `section-title`, `split` / `rail` / `results`, `facet` / `facet-option`, `button-quiet`,
 `data` (table; `.num` right-aligns), `table-scroll`, `count`, `badge`, `empty`, `colophon`.
-Rows are ~22px (3px vertical cell padding at 13px text). A table's first cell is a row
+Rows are ~19px (2px vertical cell padding at 12px text), hairline rules, no zebra striping. A table's first cell is a row
 header (`<th scope="row">`) holding the link.
 
 ## Accessibility floor
@@ -68,7 +70,7 @@ Enforced on every build by `scripts/check-budget.mjs` (fails the build), gzipped
 | ------------------------------ | ------ | ------------ | ---------- |
 | HTML                           | 30 kB  | 6.5 kB       | 1.9 kB     |
 | CSS                            | 8 kB   | 2.3 kB       | 2.3 kB     |
-| JS (all chunks the page loads) | 30 kB  | 15.9 kB      | 3.6 kB     |
+| JS (all chunks the page loads) | 30 kB  | 16.0 kB      | 3.8 kB     |
 | Total                          | 60 kB  | 24.8 kB      | 7.9 kB     |
 
 Measured on the sample Bundle (2026-10-25). The catalog page's JS is Preact, its hooks, the
