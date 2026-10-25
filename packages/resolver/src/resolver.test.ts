@@ -162,18 +162,23 @@ describe("Resolver", () => {
     expect(
       resolve({ make: "VW", model: "Golf", trim: "1.5 5D", powerKw: 110, transmission: "manual" }),
     ).toMatchObject({ status: "model", reason: "ambiguous" });
-    expect(variantOf({
+    expect(
+      variantOf({
         make: "VW",
         model: "Golf",
         trim: "2.0d 5D",
         powerKw: 110,
         transmission: "manual",
         firstRegistration: { year: 2022 },
-      })).toBe(
-      "volkswagen/golf/mk8/hatchback-diesel-110kw-manual",
-    );
+      }),
+    ).toBe("volkswagen/golf/mk8/hatchback-diesel-110kw-manual");
     const kodiaq110 = { ...kodiaq, transmission: undefined, powerKw: 110 };
-    for (const trim of ["Automatická klimatizace", "Automatische Klimaanlage", "Aut. klima", "Aut.klima"]) {
+    for (const trim of [
+      "Automatická klimatizace",
+      "Automatische Klimaanlage",
+      "Aut. klima",
+      "Aut.klima",
+    ]) {
       expect(resolve({ ...kodiaq110, trim })).toMatchObject({ reason: "ambiguous" });
     }
     for (const trim of ["Automatik, Klima", "2,0 TDI Aut. Navi", "Automat"]) {
@@ -330,7 +335,13 @@ describe("Resolver", () => {
     // "Range Rover Sport" shares engines with the Range Rover but is another Model.
     for (const model of ["RangeRover Sport", "Range-Rover Sport", "Range Rover SPORT HSE"]) {
       expect(
-        resolve({ make: "Land Rover", model, fuel: "diesel", powerKw: 225, transmission: "automatic" }),
+        resolve({
+          make: "Land Rover",
+          model,
+          fuel: "diesel",
+          powerKw: 225,
+          transmission: "automatic",
+        }),
       ).toEqual({ status: "unmatched", reason: "unknown-model" });
     }
     expect(
