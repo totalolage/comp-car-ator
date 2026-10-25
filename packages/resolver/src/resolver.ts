@@ -127,7 +127,7 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
       );
       const only = fits.length === 1 ? fits[0] : undefined;
       const evidence =
-        fuel !== undefined && powerKw !== undefined && named.length <= 1 && !unknownGeneration;
+        fuel !== undefined && powerKw !== undefined && generationSlugs(named) <= 1 && !unknownGeneration;
       if (only && evidence) {
         return {
           status: "matched",
@@ -216,6 +216,11 @@ function generationWords(variant: CatalogVariant): string[] {
       ),
     ),
   ];
+}
+
+/** Distinct generations named; two catalog spellings of one model share generation slugs. */
+function generationSlugs(ids: GenerationId[]): number {
+  return new Set(ids.map((id) => id.slice(id.lastIndexOf("/") + 1))).size;
 }
 
 function split(text: string): string[] {

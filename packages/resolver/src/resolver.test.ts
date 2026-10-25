@@ -283,6 +283,9 @@ describe("Resolver", () => {
       expect(resolve({ ...kodiaq, powerKw: 140, trim: "Mk2 2.0 TDI" })).toMatchObject({
         status: "model",
       });
+      expect(variantOf({ ...kodiaq, powerKw: 140, trim: "2.0 TDI Euro VI" })).toBe(
+        "skoda/kodiaq/mk1/suv-diesel-140kw-automatic",
+      );
       expect(
         resolve({ ...octavia, firstRegistration: { year: 2022 }, trim: "Mk3 IV" }),
       ).toMatchObject({ status: "model", reason: "ambiguous" });
@@ -388,5 +391,9 @@ describe("Resolver", () => {
     };
     expect(createResolver(spellings).resolve(listing)).toEqual(expected);
     expect(createResolver([...spellings].reverse()).resolve(listing)).toEqual(expected);
+    // Both spellings name their generation W206: one generation, not two.
+    expect(
+      createResolver(spellings).resolve({ ...listing, body: "sedan", trim: "W206 AMG Line" }),
+    ).toMatchObject({ status: "matched", variantId: "mercedes-benz/c-klasse/w206/sedan-diesel-147kw-automatic" });
   });
 });

@@ -68,6 +68,8 @@ export function readHints(text: string): Hints {
     powerKw: powers.every((p) => Math.abs(p - (powers[0] as number)) <= 3) ? powers[0] : undefined,
     words: folded
       .replace(/\bmk\s+(\d)/gi, "mk$1")
+      // "Euro VI" is an emission class, not generation VI.
+      .replace(/\beu(?:ro)?\s*-?\s*[0-9IVX]+[a-z]*\b/gi, " ")
       .split(/[^A-Za-z0-9]+/)
       .filter(Boolean),
   };
