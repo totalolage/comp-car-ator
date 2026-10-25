@@ -10,9 +10,11 @@ import { skodaPricelistSource } from "./skoda-pricelist.ts";
 // the index keeps those three models' links (Octavia's accessory catalogue included), the tiles
 // keep title and modelId, and each PDF keeps its "Platnost od" page and price-table pages
 // (Ghostscript pdfwrite, -dFILTERIMAGE -dFILTERVECTOR). kodiaq-footnote.pdf is that Kodiaq list
-// with a footnote mark ("***") set after the Selection price of the 1,5 TSI/118 kW row.
+// with a footnote mark ("*") set after the Selection price of the 1,5 TSI/118 kW row;
+// kodiaq-stray-price.pdf has a price "1 111 000" set between two rows of its grid.
 const cassetteFile = new URL("./fixtures/lists.cassette.json", import.meta.url);
 const footnoteFile = new URL("./fixtures/kodiaq-footnote.pdf", import.meta.url);
+const strayFile = new URL("./fixtures/kodiaq-stray-price.pdf", import.meta.url);
 const now = new Date("2026-10-25T18:00:00Z");
 const KODIAQ = "634e9e51-81c5-4c60-8503-4ab557399835";
 const ENYAQ = "6de4c5ec-a6b4-4057-988d-0724f9d5b40d";
@@ -61,7 +63,7 @@ const notAList = (r: Response): Response => ({
   bodyBase64: undefined,
 });
 
-const KODIAQ_118 = "kodiaq/kodiaq.1-5-tsi-118-kw.petrol.a7.fwd.selection";
+const KODIAQ_118 = "kodiaq/kodiaq.1-5-tsi-118-kw.petrol.a.fwd.selection";
 
 /** An edition the Ledger holds: a listed Offer's, or one made up under `ref`. */
 function edition(ref: string, validFrom: string, amount = 1_000_000): ListPrice {
@@ -110,7 +112,7 @@ describe("skoda-pricelist source", () => {
     });
     // A trim line whose name stands on two lines, and an electric grid labelled Coupé.
     expect(
-      offers.find((o) => o.ref === "kodiaq/kodiaq.1-5-tsi-150-kw-iv.phev.a6.fwd.laurin-klement")
+      offers.find((o) => o.ref === "kodiaq/kodiaq.1-5-tsi-150-kw-iv.phev.a.fwd.laurin-klement")
         ?.price.amount,
     ).toBe(1_440_000);
     expect(
@@ -129,7 +131,7 @@ describe("skoda-pricelist source", () => {
     // The Octavia list has its own date; Combi and edition grids come out as Octavia Combi.
     expect(
       offers.find(
-        (o) => o.ref === "octavia/octavia-combi.2-0-tdi-110-kw.diesel.a7.fwd.edice-30-let",
+        (o) => o.ref === "octavia/octavia-combi.2-0-tdi-110-kw.diesel.a.fwd.edice-30-let",
       ),
     ).toMatchObject({
       vehicle: { model: "Octavia Combi", body: "wagon", trim: "2,0 TDI/110 kW Edice 30 let" },
@@ -138,7 +140,7 @@ describe("skoda-pricelist source", () => {
     });
     // "–": the trim line does not offer that engine.
     expect(
-      offers.some((o) => o.ref === "kodiaq/kodiaq.1-5-tsi-200-kw-iv.phev.a6.fwd.selection"),
+      offers.some((o) => o.ref === "kodiaq/kodiaq.1-5-tsi-200-kw-iv.phev.a.fwd.selection"),
     ).toBe(false);
   });
 
@@ -156,16 +158,18 @@ describe("skoda-pricelist source", () => {
 
   it("full runs withdraw Offers a newer list dropped, incremental runs never", async () => {
     const inForce = [
-      edition("kodiaq/kodiaq.2-0-tdi-85-kw.diesel.m6.fwd.selection", "2026-09-01"),
+      edition("kodiaq/kodiaq.2-0-tdi-85-kw.diesel.m.fwd.selection", "2026-09-01"),
       edition("citigo/citigo-e-iv.bev.x.fwd.style", "2026-03-01"),
-      // Missing from the list it started in: no day before it to end on.
+      // Missing from the very list it started in: seen gone by this run.
       edition("kodiaq/kodiaq.made-up.x.x.x.rs", "2026-10-21"),
     ];
     const full = await harvest({ inForce });
     expect(full.filter((o) => o.validTo)).toEqual([
+      // Ends the day before the first current list issued after it started.
       { ...(inForce[0] as ListPrice), validTo: "2026-10-20" },
       // Its model left the index: ends the day before the run.
       { ...(inForce[1] as ListPrice), validTo: "2026-10-24" },
+      { ...(inForce[2] as ListPrice), validTo: "2026-10-24" },
     ]);
     expect((await harvest({ mode: "incremental", inForce })).some((o) => o.validTo)).toBe(false);
   });
@@ -189,8 +193,8 @@ describe("skoda-pricelist source", () => {
     const offers = await harvest({
       cassette: await edit(KODIAQ, (r) => ({ ...r, bodyBase64: footnote })),
       inForce: [
-        edition("kodiaq/kodiaq.2-0-tdi-85-kw.diesel.m6.fwd.selection", "2026-09-01"),
-        edition("octavia/octavia.1-0-tsi-81-kw.petrol.m6.fwd.essence", "2026-09-01"),
+        edition("kodiaq/kodiaq.2-0-tdi-85-kw.diesel.m.fwd.selection", "2026-09-01"),
+        edition("octavia/octavia.1-0-tsi-81-kw.petrol.m.fwd.essence", "2026-09-01"),
       ],
       warnings,
     });
@@ -198,8 +202,21 @@ describe("skoda-pricelist source", () => {
     expect(offers.some((o) => o.ref === KODIAQ_118)).toBe(false);
     expect(offers.filter((o) => o.vehicle.model === "Kodiaq" && !o.validTo)).toHaveLength(22);
     expect(offers.filter((o) => o.validTo).map((o) => o.ref)).toEqual([
-      "octavia/octavia.1-0-tsi-81-kw.petrol.m6.fwd.essence",
+      "octavia/octavia.1-0-tsi-81-kw.petrol.m.fwd.essence",
     ]);
+  });
+
+  it("a price no row read rejects its list's withdrawals: the row would look dropped", async () => {
+    const stray = Buffer.from(await readFile(strayFile)).toString("base64");
+    const warnings: string[] = [];
+    const offers = await harvest({
+      cassette: await edit(KODIAQ, (r) => ({ ...r, bodyBase64: stray })),
+      inForce: [edition("kodiaq/kodiaq.2-0-tdi-85-kw.diesel.m.fwd.selection", "2026-09-01")],
+      warnings,
+    });
+    expect(warnings).toContain("skoda-pricelist: rejected row");
+    expect(offers.filter((o) => o.vehicle.model === "Kodiaq")).toHaveLength(23);
+    expect(offers.some((o) => o.validTo)).toBe(false);
   });
 
   it("fails when no list reads: the site has changed", async () => {
@@ -221,7 +238,7 @@ describe("skoda-pricelist source", () => {
     expect(source.scope).toBe("models:kodiaq");
     const offers = await harvest({
       source,
-      inForce: [edition("octavia/octavia.1-0-tsi-81-kw.petrol.m6.fwd.essence", "2026-09-01")],
+      inForce: [edition("octavia/octavia.1-0-tsi-81-kw.petrol.m.fwd.essence", "2026-09-01")],
     });
     expect(new Set(offers.map((o) => o.vehicle.model))).toEqual(new Set(["Kodiaq"]));
     expect(offers.some((o) => o.validTo)).toBe(false);

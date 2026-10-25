@@ -7,7 +7,7 @@
  *   `<a data-gtm-element="infomaterial_download" data-gtm-element-url="/dam/…/x.pdf"
  *   …>Ceník modelu Tiguan</a>`: the model's own list, action models (Family, People),
  *   sporty versions (GTI, R). Downloads not labelled "Ceník" (We Charge manuals) are not lists. A model
- *   without a Ceníky page (404) has no list.
+ *   without a Ceníky page (404) has no list yet; it stays listed, so nothing of it is withdrawn.
  * - A list's table header is `Zdvihový objem (l) | Model | Palivo | Výkon kW (k) | Převodovka |
  *   Pohon | Cena bez DPH | Cena s DPH` (electric models: `Popisek` first, sometimes no Palivo
  *   or Výkon). A trim line's name stands alone on a line above its rows; each row is one sales
@@ -62,7 +62,11 @@ const vw: PriceListSite = {
         continue;
       }
       const lists = await ctx.http.get({ url: `${SITE}/${key}/${key}/ceniky`, signal: ctx.signal });
-      if (lists.status === 404) continue;
+      // No Ceníky page (yet): listed, but nothing to read and nothing to withdraw.
+      if (lists.status === 404) {
+        models.push({ key, name, documents: [] });
+        continue;
+      }
       if (lists.status !== 200)
         throw new Error(`vw-pricelist: ${key} price lists answered ${lists.status}`);
       models.push({ key, name, documents: documentsOf(lists.body) });
@@ -128,9 +132,16 @@ function read(lines: PdfLine[], model: ModelLists, url: string): Edition {
     }
     const code = cells.code;
     if (!code || !SALES_CODE.test(code)) {
-      // A trim line's name stands alone in the first column.
-      if (row.cells.length === 1 && cells.engine && !/\d{3}/.test(cells.engine))
+      if (czk(cells.price ?? "") !== undefined) {
+        // A priced row this reader cannot key would look dropped: reject it.
+        edition.rejected.push({
+          row: row.cells.map((c) => c.text).join(" | "),
+          reason: "priced row without a sales code",
+        });
+      } else if (row.cells.length === 1 && cells.engine && !/\d{3}/.test(cells.engine)) {
+        // A trim line's name stands alone in the first column.
         line = cells.engine;
+      }
       continue;
     }
     const engine = cells.engine ?? "";

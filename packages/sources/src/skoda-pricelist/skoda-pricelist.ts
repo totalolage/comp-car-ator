@@ -10,7 +10,8 @@
  *   can sit on two lines ("Laurin" over "& Klement"). Each engine row prices it in every trim
  *   line that offers it, "–" where none does. The list's own date is its "Platnost od".
  * - Rows carry no sales codes, so an Offer's code is built from what the row prices: model
- *   (with Combi/Coupé), engine, fuel, gearbox, drive and trim line.
+ *   (with Combi/Coupé), engine, fuel, manual/automatic, drive and trim line. A price on a grid
+ *   page that no row read rejects the list's withdrawals (the row would look dropped).
  * - Model year and body come from the public configurator (CC3) the site links to: its model
  *   tiles state the model year and group models by body. Missing CC3 data only leaves those
  *   two fields out.
@@ -54,7 +55,7 @@ const skoda: PriceListSite = {
     for (const m of page.body.matchAll(
       /<a\b[^>]*\bhref="([^"]*\/_doc\/[^"]+)"[^>]*>([^<]*)<\/a>/g,
     )) {
-      const name = /^(.+?)\s*-\s*Ceník$/i.exec(decode(m[2] as string))?.[1];
+      const name = /^(.+?)\s*[-–—]\s*ceník/i.exec(decode(m[2] as string))?.[1];
       if (name && !lists.has(name)) lists.set(name, new URL(m[1] as string, INDEX).href);
     }
     if (lists.size === 0) throw new Error("skoda-pricelist: the index links no price lists");
@@ -72,10 +73,13 @@ async function configuratorModels(
 ): Promise<Record<string, { modelYear?: number; body?: Body }>> {
   const named: Record<string, { modelYear?: number; body?: Body }> = {};
   try {
-    const version = await ctx.http.get({ url: CC3_VERSION, signal: ctx.signal });
+    // The version service answers a JSON string, or the bare id as text/plain to a browser Accept.
+    const headers = { accept: "application/json" };
+    const version = await ctx.http.get({ url: CC3_VERSION, headers, signal: ctx.signal });
     if (version.status !== 200) throw new Error(`version answered ${version.status}`);
     const home = await ctx.http.get({
-      url: cc3Homepage(JSON.parse(version.body)),
+      url: cc3Homepage(version.body.trim().replace(/^"|"$/g, "")),
+      headers,
       signal: ctx.signal,
     });
     if (home.status !== 200) throw new Error(`homepage answered ${home.status}`);
@@ -116,11 +120,30 @@ function read(lines: PdfLine[], model: ModelLists): Edition {
   const validFrom = validFromOf(lines);
   if (!validFrom) throw new Error('no "Platnost od" date');
   const edition: Edition = { validFrom, offers: [], rejected: [] };
+  const used = new Set<PdfCell>();
+  const pages = new Set<number>();
   lines.forEach((line, i) => {
-    if (isHeader(line)) readGrid(lines, i, model, edition);
+    if (!isHeader(line)) return;
+    pages.add(line.page);
+    readGrid(lines, i, model, edition, used);
   });
+  // A price on a grid page that no row read is a row this reader missed: its Offer would
+  // look dropped, so it rejects the list's withdrawals.
+  for (const line of lines) {
+    if (!pages.has(line.page)) continue;
+    for (const c of line.cells) {
+      if (PRICE.test(c.text) && !used.has(c)) {
+        edition.rejected.push({
+          row: `page ${line.page}: ${c.text}`,
+          reason: "price outside any row",
+        });
+      }
+    }
+  }
   return edition;
 }
+
+const PRICE = /^\d{1,3}(?: \d{3})+$/;
 
 /** A header cell's column kind, by its first word ("Verze SUV" labels an engine column). */
 function headerKind(text: string): Kind | undefined {
@@ -132,7 +155,13 @@ function isHeader(line: PdfLine): boolean {
   return kinds.includes("drive") && kinds.includes("engine");
 }
 
-function readGrid(lines: PdfLine[], at: number, model: ModelLists, edition: Edition): void {
+function readGrid(
+  lines: PdfLine[],
+  at: number,
+  model: ModelLists,
+  edition: Edition,
+  used: Set<PdfCell>,
+): void {
   const header = lines[at] as PdfLine;
   const last = header.cells.findLastIndex((c) => headerKind(c.text) !== undefined);
   // Cells between the known columns label the grid ("Verze | SUV | Pohon"): engine text.
@@ -186,7 +215,7 @@ function readGrid(lines: PdfLine[], at: number, model: ModelLists, edition: Edit
       other: [],
       trim: [],
     };
-    const prices = new Map<number, string>();
+    const prices = new Map<number, PdfCell>();
     for (const c of start.cells) {
       if (kinds[columnOf(c, header.cells)] === "engine") texts.engine.push(c.text);
     }
@@ -196,7 +225,10 @@ function readGrid(lines: PdfLine[], at: number, model: ModelLists, edition: Edit
         const kind = kinds[col] as Kind;
         if (kind === "trim") {
           // Prices and dashes; text there is the configurator link beside the grid.
-          if (/\d|^[–-]$/.test(c.text) && !prices.has(col)) prices.set(col, c.text);
+          if (/\d|^[–-]$/.test(c.text) && !prices.has(col)) {
+            prices.set(col, c);
+            used.add(c);
+          }
         } else if (kind !== "engine" && !/^\d$/.test(c.text)) texts[kind].push(c.text);
       }
     }
@@ -207,7 +239,7 @@ function readGrid(lines: PdfLine[], at: number, model: ModelLists, edition: Edit
     const transmission = gearboxOf(gearText);
     const drive = driveOf(texts.drive.join(" "));
     const powerKw = Number(/(\d+) ?kW\b/.exec(engine)?.[1]);
-    for (const [col, text] of prices) {
+    for (const [col, { text }] of prices) {
       if (/^[–-]$/.test(text)) continue;
       const line = trims[col] as string;
       const row = `${name} ${engine} ${line}: ${text}`;
@@ -220,13 +252,12 @@ function readGrid(lines: PdfLine[], at: number, model: ModelLists, edition: Edit
         edition.rejected.push({ row, reason: "no power" });
         continue;
       }
-      const gears = /(\d+) ?stup/.exec(gearText)?.[1] ?? "";
       const offer: Offer = {
         code: [
           slugify(name),
           slugify(engine),
           fuel ?? "x",
-          transmission ? `${transmission[0]}${gears}` : "x",
+          transmission?.[0] ?? "x",
           drive ?? "x",
           slugify(line),
         ].join("."),

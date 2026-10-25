@@ -58,7 +58,12 @@ function toLines(
     row.sort((p, q) => p.x - q.x);
     const cells: PdfCell[] = [];
     let size = 0;
+    let previous: (typeof runs)[number] | undefined;
     for (const run of row) {
+      // Text overprinted in place (faux bold) is one run, not two.
+      const repeat = previous && previous.text === run.text && Math.abs(previous.x - run.x) < 0.5;
+      previous = run;
+      if (repeat) continue;
       const cell = cells.at(-1);
       const gap = cell ? run.x - cell.end : Number.POSITIVE_INFINITY;
       if (cell && gap <= Math.max(size, run.size) * 0.15) cell.text += run.text;

@@ -10,10 +10,13 @@
  * - An Offer's ref is `<model key>/<offer code>`; the model key says which documents an Offer
  *   came from. Withdrawals happen in full runs only (a full run is a census of the lists):
  *   an Offer in force that a model's documents no longer list, when every one of those
- *   documents was fetched and read without a rejected row, ends the day before the model's
- *   newest list starts; an Offer of a model the brand's index no longer lists ends the day
- *   before the run, provided some other model read cleanly. A list that fails to read
- *   withdraws nothing (ADR 0003).
+ *   documents was fetched and read without a rejected row, ends the day before the first of
+ *   them issued after its edition started (or the day before the run, when none was); an
+ *   Offer of a model the brand's index no longer lists ends the day before the run, provided
+ *   every listed model read cleanly. A list that fails to read withdraws nothing (ADR 0003).
+ * - Two lists of one model may price an Offer: the same price on the same day is one edition,
+ *   different days are two editions (the Ledger keeps the newer in force), and two prices on
+ *   one day reject the Offer.
  * - A document that cannot be fetched or read is skipped with a warning; the run fails only
  *   when no document of the brand reads, which is what a site redesign looks like.
  */
@@ -118,16 +121,21 @@ async function* harvest(
 ): AsyncGenerator<ListPrice> {
   const index = await site.models(ctx, (key) => !only || only.has(key));
   const models = only ? index.filter((m) => only.has(m.key)) : index;
-  /** Price of each ref yielded. */
-  const emitted = new Map<string, number>();
-  /** Newest list day of each model whose documents all read cleanly. */
-  const clean = new Map<string, IsoDate>();
+  /** Refs yielded, and the price of each (ref, validFrom) edition yielded. */
+  const refs = new Set<string>();
+  const editions = new Map<string, number>();
+  /** List days of each model whose documents all read cleanly. */
+  const clean = new Map<string, IsoDate[]>();
   let read = 0;
 
   for (const model of models) {
-    let ok = model.documents.length > 0;
-    if (!ok) ctx.log.warn(`${site.id}: no price lists for a listed model`, { model: model.key });
-    let newest = "";
+    // A model the index shows without lists (no Ceníky page yet) has nothing to read.
+    if (model.documents.length === 0) {
+      ctx.log.info(`${site.id}: no price lists for a listed model`, { model: model.key });
+      continue;
+    }
+    let ok = true;
+    const days: IsoDate[] = [];
     for (const url of model.documents) {
       const edition = await readDocument(site, ctx, model, url);
       if (!edition) {
@@ -135,24 +143,27 @@ async function* harvest(
         continue;
       }
       read++;
-      if (edition.validFrom > newest) newest = edition.validFrom;
+      days.push(edition.validFrom);
       for (const { row, reason } of edition.rejected) {
         ctx.log.warn(`${site.id}: rejected row`, { url, row, reason });
         ok = false;
       }
       for (const offer of edition.offers) {
         const ref = `${model.key}/${offer.code}`;
-        const seen = emitted.get(ref);
-        // Action lists repeat some rows of the model's main list; the same price is no conflict.
+        const key = `${ref}@${edition.validFrom}`;
+        const seen = editions.get(key);
+        // Action lists repeat rows of the model's main list; the same price is no conflict.
+        // Lists of different days are different editions: the Ledger keeps the newer in force.
         if (seen === offer.price) continue;
         const problem =
-          offerProblem(offer) ?? (seen === undefined ? undefined : "two prices in one run");
+          offerProblem(offer) ?? (seen === undefined ? undefined : "two prices in one edition");
         if (problem) {
           ctx.log.warn(`${site.id}: rejected offer`, { url, ref, reason: problem });
           ok = false;
           continue;
         }
-        emitted.set(ref, offer.price);
+        refs.add(ref);
+        editions.set(key, offer.price);
         yield {
           kind: "ListPrice",
           ref,
@@ -163,7 +174,7 @@ async function* harvest(
         };
       }
     }
-    if (ok) clean.set(model.key, newest);
+    if (ok) clean.set(model.key, days.sort());
   }
   if (models.length > 0 && read === 0) {
     throw new Error(`${site.id}: none of the ${models.length} models' price lists could be read`);
@@ -171,19 +182,24 @@ async function* harvest(
   if (ctx.mode !== "full") return;
 
   const listed = new Set(index.map((m) => m.key));
+  // Withdraw for models gone from the index only when every model with lists read cleanly.
+  const indexClean = models.every((m) => m.documents.length === 0 || clean.has(m.key));
   const runDay = pragueDate(ctx.now);
   for (const edition of ctx.checkpoint.offersInForce()) {
     const key = edition.ref.slice(0, edition.ref.indexOf("/"));
-    if (emitted.has(edition.ref) || (only && !only.has(key))) continue;
-    const newest = clean.get(key);
-    const end = newest
-      ? dayBefore(newest)
-      : !listed.has(key) && clean.size > 0
-        ? dayBefore(runDay)
-        : undefined;
+    if (refs.has(edition.ref) || (only && !only.has(key))) continue;
+    const days = clean.get(key);
+    let end: IsoDate | undefined;
+    if (days) {
+      // The first current list issued after the edition is the first that left it out.
+      const later = days.find((day) => day > edition.validFrom);
+      end = dayBefore(later ?? runDay);
+    } else if (!listed.has(key) && indexClean) {
+      end = dayBefore(runDay);
+    }
     if (end === undefined) continue;
     if (end < edition.validFrom) {
-      ctx.log.warn(`${site.id}: offer missing from the list it started in; not withdrawn`, {
+      ctx.log.warn(`${site.id}: offer dropped on the day it started; withdrawn by a later run`, {
         ref: edition.ref,
         validFrom: edition.validFrom,
       });

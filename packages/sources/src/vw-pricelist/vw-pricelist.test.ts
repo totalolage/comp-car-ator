@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { type Cassette, createReplayHttp, loadCassette } from "@cca/http";
 import type { ListPrice } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
@@ -9,7 +10,10 @@ import { vwPricelistSource } from "./vw-pricelist.ts";
 // recorded through the real adapter in a full run, then trimmed: the overview keeps those two
 // model cards, each Ceníky page its download links, and each PDF its "Platnost od" page and
 // the pages with table headers (Ghostscript pdfwrite, -dFILTERIMAGE -dFILTERVECTOR).
+// tiguan-uncoded-row.pdf is that Tiguan list with a price "1 234 000" set in the "Cena s DPH"
+// column below the last row.
 const cassetteFile = new URL("./fixtures/lists.cassette.json", import.meta.url);
+const uncodedFile = new URL("./fixtures/tiguan-uncoded-row.pdf", import.meta.url);
 const now = new Date("2026-10-25T18:00:00Z");
 
 interface Run {
@@ -100,13 +104,16 @@ describe("vw-pricelist source", () => {
       edition("tiguan/CT1A4Z03", "2026-07-01"),
       edition("touareg/RC857JE2", "2025-12-16"),
       edition("tiguan/CT1CPT03", "2026-07-01"),
+      // Started after every current Tiguan list: seen gone by this run.
+      edition("tiguan/CT1A7T03", "2026-10-05"),
     ];
     const full = await harvest({ inForce });
     expect(full.filter((o) => o.validTo)).toEqual([
-      // Day before the model's newest list.
+      // Day before the first current list issued after it started.
       { ...(inForce[0] as ListPrice), validTo: "2026-09-30" },
       // Its model left the overview.
       { ...(inForce[1] as ListPrice), validTo: "2026-10-24" },
+      { ...(inForce[3] as ListPrice), validTo: "2026-10-24" },
     ]);
     expect((await harvest({ mode: "incremental", inForce })).some((o) => o.validTo)).toBe(false);
   });
@@ -130,6 +137,31 @@ describe("vw-pricelist source", () => {
     expect(warnings).toContain("vw-pricelist: price list not available");
     expect(offers.filter((o) => o.ref.startsWith("tiguan/") && !o.validTo)).toHaveLength(28);
     expect(offers.filter((o) => o.validTo).map((o) => o.ref)).toEqual(["id-polo/ES11CDA2"]);
+  });
+
+  it("a priced row without a sales code rejects its model's withdrawals", async () => {
+    const uncoded = Buffer.from(await readFile(uncodedFile)).toString("base64");
+    const warnings: string[] = [];
+    const offers = await harvest({
+      cassette: await edit("/Tiguan_MY2027_01102026.pdf", (r) => ({ ...r, bodyBase64: uncoded })),
+      inForce: [edition("tiguan/CT1A4Z03", "2026-07-01")],
+      warnings,
+    });
+    expect(warnings).toContain("vw-pricelist: rejected row");
+    expect(offers.filter((o) => o.ref.startsWith("tiguan/"))).toHaveLength(39);
+    expect(offers.some((o) => o.validTo)).toBe(false);
+  });
+
+  it("a model without a Ceníky page stays listed: nothing of it is withdrawn", async () => {
+    const offers = await harvest({
+      cassette: await edit("/id-polo/id-polo/ceniky", (r) => ({ ...r, status: 404, body: "" })),
+      inForce: [
+        edition("id-polo/ES11CDA2", "2026-09-01"),
+        edition("touareg/RC857JE2", "2025-12-16"),
+      ],
+    });
+    expect(offers.some((o) => o.ref.startsWith("id-polo/"))).toBe(false);
+    expect(offers.filter((o) => o.validTo).map((o) => o.ref)).toEqual(["touareg/RC857JE2"]);
   });
 
   it("fails when the model overview links no models", async () => {
