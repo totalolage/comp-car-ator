@@ -17,7 +17,8 @@
  *   page, in every mode: the Ledger keeps a listing's latest ListingSeen whole, so a ref must
  *   come out with the same fields every run.
  * - full: slices `used:<year>` (the current year's slice is open above) and
- *   `new:<from>-<to>` (price bands; the last is open). A slice is paged to its end before any
+ *   `new:<from>-<to>` (price bands; the last is open; the site's price filter leaves out
+ *   listings without a price). A slice is paged to its end before any
  *   of its detail pages, so it is paged in minutes; then its listings, then SliceDone. Slices
  *   done earlier in the census are skipped. A slice with fewer distinct listings than it
  *   reports (one removed meanwhile shifts the next across a page boundary) is paged once
@@ -143,23 +144,26 @@ class Harvest {
   /**
    * Every card of a slice, paged twice when the first pass has fewer distinct listings than
    * the slice reports (a listing removed meanwhile shifts the next one onto a page already
-   * read). `complete` says whether the cards of both passes reach the highest count a page
-   * of the last pass reported.
+   * read). A pass is complete when it alone reaches the highest total any of its pages
+   * reported; the cards of both passes come out either way.
    */
   private async census(slice: Slice): Promise<{ cards: Card[]; complete: boolean }> {
     const cards = new Map<string, Card>();
-    let reported = 0;
     for (let pass = 1; pass <= 2; pass++) {
-      reported = 0;
+      const refs = new Set<string>();
+      let reported = 0;
       for await (const page of this.pages(slice.list, slice.filter, true)) {
         reported = Math.max(reported, page.total);
-        for (const card of page.cards) if (!cards.has(card.ref)) cards.set(card.ref, card);
+        for (const card of page.cards) {
+          refs.add(card.ref);
+          if (!cards.has(card.ref)) cards.set(card.ref, card);
+        }
       }
-      if (cards.size >= reported) return { cards: [...cards.values()], complete: true };
+      if (refs.size >= reported) return { cards: [...cards.values()], complete: true };
       this.ctx.log.warn("tipcars slice came out short", {
         slice: slice.key,
         pass,
-        distinct: cards.size,
+        distinct: refs.size,
         reported,
       });
     }

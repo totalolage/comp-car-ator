@@ -297,6 +297,38 @@ describe("tipcars source", () => {
     );
   });
 
+  it("a second pass must reach its own count: the first pass's cards cannot fill it", async () => {
+    // Pass 1 misses card X on page 1. Before pass 2 one listing is gone (every page reports
+    // one less) and pass 2 misses X and Y. Together the passes have all but X: one less than
+    // pass 2 reports, so a union would pass for complete while X is still unseen.
+    const cassette = await loadCassette(full);
+    const without = (b: string, n: number) => {
+      const parts = b.split(CARD);
+      parts.splice(1, n);
+      return parts.join(CARD);
+    };
+    const fewer = (b: string) =>
+      b.replace(/"numberOfItems":\s*(\d+)/, (_, n) => `"numberOfItems": ${Number(n) - 1}`);
+    const interactions = cassette.interactions.flatMap((x) => {
+      if (!x.request.url.includes("2000-2000=")) return [x];
+      const firstPage = x.request.url.endsWith("/ojete?2000-2000=");
+      const pass1 = firstPage ? { ...x.response, body: without(x.response.body, 1) } : x.response;
+      const pass2 = {
+        ...x.response,
+        body: fewer(firstPage ? without(x.response.body, 2) : x.response.body),
+      };
+      return [
+        { ...x, response: pass1 },
+        { ...x, response: pass2 },
+      ];
+    });
+    const os: Observation[] = [];
+    await expect(harvest({ ...cassette, interactions }, { mode: "full" }, os)).rejects.toThrow(
+      /fewer listings than reported: used:2000/,
+    );
+    expect(slicesDone(os)).toEqual(["used:2001"]);
+  });
+
   it("an empty slice is done", async () => {
     const cassette = edit(
       await loadCassette(full),
