@@ -196,12 +196,13 @@ describe("Bundle", () => {
   });
 
   it("keeps absent fields, nulls, empty and mixed values apart", async () => {
-    const odd = [
-      { a: 1, b: null, c: [], d: { e: null }, f: "x", g: true },
-      { b: 2, c: null, d: null, f: null, g: "mixed" },
-      { a: null, c: [[1], []], d: {}, f: "x" },
-      {},
-    ];
+    const odd = JSON.parse(`[
+      { "a": 1, "b": null, "c": [], "d": { "e": null }, "f": "x", "g": true, "h": { "k": 1 } },
+      { "b": 2, "c": null, "d": null, "f": null, "g": "mixed", "h": 3 },
+      { "a": null, "c": [[1], [], null, [null]], "d": {}, "f": "x", "h": [1] },
+      { "__proto__": 1, "toString": "x", "d": { "constructor": 2, "__proto__": { "y": 3 } } },
+      {}
+    ]`) as unknown[];
     const files = encodeBundle({
       ...content,
       models: [{ ...model, listings: odd as unknown as ListingRow[] }],

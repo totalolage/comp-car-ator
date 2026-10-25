@@ -1,8 +1,9 @@
 /**
  * The Bundle's compact encoding for long lists of similar rows (catalog Variants, a model's
  * Listings and price cells): column-oriented, with strings dictionary-coded and absent fields
- * stored sparsely. Lossless for JSON values: a decoded row equals the encoded one, absent
- * fields stay absent and nulls stay null (key order may differ). Private to Bundle.
+ * stored sparsely. Lossless for JSON values (what JSON.parse can return; no undefined array
+ * items, no NaN): a decoded row equals the encoded one, absent fields stay absent and nulls
+ * stay null (key order may differ). Private to Bundle.
  */
 
 /**
@@ -68,11 +69,17 @@ function encodeColumn(values: readonly unknown[]): Column {
         if (value === null) nulls.push(i);
         else for (const key of Object.keys(value as object)) keys.add(key);
       });
-      const o: Record<string, Column> = {};
+      const o: Record<string, Column> = Object.create(null);
       for (const key of keys) {
-        o[key] = encodeColumn(
-          present.map((value) =>
-            value === null ? undefined : (value as Record<string, unknown>)[key],
+        setOwn(
+          o,
+          key,
+          encodeColumn(
+            present.map((value) =>
+              value !== null && Object.hasOwn(value as object, key)
+                ? (value as Record<string, unknown>)[key]
+                : undefined,
+            ),
           ),
         );
       }
@@ -120,11 +127,25 @@ function decodePresent(column: Column, count: number): unknown[] {
   const rows: (Record<string, unknown> | null)[] = Array.from({ length: count }, () => ({}));
   for (const [key, field] of Object.entries(column.o)) {
     decodeColumn(field, count).forEach((value, i) => {
-      if (value !== undefined) (rows[i] as Record<string, unknown>)[key] = value;
+      if (value !== undefined) setOwn(rows[i] as Record<string, unknown>, key, value);
     });
   }
   if (column.z) for (const i of undeltas(column.z)) rows[i] = null;
   return rows;
+}
+
+/** Plain assignment, except that a field named `__proto__` stays an own field. */
+function setOwn(target: Record<string, unknown>, key: string, value: unknown): void {
+  if (key === "__proto__") {
+    Object.defineProperty(target, key, {
+      value,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+  } else {
+    target[key] = value;
+  }
 }
 
 type Kind = "number" | "string" | "object" | "array" | "other";
