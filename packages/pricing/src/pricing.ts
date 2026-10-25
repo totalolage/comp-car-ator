@@ -134,9 +134,9 @@ function fromEu(
   if (classification === "unknown") flags.add("vatUncertain");
   const isNew = classification === true;
   if (isNew) flags.add("newVehicleVat");
-  // Austrian prices carry NoVA, which export makes exempt (new) or refundable (registered
-  // ≤ 48 months); without CO₂ data it stays in.
-  if (market === "AT" && (isNew || !(age && age.min >= RULES.atNova.refundMaxMonths))) {
+  // Austrian prices carry NoVA, which export makes exempt (new) or may make refundable
+  // (used); without CO₂ data it stays in.
+  if (market === "AT" && (isNew || !novaRefundRuledOut(input.firstRegistration, env.today))) {
     flags.add("approximate");
   }
 
@@ -241,12 +241,34 @@ function isNewMeansOfTransport(input: LandedInput, age: Age | null): boolean | "
   return "unknown";
 }
 
+/**
+ * NoVAG §12a refunds NoVA on export if the car was deregistered in Austria at most 48 months
+ * after its worldwide first registration. The deregistration date is not in a Listing and may
+ * precede it, so the car's age today proves nothing. What does: for exports from 2026-07-01,
+ * BMF rules out cars first registered worldwide before 2022-07-01.
+ */
+function novaRefundRuledOut(reg: YearMonth | undefined, today: IsoDate): boolean {
+  const { refundRuleFrom, refundFirstRegisteredFrom: from } = RULES.atNova;
+  if (!reg || today < refundRuleFrom) return false;
+  // The latest month the registration can be in.
+  const latest = reg.year * 12 + (reg.month ?? 12);
+  return latest < from.year * 12 + from.month;
+}
+
+/**
+ * An expired certificate means a full inspection whatever the car's age: a taxi, for one, is
+ * inspected yearly from the start. Only when validity is unknown does a car too young for an
+ * ordinary periodic inspection get the identity check alone.
+ */
 function inspection(input: LandedInput, age: Age | null, flags: Set<LandedFlag>): number {
   const { identityCheckCzk, technicalCzk, emissionsCzk, noneDueMonths } = RULES.inspection;
   const neverRegistered = !age && input.condition === "new";
   const noneDue = neverRegistered || (age !== null && age.max <= noneDueMonths);
-  if (noneDue || input.inspectionValid) return identityCheckCzk;
-  if (input.inspectionValid === undefined) flags.add("inspectionAssumed");
+  if (input.inspectionValid) return identityCheckCzk;
+  if (input.inspectionValid === undefined) {
+    if (noneDue) return identityCheckCzk;
+    flags.add("inspectionAssumed");
+  }
   // A BEV has no exhaust emissions to measure.
   return identityCheckCzk + technicalCzk + (input.fuel === "bev" ? 0 : emissionsCzk);
 }

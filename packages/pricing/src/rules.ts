@@ -80,8 +80,10 @@ export const PRICING_RULES = {
   },
   /**
    * Evidenční kontrola always. The technical inspection plus emissions (none for a BEV) are
-   * added unless a valid foreign certificate covers the Czech interval, or the car is too
-   * young for any periodic inspection to be due (first at 3 years in DE/AT, 4 in CZ).
+   * added unless a valid foreign certificate covers the Czech interval, or, with validity
+   * unknown, the car is too young for an ordinary periodic inspection to be due (first at 3
+   * years in DE/AT, 4 in CZ). An expired certificate always adds them: taxis and other
+   * passenger-transport cars are inspected yearly from the start.
    */
   inspection: {
     identityCheckCzk: 790,
@@ -92,7 +94,7 @@ export const PRICING_RULES = {
     sources: [
       { cite: "zákon 56/2001 Sb. §5a, §40", url: ZAKON_56_2001 },
       {
-        cite: "DE: StVZO Anlage VIII 2.1 (first HU at 36 months)",
+        cite: "DE: StVZO Anlage VIII 2.1 (first HU at 36 months; yearly for passenger transport)",
         url: "https://www.gesetze-im-internet.de/stvzo_2012/anlage_viii.html",
       },
       {
@@ -178,11 +180,17 @@ export const PRICING_RULES = {
   },
   /**
    * Austrian NoVA: in a dealer's consumer price, exempt on delivery to another EU state, and
-   * refunded to whoever exports a car registered in Austria for at most 48 months. Without
-   * CO₂ data it cannot be removed, so those cases are flagged `approximate`.
+   * refunded to whoever exports a used car. For exports from `refundRuleFrom` the car may be
+   * at most 48 months past its worldwide first registration when it is deregistered in
+   * Austria. A Listing does not show that date and the car may already be deregistered, so
+   * its age cannot rule the refund out; only BMF's cutoff can: no refund on those exports
+   * for a car first registered worldwide before `refundFirstRegisteredFrom`. Without CO₂
+   * data the NoVA cannot be removed, so every case where it may apply is flagged
+   * `approximate`.
    */
   atNova: {
-    refundMaxMonths: 48,
+    refundRuleFrom: "2026-07-01",
+    refundFirstRegisteredFrom: { year: 2022, month: 7 },
     sources: [
       {
         cite: "NoVAG 1991 §3(2)(1): deliveries to the rest of the EU exempt",
@@ -191,6 +199,10 @@ export const PRICING_RULES = {
       {
         cite: "NoVAG 1991 §12a: refund on export, ≤ 48 months from 2026-07-01",
         url: "https://www.ris.bka.gv.at/NormDokument.wxe?Abfrage=Bundesnormen&Gesetzesnummer=10004698&Paragraf=12a",
+      },
+      {
+        cite: "BMF, NoVA ab 1. Juli 2026: 48 months from worldwide first registration to Austrian deregistration; none for cars first registered before 2022-07-01",
+        url: "https://www.bmf.gv.at/rechtsnews/steuern-rechtsnews/aktuelle-infos-und-erlaesse/fachinformation----kraftfahrzeugbesteuerung/fachinformation-zum-betrugsbek%C3%A4mpfungsgesetz-2025-teil-steuern-betreffend-normverbrauchsabgabe-ab-1.-juli-2026.html",
       },
       {
         cite: "PrAG §9: consumer prices include all taxes",

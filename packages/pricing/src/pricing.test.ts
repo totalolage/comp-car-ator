@@ -298,7 +298,7 @@ const cases: Case[] = [
 
   // Austria: 20% USt; NoVA stays in the price where export would remove it.
   {
-    name: "AT used, registered over 48 months ago: the price as paid",
+    name: "AT used, first registered before 2022-07: no NoVA refund, the price as paid",
     input: { ...deUsed, market: "AT" },
     lines: { goods: 365_025, ...FEES },
     total: 378_615,
@@ -315,7 +315,7 @@ const cases: Case[] = [
     total: 305_610,
   },
   {
-    name: "AT used, registered 41 months ago: NoVA refundable on export",
+    name: "AT used, registered 41 months ago: NoVA may be refunded on export",
     input: {
       ...deUsed,
       market: "AT",
@@ -374,16 +374,34 @@ const cases: Case[] = [
     flags: ["newVehicleVat", "approximate"],
     total: 896_951,
   },
+  {
+    // 49 months old today, but it may have been deregistered in Austria in 2026-08, at 47
+    // months: the 48-month limit is measured at deregistration, which a Listing does not show.
+    name: "AT used, first registered 2022-09, valued 2026-10: NoVA refund still possible",
+    input: { ...deUsed, market: "AT", firstRegistration: { year: 2022, month: 9 } },
+    env: { today: "2026-10-01" },
+    lines: { goods: 365_025, ...FEES },
+    flags: ["approximate"],
+    total: 378_615,
+  },
+  {
+    name: "AT used, exported before 2026-07: the old §12a rule refunds NoVA at any age",
+    input: { ...deUsed, market: "AT" },
+    env: { today: "2026-06-30" },
+    lines: { goods: 365_025, ...FEES },
+    flags: ["approximate"],
+    total: 378_615,
+  },
   ...(
     [
-      [{ year: 2022, month: 10 }, ["approximate"]],
-      [{ year: 2022, month: 9 }, []],
+      [{ year: 2022, month: 7 }, ["approximate"]],
+      [{ year: 2022, month: 6 }, []],
       [{ year: 2022 }, ["approximate"]],
       [{ year: 2021 }, []],
     ] as const
   ).map(
     ([firstRegistration, flags]): Case => ({
-      name: `AT used, registered ${firstRegistration.year}-${"month" in firstRegistration ? firstRegistration.month : "??"}: NoVA refund ${flags.length ? "possible" : "ruled out"} (48 months)`,
+      name: `AT used, registered ${firstRegistration.year}-${"month" in firstRegistration ? firstRegistration.month : "??"}: NoVA refund ${flags.length ? "possible" : "ruled out"} (BMF cutoff 2022-07)`,
       input: { ...deUsed, market: "AT", firstRegistration },
       lines: { goods: 365_025, ...FEES },
       flags: [...flags],
@@ -445,13 +463,13 @@ const cases: Case[] = [
     total: 382_055,
   },
   {
-    name: "inspection: under 36 months no periodic inspection is due yet",
+    name: "inspection expired under 36 months (a taxi's yearly one): the full CZ inspection",
     input: { ...deUsed, firstRegistration: { year: 2024, month: 1 }, inspectionValid: false },
-    lines: { goods: 365_025, ...FEES },
-    total: 378_615,
+    lines: { goods: 365_025, ...FEES, inspection: FULL_INSPECTION },
+    total: 382_055,
   },
   {
-    name: "inspection: 35 calendar months ago is certainly under 36",
+    name: "inspection unknown, 35 calendar months ago: certainly under 36, none due yet",
     input: { ...deUsed, firstRegistration: { year: 2023, month: 11 }, inspectionValid: undefined },
     lines: { goods: 365_025, ...FEES },
     total: 378_615,
