@@ -312,25 +312,31 @@ main:focus {
   border: 0;
 }
 
+/* Facet groups sit under grey heading bands, as in McMaster's rail. */
 .facet legend {
+  float: left;
   width: 100%;
-  margin-bottom: var(--s1);
-  padding: var(--s1) 0 2px;
-  border-bottom: 1px solid var(--rule);
+  margin-bottom: 2px;
+  padding: var(--s1) var(--s2);
+  background: var(--panel);
   font-weight: 700;
   color: var(--ink-strong);
+}
+
+.facet legend + * {
+  clear: left;
 }
 
 .facet-option {
   display: flex;
   align-items: baseline;
   gap: var(--s2);
-  padding: 2px var(--s1);
+  padding: 1px var(--s2);
   cursor: pointer;
 }
 
 .facet-option:hover {
-  background: var(--row-alt);
+  background: var(--mark-soft);
 }
 
 .facet-option:has(:checked) {
@@ -421,10 +427,6 @@ main:focus {
   min-width: 12rem;
   font-weight: 400;
   white-space: normal;
-}
-
-.data tbody tr:nth-child(even) {
-  background: var(--row-alt);
 }
 
 .data tbody tr:hover {
