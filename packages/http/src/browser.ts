@@ -295,18 +295,32 @@ async function userAgentOf(context: BrowserContext): Promise<string> {
 
 /**
  * Applies to the browser what a request context changed in the cookies it was seeded with: new
- * and changed cookies are set, deleted ones cleared. Untouched cookies are left alone, so a page
- * that changed one meanwhile keeps its value.
+ * and changed cookies are set, missing ones cleared. A cookie is touched only while the browser
+ * still holds it as seeded (or lost it to expiry), so a page that changed one meanwhile keeps its
+ * value, and a seeded cookie that expired during the fetch does not clear a refreshed copy.
  */
 async function handBack(context: BrowserContext, before: Cookie[], after: Cookie[]) {
   const key = (cookie: Cookie) => `${cookie.name}\0${cookie.domain}\0${cookie.path}`;
   const stamp = ({ value, expires, httpOnly, secure, sameSite }: Cookie) =>
     JSON.stringify([value, expires, httpOnly, secure, sameSite]);
-  const seeded = new Map(before.map((cookie) => [key(cookie), stamp(cookie)]));
-  const kept = new Set(after.map(key));
-  const changed = after.filter((cookie) => seeded.get(key(cookie)) !== stamp(cookie));
+  const seeded = new Map(before.map((cookie) => [key(cookie), cookie]));
+  const handed = new Set(after.map(key));
+  const current = new Map((await context.cookies()).map((cookie) => [key(cookie), stamp(cookie)]));
+  const untouched = (k: string) => {
+    const cookie = seeded.get(k);
+    if (current.has(k)) return cookie !== undefined && current.get(k) === stamp(cookie);
+    return cookie === undefined || (cookie.expires > 0 && cookie.expires * 1000 <= Date.now());
+  };
+  const changed = after.filter((cookie) => {
+    const k = key(cookie);
+    const was = seeded.get(k);
+    return (was === undefined || stamp(was) !== stamp(cookie)) && untouched(k);
+  });
   if (changed.length > 0) await context.addCookies(changed);
-  for (const { name, domain, path } of before.filter((cookie) => !kept.has(key(cookie)))) {
-    await context.clearCookies({ name, domain, path });
+  for (const cookie of before) {
+    const k = key(cookie);
+    if (!handed.has(k) && current.has(k) && untouched(k)) {
+      await context.clearCookies({ name: cookie.name, domain: cookie.domain, path: cookie.path });
+    }
   }
 }

@@ -280,6 +280,35 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
     }
   }, 120_000);
 
+  it("keeps a refreshed cookie whose seeded copy expired while a binary fetch ran", async () => {
+    let release: () => void = () => {};
+    const held = holdResponse("/held.bin", new Promise<void>((resolve) => (release = resolve)));
+    const other = createServer(held.handle);
+    await new Promise<void>((resolve) => other.listen(0, "localhost", resolve));
+    const otherBase = `http://localhost:${(other.address() as AddressInfo).port}`;
+    try {
+      handler = recording((req, res) => {
+        const value = new URL(req.url ?? "", base).searchParams.get("set");
+        if (value) res.setHeader("set-cookie", value);
+        res.end("ok");
+      });
+      await http.get({ url: `${base}/?set=session=old;Max-Age=3`, minTier: "T2" });
+      const oldExpiry = Date.now() + 3000;
+      const binary = http.get({ url: `${otherBase}/held.bin`, minTier: "T2", binary: true });
+      await held.arrival;
+      await http.get({ url: `${base}/?set=session=new;Max-Age=3600`, minTier: "T2" });
+      await new Promise((resolve) => setTimeout(resolve, oldExpiry + 1000 - Date.now()));
+      release();
+      await binary;
+      await http.get({ url: `${base}/check`, minTier: "T2" });
+      expect(seen.get("/check")?.cookie).toContain("session=new");
+    } finally {
+      release();
+      other.closeAllConnections();
+      await new Promise<void>((resolve) => other.close(() => resolve()));
+    }
+  }, 120_000);
+
   it("closes the connection of an aborted binary fetch", async () => {
     const held = holdResponse("/slow.zip");
     handler = held.handle;
