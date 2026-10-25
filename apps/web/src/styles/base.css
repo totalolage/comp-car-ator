@@ -308,6 +308,7 @@ main:focus {
 }
 
 .facet {
+  min-width: 0;
   padding: 0 0 var(--s3);
   border: 0;
 }
@@ -359,6 +360,8 @@ main:focus {
 }
 
 .button-quiet {
+  justify-self: start;
+  align-self: start;
   padding: var(--s1) var(--s2);
   border: 1px solid var(--rule-strong);
   border-radius: 2px;
@@ -476,8 +479,9 @@ main:focus {
     grid-template-areas: "recents" "makes" "bodies";
   }
 
+  /* minmax(0, …): the table must not widen the page; it scrolls inside .table-scroll. */
   .split {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--s3);
   }
 
