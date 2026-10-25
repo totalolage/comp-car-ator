@@ -20,6 +20,8 @@ interface Run {
   mode: HarvestMode;
   /** Collects the URLs requested. */
   urls?: string[];
+  /** Adds each yielded listing to `known`, as a Ledger recording during the run would. */
+  live?: boolean;
   known?: ReadonlySet<string>;
   done?: readonly string[];
   options?: TipcarsOptions;
@@ -51,6 +53,7 @@ async function harvest(
     signal: new AbortController().signal,
   })) {
     out.push(o);
+    if (run.live && o.kind === "ListingSeen") (run.known as Set<string>).add(o.ref);
   }
   return out;
 }
@@ -102,6 +105,13 @@ describe("tipcars source", () => {
       ["12770757", "new"],
     ]);
     expect(slicesDone(os)).toEqual([]);
+    // The same against a checkpoint that learns this run's listings as they are recorded.
+    const live = await harvest(await loadCassette(incremental), {
+      mode: "incremental",
+      known: await known(),
+      live: true,
+    });
+    expect(listings(live).map((o) => o.ref)).toEqual(seen.map((o) => o.ref));
   });
 
   it("maps a used listing from its list card", async () => {
@@ -263,6 +273,55 @@ describe("tipcars source", () => {
     expect(slicesDone(os)).toEqual(["used:2001"]);
   });
 
+  it("a slice short on its first pass and whole on its second is done", async () => {
+    // Replay serves a URL's recordings in order: the first pass sees page 1 without a card.
+    const cassette = await loadCassette(full);
+    const i = cassette.interactions.findIndex((x) => x.request.url.endsWith("/ojete?2000-2000="));
+    const first = cassette.interactions[i] as Cassette["interactions"][number];
+    const parts = first.response.body.split(CARD);
+    parts.splice(1, 1);
+    const short = { ...first, response: { ...first.response, body: parts.join(CARD) } };
+    const interactions = [...cassette.interactions];
+    interactions.splice(i, 0, short);
+    const os = await harvest({ ...cassette, interactions }, { mode: "full" });
+    expect(slicesDone(os)).toEqual(FULL_SLICES);
+    const whole = await harvest(await loadCassette(full), { mode: "full" });
+    expect(
+      listings(os)
+        .map((o) => o.ref)
+        .sort(),
+    ).toEqual(
+      listings(whole)
+        .map((o) => o.ref)
+        .sort(),
+    );
+  });
+
+  it("an empty slice is done", async () => {
+    const cassette = edit(
+      await loadCassette(full),
+      "/ojete?2000-2000=",
+      body(
+        () =>
+          '<script type="application/ld+json">{"@type":"ItemList","numberOfItems":0,"itemListElement":[]}</script>',
+      ),
+    );
+    const os = await harvest(cassette, { mode: "full" });
+    expect(slicesDone(os)).toEqual(FULL_SLICES);
+    expect(listings(os).some((o) => o.vehicle.manufactureYear === 2000)).toBe(false);
+  });
+
+  it("a card whose price does not parse gives a ListingSeen the Ledger rejects", async () => {
+    // Not "Dohodou": the card still shows a price, its record lacks it.
+    const cassette = edit(
+      await loadCassette(full),
+      "/ojete?2000-2000=",
+      body((b) => b.replace(/&quot;price&quot;:[1-9]\d*,/, "")),
+    );
+    const seen = listings(await harvest(cassette, { mode: "full" }));
+    expect(seen.filter((o) => !Number.isFinite(o.price.amount))).toHaveLength(1);
+  });
+
   it("a changed list page fails the run", async () => {
     const cassette = edit(
       await loadCassette(full),
@@ -300,6 +359,15 @@ describe("tipcars source", () => {
         options: { slices: FULL_SLICES, maxPages: 1 },
       }),
     ).rejects.toThrow(/more than 1 pages/);
+  });
+
+  it("slices narrow full runs only", async () => {
+    await expect(
+      harvest(await loadCassette(incremental), {
+        mode: "incremental",
+        options: { slices: ["used:2000"] },
+      }),
+    ).rejects.toThrow(/full runs only/);
   });
 
   it("names its scope after the slices it is limited to", () => {

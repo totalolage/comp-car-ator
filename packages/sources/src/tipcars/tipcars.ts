@@ -86,6 +86,8 @@ export function tipcarsSource(options: TipcarsOptions = {}): Source {
 class Harvest {
   /** Refs handled this run, so a listing seen twice costs one detail page. */
   private readonly done = new Set<string>();
+  /** `isKnown` as of a ref's first sighting: the Ledger may record this run's listings as we go. */
+  private readonly knownBefore = new Map<string, boolean>();
   private readonly ctx: HarvestContext;
   private readonly maxPages: number;
   private readonly only: readonly string[] | undefined;
@@ -98,6 +100,7 @@ class Harvest {
 
   async *run(): AsyncIterable<Observation> {
     if (this.ctx.mode === "incremental") {
+      if (this.only) throw new Error("TipCars slices narrow full runs only");
       yield* this.incremental("ojete", `${FIRST_YEAR}-=`);
       yield* this.incremental("nove", "");
       return;
@@ -140,14 +143,16 @@ class Harvest {
   /**
    * Every card of a slice, paged twice when the first pass has fewer distinct listings than
    * the slice reports (a listing removed meanwhile shifts the next one onto a page already
-   * read). `complete` says whether the union reached the count.
+   * read). `complete` says whether the cards of both passes reach the highest count a page
+   * of the last pass reported.
    */
   private async census(slice: Slice): Promise<{ cards: Card[]; complete: boolean }> {
     const cards = new Map<string, Card>();
-    let reported = Number.POSITIVE_INFINITY;
+    let reported = 0;
     for (let pass = 1; pass <= 2; pass++) {
+      reported = 0;
       for await (const page of this.pages(slice.list, slice.filter, true)) {
-        reported = Math.min(reported, page.total);
+        reported = Math.max(reported, page.total);
         for (const card of page.cards) if (!cards.has(card.ref)) cards.set(card.ref, card);
       }
       if (cards.size >= reported) return { cards: [...cards.values()], complete: true };
@@ -164,14 +169,25 @@ class Harvest {
   /** New listings of one list, newest first, up to the first page of only known ones. */
   private async *incremental(list: Slice["list"], filter: string): AsyncIterable<Observation> {
     for await (const page of this.pages(list, filter, false)) {
-      // Known before anything of this page is yielded: the Ledger may record as we go.
-      const fresh = page.cards.filter((card) => !this.ctx.checkpoint.isKnown(card.ref));
+      const fresh = page.cards.filter((card) => !this.wasKnown(card.ref));
       for (const card of fresh) yield* this.listing(card);
       if (fresh.length === 0) return;
     }
   }
 
-  /** A list's pages from the first to its last (or `maxPages`; a full walk then throws). */
+  private wasKnown(ref: string): boolean {
+    let known = this.knownBefore.get(ref);
+    if (known === undefined) {
+      known = this.ctx.checkpoint.isKnown(ref);
+      this.knownBefore.set(ref, known);
+    }
+    return known;
+  }
+
+  /**
+   * A list's pages from the first to its last, an empty first page included (or `maxPages`;
+   * a full walk then throws).
+   */
   private async *pages(list: Slice["list"], filter: string, full: boolean) {
     for (let n = 1; ; n++) {
       if (n > this.maxPages) {
@@ -183,7 +199,7 @@ class Harvest {
       const url = `${BASE}/${list}${query ? `?${query}` : ""}`;
       const page = parseListPage(await this.get(url), url);
       this.ctx.log.info("tipcars page", { url, cards: page.cards.length, total: page.total });
-      if (page.cards.length > 0) yield page;
+      if (page.cards.length > 0 || n === 1) yield page;
       if (page.cards.length === 0 || n * PAGE_SIZE >= page.total) return;
     }
   }
@@ -197,8 +213,8 @@ class Harvest {
     }
     if (this.done.has(card.ref)) return;
     this.done.add(card.ref);
-    if (!whole(card.record.price)) {
-      // "Dohodou" (price on request, recorded as 0): no ListingSeen, the scope is priced listings.
+    if (card.priceOnRequest) {
+      // No ListingSeen: the scope is priced listings.
       this.ctx.log.info("tipcars listing without a price", { ref: card.ref });
       return;
     }
@@ -247,6 +263,8 @@ interface Card {
   record: Raw;
   price?: number;
   currency?: string;
+  /** "Dohodou": the card shows no price (its record says 0). */
+  priceOnRequest: boolean;
   vatDeductible: boolean;
   sellerText?: string;
   cover?: string;
@@ -290,6 +308,7 @@ function parseListPage(html: string, url: string): ListPage {
       record: data ?? {},
       price: whole(data?.price),
       currency: currencyOf(clean(priceBlock)),
+      priceOnRequest: data?.price === 0 && /Dohodou/i.test(priceBlock),
       vatDeductible: /bez(?:&nbsp;|\s)+DPH/.test(priceBlock),
       sellerText: text(seller?.description) || undefined,
       cover: text(item?.image) || undefined,
@@ -404,7 +423,10 @@ function toListingSeen(card: Card, detail?: Detail): ListingSeen {
     market: "CZ",
     condition: detail?.condition ?? "used",
     vehicle,
-    odometerKm: r.odometer_unit === "A" ? whole(r.odometer) : undefined,
+    odometerKm:
+      r.odometer_unit === "A" && typeof r.odometer === "number" && r.odometer >= 0
+        ? r.odometer
+        : undefined,
     price: { amount: card.price ?? Number.NaN, currency: card.currency ?? "" },
     priceBasis: card.vatDeductible ? "gross" : "unknown",
     seller: detail?.seller ?? "unknown",
