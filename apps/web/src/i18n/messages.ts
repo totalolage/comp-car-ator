@@ -1,16 +1,40 @@
 /**
- * UI strings, cs (default) and en. Keys are flat; enum labels are keyed `<facet>.<value>`.
- * TODO(wave1-stream13): full i18n (plurals, number/date formats, language switch state).
+ * UI strings, cs (default) and en. Keys are flat; enum labels are keyed `<facet>.<value>`;
+ * plural forms are `<key>.one|few|other` (Czech: 1 | 2–4 | 0, 5+). Formatting and plural
+ * selection live in i18n.ts; components call `i18n(lang)`.
  */
-export const LANGS = ["cs", "en"] as const;
-export type Lang = (typeof LANGS)[number];
+import type { Lang } from "./locale.ts";
+
+export { LANGS, type Lang, localePath, numberLocale } from "./locale.ts";
 
 const cs = {
   "site.title": "comp-car-ator",
   "site.tagline": "Srovnání aut: katalog, nové ceny a inzeráty z ČR, Německa a Rakouska",
   "lang.switch": "English",
+  "lang.switchLabel": "Switch to English",
+  "nav.skip": "Přeskočit na obsah",
+  "nav.catalog": "Katalog",
+  "nav.categories": "Kategorie",
+  "nav.makes": "Značky",
+  "nav.bodies": "Karoserie",
+  "nav.recents": "Naposledy prohlížené",
+  "nav.compare": "Porovnání",
+  "nav.breadcrumb": "Drobečková navigace",
+  "nav.allOf": "Vše od {make}",
+  "footer.data": "Data k {date}",
+  "footer.counts": "{variants}, {listings}",
+  "footer.note": "Osobní nekomerční projekt. Ceny inzerátů přebírá ze zdrojů, cena v ČR je odhad.",
+  "count.variants.one": "{n} varianta",
+  "count.variants.few": "{n} varianty",
+  "count.variants.other": "{n} variant",
+  "count.listings.one": "{n} inzerát",
+  "count.listings.few": "{n} inzeráty",
+  "count.listings.other": "{n} inzerátů",
+  "count.models.one": "{n} model",
+  "count.models.few": "{n} modely",
+  "count.models.other": "{n} modelů",
   "catalog.heading": "Katalog",
-  "catalog.results": "Výsledků",
+  "catalog.filters": "Filtry",
   "catalog.empty": "Žádná varianta neodpovídá filtrům.",
   "catalog.clear": "Zrušit filtry",
   "col.model": "Model",
@@ -37,7 +61,6 @@ const cs = {
   "facet.transmission": "Převodovka",
   "facet.market": "Země inzerátu",
   "model.listings": "Inzeráty",
-  "model.back": "Zpět na katalog",
   "fuel.petrol": "benzín",
   "fuel.diesel": "nafta",
   "fuel.lpg": "LPG",
@@ -72,8 +95,31 @@ const en: Record<MessageKey, string> = {
   "site.tagline":
     "Car comparison: catalog, new prices and listings from Czechia, Germany and Austria",
   "lang.switch": "Česky",
+  "lang.switchLabel": "Přepnout do češtiny",
+  "nav.skip": "Skip to content",
+  "nav.catalog": "Catalog",
+  "nav.categories": "Categories",
+  "nav.makes": "Makes",
+  "nav.bodies": "Body types",
+  "nav.recents": "Recently viewed",
+  "nav.compare": "Compare",
+  "nav.breadcrumb": "Breadcrumb",
+  "nav.allOf": "All {make}",
+  "footer.data": "Data as of {date}",
+  "footer.counts": "{variants}, {listings}",
+  "footer.note":
+    "Personal, non-commercial project. Listing prices come from their sources; the landed price in CZ is an estimate.",
+  "count.variants.one": "{n} variant",
+  "count.variants.few": "{n} variants",
+  "count.variants.other": "{n} variants",
+  "count.listings.one": "{n} listing",
+  "count.listings.few": "{n} listings",
+  "count.listings.other": "{n} listings",
+  "count.models.one": "{n} model",
+  "count.models.few": "{n} models",
+  "count.models.other": "{n} models",
   "catalog.heading": "Catalog",
-  "catalog.results": "Results",
+  "catalog.filters": "Filters",
   "catalog.empty": "No variant matches the filters.",
   "catalog.clear": "Clear filters",
   "col.model": "Model",
@@ -100,7 +146,6 @@ const en: Record<MessageKey, string> = {
   "facet.transmission": "Transmission",
   "facet.market": "Listing country",
   "model.listings": "Listings",
-  "model.back": "Back to catalog",
   "fuel.petrol": "petrol",
   "fuel.diesel": "diesel",
   "fuel.lpg": "LPG",
@@ -139,12 +184,4 @@ export function messages(lang: Lang): Messages {
 /** Label for an enum value, falling back to the raw value (e.g. make ids). */
 export function label(m: Messages, facet: string, value: string): string {
   return (m as Record<string, string>)[`${facet}.${value}`] ?? value;
-}
-
-export function localePath(lang: Lang, path: string): string {
-  return lang === "cs" ? path : `/en${path}`;
-}
-
-export function numberLocale(lang: Lang): string {
-  return lang === "cs" ? "cs-CZ" : "en-GB";
 }

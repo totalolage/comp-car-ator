@@ -1,8 +1,10 @@
 ---
 import type { ModelId } from "@cca/vocabulary";
-import { type Lang, label, localePath, messages, numberLocale } from "../i18n/messages.ts";
+import { i18n } from "../i18n/i18n.ts";
+import type { Lang } from "../i18n/messages.ts";
 import Base from "../layouts/Base.astro";
 import { buildCatalog } from "../lib/catalog.ts";
+import { writeCatalogState } from "../lib/url-state.ts";
 
 /**
  * Minimal model page, rendered at build time from the Bundle.
@@ -13,43 +15,56 @@ interface Props {
   id: ModelId;
 }
 const { lang, id } = Astro.props;
-const m = messages(lang);
+const t = i18n(lang);
 const view = await (await buildCatalog()).model(id);
 if (!view) throw new Error(`Model ${id} is in the catalog index but has no model file`);
 const listings = view.listings({ sort: { key: "priceCzk", dir: "asc" }, limit: 500 });
-const fmt = new Intl.NumberFormat(numberLocale(lang), { maximumFractionDigits: 0 });
-const czk = (n: number | undefined) => (n === undefined ? "–" : `${fmt.format(n)} Kč`);
+const name = `${view.model.make} ${view.model.name}`;
+const makeId = view.variants[0]?.makeId;
 ---
-<Base lang={lang} path={`/model/${id}/`} title={`${view.model.make} ${view.model.name}`}>
-  <p><a href={localePath(lang, "/")}>{m["model.back"]}</a></p>
-  <h1>{view.model.make} {view.model.name}</h1>
-  <h2>{m["model.listings"]} ({listings.total})</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>{m["col.title"]}</th>
-        <th>{m["col.year"]}</th>
-        <th>{m["col.odometer"]}</th>
-        <th>{m["col.price"]}</th>
-        <th>{m["col.landed"]}</th>
-        <th>{m["col.market"]}</th>
-        <th>{m["col.source"]}</th>
-        <th>{m["col.days"]}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {listings.rows.map((l) => (
-        <tr data-listing={l.id}>
-          <td><a href={l.url} rel="noopener nofollow">{l.title}</a></td>
-          <td>{l.year ?? "–"}</td>
-          <td>{l.odometerKm === undefined ? "–" : `${fmt.format(l.odometerKm)} km`}</td>
-          <td>{fmt.format(l.price.amount)} {l.price.currency}</td>
-          <td>{czk(l.landed?.totalCzk)}</td>
-          <td>{label(m, "market", l.market)}</td>
-          <td>{l.source}</td>
-          <td>{l.daysOnMarket}</td>
+<Base
+  lang={lang}
+  path={`/model/${id}/`}
+  title={name}
+  crumbs={[
+    { label: view.model.make, href: makeId && t.path("/") + writeCatalogState({ filters: { make: [makeId] } }) },
+    { label: view.model.name },
+  ]}
+  recent={{ id, label: name }}
+>
+  <h1 class="page-title">{name}</h1>
+  <p class="page-summary">
+    {t.count("count.variants", view.variants.length)}, {t.count("count.listings", listings.total)}
+  </p>
+  <h2 class="section-title">{t.t("model.listings")}</h2>
+  <div class="table-scroll">
+    <table class="data">
+      <thead>
+        <tr>
+          <th scope="col">{t.t("col.title")}</th>
+          <th scope="col" class="num">{t.t("col.year")}</th>
+          <th scope="col" class="num">{t.t("col.odometer")}</th>
+          <th scope="col" class="num">{t.t("col.price")}</th>
+          <th scope="col" class="num">{t.t("col.landed")}</th>
+          <th scope="col">{t.t("col.market")}</th>
+          <th scope="col">{t.t("col.source")}</th>
+          <th scope="col" class="num">{t.t("col.days")}</th>
         </tr>
-      ))}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {listings.rows.map((l) => (
+          <tr data-listing={l.id}>
+            <th scope="row"><a href={l.url} rel="noopener nofollow">{l.title}</a></th>
+            <td class="num">{l.year ?? "–"}</td>
+            <td class="num">{t.km(l.odometerKm)}</td>
+            <td class="num">{t.money(l.price.amount, l.price.currency)}</td>
+            <td class="num">{t.czk(l.landed?.totalCzk)}</td>
+            <td>{t.label("market", l.market)}</td>
+            <td>{l.source}</td>
+            <td class="num">{l.daysOnMarket}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
 </Base>

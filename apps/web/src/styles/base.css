@@ -1,0 +1,496 @@
+/*
+ * Shell and shared components: masthead, category menu, breadcrumb, the `.split` rail
+ * layout, facets, the dense `.data` table and the footer. Element selectors set defaults;
+ * every component is one class deep so specificity stays flat.
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  color: var(--ink);
+  font: var(--text-md) / var(--leading) var(--font);
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+fieldset {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.skip {
+  position: absolute;
+  left: var(--s2);
+  top: -3rem;
+  z-index: 20;
+  padding: var(--s1) var(--s2);
+  background: var(--paper);
+  color: var(--ink-strong);
+}
+
+.skip:focus {
+  top: var(--s2);
+}
+
+/* Masthead ---------------------------------------------------------------------------- */
+
+.masthead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--sign);
+  color: var(--on-sign);
+  --focus: var(--mark);
+}
+
+.masthead-bar {
+  display: flex;
+  align-items: stretch;
+  gap: var(--s1);
+  max-width: var(--page-max);
+  height: var(--masthead);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.masthead-fill {
+  flex: 1;
+}
+
+.wordmark {
+  display: flex;
+  align-items: center;
+  margin-right: var(--s4);
+  color: inherit;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.masthead-link {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  padding: 0 var(--s3);
+  color: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.masthead-link[hidden] {
+  display: none;
+}
+
+.masthead-link:hover,
+.menu[open] > .masthead-link {
+  background: rgb(0 0 0 / 0.22);
+  text-decoration: none;
+}
+
+.badge {
+  min-width: 1.25rem;
+  padding: 0 var(--s1);
+  border-radius: 0.625rem;
+  background: var(--mark);
+  color: #000;
+  font-size: var(--text-xs);
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+/* Category menu: <details> disclosure with a full-width panel ------------------------- */
+
+.menu > summary {
+  height: var(--masthead);
+  list-style: none;
+}
+
+.menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu > summary::after {
+  content: "";
+  width: 0.4em;
+  height: 0.4em;
+  margin: -0.2em 0 0 0.35em;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.menu[open] > summary::after {
+  margin-top: 0.2em;
+  transform: rotate(-135deg);
+}
+
+.menu-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--masthead);
+  max-height: calc(100vh - var(--masthead));
+  overflow: auto;
+  display: grid;
+  grid-template-columns: 1fr 12rem;
+  grid-template-areas: "recents recents" "makes bodies";
+  gap: var(--s4) var(--s8);
+  padding: var(--s4) max(var(--gutter), calc((100% - var(--page-max)) / 2 + var(--gutter)));
+  background: var(--paper);
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule-strong);
+  box-shadow: 0 6px 16px -6px rgb(0 0 0 / 0.25);
+  font-size: var(--text-sm);
+}
+
+.menu-panel h2 {
+  margin-bottom: var(--s2);
+  padding-bottom: var(--s1);
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--text-sm);
+  color: var(--ink-strong);
+}
+
+.menu-recents {
+  grid-area: recents;
+}
+
+.menu-recents ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s4);
+}
+
+.menu-makes {
+  grid-area: makes;
+}
+
+.menu-bodies {
+  grid-area: bodies;
+}
+
+.tree {
+  columns: 11rem;
+  column-gap: var(--s6);
+}
+
+.tree > li {
+  break-inside: avoid;
+  padding-bottom: var(--s3);
+}
+
+.tree-make {
+  font-weight: 700;
+}
+
+.tree ul {
+  padding-left: var(--s3);
+}
+
+.menu-panel li {
+  padding: 1px 0;
+}
+
+.count {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Breadcrumb, page titles ------------------------------------------------------------- */
+
+.crumbs,
+main,
+.colophon {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  padding: var(--s2) 0 0;
+  font-size: var(--text-sm);
+}
+
+.crumbs li + li::before {
+  content: "›";
+  padding: 0 var(--s2);
+  color: var(--muted);
+}
+
+.crumbs [aria-current] {
+  color: var(--muted);
+}
+
+main {
+  flex: 1;
+  padding-top: var(--s3);
+  padding-bottom: var(--s8);
+}
+
+main:focus {
+  outline: none;
+}
+
+.page-title {
+  font-size: var(--text-xl);
+  line-height: var(--leading-tight);
+  color: var(--ink-strong);
+  margin-bottom: var(--s3);
+}
+
+.page-summary {
+  margin: calc(-1 * var(--s2)) 0 var(--s4);
+  color: var(--muted);
+}
+
+.section-title {
+  margin: var(--s6) 0 var(--s2);
+  font-size: var(--text-lg);
+  color: var(--ink-strong);
+}
+
+/* Rail layout: facets left, results right --------------------------------------------- */
+
+.split {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  gap: var(--s6);
+  align-items: start;
+}
+
+.rail {
+  position: sticky;
+  top: calc(var(--masthead) + var(--s3));
+  max-height: calc(100vh - var(--masthead) - var(--s6));
+  overflow: auto;
+  font-size: var(--text-sm);
+}
+
+.facet {
+  padding: 0 0 var(--s3);
+  border: 0;
+}
+
+.facet legend {
+  width: 100%;
+  margin-bottom: var(--s1);
+  padding: var(--s1) 0 2px;
+  border-bottom: 1px solid var(--rule);
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+
+.facet-option {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  padding: 2px var(--s1);
+  cursor: pointer;
+}
+
+.facet-option:hover {
+  background: var(--row-alt);
+}
+
+.facet-option:has(:checked) {
+  background: var(--mark);
+  color: #000;
+}
+
+.facet-option:has(:checked) .count {
+  color: #000;
+}
+
+.facet-option input {
+  margin: 0;
+  accent-color: var(--sign);
+  align-self: center;
+}
+
+.facet-label {
+  flex: 1;
+}
+
+.button-quiet {
+  padding: var(--s1) var(--s2);
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.button-quiet:hover:not(:disabled) {
+  background: var(--panel);
+}
+
+.button-quiet:disabled {
+  color: var(--muted);
+  cursor: default;
+  opacity: 0.6;
+}
+
+.results-count {
+  margin-bottom: var(--s2);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.empty {
+  padding: var(--s6) 0;
+  color: var(--muted);
+}
+
+/* Dense data table -------------------------------------------------------------------- */
+
+/* Wide screens: the page scrolls and the header row sticks under the masthead. Narrow
+   screens: the table scrolls sideways in its own box (which rules out the sticky header). */
+.table-scroll {
+  overflow: visible;
+}
+
+.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.data th,
+.data td {
+  padding: var(--cell-y) var(--cell-x);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+.data thead th {
+  position: sticky;
+  top: var(--masthead);
+  background: var(--panel);
+  border-bottom-color: var(--rule-strong);
+  color: var(--ink-strong);
+  font-weight: 700;
+  vertical-align: bottom;
+}
+
+.data tbody th {
+  min-width: 12rem;
+  font-weight: 400;
+  white-space: normal;
+}
+
+.data tbody tr:nth-child(even) {
+  background: var(--row-alt);
+}
+
+.data tbody tr:hover {
+  background: var(--mark-soft);
+}
+
+.data .num {
+  text-align: right;
+}
+
+.results[aria-busy="true"] .data {
+  opacity: 0.7;
+}
+
+/* Footer ------------------------------------------------------------------------------ */
+
+.colophon {
+  padding-top: var(--s3);
+  padding-bottom: var(--s6);
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.colophon p + p {
+  margin-top: var(--s1);
+}
+
+/* Narrow screens ---------------------------------------------------------------------- */
+
+@media (max-width: 47.99rem) {
+  :root {
+    --gutter: var(--s3);
+  }
+
+  .wordmark {
+    margin-right: var(--s1);
+    font-size: var(--text-md);
+  }
+
+  .masthead-link {
+    padding: 0 var(--s2);
+  }
+
+  .menu-panel {
+    grid-template-columns: 1fr;
+    grid-template-areas: "recents" "makes" "bodies";
+  }
+
+  .split {
+    grid-template-columns: 1fr;
+    gap: var(--s3);
+  }
+
+  .rail {
+    position: static;
+    max-height: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: 0 var(--s4);
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+  }
+
+  .data thead th {
+    position: static;
+  }
+}

@@ -1,32 +1,107 @@
 ---
-import { type Lang, localePath, messages } from "../i18n/messages.ts";
+/**
+ * The site shell every page renders in: skip link, header with the category menu, compare
+ * link and language switch, optional breadcrumb, main content, data footer, and a slot for
+ * the compare tray. Pages fill the default slot; the catalog page lays out its own facet
+ * rail with the `.split` layout from styles/base.css.
+ */
+import "../styles/tokens.css";
+import "../styles/base.css";
+import CategoryMenu from "../components/CategoryMenu.astro";
+import { i18n } from "../i18n/i18n.ts";
+import type { Lang } from "../i18n/messages.ts";
+import { categoryTree } from "../lib/catalog.ts";
+
+interface Crumb {
+  label: string;
+  href?: string;
+}
 
 interface Props {
   lang: Lang;
   title?: string;
-  /** Path of this page without the locale prefix, for the language switch. */
+  /** Path of this page without the locale prefix, for the language switch and hreflang. */
   path: string;
+  /** Trail below the header; the catalog root is prepended. */
+  crumbs?: Crumb[];
+  /** Remembered as a recently viewed model when set. */
+  recent?: { id: string; label: string };
 }
-const { lang, title, path } = Astro.props;
-const m = messages(lang);
+const { lang, title, path, crumbs, recent } = Astro.props;
+const t = i18n(lang);
 const other: Lang = lang === "cs" ? "en" : "cs";
+const tree = await categoryTree();
+const site = t.t("site.title");
+const trail: Crumb[] | undefined = crumbs && [
+  { label: t.t("nav.catalog"), href: t.path("/") },
+  ...crumbs,
+];
 ---
 <!doctype html>
 <html lang={lang}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content={t.t("site.tagline")} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>{title ? `${title} · ${m["site.title"]}` : m["site.title"]}</title>
+    <link rel="alternate" hreflang="cs" href={new URL(path, Astro.site)} />
+    <link rel="alternate" hreflang="en" href={new URL(`/en${path}`, Astro.site)} />
+    <title>{title ? `${title} – ${site}` : `${site} – ${t.t("site.tagline")}`}</title>
   </head>
-  <body>
-    <header>
-      <a href={localePath(lang, "/")}><strong>{m["site.title"]}</strong></a>
-      <span>{m["site.tagline"]}</span>
-      <a href={localePath(other, path)} hreflang={other} lang={other}>{m["lang.switch"]}</a>
+  <body data-lang={lang} data-recent-id={recent?.id} data-recent-label={recent?.label}>
+    <a class="skip" href="#main">{t.t("nav.skip")}</a>
+    <header class="masthead">
+      <div class="masthead-bar">
+        <a class="wordmark" href={t.path("/")}>{site}</a>
+        <CategoryMenu lang={lang} tree={tree} />
+        <span class="masthead-fill"></span>
+        <a class="masthead-link" href={t.path("/")} data-compare-link hidden>
+          {t.t("nav.compare")} <span class="badge" data-compare-count>0</span>
+        </a>
+        <a
+          class="masthead-link lang"
+          href={other === "cs" ? path : `/en${path}`}
+          hreflang={other}
+          lang={other}
+          title={t.t("lang.switchLabel")}
+          data-lang-switch={other}
+        >{t.t("lang.switch")}</a>
+      </div>
     </header>
-    <main>
+    {
+      trail && (
+        <nav class="crumbs" aria-label={t.t("nav.breadcrumb")}>
+          <ol>
+            {trail.map((c, i) => (
+              <li>
+                {c.href && i < trail.length - 1 ? (
+                  <a href={c.href}>{c.label}</a>
+                ) : (
+                  <span aria-current="page">{c.label}</span>
+                )}
+              </li>
+            ))}
+          </ol>
+        </nav>
+      )
+    }
+    <main id="main" tabindex="-1">
       <slot />
     </main>
+    <footer class="colophon">
+      <p>
+        {t.t("footer.data", { date: t.date(tree.generatedAt) })}:{" "}
+        {t.t("footer.counts", {
+          variants: t.count("count.variants", tree.variants),
+          listings: t.count("count.listings", tree.listings),
+        })}.
+      </p>
+      <p>{t.t("footer.note")}</p>
+    </footer>
+    <slot name="tray" />
+    <script>
+      import "../scripts/shell.ts";
+    </script>
   </body>
 </html>

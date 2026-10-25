@@ -1,0 +1,50 @@
+/*
+ * Design tokens (docs: apps/web/DESIGN.md). A printed parts catalog: white paper, black
+ * ink, hairline rules, one motorway-sign green for the masthead and highlighter yellow for
+ * whatever is selected or different. Light and dark come from one set via light-dark().
+ */
+:root {
+  color-scheme: light dark;
+
+  /* Colour */
+  --paper: light-dark(#ffffff, #1e1f1e);
+  --panel: light-dark(#f2f2ef, #272827);
+  --row-alt: light-dark(#f8f8f6, #232423);
+  --ink: light-dark(#202020, #e7e7e3);
+  --ink-strong: light-dark(#000000, #ffffff);
+  --muted: light-dark(#5c5c5a, #a6a6a1);
+  --rule: light-dark(#d5d5d1, #3c3d3b);
+  --rule-strong: light-dark(#9d9d98, #6a6b68);
+  --link: light-dark(#0a4da0, #8fb9ff);
+  --sign: light-dark(#00664a, #0c5240);
+  --on-sign: #ffffff;
+  --mark: light-dark(#ffe94a, #6b5c00);
+  --mark-soft: light-dark(#fff7bf, #3d3600);
+  --focus: light-dark(#0a4da0, #8fb9ff);
+
+  /* Type: one workhorse sans, a tight 1.125 scale, tabular figures in data */
+  --font: Arial, "Helvetica Neue", Helvetica, "Liberation Sans", sans-serif;
+  --text-xs: 0.75rem; /* 12px: counts, footnotes */
+  --text-sm: 0.8125rem; /* 13px: table cells, facets */
+  --text-md: 0.875rem; /* 14px: body */
+  --text-lg: 1rem; /* 16px: section titles */
+  --text-xl: 1.375rem; /* 22px: page title */
+  --leading: 1.35;
+  --leading-tight: 1.2;
+
+  /* Space: 4px steps */
+  --s1: 0.25rem;
+  --s2: 0.5rem;
+  --s3: 0.75rem;
+  --s4: 1rem;
+  --s6: 1.5rem;
+  --s8: 2rem;
+
+  /* Layout */
+  --page-max: 100rem;
+  --gutter: var(--s4);
+  --rail: 13.5rem;
+  --masthead: 2.5rem;
+  --cell-y: 0.1875rem; /* 3px: ~22px rows at 13px text */
+  --cell-x: var(--s2);
+}

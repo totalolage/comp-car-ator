@@ -1,0 +1,65 @@
+---
+/**
+ * The category tree as a header disclosure: every make with its models, then body types,
+ * plus the person's recently viewed models (filled in by scripts/shell.ts). Plain links and
+ * <details>, so it works before and without JavaScript; links prefetch on hover.
+ */
+import { i18n } from "../i18n/i18n.ts";
+import type { Lang } from "../i18n/messages.ts";
+import type { CategoryTree } from "../lib/catalog.ts";
+import { writeCatalogState } from "../lib/url-state.ts";
+
+interface Props {
+  lang: Lang;
+  tree: CategoryTree;
+}
+const { lang, tree } = Astro.props;
+const t = i18n(lang);
+const catalog = (state: Parameters<typeof writeCatalogState>[0]) =>
+  t.path("/") + writeCatalogState(state);
+---
+<details class="menu" data-menu>
+  <summary class="masthead-link">{t.t("nav.categories")}</summary>
+  <div class="menu-panel">
+    <section class="menu-recents" data-recents hidden>
+      <h2>{t.t("nav.recents")}</h2>
+      <ul></ul>
+    </section>
+    <section class="menu-makes">
+      <h2>{t.t("nav.makes")}</h2>
+      <ul class="tree">
+        {
+          tree.makes.map((make) => (
+            <li>
+              <a class="tree-make" href={catalog({ filters: { make: [make.id] } })}>
+                {make.name}
+              </a>{" "}
+              <span class="count">{make.count}</span>
+              <ul>
+                {make.models.map((model) => (
+                  <li>
+                    <a href={t.path(`/model/${model.id}/`)}>{model.name}</a>{" "}
+                    <span class="count">{model.count}</span>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+    <section class="menu-bodies">
+      <h2>{t.t("nav.bodies")}</h2>
+      <ul>
+        {
+          tree.bodies.map(({ value, count }) => (
+            <li>
+              <a href={catalog({ filters: { body: [value] } })}>{t.label("body", value)}</a>{" "}
+              <span class="count">{count}</span>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
+</details>
