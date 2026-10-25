@@ -348,6 +348,23 @@ describe("autoesa source", () => {
     expect(listings(os)).toHaveLength(31);
   });
 
+  it("a short slice's listings come out after the done slices, so they cannot taint one", async () => {
+    const cassette = edit(
+      await loadCassette(full),
+      "?rok_od=2002&rok_do=2002&razeni=7",
+      body(withoutCard),
+    );
+    const os: Observation[] = [];
+    await expect(harvest(cassette, { mode: "full" }, os)).rejects.toThrow(
+      /fewer listings than reported: year:2002/,
+    );
+    expect(slicesDone(os)).toEqual(["year:2003"]);
+    const done = os.findIndex((o) => o.kind === "SliceDone");
+    const in2002 = listings(os).filter((o) => o.vehicle.firstRegistration?.year === 2002);
+    expect(in2002).toHaveLength(6);
+    expect(in2002.every((o) => os.indexOf(o) > done)).toBe(true);
+  });
+
   it("a slice short on its first pass and whole on its second is done", async () => {
     // Replay serves a URL's recordings in order: the first pass sees page 1 without a card.
     const cassette = await loadCassette(full);

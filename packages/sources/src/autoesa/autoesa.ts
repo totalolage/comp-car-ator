@@ -23,8 +23,8 @@
  * - full: slices `year:<year>` from 2000, the current year open above (`year:<year>-`). A
  *   slice is paged to its end, oldest first (a car added meanwhile lands at the end), before
  *   any of its detail pages; a slice with fewer distinct listings than it reports is paged
- *   once more; still short, it stays not done and the run fails after the other slices.
- *   Slices done earlier in the census are skipped.
+ *   once more; still short, it stays not done, its listings come out after the other
+ *   slices' and the run fails. Slices done earlier in the census are skipped.
  * - incremental: the list newest first, reading the cars not known before, up to a page
  *   with none. A van is never known, so a page with one does not stop the walk (vans are
  *   about 4% of the stock: the walk goes on a page or so further).
@@ -101,18 +101,28 @@ class Harvest {
       yield* this.incremental();
       return;
     }
-    const short: string[] = [];
+    // A short slice's listings come out after every slice that is done: the Ledger counts the
+    // Observations before a SliceDone towards that slice, and a rejected one among a short
+    // slice's would keep the next slice not done.
+    const short: { slice: Slice; cards: Card[] }[] = [];
     for (const slice of this.slices()) {
       if (this.ctx.checkpoint.sliceDoneAt(slice.key)) continue;
       // Page the slice before any detail page, so it is paged in a minute or two and few
       // listings move under it.
       const { cards, complete } = await this.census(slice);
+      if (!complete) {
+        short.push({ slice, cards });
+        continue;
+      }
       for (const card of cards) yield* this.listing(card);
-      if (complete) yield { kind: "SliceDone", slice: slice.key };
-      else short.push(slice.key);
+      yield { kind: "SliceDone", slice: slice.key };
+    }
+    for (const { cards } of short) {
+      for (const card of cards) yield* this.listing(card);
     }
     if (short.length > 0) {
-      throw new Error(`Autoesa slices yielded fewer listings than reported: ${short.join(", ")}`);
+      const keys = short.map((s) => s.slice.key).join(", ");
+      throw new Error(`Autoesa slices yielded fewer listings than reported: ${keys}`);
     }
   }
 
