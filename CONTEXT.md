@@ -52,6 +52,10 @@ _Avoid_: country (alone), region, origin
 Whether a Listing's car is new, a demonstrator, or used.
 _Avoid_: state, status
 
+**New means of transport**:
+A car that counts as new for VAT when it moves between EU states: at most 6 months since first registration or at most 6,000 km. Its Czech buyer pays Czech VAT on the price net of the Market's VAT. Decided from registration and odometer, not from Condition.
+_Avoid_: new car (for the VAT test)
+
 **Price basis**:
 What a Listing's asking price includes with respect to VAT: gross, net, margin scheme, or unknown.
 _Avoid_: VAT status, tax mode
@@ -119,4 +123,4 @@ _Avoid_: export, dump, dataset, build data
 - A **Make** has many **Models**; a **Model** has many **Generations**; a **Generation** has many **Variants**.
 - A **Listing** belongs to exactly one **Source** and one **Market**, and resolves to at most one **Variant** (or only a **Model**).
 - A **Run** of a **Source** produces **Observations**; the **Ledger** records them; a **Bundle** is published from the **Ledger**.
-- A **Landed price** is computed for a **Listing** from its **Market**, **Price basis**, **Condition** and the latest **FX rate**.
+- A **Landed price** is computed for a **Listing** from its **Market**, seller, **Price basis**, whether it is a **New means of transport**, and the latest **FX rate**.

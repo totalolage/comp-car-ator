@@ -1,6 +1,7 @@
 /**
  * Landed price: what a Czech private buyer pays to own and register a listed car in CZ.
- * Formula and sources: import-and-china.md §5 in the research notes (as of 2026-10-24).
+ * Formula: import-and-china.md §5 in the research notes; every rate, fee and threshold with
+ * its source and as-of date is in `rules.ts`.
  */
 import type {
   Condition,
@@ -14,6 +15,7 @@ import type {
   SellerExtras,
   YearMonth,
 } from "@cca/vocabulary";
+import { PRICING_RULES as RULES } from "./rules.ts";
 
 export interface LandedInput {
   price: Money;
@@ -26,12 +28,12 @@ export interface LandedInput {
   seller: Seller;
   priceBasis: PriceBasis;
   condition: Condition;
-  /** Absent = never registered. */
+  /** Absent = not stated; with condition `new` the car counts as never registered. */
   firstRegistration?: YearMonth;
   odometerKm?: number;
   fuel?: Fuel;
   euroClass?: number;
-  /** German/Austrian periodic inspection still valid long enough for CZ. Unknown = false. */
+  /** German/Austrian periodic inspection still valid long enough for CZ. Unknown = undefined. */
   inspectionValid?: boolean;
 }
 
@@ -39,10 +41,11 @@ export interface PricingEnv {
   fx: FxTable;
   /** Valuation day (vehicle age and the "new means of transport" VAT test). */
   today: IsoDate;
-  /** Transport to CZ, CZK. Default 12,000. */
+  /** Transport to CZ, CZK. Default `PRICING_RULES.transport.czk`. */
   transportCzk?: number;
 }
 
+/** Each code is a key of `PRICING_RULES`, which holds the line's rule reference. */
 export type LandedLineCode =
   | "price"
   | "goods"
@@ -57,18 +60,23 @@ export type LandedLineCode =
 export type LandedFlag =
   /** Euro class unknown: eco fee shown as 0 but may be up to 10,000 CZK. */
   | "ecoFeeUncertain"
-  /** Inspection validity unknown: the full CZ inspection set is charged. */
+  /** Inspection validity unknown on a car old enough to need one: the full CZ inspection is charged. */
   | "inspectionAssumed"
   /** The car counts as a "new means of transport", so CZ VAT applies. */
   | "newVehicleVat"
   /** Registration date or odometer missing, so the new/used VAT test could not decide; priced as used. */
   | "vatUncertain"
-  /** Rules for this market are simplified (AT: NoVA ignored). */
+  /**
+   * A simplification the other flags don't name: Austrian NoVA left in the price where export
+   * may remove it (a new car, or a used one whose refund BMF's 2022-07 cutoff does not rule
+   * out; never a BEV, which pays none), or the seller's VAT status read from an unknown,
+   * margin or contradictory price basis.
+   */
   | "approximate";
 
 export interface LandedPrice {
   totalCzk: number;
-  /** Additive: the lines sum to totalCzk. */
+  /** Additive: the lines sum to totalCzk. Each line is rounded to whole CZK (half up). */
   lines: { code: LandedLineCode; czk: number }[];
   flags: LandedFlag[];
   /** ČNB fixing date used, null for CZK prices. */
@@ -79,89 +87,148 @@ export type LandedResult =
   | { ok: true; landed: LandedPrice }
   | { ok: false; reason: "fx-missing" | "unsupported-market" | "extras-currency" };
 
-const REGISTRATION_FEE = 800;
-const DEFAULT_TRANSPORT = 12_000;
-const INSPECTION_VALID = 790;
-const INSPECTION_FULL = 790 + 2490 + 950;
-const ORIGIN_VAT: Record<Market, number> = { CZ: 0.21, DE: 0.19, AT: 0.2 };
+type Lines = LandedPrice["lines"];
 
 /** Pricing's interface: one pure function. Never throws for well-typed input. */
 export function landedPrice(input: LandedInput, env: PricingEnv): LandedResult {
   if (input.sellerExtras && input.sellerExtras.currency !== input.price.currency) {
     return { ok: false, reason: "extras-currency" };
   }
-  if (input.market === "CZ") {
-    const fx = rateOf(input.price.currency, env.fx);
-    if (!fx) return { ok: false, reason: "fx-missing" };
-    // A private buyer pays a dealer's net amounts plus Czech VAT.
-    const consumer = (amount: number, basis: PriceBasis) =>
-      input.seller === "dealer" && basis === "net" ? amount * (1 + ORIGIN_VAT.CZ) : amount;
-    const lines: LandedPrice["lines"] = [
-      { code: "price", czk: round(consumer(input.price.amount, input.priceBasis) * fx.czkPerUnit) },
-    ];
-    const extras = input.sellerExtras;
-    if (extras?.amount) {
-      lines.push({
-        code: "sellerExtras",
-        czk: round(consumer(extras.amount, extras.basis) * fx.czkPerUnit),
-      });
-    }
-    const totalCzk = lines.reduce((sum, line) => sum + line.czk, 0);
-    return { ok: true, landed: { totalCzk, lines, flags: [], fxDate: fx.date } };
+  if (input.market !== "CZ" && input.market !== "DE" && input.market !== "AT") {
+    return { ok: false, reason: "unsupported-market" };
   }
-  if (input.market === "DE" || input.market === "AT") return fromEu(input, env);
-  return { ok: false, reason: "unsupported-market" };
-}
-
-function fromEu(input: LandedInput, env: PricingEnv): LandedResult {
   const fx = rateOf(input.price.currency, env.fx);
   if (!fx) return { ok: false, reason: "fx-missing" };
-  const flags: LandedFlag[] = [];
-  if (input.market === "AT") flags.push("approximate");
+  const flags = new Set<LandedFlag>();
+  const lines =
+    input.market === "CZ"
+      ? fromCz(input, fx.czkPerUnit, flags)
+      : fromEu(input, env, fx.czkPerUnit, flags);
+  const totalCzk = lines.reduce((sum, line) => sum + line.czk, 0);
+  return { ok: true, landed: { totalCzk, lines, flags: [...flags], fxDate: fx.date } };
+}
 
-  const vat = ORIGIN_VAT[input.market];
-  const dealer = input.seller === "dealer";
-  const classification = isNewMeansOfTransport(input, env.today);
-  // Undecidable cases are priced as used (German VAT stays in the price) and flagged.
-  if (classification === "unknown") flags.push("vatUncertain");
+/** A Czech Listing: the asking price plus seller extras, as a private buyer pays them. */
+function fromCz(input: LandedInput, czkPerUnit: number, flags: Set<LandedFlag>): Lines {
+  const paid = (amount: number, basis: PriceBasis) =>
+    asPaid(amount, basis, input.seller, RULES.marketVat.rates.CZ, flags) * czkPerUnit;
+  const lines: Lines = [{ code: "price", czk: round(paid(input.price.amount, input.priceBasis)) }];
+  const extras = input.sellerExtras;
+  if (extras?.amount) {
+    lines.push({ code: "sellerExtras", czk: round(paid(extras.amount, extras.basis)) });
+  }
+  return lines;
+}
+
+/** A German or Austrian Listing bought by a Czech private buyer and registered in CZ. */
+function fromEu(
+  input: LandedInput,
+  env: PricingEnv,
+  czkPerUnit: number,
+  flags: Set<LandedFlag>,
+): Lines {
+  const market = input.market as "DE" | "AT";
+  const vat = RULES.marketVat.rates[market];
+  const age = monthsSince(input.firstRegistration, env.today);
+  const classification = isNewMeansOfTransport(input, age);
+  // Undecidable cases are priced as used (the Market's VAT stays in the price) and flagged.
+  if (classification === "unknown") flags.add("vatUncertain");
   const isNew = classification === true;
-  if (isNew) flags.push("newVehicleVat");
-
-  // What the buyer is invoiced for an amount shown on `basis`: consumer gross for a used car;
-  // net of origin VAT for a new one (exempt intra-EU supply), where a private seller's agreed
-  // amount is taxed as is.
-  const invoiced = (amount: number, basis: PriceBasis) => {
-    const consumerGross = dealer && basis === "net" ? amount * (1 + vat) : amount;
-    if (!isNew) return consumerGross;
-    return dealer && (basis === "gross" || basis === "net") ? consumerGross / (1 + vat) : amount;
-  };
-  const goods = invoiced(input.price.amount, input.priceBasis) * fx.czkPerUnit;
-  const extras = input.sellerExtras
-    ? invoiced(input.sellerExtras.amount, input.sellerExtras.basis) * fx.czkPerUnit
-    : 0;
-  const vatCz = isNew ? 0.21 * (goods + extras) : 0;
-
-  let inspection = INSPECTION_FULL;
-  if (input.inspectionValid) inspection = INSPECTION_VALID;
-  else if (input.inspectionValid === undefined) flags.push("inspectionAssumed");
-
-  let ecoFee = 0;
-  if (input.fuel !== "bev") {
-    if (input.euroClass === undefined) flags.push("ecoFeeUncertain");
-    else ecoFee = input.euroClass >= 3 ? 0 : ([10_000, 5_000, 3_000][input.euroClass] ?? 0);
+  if (isNew) flags.add("newVehicleVat");
+  // Austrian prices carry NoVA, which export makes exempt (new) or may make refundable
+  // (used); without CO₂ data it stays in. A BEV pays no NoVA, so there is none to remove.
+  if (
+    market === "AT" &&
+    input.fuel !== "bev" &&
+    (isNew || !novaRefundRuledOut(input.firstRegistration, env.today))
+  ) {
+    flags.add("approximate");
   }
 
-  const lines: LandedPrice["lines"] = [
+  const invoiced = (amount: number, basis: PriceBasis) =>
+    (isNew
+      ? exportNet(amount, basis, input.seller, vat, flags)
+      : asPaid(amount, basis, input.seller, vat, flags)) * czkPerUnit;
+  const goods = invoiced(input.price.amount, input.priceBasis);
+  const extras = input.sellerExtras
+    ? invoiced(input.sellerExtras.amount, input.sellerExtras.basis)
+    : 0;
+  const vatCz = isNew ? RULES.vatCz.rate * (goods + extras) : 0;
+
+  const lines: Lines = [
     { code: "goods", czk: round(goods) },
     ...(extras > 0 ? [{ code: "sellerExtras" as const, czk: round(extras) }] : []),
     ...(vatCz > 0 ? [{ code: "vatCz" as const, czk: round(vatCz) }] : []),
-    { code: "transport", czk: env.transportCzk ?? DEFAULT_TRANSPORT },
-    { code: "inspection", czk: inspection },
-    { code: "registration", czk: REGISTRATION_FEE },
-    ...(ecoFee > 0 ? [{ code: "ecoFee" as const, czk: ecoFee }] : []),
+    { code: "transport", czk: round(env.transportCzk ?? RULES.transport.czk) },
+    { code: "inspection", czk: inspection(input, age, flags) },
+    { code: "registration", czk: RULES.registration.czk },
   ];
-  const totalCzk = lines.reduce((sum, line) => sum + line.czk, 0);
-  return { ok: true, landed: { totalCzk, lines, flags, fxDate: fx.date } };
+  const ecoFee = ecoFeeOf(input, flags);
+  if (ecoFee > 0) lines.push({ code: "ecoFee", czk: ecoFee });
+  return lines;
+}
+
+/**
+ * What a private buyer pays for an amount shown on `basis` when the car is not a new means of
+ * transport: the consumer gross. Only a VAT payer quotes net, so a net amount gets the Market's
+ * VAT; a private seller cannot charge VAT, so their "net" amount is taken as is.
+ */
+function asPaid(
+  amount: number,
+  basis: PriceBasis,
+  seller: Seller,
+  vat: number,
+  flags: Set<LandedFlag>,
+): number {
+  if (basis !== "net") return amount;
+  if (seller === "private") {
+    flags.add("approximate");
+    return amount;
+  }
+  if (seller === "unknown") flags.add("approximate");
+  return amount * (1 + vat);
+}
+
+/**
+ * The invoice amount of a new means of transport supplied to another EU state: net of the
+ * Market's VAT (exempt supply). A private seller's agreed price is taxed as is, not divided.
+ * A margin-scheme price cannot apply to a new car, and an unknown basis may include VAT:
+ * both are taken as is and flagged. A gross price from an unknown seller is assumed to
+ * include VAT, flagged. (A net price needs no flag: it is the base whoever sells.)
+ */
+function exportNet(
+  amount: number,
+  basis: PriceBasis,
+  seller: Seller,
+  vat: number,
+  flags: Set<LandedFlag>,
+): number {
+  if (seller === "private" || basis === "net") return amount;
+  if (basis === "gross") {
+    if (seller !== "dealer") flags.add("approximate");
+    return amount / (1 + vat);
+  }
+  flags.add("approximate");
+  return amount;
+}
+
+/** Calendar months between first registration and today, as the range the true age lies in. */
+interface Age {
+  /** The true age is strictly greater than this. */
+  min: number;
+  /** The true age is strictly less than this. */
+  max: number;
+}
+
+/**
+ * Registrations are known to the month (sometimes only the year), so a calendar-month
+ * difference d means the true elapsed time lies strictly between d - 1 and d + 1 months.
+ */
+function monthsSince(reg: YearMonth | undefined, today: IsoDate): Age | null {
+  if (!reg) return null;
+  const [ty, tm] = today.split("-").map(Number) as [number, number];
+  const monthsAgo = (month: number) => (ty - reg.year) * 12 + (tm - month);
+  return { min: monthsAgo(reg.month ?? 12) - 1, max: monthsAgo(reg.month ?? 1) + 1 };
 }
 
 /**
@@ -169,20 +236,55 @@ function fromEu(input: LandedInput, env: PricingEnv): LandedResult {
  * ≤ 6 months ago, or driven ≤ 6,000 km; it is used only when both limits are exceeded.
  * Returns "unknown" when the listing's evidence cannot decide (missing date or odometer).
  */
-function isNewMeansOfTransport(input: LandedInput, today: IsoDate): boolean | "unknown" {
+function isNewMeansOfTransport(input: LandedInput, age: Age | null): boolean | "unknown" {
+  const { months, km: maxKm } = RULES.newMeansOfTransport;
   const km = input.odometerKm;
-  if (km !== undefined && km <= 6000) return true;
-  const reg = input.firstRegistration;
-  if (!reg) return input.condition === "new" ? true : "unknown";
-  // Registrations are known to the month, so a calendar-month difference d means the true
-  // elapsed time lies strictly between d - 1 and d + 1 months; d = 6 cannot be decided.
-  const [ty, tm] = today.split("-").map(Number) as [number, number];
-  const monthsAgo = (month: number) => (ty - reg.year) * 12 + (tm - month);
-  const newest = monthsAgo(reg.month ?? 12);
-  const oldest = monthsAgo(reg.month ?? 1);
-  if (oldest <= 5) return true;
-  if (newest >= 7 && km !== undefined) return false;
+  if (km !== undefined && km <= maxKm) return true;
+  if (!age) return input.condition === "new" ? true : "unknown";
+  if (age.max <= months) return true;
+  if (age.min >= months && km !== undefined) return false;
   return "unknown";
+}
+
+/**
+ * NoVAG §12a refunds NoVA on export if the car was deregistered in Austria at most 48 months
+ * after its worldwide first registration. The deregistration date is not in a Listing and may
+ * precede it, so the car's age today proves nothing. What does: for exports from 2026-07-01,
+ * BMF rules out cars first registered worldwide before 2022-07-01.
+ */
+function novaRefundRuledOut(reg: YearMonth | undefined, today: IsoDate): boolean {
+  const { refundRuleFrom, refundFirstRegisteredFrom: from } = RULES.atNova;
+  if (!reg || today < refundRuleFrom) return false;
+  // The latest month the registration can be in.
+  const latest = reg.year * 12 + (reg.month ?? 12);
+  return latest < from.year * 12 + from.month;
+}
+
+/**
+ * An expired certificate means a full inspection whatever the car's age: a taxi, for one, is
+ * inspected yearly from the start. Only when validity is unknown does a car too young for an
+ * ordinary periodic inspection get the identity check alone.
+ */
+function inspection(input: LandedInput, age: Age | null, flags: Set<LandedFlag>): number {
+  const { identityCheckCzk, technicalCzk, emissionsCzk, noneDueMonths } = RULES.inspection;
+  const neverRegistered = !age && input.condition === "new";
+  const noneDue = neverRegistered || (age !== null && age.max <= noneDueMonths);
+  if (input.inspectionValid) return identityCheckCzk;
+  if (input.inspectionValid === undefined) {
+    if (noneDue) return identityCheckCzk;
+    flags.add("inspectionAssumed");
+  }
+  // A BEV has no exhaust emissions to measure.
+  return identityCheckCzk + technicalCzk + (input.fuel === "bev" ? 0 : emissionsCzk);
+}
+
+function ecoFeeOf(input: LandedInput, flags: Set<LandedFlag>): number {
+  if (input.fuel === "bev") return 0;
+  if (input.euroClass === undefined) {
+    flags.add("ecoFeeUncertain");
+    return 0;
+  }
+  return RULES.ecoFee.czkByEuroClass[input.euroClass] ?? 0;
 }
 
 function rateOf(
@@ -194,6 +296,7 @@ function rateOf(
   return rate ? { czkPerUnit: rate.czkPerUnit, date: rate.validFor } : null;
 }
 
+/** Whole CZK, half up (amounts are never negative). */
 function round(value: number): number {
   return Math.round(value);
 }
