@@ -1,4 +1,6 @@
-export { createLiveHttp, type LiveHttpOptions } from "./live.ts";
+export type { BrowserOptions } from "./browser.ts";
+export type { CacheOptions } from "./cache.ts";
+export { createLiveHttp, type LiveHttp, type LiveHttpOptions } from "./live.ts";
 export {
   type Cassette,
   createReplayHttp,
