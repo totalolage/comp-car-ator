@@ -1,0 +1,17 @@
+{
+  "name": "@cca/bundle",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@cca/pricing": "workspace:*",
+    "@cca/vocabulary": "workspace:*"
+  }
+}

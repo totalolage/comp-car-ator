@@ -1,0 +1,20 @@
+{
+  "name": "@cca/ingest",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "cli": "node src/cli.ts",
+    "sample-bundle": "node src/cli.ts sample-bundle"
+  },
+  "dependencies": {
+    "@cca/bundle": "workspace:*",
+    "@cca/catalog": "workspace:*",
+    "@cca/http": "workspace:*",
+    "@cca/ledger": "workspace:*",
+    "@cca/publisher": "workspace:*",
+    "@cca/sources": "workspace:*",
+    "@cca/vocabulary": "workspace:*"
+  }
+}

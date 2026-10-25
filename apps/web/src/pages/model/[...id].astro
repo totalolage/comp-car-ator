@@ -1,0 +1,8 @@
+---
+import ModelPage from "../../components/ModelPage.astro";
+import { modelPaths } from "../../lib/paths.ts";
+
+export const getStaticPaths = modelPaths;
+const { id } = Astro.params;
+---
+<ModelPage lang="cs" id={id as string} />

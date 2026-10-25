@@ -1,0 +1,23 @@
+{
+  "name": "comp-car-ator",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "typecheck": "pnpm -r --workspace-concurrency=2 typecheck",
+    "test": "vitest run",
+    "fixtures:bundle": "node apps/ingest/src/cli.ts sample-bundle",
+    "ingest": "node apps/ingest/src/cli.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "@types/node": "^24.19.2",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  }
+}

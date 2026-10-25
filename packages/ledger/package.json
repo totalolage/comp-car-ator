@@ -1,0 +1,17 @@
+{
+  "name": "@cca/ledger",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@cca/resolver": "workspace:*",
+    "@cca/sources": "workspace:*",
+    "@cca/vocabulary": "workspace:*"
+  }
+}
