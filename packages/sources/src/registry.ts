@@ -1,5 +1,6 @@
 import { cnbSource } from "./cnb/cnb.ts";
 import type { Source, SourceId } from "./source.ts";
+import { tipcarsSource } from "./tipcars/tipcars.ts";
 
 /**
  * Every Source adapter the ingest runner can run, by id. Adding an adapter = one line here
@@ -7,4 +8,5 @@ import type { Source, SourceId } from "./source.ts";
  */
 export const sources: Record<SourceId, () => Source> = {
   cnb: () => cnbSource(),
+  tipcars: () => tipcarsSource(),
 };

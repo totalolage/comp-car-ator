@@ -10,3 +10,4 @@ export {
   type SourceId,
   silentLogger,
 } from "./source.ts";
+export { type TipcarsOptions, tipcarsSource } from "./tipcars/tipcars.ts";
