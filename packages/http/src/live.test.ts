@@ -296,6 +296,8 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
       const oldExpiry = Date.now() + 3000;
       const binary = http.get({ url: `${otherBase}/held.bin`, minTier: "T2", binary: true });
       await held.arrival;
+      // The binary fetch took its cookie snapshot while session=old was still live.
+      expect(Date.now()).toBeLessThan(oldExpiry);
       await http.get({ url: `${base}/?set=session=new;Max-Age=3600`, minTier: "T2" });
       await new Promise((resolve) => setTimeout(resolve, oldExpiry + 1000 - Date.now()));
       release();

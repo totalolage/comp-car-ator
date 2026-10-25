@@ -296,8 +296,9 @@ async function userAgentOf(context: BrowserContext): Promise<string> {
 /**
  * Applies to the browser what a request context changed in the cookies it was seeded with: new
  * and changed cookies are set, missing ones cleared. A cookie is touched only while the browser
- * still holds it as seeded (or lost it to expiry), so a page that changed one meanwhile keeps its
- * value, and a seeded cookie that expired during the fetch does not clear a refreshed copy.
+ * still holds it as seeded (or lost it to expiry), so a change a page made meanwhile and that is
+ * in the jar at hand-back is kept, and a seeded cookie that expired during the fetch does not
+ * clear a refreshed copy. A page that deleted a cookie past its expiry looks like expiry here.
  */
 async function handBack(context: BrowserContext, before: Cookie[], after: Cookie[]) {
   const key = (cookie: Cookie) => `${cookie.name}\0${cookie.domain}\0${cookie.path}`;
