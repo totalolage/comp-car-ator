@@ -341,11 +341,20 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
     });
     const pending = own.get({ url: `${base}/slow.zip`, minTier: "T2", binary: true });
     pending.catch(() => {});
-    await held.arrival;
-    const closedAt = Date.now();
-    await own.close();
-    expect((await held.closure) - closedAt).toBeLessThan(2000);
-    await expect(pending).rejects.toThrow();
+    try {
+      // A fetch that fails before reaching the server (Chrome slow to start under memory
+      // pressure, say) fails the test with its own error instead of a wait for the request.
+      await Promise.race([
+        held.arrival,
+        pending.then(() => Promise.reject(new Error("the fetch ended before reaching the server"))),
+      ]);
+      const closedAt = Date.now();
+      await own.close();
+      expect((await held.closure) - closedAt).toBeLessThan(2000);
+      await expect(pending).rejects.toThrow();
+    } finally {
+      await own.close();
+    }
   }, 120_000);
 });
 
