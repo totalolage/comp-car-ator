@@ -219,6 +219,24 @@ describe("skoda-pricelist source", () => {
     expect(offers.some((o) => o.validTo)).toBe(false);
   });
 
+  it("a price-list link it cannot name keeps every model in the index", async () => {
+    const warnings: string[] = [];
+    const offers = await harvest({
+      cassette: await edit("/nabidka/ceniky-katalogy", (r) => ({
+        ...r,
+        body: r.body.replace(">Enyaq - Ceník<", ">Ceník Enyaq<"),
+      })),
+      inForce: [
+        edition("citigo/citigo-e-iv.bev.x.fwd.style", "2026-03-01"),
+        edition("enyaq/enyaq.60-140-kw.bev.x.rwd.selection", "2026-09-01"),
+      ],
+      warnings,
+    });
+    expect(warnings).toContain("skoda-pricelist: price-list link without a model name");
+    expect(offers.some((o) => o.vehicle.model.startsWith("Enyaq"))).toBe(false);
+    expect(offers.some((o) => o.validTo)).toBe(false);
+  });
+
   it("fails when no list reads: the site has changed", async () => {
     let cassette = await edit(KODIAQ, notAList);
     for (const id of [ENYAQ, OCTAVIA]) {

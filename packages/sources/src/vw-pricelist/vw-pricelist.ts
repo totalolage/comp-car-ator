@@ -49,10 +49,15 @@ const vw: PriceListSite = {
     if (page.status !== 200)
       throw new Error(`vw-pricelist: model overview answered ${page.status}`);
     const names = new Map<string, string>();
+    let complete = true;
     for (const m of page.body.matchAll(/<a\b[^>]*>/g)) {
-      const route = /\bhref="\/([a-z0-9-]+)\/\1"/.exec(m[0])?.[1];
       const name = /\btitle="Vše o modelu ([^"]+)"/.exec(m[0])?.[1];
-      if (route && name && !names.has(route)) names.set(route, decode(name));
+      if (!name) continue;
+      const route = /\bhref="\/([a-z0-9-]+)\/\1"/.exec(m[0])?.[1];
+      if (!route) {
+        ctx.log.warn("vw-pricelist: model card with an unexpected link", { name: decode(name) });
+        complete = false;
+      } else if (!names.has(route)) names.set(route, decode(name));
     }
     if (names.size === 0) throw new Error("vw-pricelist: the model overview links no models");
     const models: ModelLists[] = [];
@@ -71,7 +76,7 @@ const vw: PriceListSite = {
         throw new Error(`vw-pricelist: ${key} price lists answered ${lists.status}`);
       models.push({ key, name, documents: documentsOf(lists.body) });
     }
-    return models;
+    return { models, complete };
   },
   read,
 };

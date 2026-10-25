@@ -43,12 +43,21 @@ export interface PriceListSite {
    * lists the run reads, so the site can skip fetching the others'. Throws when the index
    * cannot be read.
    */
-  models(ctx: HarvestContext, wanted: (key: string) => boolean): Promise<ModelLists[]>;
+  models(ctx: HarvestContext, wanted: (key: string) => boolean): Promise<Index>;
   /**
    * Reads the offers of one of the model's documents from its text lines. Throws when the
    * layout is not the expected one.
    */
   read(lines: PdfLine[], model: ModelLists, url: string): Edition;
+}
+
+export interface Index {
+  models: ModelLists[];
+  /**
+   * False when an entry looked like a model's lists but did not read (a renamed link): the
+   * index may lack a model that is still offered, so no model counts as gone from it.
+   */
+  complete: boolean;
 }
 
 export interface ModelLists {
@@ -120,10 +129,9 @@ async function* harvest(
   only: ReadonlySet<string> | undefined,
 ): AsyncGenerator<ListPrice> {
   const index = await site.models(ctx, (key) => !only || only.has(key));
-  const models = only ? index.filter((m) => only.has(m.key)) : index;
-  /** Refs yielded, and the price of each (ref, validFrom) edition yielded. */
+  const models = only ? index.models.filter((m) => only.has(m.key)) : index.models;
+  /** Refs the current lists price. */
   const refs = new Set<string>();
-  const editions = new Map<string, number>();
   /** List days of each model whose documents all read cleanly. */
   const clean = new Map<string, IsoDate[]>();
   let read = 0;
@@ -136,6 +144,8 @@ async function* harvest(
     }
     let ok = true;
     const days: IsoDate[] = [];
+    /** The model's editions by `ref@validFrom`; null where two lists disagree on the price. */
+    const editions = new Map<string, ListPrice | null>();
     for (const url of model.documents) {
       const edition = await readDocument(site, ctx, model, url);
       if (!edition) {
@@ -150,30 +160,38 @@ async function* harvest(
       }
       for (const offer of edition.offers) {
         const ref = `${model.key}/${offer.code}`;
-        const key = `${ref}@${edition.validFrom}`;
-        const seen = editions.get(key);
-        // Action lists repeat rows of the model's main list; the same price is no conflict.
-        // Lists of different days are different editions: the Ledger keeps the newer in force.
-        if (seen === offer.price) continue;
-        const problem =
-          offerProblem(offer) ?? (seen === undefined ? undefined : "two prices in one edition");
+        const problem = offerProblem(offer);
         if (problem) {
           ctx.log.warn(`${site.id}: rejected offer`, { url, ref, reason: problem });
           ok = false;
           continue;
         }
         refs.add(ref);
-        editions.set(key, offer.price);
-        yield {
-          kind: "ListPrice",
-          ref,
-          vehicle: describe(site.make, model, offer),
-          price: { amount: offer.price, currency: "CZK" },
-          market: "CZ",
-          validFrom: edition.validFrom,
-        };
+        // Action lists repeat rows of the model's main list; the same price is no conflict.
+        // Lists of different days are different editions: the Ledger keeps the newer in force.
+        const key = `${ref}@${edition.validFrom}`;
+        const seen = editions.get(key);
+        if (seen === undefined) {
+          editions.set(key, {
+            kind: "ListPrice",
+            ref,
+            vehicle: describe(site.make, model, offer),
+            price: { amount: offer.price, currency: "CZK" },
+            market: "CZ",
+            validFrom: edition.validFrom,
+          });
+        } else if (seen?.price.amount !== offer.price) {
+          if (seen)
+            ctx.log.warn(`${site.id}: rejected offer`, {
+              ref,
+              reason: "two prices in one edition",
+            });
+          editions.set(key, null);
+          ok = false;
+        }
       }
     }
+    for (const edition of editions.values()) if (edition) yield edition;
     if (ok) clean.set(model.key, days.sort());
   }
   if (models.length > 0 && read === 0) {
@@ -181,9 +199,11 @@ async function* harvest(
   }
   if (ctx.mode !== "full") return;
 
-  const listed = new Set(index.map((m) => m.key));
-  // Withdraw for models gone from the index only when every model with lists read cleanly.
-  const indexClean = models.every((m) => m.documents.length === 0 || clean.has(m.key));
+  const listed = new Set(index.models.map((m) => m.key));
+  // Withdraw for models gone from the index only when it read whole and every model with
+  // lists read cleanly.
+  const indexClean =
+    index.complete && models.every((m) => m.documents.length === 0 || clean.has(m.key));
   const runDay = pragueDate(ctx.now);
   for (const edition of ctx.checkpoint.offersInForce()) {
     const key = edition.ref.slice(0, edition.ref.indexOf("/"));
@@ -191,7 +211,8 @@ async function* harvest(
     const days = clean.get(key);
     let end: IsoDate | undefined;
     if (days) {
-      // The first current list issued after the edition is the first that left it out.
+      // The first current list issued after the edition is the earliest evidence it was left
+      // out. An estimate for models with several lists: rows carry no list of origin.
       const later = days.find((day) => day > edition.validFrom);
       end = dayBefore(later ?? runDay);
     } else if (!listed.has(key) && indexClean) {

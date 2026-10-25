@@ -164,6 +164,16 @@ describe("vw-pricelist source", () => {
     expect(offers.filter((o) => o.validTo).map((o) => o.ref)).toEqual(["touareg/RC857JE2"]);
   });
 
+  it("reads the same editions whatever order a Ceníky page lists its documents in", async () => {
+    const reversed = await edit("/tiguan/tiguan/ceniky", (r) => {
+      const links = r.body.match(/<a\b[\s\S]*?<\/a>/g) ?? [];
+      return { ...r, body: `<html><body>${links.reverse().join("\n")}</body></html>` };
+    });
+    const key = (o: ListPrice) => `${o.ref}@${o.validFrom}:${o.price.amount}`;
+    const forward = (await harvest()).map(key).sort();
+    expect((await harvest({ cassette: reversed })).map(key).sort()).toEqual(forward);
+  });
+
   it("fails when the model overview links no models", async () => {
     const cassette = await edit("/modely", (r) => ({ ...r, body: "<html><body></body></html>" }));
     await expect(harvest({ cassette })).rejects.toThrow("links no models");

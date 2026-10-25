@@ -52,15 +52,29 @@ const skoda: PriceListSite = {
     const page = await ctx.http.get({ url: INDEX, signal: ctx.signal });
     if (page.status !== 200) throw new Error(`skoda-pricelist: index answered ${page.status}`);
     const lists = new Map<string, string>();
+    let complete = true;
     for (const m of page.body.matchAll(
       /<a\b[^>]*\bhref="([^"]*\/_doc\/[^"]+)"[^>]*>([^<]*)<\/a>/g,
     )) {
-      const name = /^(.+?)\s*[-–—]\s*ceník/i.exec(decode(m[2] as string))?.[1];
-      if (name && !lists.has(name)) lists.set(name, new URL(m[1] as string, INDEX).href);
+      const text = decode(m[2] as string);
+      if (!/ceník/i.test(text)) continue;
+      const name = /^(.+?)\s*[-–—]\s*ceník/i.exec(text)?.[1];
+      if (!name) {
+        ctx.log.warn("skoda-pricelist: price-list link without a model name", { text });
+        complete = false;
+      } else if (!lists.has(name)) lists.set(name, new URL(m[1] as string, INDEX).href);
     }
     if (lists.size === 0) throw new Error("skoda-pricelist: the index links no price lists");
     const named = await configuratorModels(ctx);
-    return [...lists].map(([name, url]) => ({ key: slugify(name), name, documents: [url], named }));
+    return {
+      models: [...lists].map(([name, url]) => ({
+        key: slugify(name),
+        name,
+        documents: [url],
+        named,
+      })),
+      complete,
+    };
   },
   read,
 };
