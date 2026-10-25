@@ -250,6 +250,47 @@ const cases: Case[] = [
     total: 390_783,
   },
 
+  {
+    name: "DE exactly 6,000 km on a 2019 car: still a new means of transport",
+    input: { ...deUsed, odometerKm: 6_000 },
+    lines: { goods: 306_744, vatCz: 64_416, ...FEES },
+    flags: ["newVehicleVat"],
+    total: 384_750,
+  },
+  {
+    name: "DE 6,001 km on a 2019 car: used",
+    input: { ...deUsed, odometerKm: 6_001 },
+    lines: { goods: 365_025, ...FEES },
+    total: 378_615,
+  },
+  {
+    name: "DE dealer margin scheme, used: the price as paid",
+    input: { ...deUsed, priceBasis: "margin" },
+    lines: { goods: 365_025, ...FEES },
+    total: 378_615,
+  },
+  {
+    name: "DE unknown seller gross, new: assumed to include VAT",
+    input: { ...deNew, seller: "unknown" },
+    lines: { goods: 817_983, vatCz: 171_776, ...FEES },
+    flags: ["newVehicleVat", "approximate"],
+    total: 1_003_349,
+  },
+  {
+    name: "DE private seller quoting net, new: the agreed price either way",
+    input: { ...deNew, seller: "private", priceBasis: "net", price: { amount: 30_000, currency: "EUR" } },
+    lines: { goods: 730_050, vatCz: 153_311, ...FEES },
+    flags: ["newVehicleVat"],
+    total: 896_951,
+  },
+  {
+    name: "rounding: CZ VAT is taken on the unrounded goods (102,600.497, not 102,600.54)",
+    input: { ...deNew, priceBasis: "net", price: { amount: 20_077, currency: "EUR" } },
+    lines: { goods: 488_574, vatCz: 102_600, ...FEES },
+    flags: ["newVehicleVat"],
+    total: 604_764,
+  },
+
   // Austria: 20% USt; NoVA stays in the price where export would remove it.
   {
     name: "AT used, registered over 48 months ago: the price as paid",
@@ -301,6 +342,45 @@ const cases: Case[] = [
     total: 378_615,
   },
 
+  {
+    name: "AT new, dealer net: 20% USt never added, NoVA may be in",
+    input: { ...deNew, market: "AT", priceBasis: "net", price: { amount: 30_000, currency: "EUR" } },
+    lines: { goods: 730_050, vatCz: 153_311, ...FEES },
+    flags: ["newVehicleVat", "approximate"],
+    total: 896_951,
+  },
+  {
+    name: "AT new, private seller: the agreed price taxed as is",
+    input: {
+      ...deNew,
+      market: "AT",
+      seller: "private",
+      priceBasis: "unknown",
+      price: { amount: 30_000, currency: "EUR" },
+      firstRegistration: { year: 2026, month: 8 },
+      odometerKm: 1_000,
+    },
+    lines: { goods: 730_050, vatCz: 153_311, ...FEES },
+    flags: ["newVehicleVat", "approximate"],
+    total: 896_951,
+  },
+  ...(
+    [
+      [{ year: 2022, month: 10 }, ["approximate"]],
+      [{ year: 2022, month: 9 }, []],
+      [{ year: 2022 }, ["approximate"]],
+      [{ year: 2021 }, []],
+    ] as const
+  ).map(
+    ([firstRegistration, flags]): Case => ({
+      name: `AT used, registered ${firstRegistration.year}-${"month" in firstRegistration ? firstRegistration.month : "??"}: NoVA refund ${flags.length ? "possible" : "ruled out"} (48 months)`,
+      input: { ...deUsed, market: "AT", firstRegistration },
+      lines: { goods: 365_025, ...FEES },
+      flags: [...flags],
+      total: 378_615,
+    }),
+  ),
+
   // Eco fee tiers (zákon 542/2020): a 2001 car without a valid inspection.
   {
     name: "eco fee: Euro 3 pays none",
@@ -334,10 +414,10 @@ const cases: Case[] = [
     total: 65_700,
   },
   {
-    name: "eco fee: a BEV pays none, Euro class or not",
+    name: "eco fee: a BEV pays none, Euro class or not, and has no emissions measured",
     input: { ...deOld, euroClass: undefined, fuel: "bev" },
-    lines: deOldLines,
-    total: 65_700,
+    lines: { ...deOldLines, inspection: 790 + 2_490 },
+    total: 64_750,
   },
 
   // Inspection.
@@ -357,6 +437,12 @@ const cases: Case[] = [
   {
     name: "inspection: under 36 months no periodic inspection is due yet",
     input: { ...deUsed, firstRegistration: { year: 2024, month: 1 }, inspectionValid: false },
+    lines: { goods: 365_025, ...FEES },
+    total: 378_615,
+  },
+  {
+    name: "inspection: 35 calendar months ago is certainly under 36",
+    input: { ...deUsed, firstRegistration: { year: 2023, month: 11 }, inspectionValid: undefined },
     lines: { goods: 365_025, ...FEES },
     total: 378_615,
   },

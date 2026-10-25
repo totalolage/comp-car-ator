@@ -79,9 +79,9 @@ export const PRICING_RULES = {
     asOf: "2026-10-24",
   },
   /**
-   * Evidenční kontrola always. The technical inspection plus emissions are added unless a
-   * valid foreign certificate covers the Czech interval, or the car is too young for any
-   * periodic inspection to be due (first at 3 years in DE/AT, 4 in CZ).
+   * Evidenční kontrola always. The technical inspection plus emissions (none for a BEV) are
+   * added unless a valid foreign certificate covers the Czech interval, or the car is too
+   * young for any periodic inspection to be due (first at 3 years in DE/AT, 4 in CZ).
    */
   inspection: {
     identityCheckCzk: 790,
@@ -104,6 +104,10 @@ export const PRICING_RULES = {
         url: "https://eur-lex.europa.eu/legal-content/EN/ALL/?uri=celex%3A32014L0045",
       },
       { cite: "STK Unikom price list from 2026-07-01: 790", url: "https://stk.unikom.cz/cenik" },
+      {
+        cite: "Praha: no emissions measurement for electric cars",
+        url: "https://portalprazana.cz/pro-verejnost/sluzby/technicka-prohlidka-emise",
+      },
       {
         cite: "STK Raspenava 2026: 2,490 + emissions 950",
         url: "https://www.stkraspenava.cz/assets/files/Cenik_osobni_2026.pdf",

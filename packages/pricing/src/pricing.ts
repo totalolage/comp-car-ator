@@ -188,7 +188,8 @@ function asPaid(
  * The invoice amount of a new means of transport supplied to another EU state: net of the
  * Market's VAT (exempt supply). A private seller's agreed price is taxed as is, not divided.
  * A margin-scheme price cannot apply to a new car, and an unknown basis may include VAT:
- * both are taken as is and flagged.
+ * both are taken as is and flagged. A gross price from an unknown seller is assumed to
+ * include VAT, flagged. (A net price needs no flag: it is the base whoever sells.)
  */
 function exportNet(
   amount: number,
@@ -197,9 +198,12 @@ function exportNet(
   vat: number,
   flags: Set<LandedFlag>,
 ): number {
-  if (seller === "private") return amount;
-  if (basis === "gross") return amount / (1 + vat);
-  if (basis !== "net") flags.add("approximate");
+  if (seller === "private" || basis === "net") return amount;
+  if (basis === "gross") {
+    if (seller !== "dealer") flags.add("approximate");
+    return amount / (1 + vat);
+  }
+  flags.add("approximate");
   return amount;
 }
 
@@ -243,7 +247,8 @@ function inspection(input: LandedInput, age: Age | null, flags: Set<LandedFlag>)
   const noneDue = neverRegistered || (age !== null && age.max <= noneDueMonths);
   if (noneDue || input.inspectionValid) return identityCheckCzk;
   if (input.inspectionValid === undefined) flags.add("inspectionAssumed");
-  return identityCheckCzk + technicalCzk + emissionsCzk;
+  // A BEV has no exhaust emissions to measure.
+  return identityCheckCzk + technicalCzk + (input.fuel === "bev" ? 0 : emissionsCzk);
 }
 
 function ecoFeeOf(input: LandedInput, flags: Set<LandedFlag>): number {
