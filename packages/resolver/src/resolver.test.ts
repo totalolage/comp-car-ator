@@ -108,7 +108,7 @@ describe("Resolver", () => {
     const petrol = { fuel: "petrol", powerKw: 140, transmission: "automatic" } as const;
     expect(variantOf({ make: "VW", model: "TIGUAN", ...petrol })).toBe(tiguan);
     expect(variantOf({ make: "volkswagen", model: "tiguan", ...petrol })).toBe(tiguan);
-    expect(variantOf({ make: "SKODA", model: "kodiaq", ...kodiaq, powerKw: 140 })).toBe(
+    expect(variantOf({ ...kodiaq, make: "SKODA", model: "kodiaq", powerKw: 140 })).toBe(
       "skoda/kodiaq/mk1/suv-diesel-140kw-automatic",
     );
     // Sauto's Czech class names, AutoScout24's engine badges, English names: one Model each.
