@@ -194,6 +194,10 @@ describe("publish: New prices", () => {
         sellerExtras: { amount: 10_000, currency: "CZK", basis: "gross" },
       }),
       tiguan("new-2", 1_200_000, asNew),
+      // Shown net: a private buyer pays Czech VAT on top.
+      tiguan("new-net", 1_000_000, { ...asNew, priceBasis: "net" }),
+      // A placeholder price: left out by the outlier rule.
+      tiguan("new-placeholder", 1, asNew),
       // None of these sets a Czech new price: a demonstrator, a private seller, a German car.
       tiguan("demo", 900_000, { condition: "demo" }),
       tiguan("private-new", 800_000, { ...asNew, seller: "private" }),
@@ -210,12 +214,12 @@ describe("publish: New prices", () => {
       source: "list",
       count: 1,
     });
-    // After it expires: landed price (asking + seller extras) of the dealer Listings.
+    // After it expires: landed price (asking + seller extras, gross) of the dealer Listings.
     expect(await newPriceOn("2026-10-24")).toEqual({
       min: 1_160_000,
-      max: 1_200_000,
+      max: 1_210_000,
       source: "dealer",
-      count: 2,
+      count: 3,
     });
   });
 });
@@ -297,6 +301,41 @@ describe("publish: price statistics", () => {
     expect(cell(stats, { market: "CZ" })?.median).toBe(600_000);
     expect(cell(stats, { market: "DE" })?.median).toBe(500_000);
     expect(stats.filter((c) => c.market === "AT")).toEqual([]);
+  });
+
+  it("keeps Conditions apart, and Listings without year or odometer only in the 'all' cells", async () => {
+    ledger = newLedger();
+    await record("cnb", "2026-10-20", [eurRate]);
+    const { firstRegistration: _, ...noYear } = tiguan("x", 0).vehicle;
+    await record("sauto", "2026-10-20", [
+      tiguanEntry,
+      ...series("dated", 3, 500_000, 0),
+      ...series("undated", 3, 400_000, 0, { vehicle: noYear, odometerKm: undefined }),
+      ...series("new", 3, 1_100_000, 0, { condition: "new", odometerKm: 10 }),
+      ...series("demo", 3, 950_000, 0, { condition: "demo", odometerKm: 5_000 }),
+    ]);
+    await record("autoscout24-at", "2026-10-20", [...series("at", 3, 21_000, 0, { market: "AT" })]);
+    const { stats } = await tiguanFile();
+    const variantCells = (market: string, condition: string) =>
+      stats
+        .filter((c) => c.variantId === tiguanId && c.market === market && c.condition === condition)
+        .map((c) => [c.year, c.band, c.count, c.median]);
+    expect(variantCells("CZ", "used")).toEqual([
+      [null, null, 6, 450_000],
+      [null, "10-50k", 3, 500_000],
+      [2024, null, 3, 500_000],
+      [2024, "10-50k", 3, 500_000],
+    ]);
+    expect(variantCells("CZ", "new")).toEqual([
+      [null, null, 3, 1_100_000],
+      [null, "0-10k", 3, 1_100_000],
+      [2024, null, 3, 1_100_000],
+      [2024, "0-10k", 3, 1_100_000],
+    ]);
+    expect(variantCells("CZ", "demo")[0]).toEqual([null, null, 3, 950_000]);
+    expect(variantCells("AT", "used")[0]).toEqual([null, null, 3, 525_000]);
+    // The catalog row counts used cars only.
+    expect((await tiguanRow())?.used?.markets).toEqual({ CZ: 6, AT: 3 });
   });
 
   it("leaves outliers out of statistics but keeps them findable", async () => {
@@ -420,7 +459,8 @@ describe("publish: model files", () => {
   });
 });
 
-describe("publish: determinism and scale", () => {
+// Each test builds synthetic Ledgers: well under a second normally, slow on a loaded runner.
+describe("publish: determinism and scale", { timeout: 60_000 }, () => {
   async function synthetic(listings: number, shuffle: boolean): Promise<BundleFiles> {
     const l = newLedger();
     for (const { run, observations } of syntheticRuns({

@@ -139,7 +139,8 @@ export interface ModelFile {
   stats: PriceCell[];
   /**
    * Weekly median asking price (CZK) of the model's used Listings, one series per Market:
-   * a point every Monday plus the publish day, from the Listings active that day.
+   * a point every Monday plus the publish day, from the Listings active that day. A date
+   * without a point had no active Listings (a gap, not zero).
    */
   history: { market: Market; points: { date: IsoDate; count: number; medianCzk: number }[] }[];
 }

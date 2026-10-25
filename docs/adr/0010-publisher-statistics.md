@@ -27,7 +27,7 @@ Demonstrators never set a new price (they are discounted); German and Austrian n
 
 - Model files list active Listings plus those gone in the last 30 days; older gone Listings feed only `history`. A model page shows "recently sold" without carrying years of sold cars.
 - A Listing row keeps its first 3 photos; the Source has the rest (`url`).
-- `history` is weekly: one point per Monday plus the publish day, per Market. Daily points over years × 3 Markets × ~1,500 models would add ~100 MB to the Bundle for a chart that cannot show that resolution.
+- `history` is weekly: one point per Monday plus the publish day, per Market. Daily points over years × 3 Markets × ~1,500 models would add ~100 MB to the Bundle for a chart that cannot show that resolution. A week without active Listings has no point (a gap, not zero). A Listing counts as active from its first sighting until it went; a Listing that reappears after being marked gone has its `gone` cleared by the Ledger, so the history shows it as active through the absence (the Ledger keeps no availability intervals).
 
 ## Scale
 
@@ -41,7 +41,7 @@ Measured run with `packages/publisher/scripts/scale.ts` on a synthetic Ledger (`
 | `catalog.json`     | 25.7 MB raw, 1.27 MB brotli                                                                                                                |
 | Largest model file | 6.8 MB raw, 0.32 MB brotli (the most popular model); median model file 15 KB                                                               |
 
-Synthetic data repeats itself more than real listings, so real compressed sizes will be a few times larger (assume ~10× compression instead of ~20×: `catalog.json` ~2.5 MB, the largest model ~0.7 MB over the wire). Time and memory grow with the published Listings and the history samples, not with the Ledger's gone Listings; extrapolated, not measured, a 1M-Listing Ledger with ~450k published Listings needs ~35 s and ~3 GB. The ~26 MB `catalog.json` is the first thing to shrink (columnar, dictionary-encoded inside Bundle, per ADR 0004) if parse time or transfer becomes a problem.
+Synthetic data repeats itself more than real listings, so real compressed sizes will be a few times larger (assume ~10× compression instead of ~20×: `catalog.json` ~2.5 MB, the largest model ~0.7 MB over the wire). Time and memory grow with the published Listings plus the history samples: one number per used Listing per week it was active, kept for every Listing the Ledger ever saw (~8 bytes each; a Listing on sale 2 months adds ~9). Extrapolated, not measured: a 1M-Listing Ledger with ~450k published Listings needs ~35 s and ~3.5 GB, dominated by the published rows; the history part stays under ~100 MB until the Ledger holds roughly ten million Listing-weeks. If it outgrows that, the fix inside the Publisher is a retention window for history. The ~26 MB `catalog.json` is the first thing to shrink (columnar, dictionary-encoded inside Bundle, per ADR 0004) if parse time or transfer becomes a problem.
 
 Vercel Hobby (checked 2026-10-25, vercel.com/docs/limits): no limit on build output file count (CLI uploads cap at 15,000 files of up to 100 MB each), automatic gzip/brotli for JSON, 100 GB/month transfer and 1M CDN requests/month. Transfer is the binding limit, so per-model files and `catalog.json` are sized by their compressed bytes.
 
