@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "url": "https://www.autoscout24.at/lst?atype=C&cy=A&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=N&sort=age&desc=1&size=50&page=1&mmmv=51964%7C%7C%7C"
+      },
+      "response": {
+        "url": "https://www.autoscout24.at/lst?atype=C&cy=A&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=N&sort=age&desc=1&size=50&page=1&mmmv=51964%7C%7C%7C",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":0,\"numberOfPages\":1,\"listings\":[]}}}</script></body></html>",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.at/lst?atype=C&cy=A&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=D%2CS&sort=age&desc=1&size=50&page=1&mmmv=51964%7C%7C%7C"
+      },
+      "response": {
+        "url": "https://www.autoscout24.at/lst?atype=C&cy=A&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=D%2CS&sort=age&desc=1&size=50&page=1&mmmv=51964%7C%7C%7C",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":2,\"numberOfPages\":1,\"listings\":[{\"id\":\"a277dfcf-9ff8-4761-ae16-a5d974c3373b\",\"url\":\"/angebote/zeekr-7x-long-range-20-zoll-ahk-advance-310-kw-421-ps-elektro-schwarz-cat_ma51964mo77829-a277dfcf-9ff8-4761-ae16-a5d974c3373b\",\"searchResultType\":\"Organic\",\"images\":[\"https://prod.pictures.autoscout24.net/listing-images/a277dfcf-9ff8-4761-ae16-a5d974c3373b_b9fb9374-00f0-4e6d-b283-db8c7133d3e9.jpg/250x188.webp\",\"https://prod.pictures.autoscout24.net/listing-images/a277dfcf-9ff8-4761-ae16-a5d974c3373b_ab7e00cf-2862-43f7-beee-99a9a638c887.jpg/250x188.webp\"],\"price\":{\"priceFormatted\":\"€ 60 211\",\"priceRaw\":60211,\"vatLabel\":\"inkl. MwSt.\",\"isConditionalPrice\":false},\"vehicle\":{\"make\":\"Zeekr\",\"model\":\"7X\",\"modelId\":77829,\"modelVersionInput\":\"Long Range 20 Zoll AHK Advance 310 kW (421 PS),...\",\"offerType\":\"U\",\"transmission\":\"Automatik\",\"fuel\":\"Elektro\",\"mileageInKm\":\"0 km\"},\"location\":{\"countryCode\":\"AT\",\"zip\":\"6844\",\"city\":\"Altach\"},\"seller\":{\"type\":\"Dealer\"},\"tracking\":{\"firstRegistration\":\"07-2026\",\"fuelType\":\"e\",\"mileage\":\"0\",\"price\":\"60211\",\"modelTaxonomy\":\"[make_id:51964, model_group_id:202861, variant_id:, generation_id:11016, motortype_id:, trim_id:480945];\"},\"vehicleDetails\":[{\"data\":\"0 km\",\"iconName\":\"mileage_odometer\",\"ariaLabel\":\"Kilometerstand\"},{\"data\":\"Automatik\",\"iconName\":\"gearbox\",\"ariaLabel\":\"Getriebe\"},{\"data\":\"07/2026\",\"iconName\":\"calendar\",\"ariaLabel\":\"Erstzulassung\"},{\"data\":\"Elektro\",\"iconName\":\"gas_pump\",\"ariaLabel\":\"Kraftstoff\"},{\"data\":\"310 kW (421 PS)\",\"iconName\":\"speedometer\",\"ariaLabel\":\"Leistung\"},{\"data\":\"615 km Reichweite | 754 km (Ort)\",\"iconName\":\"distance\",\"ariaLabel\":\"Reichweite\"}]},{\"id\":\"4ef3eebf-3e87-4bbf-93e8-b80ec76617fd\",\"url\":\"/angebote/zeekr-7x-long-range-20-zoll-ahk-advance-310-kw-421-ps-elektro-gruen-cat_ma51964mo77829-4ef3eebf-3e87-4bbf-93e8-b80ec76617fd\",\"searchResultType\":\"Organic\",\"images\":[\"https://prod.pictures.autoscout24.net/listing-images/4ef3eebf-3e87-4bbf-93e8-b80ec76617fd_775054e2-e71b-4eff-9547-1eedb0e31820.jpg/250x188.webp\",\"https://prod.pictures.autoscout24.net/listing-images/4ef3eebf-3e87-4bbf-93e8-b80ec76617fd_05da89de-7b59-481d-9d09-5913ea055371.jpg/250x188.webp\"],\"price\":{\"priceFormatted\":\"€ 60 211\",\"priceRaw\":60211,\"vatLabel\":\"inkl. MwSt.\",\"isConditionalPrice\":false},\"vehicle\":{\"make\":\"Zeekr\",\"model\":\"7X\",\"modelId\":77829,\"modelVersionInput\":\"Long Range 20 Zoll AHK Advance 310 kW (421 PS),...\",\"offerType\":\"U\",\"transmission\":\"Automatik\",\"fuel\":\"Elektro\",\"mileageInKm\":\"0 km\"},\"location\":{\"countryCode\":\"AT\",\"zip\":\"6844\",\"city\":\"Altach\"},\"seller\":{\"type\":\"Dealer\"},\"tracking\":{\"firstRegistration\":\"07-2026\",\"fuelType\":\"e\",\"mileage\":\"0\",\"price\":\"60211\",\"modelTaxonomy\":\"[make_id:51964, model_group_id:202861, variant_id:, generation_id:11016, motortype_id:, trim_id:480945];\"},\"vehicleDetails\":[{\"data\":\"0 km\",\"iconName\":\"mileage_odometer\",\"ariaLabel\":\"Kilometerstand\"},{\"data\":\"Automatik\",\"iconName\":\"gearbox\",\"ariaLabel\":\"Getriebe\"},{\"data\":\"07/2026\",\"iconName\":\"calendar\",\"ariaLabel\":\"Erstzulassung\"},{\"data\":\"Elektro\",\"iconName\":\"gas_pump\",\"ariaLabel\":\"Kraftstoff\"},{\"data\":\"310 kW (421 PS)\",\"iconName\":\"speedometer\",\"ariaLabel\":\"Leistung\"},{\"data\":\"615 km Reichweite | 754 km (Ort)\",\"iconName\":\"distance\",\"ariaLabel\":\"Reichweite\"}]}]}}}</script></body></html>",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.at/lst?atype=C&cy=A&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=50&page=1&mmmv=51964%7C%7C%7C"
+      },
+      "response": {
+        "url": "https://www.autoscout24.at/lst?atype=C&cy=A&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=50&page=1&mmmv=51964%7C%7C%7C",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":1,\"numberOfPages\":1,\"listings\":[{\"id\":\"986e7993-839c-42fc-9659-64d60db72a64\",\"url\":\"/angebote/zeekr-7x-long-range-20-zoll-ahk-advance-310-kw-421-ps-elektro-schwarz-cat_ma51964mo77829-986e7993-839c-42fc-9659-64d60db72a64\",\"searchResultType\":\"Organic\",\"images\":[\"https://prod.pictures.autoscout24.net/listing-images/986e7993-839c-42fc-9659-64d60db72a64_89d920cc-52c0-4658-b2d0-35404ef220c3.jpg/250x188.webp\",\"https://prod.pictures.autoscout24.net/listing-images/986e7993-839c-42fc-9659-64d60db72a64_4ce9ee98-d30d-4879-a3dd-e7165aff54c7.jpg/250x188.webp\"],\"price\":{\"priceFormatted\":\"€ 63 335\",\"priceRaw\":63335,\"vatLabel\":\"inkl. MwSt.\",\"isConditionalPrice\":false},\"vehicle\":{\"make\":\"Zeekr\",\"model\":\"7X\",\"modelId\":77829,\"modelVersionInput\":\"Long Range 20 Zoll AHK Advance 310 kW (421 PS),...\",\"offerType\":\"U\",\"transmission\":\"Automatik\",\"fuel\":\"Elektro\",\"mileageInKm\":\"0 km\"},\"location\":{\"countryCode\":\"AT\",\"zip\":\"6060\",\"city\":\"Hall in Tirol\"},\"seller\":{\"type\":\"Dealer\"},\"tracking\":{\"firstRegistration\":\"07-2026\",\"fuelType\":\"e\",\"mileage\":\"0\",\"price\":\"63335\",\"modelTaxonomy\":\"[make_id:51964, model_group_id:202861, variant_id:, generation_id:11016, motortype_id:, trim_id:480945];\"},\"vehicleDetails\":[{\"data\":\"0 km\",\"iconName\":\"mileage_odometer\",\"ariaLabel\":\"Kilometerstand\"},{\"data\":\"Automatik\",\"iconName\":\"gearbox\",\"ariaLabel\":\"Getriebe\"},{\"data\":\"07/2026\",\"iconName\":\"calendar\",\"ariaLabel\":\"Erstzulassung\"},{\"data\":\"Elektro\",\"iconName\":\"gas_pump\",\"ariaLabel\":\"Kraftstoff\"},{\"data\":\"310 kW (421 PS)\",\"iconName\":\"speedometer\",\"ariaLabel\":\"Leistung\"},{\"data\":\"615 km Reichweite | 754 km (Ort)\",\"iconName\":\"distance\",\"ariaLabel\":\"Reichweite\"}]}]}}}</script></body></html>",
+        "tier": "T0"
+      }
+    }
+  ]
+}
