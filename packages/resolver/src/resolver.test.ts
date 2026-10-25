@@ -299,6 +299,121 @@ describe("Resolver", () => {
         },
       );
     });
+    it("blocks on a generation the catalog lacks, whatever it is called", () => {
+      // Each catalog has only the newer generation; the listing names the older one.
+      const kodiaq2 = createResolver(
+        variants("Škoda", "Kodiaq", { slug: "mk2", name: "Kodiaq II", from: 2024 }, [
+          { body: "suv", fuel: "diesel", powerKw: 140, transmission: "automatic" },
+        ]),
+      );
+      const listing = { ...kodiaq, powerKw: 140 };
+      expect(kodiaq2.resolve({ ...listing, trim: "I 2.0 TDI" })).toMatchObject({ status: "model" });
+      expect(kodiaq2.resolve({ ...listing, model: "Kodiaq I", trim: "2.0 TDI" })).toMatchObject({
+        status: "model",
+      });
+      // "I. majitel" is the first owner, and an "I" deep in the trim claims nothing.
+      for (const trim of ["2.0 TDI I. majitel", "2.0 TDI Style I 4x4"]) {
+        expect(kodiaq2.resolve({ ...listing, trim })).toMatchObject({ status: "matched" });
+      }
+
+      const eClass213 = createResolver(
+        variants("Mercedes-Benz", "E-Klasse", { slug: "w213", name: "W213", from: 2016 }, [
+          { body: "sedan", fuel: "diesel", powerKw: 143, transmission: "automatic" },
+        ]),
+      );
+      const e220 = { make: "Mercedes", model: "E 220 d", fuel: "diesel", powerKw: 143 } as const;
+      expect(eClass213.resolve({ ...e220, trim: "W212 143kW" })).toMatchObject({ status: "model" });
+      expect(eClass213.resolve({ ...e220, trim: "w212 Avantgarde" })).toMatchObject({
+        status: "model",
+      });
+      // "E220" in an E-Class listing is the engine badge, not a chassis code.
+      expect(
+        eClass213.resolve({ ...e220, model: "E-Klasse", trim: "E220 CDI W213" }),
+      ).toMatchObject({ status: "matched" });
+
+      // The catalog's 3 Series is the G20 only.
+      expect(
+        resolve({ make: "BMW", model: "320d", trim: "F30 Touring", fuel: "diesel", powerKw: 140 }),
+      ).toMatchObject({ status: "model" });
+      expect(
+        resolve({ make: "BMW", model: "320d", trim: "G20 M Sport", fuel: "diesel", powerKw: 140 }),
+      ).toMatchObject({ status: "matched" });
+    });
+
+    it("finds no Variant when a chassis code contradicts the year", () => {
+      const eClass = createResolver([
+        ...variants(
+          "Mercedes-Benz",
+          "E-Klasse",
+          { slug: "w212", name: "W212", from: 2009, to: 2016 },
+          [{ body: "sedan", fuel: "diesel", powerKw: 143, transmission: "automatic" }],
+        ),
+        ...variants("Mercedes-Benz", "E-Klasse", { slug: "w213", name: "W213", from: 2016 }, [
+          { body: "sedan", fuel: "diesel", powerKw: 143, transmission: "automatic" },
+        ]),
+      ]);
+      const e220 = { make: "Mercedes", model: "E 220 d", fuel: "diesel", powerKw: 143 } as const;
+      expect(
+        eClass.resolve({ ...e220, trim: "W212", firstRegistration: { year: 2021 } }),
+      ).toMatchObject({ status: "model", reason: "no-variant" });
+      expect(eClass.resolve({ ...e220, trim: "W213", firstRegistration: { year: 2021 } })).toEqual(
+        expect.objectContaining({
+          status: "matched",
+          variantId: expect.stringContaining("/w213/"),
+        }),
+      );
+    });
+  });
+
+  describe("hybrid and electric wording", () => {
+    const golf = createResolver(
+      variants("Volkswagen", "Golf", golf8, [
+        { body: "hatchback", fuel: "petrol", powerKw: 110, transmission: "automatic" },
+        { body: "hatchback", fuel: "phev", powerKw: 150, transmission: "automatic" },
+      ]),
+    );
+    const vw = { make: "VW", model: "Golf" } as const;
+
+    it("never reads a hybrid's engine code as petrol or diesel", () => {
+      for (const listing of [
+        { model: "Golf GTE", trim: "1.4 TSI Plug-in Hybrid 110 kW DSG" },
+        { trim: "1.4 TSI PHEV 110 kW DSG" },
+        { trim: "1.4 TSI eHybrid 110 kW DSG" },
+        { trim: "1,4 TSI Hybridní 110 kW DSG" },
+        { trim: "1.4 TSI Hybrid 110 kW DSG" },
+        { trim: "1.4 TSI Elektro/Benzin 110 kW DSG" },
+        { trim: "1.5 TSI mHEV 110 kW DSG" },
+      ]) {
+        expect(golf.resolve({ ...vw, ...listing })).toMatchObject({ status: "model" });
+      }
+      expect(golf.resolve({ ...vw, trim: "1.4 TSI 110 kW DSG" })).toMatchObject({
+        status: "matched",
+      });
+    });
+
+    it("finds no Variant when the wording contradicts the stated fuel", () => {
+      for (const trim of ["GTE 110 kW", "1.4 TSI Plug-in-Hybrid 110 kW", "Hybrid 110 kW"]) {
+        expect(golf.resolve({ ...vw, fuel: "petrol", trim })).toMatchObject({
+          status: "model",
+          reason: "no-variant",
+        });
+      }
+    });
+
+    it("reads a plug-in hybrid from its wording, and a mild hybrid by its stated fuel", () => {
+      expect(
+        golf.resolve({ ...vw, model: "Golf GTE", trim: "1.4 TSI Plug-in Hybrid 150 kW DSG" }),
+      ).toMatchObject({
+        status: "matched",
+        variantId: "volkswagen/golf/mk8/hatchback-phev-150kw-automatic",
+      });
+      expect(
+        golf.resolve({ ...vw, fuel: "petrol", trim: "1.5 eTSI Mild-Hybrid 110 kW DSG" }),
+      ).toMatchObject({
+        status: "matched",
+        variantId: "volkswagen/golf/mk8/hatchback-petrol-110kw-automatic",
+      });
+    });
   });
 
   it("resolves the same car from Sauto and AutoScout24 to the same Variant", () => {

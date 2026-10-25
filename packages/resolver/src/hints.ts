@@ -4,6 +4,11 @@ import type { Body, Fuel, Transmission } from "@cca/vocabulary";
 export interface Hints {
   body?: Body;
   fuel?: Fuel;
+  /**
+   * The fuels the text's hybrid or electric wording leaves open ("Plug-in Hybrid" → phev,
+   * "Hybrid" → hev or phev). Undefined when the text has no such wording.
+   */
+  fuels?: readonly Fuel[];
   transmission?: Transmission;
   powerKw?: number;
   /** Words with their case kept and diacritics stripped, for generation names ("IV", "Mk8"). */
@@ -35,6 +40,21 @@ const FUEL: [Fuel, RegExp][] = [
   ["petrol", word("e?tsi|tfsi|fsi|mpi|tce|puretech|ecoboost|t-gdi|gdi|benzin")],
 ];
 
+/**
+ * Hybrid and electric wording, with the fuels each allows; a text naming several allows what
+ * they share. Mild hybrids ("eTSI", "mHEV") are catalogued under their combustion fuel.
+ */
+const ELECTRIFIED: [Fuel[], RegExp][] = [
+  [["phev"], word("plug-? ?in|phev|e-?hybrid|gte")],
+  [["bev"], word("bev|ev")],
+  [["hev"], word("hev|full ?hybrid|self-? ?charging")],
+  [["hev", "phev"], word("(?<!mild[- ]?)hybrid[a-z]*")],
+  [["hev", "phev", "bev", "reev"], word("elektro|elektroauto|e-?tron|e-?tech")],
+  [["petrol", "diesel", "hev"], word("mhev|mild[- ]?hybrid|48 ?v|etsi")],
+];
+/** Škoda's "iV" badge (plug-in or electric); lower case would read as generation IV. */
+const IV_BADGE: [Fuel[], RegExp] = [["phev", "bev"], /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/];
+
 const TRANSMISSION: [Transmission, RegExp][] = [
   [
     "automatic",
@@ -52,7 +72,9 @@ const PS_TO_KW = 0.73549875;
 
 /**
  * Reads the hints in listing text. A hint the text states two conflicting ways
- * ("DSG ... Schaltgetriebe", "110 kW ... 22 kW") is dropped rather than guessed.
+ * ("DSG ... Schaltgetriebe", "110 kW ... 22 kW") is dropped rather than guessed. Next to
+ * hybrid or electric wording an engine code says nothing about fuel: a "1.4 TSI Plug-in
+ * Hybrid" is not a petrol car.
  */
 export function readHints(text: string): Hints {
   const folded = fold(text);
@@ -61,15 +83,27 @@ export function readHints(text: string): Hints {
     ...[...lower.matchAll(KW)].map((m) => Number(m[1])),
     ...[...lower.matchAll(PS)].map((m) => Math.round(Number(m[1]) * PS_TO_KW)),
   ];
+  const fuels = [
+    ...ELECTRIFIED.filter(([, pattern]) => pattern.test(lower)),
+    ...(IV_BADGE[1].test(folded) ? [IV_BADGE] : []),
+  ]
+    .map(([allowed]) => allowed)
+    .reduce<Fuel[] | undefined>(
+      (open, allowed) => (open ?? allowed).filter((f) => allowed.includes(f)),
+      undefined,
+    );
   return {
     body: only(BODY, lower),
-    fuel: only(FUEL, lower),
+    fuel: fuels ? (fuels.length === 1 ? fuels[0] : undefined) : only(FUEL, lower),
+    fuels,
     transmission: only(TRANSMISSION, lower),
     powerKw: powers.every((p) => Math.abs(p - (powers[0] as number)) <= 3) ? powers[0] : undefined,
     words: folded
       .replace(/\bmk\s+(\d)/gi, "mk$1")
       // "Euro VI" is an emission class, not generation VI.
       .replace(/\beu(?:ro)?\s*-?\s*[0-9IVX]+[a-z]*\b/gi, " ")
+      // "I. majitel" is the first owner, not generation I.
+      .replace(/\b[IVX]+\.\s*maj[a-z]*/gi, " ")
       .split(/[^A-Za-z0-9]+/)
       .filter(Boolean),
   };

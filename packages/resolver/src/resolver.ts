@@ -49,8 +49,10 @@ interface Model {
   nameWords: Set<string>;
 }
 
-/** Words a listing uses to claim a generation, whatever the catalog calls its generations. */
+/** Words that claim a generation for any make; a lone "I" only next to the model name. */
 const GENERATION_CLAIM = /^(?:II|III|IV|V|VI|VII|VIII|IX|[Mm][Kk]\d{1,2})$/;
+/** Engine layouts ("V6 TDI", "W12"), not chassis codes. */
+const ENGINE_LAYOUT = /^[VW]\d{1,2}$/;
 
 /**
  * Matching rule (docs/adr/0002-variant-definition.md):
@@ -59,17 +61,23 @@ const GENERATION_CLAIM = /^(?:II|III|IV|V|VI|VII|VIII|IX|[Mm][Kk]\d{1,2})$/;
  * 2. Fields the descriptor leaves undefined are read from its model and trim text when the
  *    text states them once: power ("110kW", "150 PS"), transmission ("DSG"), body ("Combi"),
  *    fuel ("TDI"), and a generation name ("VIII", "Mk8"). Stated fields win over text.
+ *    Hybrid or electric wording ("Plug-in Hybrid", "GTE", "mHEV") limits the fuel to what it
+ *    allows, stated or not, and an engine code next to it ("TSI") says nothing about fuel.
  * 3. A Variant fits when every known field agrees: fuel, transmission and body equal, power
  *    within 3 kW, year inside the Variant's production years (manufacture year exactly,
  *    registration or model year ±1), and generation equal when the text names one.
  * 4. One fitting Variant is a match only if fuel and power are known and the text names at
  *    most one generation, all of them known to the catalog ("Octavia III" when the catalog
- *    has only the IV is not evidence for the IV). Otherwise, or when several fit, the listing
- *    resolves to the Model. Fitting Variants are never ranked.
+ *    has only the IV is not evidence for the IV). A word claims a generation when it is a
+ *    Roman numeral or "Mk7", a lone "I" next to the model name, or has the shape of the
+ *    make's chassis codes ("W212" where the catalog has "W213"). Otherwise, or when several
+ *    fit, the listing resolves to the Model. Fitting Variants are never ranked.
  * TODO(wave1-stream11): per-source `sourceTaxonomy` aliases once a Source needs them.
  */
 export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
   const makes = new Map<string, Map<string, Model>>();
+  /** Shapes of the chassis codes each make's generations go by ("W213" → "A999"). */
+  const codeShapes = new Map<string, Set<string>>();
   const sorted = [...catalog].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   for (const variant of sorted) {
     const makeKey = makeKeyOf(variant.makeId);
@@ -89,7 +97,15 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
     }
     model.variants.push(variant);
     if (!model.generationWords.has(variant.generationId)) {
-      model.generationWords.set(variant.generationId, generationWords(variant));
+      const names = generationWords(variant);
+      model.generationWords.set(variant.generationId, names);
+      const shapes = codeShapes.get(makeKey) ?? new Set<string>();
+      codeShapes.set(makeKey, shapes);
+      for (const name of names) {
+        if (/\d/.test(name) && /[a-z]/i.test(name) && !GENERATION_CLAIM.test(name)) {
+          shapes.add(shapeOf(name));
+        }
+      }
     }
   }
 
@@ -112,14 +128,32 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
         .filter(([, names]) => names.some((name) => words.has(name)))
         .map(([id]) => id);
       const known = new Set([...model.generationWords.values()].flat());
-      const unknownGeneration = hints.words.some(
-        (w) => GENERATION_CLAIM.test(w) && !known.has(w) && !model.nameWords.has(w.toLowerCase()),
-      );
+      const shapes = codeShapes.get(makeKey) ?? new Set<string>();
+      const modelWords = split(vehicle.model).length;
+      const claims = (w: string, i: number) => {
+        if (model.nameWords.has(w.toLowerCase())) return false;
+        if (w === "I") {
+          const before = hints.words[i - 1];
+          return (
+            i === modelWords || before === undefined || model.nameWords.has(before.toLowerCase())
+          );
+        }
+        if (GENERATION_CLAIM.test(w)) return true;
+        // "C220" in a C-Class listing is an engine badge, "W212" a chassis code.
+        const letters = w.match(/^[a-z]+/i)?.[0].toLowerCase();
+        return (
+          shapes.has(shapeOf(w)) &&
+          !ENGINE_LAYOUT.test(w) &&
+          (letters === undefined || !model.nameWords.has(letters))
+        );
+      };
+      const unknownGeneration = hints.words.some((w, i) => claims(w, i) && !known.has(w));
 
       const fits = model.variants.filter(
         (v) =>
           fitsYear(v, vehicle) &&
           (fuel === undefined || v.fuel === fuel) &&
+          (hints.fuels === undefined || hints.fuels.includes(v.fuel)) &&
           (transmission === undefined || v.transmission === transmission) &&
           (body === undefined || v.body === body) &&
           (powerKw === undefined || Math.abs(v.powerKw - powerKw) <= POWER_TOLERANCE_KW) &&
@@ -224,6 +258,11 @@ function generationWords(variant: CatalogVariant): string[] {
 /** Distinct generations named; two catalog spellings of one model share generation slugs. */
 function generationSlugs(ids: GenerationId[]): number {
   return new Set(ids.map((id) => id.slice(id.lastIndexOf("/") + 1))).size;
+}
+
+/** A word's shape with letters as "A" and digits as "9": "W213" and "w212" are both "A999". */
+function shapeOf(word: string): string {
+  return word.toUpperCase().replace(/[A-Z]/g, "A").replace(/\d/g, "9");
 }
 
 function split(text: string): string[] {
