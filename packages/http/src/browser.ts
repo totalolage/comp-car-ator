@@ -6,7 +6,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { BrowserContext, Page, Response } from "patchright";
+import type { APIRequestContext, BrowserContext, Cookie, Page, Response } from "patchright";
 import { detectChallenge } from "./challenge.ts";
 import type { RawResponse, TierFetcher } from "./tiered.ts";
 
@@ -41,10 +41,11 @@ interface Profile {
  * Navigates a browser tab to the URL and returns the rendered document. A page that still shows
  * a challenge is polled until it clears or `challengeWaitMs` passes, then returned as it is so
  * the policy can escalate or report the block. Accept-Language becomes the browser's locale;
- * the other request headers go on the page's main-frame navigations only, over the browser's
- * own, so subresources keep the browser's fingerprint. Binary requests go through a request
- * API context of their own that carries the browser's User-Agent and cookies (and hands new
- * cookies back), so an abort can dispose it and close the connection.
+ * the other request headers go on the page's main-frame navigations only (and, as at T0, their
+ * redirects), over the browser's own, so subresources keep the browser's fingerprint. Binary
+ * requests go through a request API context of their own that carries the browser's User-Agent
+ * and cookies (and hands the cookies it changed back), so an abort or close() can dispose it
+ * and close the connection.
  */
 export function createBrowserFetcher(
   options: BrowserOptions,
@@ -55,6 +56,8 @@ export function createBrowserFetcher(
   const challengeWaitMs = options.challengeWaitMs ?? 20_000;
   const idleCloseMs = options.idleCloseMs ?? 30_000;
   const profiles = new Map<string, Promise<Profile>>();
+  /** Request contexts of binary fetches in flight, disposed by close(). */
+  const requests = new Set<Promise<APIRequestContext>>();
   let active = 0;
   let idleTimer: NodeJS.Timeout | undefined;
   /** A running close(); a launch waits for it so a persistent profile is never opened twice. */
@@ -109,9 +112,11 @@ export function createBrowserFetcher(
     clearTimeout(idleTimer);
     const all = [...profiles.values()];
     profiles.clear();
+    const inFlight = [...requests].map((api) => api.then((it) => it.dispose()).catch(() => {}));
     const previous = closing;
     closing = (async () => {
       await previous;
+      await Promise.all(inFlight);
       await Promise.allSettled(
         all.map(async (pending) => {
           const { context, tempDir } = await pending;
@@ -133,7 +138,7 @@ export function createBrowserFetcher(
       const locale = headers["accept-language"]?.split(",")[0]?.trim() || "cs-CZ";
       const current = await profile(locale);
       signal?.throwIfAborted();
-      if (binary) return await fetchBinary(current, url, headers, timeoutMs, signal);
+      if (binary) return await fetchBinary(current, requests, url, headers, timeoutMs, signal);
       const page = await current.context.newPage();
       if (signal?.aborted) {
         await page.close().catch(() => {});
@@ -224,6 +229,7 @@ async function snapshotOf(page: Page, document: Response | null): Promise<RawRes
 
 async function fetchBinary(
   profile: Profile,
+  requests: Set<Promise<APIRequestContext>>,
   url: string,
   headers: Record<string, string>,
   timeoutMs: number,
@@ -236,20 +242,29 @@ async function fetchBinary(
       profile.userAgent = undefined;
     });
   }
-  const { request } = await import("patchright");
-  const api = await request.newContext({
-    userAgent: await profile.userAgent,
-    storageState: { cookies: await context.cookies(), origins: [] },
-    timeout: timeoutMs,
-  });
+  const userAgent = profile.userAgent;
+  const cookies = context.cookies();
+  // Awaited inside `created`, possibly after it rejects; don't let that count as unhandled.
+  cookies.catch(() => {});
+  const created = (async () => {
+    const { request } = await import("patchright");
+    return request.newContext({
+      userAgent: await userAgent,
+      storageState: { cookies: await cookies, origins: [] },
+      timeout: timeoutMs,
+    });
+  })();
+  requests.add(created);
   // Disposing the context destroys its in-flight request, which the request API has no signal for.
-  const onAbort = () => void api.dispose().catch(() => {});
+  const dispose = () => created.then((api) => api.dispose()).catch(() => {});
+  const onAbort = () => void dispose();
   signal?.addEventListener("abort", onAbort, { once: true });
   try {
+    const api = await created;
     signal?.throwIfAborted();
     const response = await api.get(url, { headers, timeout: timeoutMs });
     const bytes = new Uint8Array(await response.body());
-    await context.addCookies((await api.storageState()).cookies);
+    await handBack(context, await cookies, (await api.storageState()).cookies);
     const responseHeaders = response.headers();
     const text = /^text\//i.test(responseHeaders["content-type"] ?? "");
     return {
@@ -264,7 +279,8 @@ async function fetchBinary(
     throw error;
   } finally {
     signal?.removeEventListener("abort", onAbort);
-    await api.dispose().catch(() => {});
+    requests.delete(created);
+    await dispose();
   }
 }
 
@@ -274,5 +290,22 @@ async function userAgentOf(context: BrowserContext): Promise<string> {
     return await page.evaluate(() => navigator.userAgent);
   } finally {
     await page.close().catch(() => {});
+  }
+}
+
+/**
+ * Applies to the browser what a request context changed in the cookies it was seeded with: new
+ * and changed cookies are set, deleted ones cleared. Untouched cookies are left alone, so a page
+ * that changed one meanwhile keeps its value.
+ */
+async function handBack(context: BrowserContext, before: Cookie[], after: Cookie[]) {
+  const key = (cookie: Cookie) => `${cookie.name}\0${cookie.domain}\0${cookie.path}`;
+  const stamp = (cookie: Cookie) => `${cookie.value}\0${cookie.expires}`;
+  const seeded = new Map(before.map((cookie) => [key(cookie), stamp(cookie)]));
+  const kept = new Set(after.map(key));
+  const changed = after.filter((cookie) => seeded.get(key(cookie)) !== stamp(cookie));
+  if (changed.length > 0) await context.addCookies(changed);
+  for (const { name, domain, path } of before.filter((cookie) => !kept.has(key(cookie)))) {
+    await context.clearCookies({ name, domain, path });
   }
 }

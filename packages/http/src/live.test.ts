@@ -196,6 +196,7 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
       res.end(`<script src="/sub.js"></script><p>ok</p>`);
     });
     await http.get({ url: `${base}/first`, minTier: "T2" });
+    seen.clear();
     await http.get({
       url: `${base}/headers`,
       minTier: "T2",
@@ -211,10 +212,13 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
     expect(seen.get("/sub.js")).not.toHaveProperty("x-test-token");
   }, 120_000);
 
-  it("fetches binary requests with the browser's cookies and keeps the cookies they set", async () => {
+  it("fetches binary requests with the browser's cookies and hands back the ones they change", async () => {
     handler = recording((req, res) => {
       if (req.url === "/a.pdf") {
-        res.writeHead(200, { "content-type": "application/pdf", "set-cookie": "pdf=1" });
+        res.writeHead(200, {
+          "content-type": "application/pdf",
+          "set-cookie": ["pdf=1", "page=; Max-Age=0"],
+        });
         res.end(Buffer.from([0x25, 0x50, 0x44, 0x46]));
         return;
       }
@@ -227,7 +231,6 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
       binary: true,
       headers: { "x-test-token": "abc" },
     });
-    await http.get({ url: `${base}/after`, minTier: "T2" });
     expect(pdf).toMatchObject({ status: 200, tier: "T2" });
     expect([...(pdf.bytes ?? [])]).toEqual([0x25, 0x50, 0x44, 0x46]);
     expect(seen.get("/a.pdf")).toMatchObject({
@@ -235,24 +238,43 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
       "x-test-token": "abc",
       "user-agent": expect.stringContaining("Chrome/"),
     });
+    handler = recording((_req, res) => res.end("ok"));
+    await http.get({ url: `${base}/after`, minTier: "T2" });
     expect(seen.get("/after")?.cookie).toContain("pdf=1");
+    expect(seen.get("/after")?.cookie).not.toContain("page=");
+  }, 120_000);
+
+  it("keeps a cookie a page changed while a binary fetch to another host ran", async () => {
+    // A second host (pacing is per hostname), so the page fetch runs during the binary one.
+    let release: () => void = () => {};
+    const held = holdResponse("/held.bin", new Promise<void>((resolve) => (release = resolve)));
+    const other = createServer(held.handle);
+    await new Promise<void>((resolve) => other.listen(0, "localhost", resolve));
+    const otherBase = `http://localhost:${(other.address() as AddressInfo).port}`;
+    try {
+      handler = recording((req, res) => {
+        const value = new URL(req.url ?? "", base).searchParams.get("set");
+        if (value) res.setHeader("set-cookie", `shared=${value}`);
+        res.end("ok");
+      });
+      await http.get({ url: `${base}/?set=1`, minTier: "T2" });
+      const binary = http.get({ url: `${otherBase}/held.bin`, minTier: "T2", binary: true });
+      await held.arrival;
+      await http.get({ url: `${base}/?set=2`, minTier: "T2" });
+      release();
+      await binary;
+      await http.get({ url: `${base}/check`, minTier: "T2" });
+      expect(seen.get("/check")?.cookie).toContain("shared=2");
+    } finally {
+      release();
+      other.closeAllConnections();
+      await new Promise<void>((resolve) => other.close(() => resolve()));
+    }
   }, 120_000);
 
   it("closes the connection of an aborted binary fetch", async () => {
-    let arrived: () => void = () => {};
-    const arrival = new Promise<void>((resolve) => {
-      arrived = resolve;
-    });
-    let closedAt = Number.POSITIVE_INFINITY;
-    handler = (req, res) => {
-      // Hold the response for 5 s, the way a large download would.
-      const timer = setTimeout(() => res.end("late"), 5000);
-      res.on("close", () => {
-        clearTimeout(timer);
-        closedAt = Date.now();
-      });
-      if (req.url === "/slow.zip") arrived();
-    };
+    const held = holdResponse("/slow.zip");
+    handler = held.handle;
     const controller = new AbortController();
     const pending = http.get({
       url: `${base}/slow.zip`,
@@ -260,10 +282,57 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
       binary: true,
       signal: controller.signal,
     });
-    await arrival;
+    await held.arrival;
     const abortedAt = Date.now();
     controller.abort();
     await expect(pending).rejects.toMatchObject({ name: "AbortError" });
-    await expect.poll(() => closedAt - abortedAt, { timeout: 2000 }).toBeLessThan(1000);
+    // Unfixed, the connection stays open until the server ends the response 5 s later.
+    expect((await held.closure) - abortedAt).toBeLessThan(2000);
+  }, 120_000);
+
+  it("closes the connection of a binary fetch still running at close()", async () => {
+    const held = holdResponse("/slow.zip");
+    handler = held.handle;
+    const own = createLiveHttp({
+      hostIntervalMs: 0,
+      attempts: 1,
+      browser: { engine: "patchright" },
+    });
+    const pending = own.get({ url: `${base}/slow.zip`, minTier: "T2", binary: true });
+    pending.catch(() => {});
+    await held.arrival;
+    const closedAt = Date.now();
+    await own.close();
+    expect((await held.closure) - closedAt).toBeLessThan(2000);
+    await expect(pending).rejects.toThrow();
   }, 120_000);
 });
+
+/**
+ * Serves `path` slowly, the way a large download goes: the response ends after `release` settles
+ * or 5 s. Reports when the request arrives and when its connection closes; other paths get "ok".
+ */
+function holdResponse(path: string, release: Promise<void> = new Promise(() => {})) {
+  let arrived: () => void = () => {};
+  let closed: (at: number) => void = () => {};
+  const arrival = new Promise<void>((resolve) => {
+    arrived = resolve;
+  });
+  const closure = new Promise<number>((resolve) => {
+    closed = resolve;
+  });
+  const handle: Handler = (req, res) => {
+    if (req.url !== path) {
+      res.end("ok");
+      return;
+    }
+    const timer = setTimeout(() => res.end("late"), 5000);
+    void release.then(() => res.end("released"));
+    res.on("close", () => {
+      clearTimeout(timer);
+      closed(Date.now());
+    });
+    arrived();
+  };
+  return { handle, arrival, closure };
+}
