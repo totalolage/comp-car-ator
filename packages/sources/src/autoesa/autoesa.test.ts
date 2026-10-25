@@ -214,20 +214,41 @@ describe("autoesa source", () => {
     expect(listings(os).map((o) => o.ref)).toEqual(FRESH);
   });
 
-  it("a commercial vehicle yields nothing and does not keep the walk going", async () => {
-    // Page 2's only new listing turns out to be a van: page 2 then has nothing new, so page 3
-    // is not read.
-    const cassette = edit(
+  it("a commercial vehicle yields nothing; an unknown category is rejected", async () => {
+    const category = (label: string) =>
+      body((b) => b.replace('"car_category": "Osobn\\u00ed"', `"car_category": "${label}"`));
+    // Page 2's only new listing is a van: never known, so the walk still reads page 3.
+    const van = edit(
       await loadCassette(incremental),
       "/334464858",
-      body((b) =>
-        b.replace('"car_category": "Osobn\\u00ed"', '"car_category": "U\\u017eitkov\\u00e9"'),
-      ),
+      category("U\\u017eitkov\\u00e9"),
     );
     const urls: string[] = [];
-    const os = await harvest(cassette, { mode: "incremental", known: await known(), urls });
-    expect(listings(os).map((o) => o.ref)).toEqual(FRESH.slice(0, 4));
-    expect(urls.some((u) => u.endsWith(PAGE_3))).toBe(false);
+    const os = await harvest(van, { mode: "incremental", known: await known(), urls });
+    expect(os.map((o) => ("ref" in o ? o.ref : o.kind))).toEqual(FRESH.slice(0, 4));
+    expect(urls.filter((u) => u.includes("/vsechna-auta"))).toHaveLength(3);
+    const odd = edit(await loadCassette(incremental), "/334464858", category("Motocykly"));
+    const seen = listings(await harvest(odd, { mode: "incremental", known: await known() }));
+    expect(seen.map((o) => o.ref)).toEqual([...FRESH.slice(0, 4), ""]);
+  });
+
+  it("a hybrid is a plug-in only when its title says so", async () => {
+    const hybrid = (title: string) =>
+      body((b) =>
+        b
+          .replace(/"title": "[^"]*"/, `"title": "${title}"`)
+          .replace("<span>benzín</span>", "<span>hybridní</span>"),
+      );
+    const fuelOf = async (title: string) => {
+      const cassette = edit(await loadCassette(incremental), "/414464866", hybrid(title));
+      const os = await harvest(cassette, { mode: "incremental", known: await known() });
+      return listings(os).find((o) => o.ref === "414464866")?.vehicle;
+    };
+    expect((await fuelOf("Škoda Fabia III 1.4 Hybrid"))?.fuel).toBeUndefined();
+    expect(await fuelOf("Škoda Fabia III 1.4 TSI iV Style")).toMatchObject({
+      fuel: "phev",
+      trim: "1.4 TSI iV Style",
+    });
   });
 
   it("a sold or removed listing yields ListingGone", async () => {
@@ -352,6 +373,17 @@ describe("autoesa source", () => {
     const os = await harvest(cassette, { mode: "full" });
     expect(slicesDone(os)).toEqual(FULL_SLICES);
     expect(listings(os)).toHaveLength(25);
+  });
+
+  it("a list page that reports more listings than it shows and no pagination fails the run", async () => {
+    const cassette = edit(
+      await loadCassette(incremental),
+      PAGE_1,
+      body((b) => b.replace(/<div id="snippet--paginationTop"[\s\S]*?<\/ul>/, "")),
+    );
+    await expect(harvest(cassette, { mode: "incremental", known: await known() })).rejects.toThrow(
+      /Autoesa page changed: no pagination/,
+    );
   });
 
   it("a changed list page fails the run", async () => {

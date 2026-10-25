@@ -17,15 +17,17 @@
  *   page, in every mode: the Ledger keeps a listing's latest ListingSeen whole.
  * - The year ("Rok") is the year the car entered service: the page says so.
  * - A car whose detail page says "Užitkové" (a commercial vehicle) is outside the scope: it
- *   counts towards its slice but yields nothing. A sold car's URL answers 200 with "Tento vůz
- *   je prodán": ListingGone.
+ *   counts towards its slice but yields nothing; any other category than "Osobní" is a
+ *   change of the site, rejected. A sold car's URL answers 200 with "Tento vůz je prodán":
+ *   ListingGone.
  * - full: slices `year:<year>` from 2000, the current year open above (`year:<year>-`). A
  *   slice is paged to its end, oldest first (a car added meanwhile lands at the end), before
  *   any of its detail pages; a slice with fewer distinct listings than it reports is paged
  *   once more; still short, it stays not done and the run fails after the other slices.
  *   Slices done earlier in the census are skipped.
  * - incremental: the list newest first, reading the cars not known before, up to a page
- *   with none (a van counts as known once its detail page has said so this run).
+ *   with none. A van is never known, so a page with one does not stop the walk (vans are
+ *   about 4% of the stock: the walk goes on a page or so further).
  *
  * Research notes: scrape-access.md (Autoesa row); lists, filters, orders and pages verified
  * against the live site 2026-10-25. robots.txt disallows only `/xml-feed`, which is unused.
@@ -81,8 +83,6 @@ export function autoesaSource(options: AutoesaOptions = {}): Source {
 class Harvest {
   /** Refs whose detail page was read this run, so a listing seen twice costs one request. */
   private readonly done = new Set<string>();
-  /** Refs whose detail page put them outside the scope (or showed them sold) this run. */
-  private readonly spent = new Set<string>();
   /** `isKnown` as of a ref's first sighting: the Ledger may record this run's listings as we go. */
   private readonly knownBefore = new Map<string, boolean>();
   private readonly ctx: HarvestContext;
@@ -167,9 +167,10 @@ class Harvest {
       let fresh = 0;
       for (const card of page.cards) {
         if (card.ref && this.wasKnown(card.ref)) continue;
+        // Any card not known before counts, a listing read earlier this run, a van, a sold or
+        // a broken one included: the walk stops only at a page of known listings.
+        fresh++;
         yield* this.listing(card);
-        // A listing read earlier this run still counts: it was new, not known.
-        if (card.ref && !this.spent.has(card.ref)) fresh++;
       }
       if (fresh === 0) return;
     }
@@ -212,7 +213,6 @@ class Harvest {
     this.done.add(card.ref);
     const page = await this.ctx.http.get(this.request(card.url));
     if (page.status === 404 || page.status === 410) {
-      this.spent.add(card.ref);
       yield { kind: "ListingGone", ref: card.ref };
       return;
     }
@@ -220,7 +220,6 @@ class Harvest {
       throw new Error(`Autoesa returned HTTP ${page.status} for ${card.url}`);
     const detail = parseDetailPage(page.body);
     if (detail === "sold") {
-      this.spent.add(card.ref);
       yield { kind: "ListingGone", ref: card.ref };
       return;
     }
@@ -229,13 +228,17 @@ class Harvest {
       yield rejected(card.url);
       return;
     }
-    if (detail.category !== PASSENGER) {
+    if (detail.category === COMMERCIAL) {
       // No ListingSeen: the scope is passenger cars.
-      this.spent.add(card.ref);
-      this.ctx.log.info("autoesa listing outside the scope", {
+      this.ctx.log.info("autoesa listing outside the scope", { ref: card.ref });
+      return;
+    }
+    if (detail.category !== PASSENGER) {
+      this.ctx.log.warn("autoesa detail of an unknown category", {
         ref: card.ref,
         category: detail.category,
       });
+      yield rejected(card.url);
       return;
     }
     const seen = toListingSeen(card, detail);
@@ -282,8 +285,9 @@ function parseListPage(html: string, url: string, n: number): ListPage {
   const total = /Počet vozů(?:&nbsp;|\s)*<strong>(\d+)<\/strong>/.exec(html)?.[1];
   if (total === undefined) throw new Error(`Autoesa page changed: no "Počet vozů" at ${url}`);
   const pagination = between(html, 'id="snippet--paginationTop"', "</ul>") ?? "";
+  // A page links to the pages around it; the first page's link has no `stranka`.
   const lastPage = Math.max(
-    1,
+    n,
     ...[...pagination.matchAll(/stranka=(\d+)/g)].map((m) => Number(m[1])),
   );
   const cards = [...html.matchAll(/<a href="([^"]*)"\s+class="car_item"[\s>]/g)].map((m, i) => {
@@ -302,6 +306,9 @@ function parseListPage(html: string, url: string, n: number): ListPage {
       },
     } satisfies Card;
   });
+  if (n === 1 && lastPage === 1 && cards.length < Number(total)) {
+    throw new Error(`Autoesa page changed: no pagination for ${total} listings at ${url}`);
+  }
   return { total: Number(total), lastPage, cards };
 }
 
@@ -309,6 +316,7 @@ function parseListPage(html: string, url: string, n: number): ListPage {
 // Detail pages
 
 const PASSENGER = "Osobní";
+const COMMERCIAL = "Užitkové";
 
 interface Detail {
   /** The site's vehicle category: "Osobní" (passenger) or "Užitkové" (commercial). */
@@ -444,14 +452,14 @@ const BODY_SLUGS: Record<string, Body> = {
 };
 
 /**
- * The site's "Palivo" values. "hybridní" does not tell a plug-in from a full or mild hybrid;
- * the title marks plug-ins ("PHEV", "Plug-in", Škoda "iV").
+ * The site's "Palivo" values. "hybridní" does not tell a full or mild hybrid from a plug-in,
+ * so it stays undefined unless the title marks a plug-in ("PHEV", "Plug-in", Škoda "iV").
  */
 function fuel(value: string, title: string): Fuel | undefined {
   const v = value.toLowerCase();
   if (v.startsWith("lpg")) return "lpg";
   if (v.startsWith("cng")) return "cng";
-  if (v.startsWith("hybrid")) return /plug-in|phev|\biV\b/i.test(title) ? "phev" : "hev";
+  if (v.startsWith("hybrid")) return /plug-in|phev|\biV\b/i.test(title) ? "phev" : undefined;
   return ({ benzín: "petrol", nafta: "diesel", elektro: "bev" } as Record<string, Fuel>)[v];
 }
 
