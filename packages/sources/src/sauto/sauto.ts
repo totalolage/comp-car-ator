@@ -120,7 +120,8 @@ class Run {
       : undefined;
     for (let offset = 0; offset + this.pageSize <= WINDOW; offset += this.pageSize) {
       const page = await this.search({ conditions: CONDITION_SEOS, offset });
-      let more = false;
+      // A first run stops at a page of known listings; a page with none priced proves nothing.
+      let more = since === undefined && page.items.every((item) => refOf(item) && isUnpriced(item));
       for (const item of page.items) {
         const ref = refOf(item);
         // Unpriced listings never become known, so only their timestamp keeps the walk going.

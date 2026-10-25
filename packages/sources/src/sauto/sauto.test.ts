@@ -382,6 +382,65 @@ describe("sauto source", () => {
     ).rejects.toBeInstanceOf(HttpBlockedError);
   });
 
+  it("incremental run fails at the 10,000-result window after a last run, but not on a first run", async () => {
+    // Every page repeats one recently changed listing, so only its detail is needed.
+    const item = {
+      id: 1,
+      price: 100000,
+      sorting_date: "2026-10-25T14:00:00",
+      manufacturer_cb: { name: "Dacia", seo_name: "dacia", value: 15 },
+      model_cb: { name: "Spring", seo_name: "spring", value: 9057 },
+      condition_cb: { name: "Ojeté", value: 2 },
+    };
+    const json = (url: string, body: unknown): Interaction => ({
+      request: { url },
+      response: { url, status: 200, headers: {}, body: JSON.stringify(body), tier: "T0" },
+    });
+    const interactions = [json("https://www.sauto.cz/api/v1/items/1", { result: item })];
+    for (let offset = 0; offset < 10_000; offset += 100) {
+      const params = new URLSearchParams({
+        category_id: "838",
+        condition_seo: "nove,predvadeci,ojete",
+        operating_lease: "false",
+        limit: "100",
+        offset: String(offset),
+      });
+      interactions.push(
+        json(`https://www.sauto.cz/api/v1/items/search?${params}`, {
+          pagination: { total: 10_001 },
+          results: Array.from({ length: 100 }, () => item),
+        }),
+      );
+    }
+    const run = async (checkpoint: Partial<Checkpoint>) => {
+      const out: Observation[] = [];
+      const ctx: HarvestContext = {
+        http: createReplayHttp({ version: 1, interactions }),
+        mode: "incremental",
+        checkpoint: { ...emptyCheckpoint, ...checkpoint },
+        now,
+        log: silentLogger,
+        signal: new AbortController().signal,
+      };
+      for await (const o of sautoSource({ pageSize: 100 }).harvest(ctx)) out.push(o);
+      return out;
+    };
+    await expect(run({ lastRunAt: new Date("2026-10-25T12:00:00Z") })).rejects.toThrow(/window/);
+    expect(listings(await run({}))).toHaveLength(1);
+  });
+
+  it("first incremental run walks past a page where nothing has a price", async () => {
+    const { observations, urls } = await harvest("incremental", {}, (cassette) =>
+      editBodies(cassette, firstSearchPage, (body) => {
+        for (const item of body.results) {
+          Object.assign(item, { price: null, price_by_agreement: true });
+        }
+      }),
+    );
+    expect(searches(urls).length).toBeGreaterThan(1);
+    expect(listings(observations)).toHaveLength(9);
+  });
+
   it("stops when the run is aborted", async () => {
     const controller = new AbortController();
     controller.abort(new Error("stop"));
