@@ -39,6 +39,11 @@ and hash, so switching language keeps the view.
   that seam; tests pass an in-memory `Storage`. No extra port.
 - **Locale by `Accept-Language` redirect**: needs a server or a client redirect with a flash.
   Czech is the default at `/`; English is one click away and links carry their locale.
+- **Facet counts as "the total after this click"**: exact for make, model, body, fuel and
+  transmission from the engine's disjunctive counts, but a Variant can be listed in several
+  countries and sources, so for those the union needs one engine query per option, and
+  every number in the rail would shift on each click. Per-value counts were chosen instead
+  (Consequences).
 - **A custom hover-prefetch script**: Astro's built-in `prefetch` (`prefetchAll`, `hover`)
   does it in about 1 kB, so the shell has no prefetch code of its own.
 
@@ -48,9 +53,23 @@ and hash, so switching language keeps the view.
   `history.replaceState`; new filters are a row in its field table plus a test case.
 - Static pages render unfiltered; an island applies the URL state after hydration, so a
   shared filtered link briefly shows the unfiltered first paint.
+  Category tree pages (`/make/<make>/`, `/body/<body>/`) avoid that for the common entry
+  points: the category is the island's fixed scope, rendered narrowed at build time and kept
+  out of the query string (`withoutScope` drops a conflicting URL value).
 - The compare tray (#17) reads the list from `cmp` when the URL has it (even empty) and from
-  the store otherwise; the header compare link already follows the store. Whoever owns the
-  catalog URL (today `CatalogExplorer`) must write the tray's `compare` back with the filters.
+  the store otherwise; the header compare link already follows the store. The catalog URL
+  has one owner, `CatalogExplorer`: it subscribes to the store and writes a changed compare
+  list back as `cmp` with the filters, so the tray changes the list only through the store.
+- Facet counts in the catalog rail are per value: how many Variants have that value under
+  every other facet's filters (the engine's disjunctive counts, unchanged). Checking or
+  unchecking a value never changes the counts in its own facet (clearing the last make also
+  clears the model choice, so the make counts then widen with it). In a facet with a checked
+  value, unchecked make, model, body, fuel and transmission options read "+N": each Variant
+  has one such value, so checking it adds exactly N. Listing country and source keep the
+  plain count there, since their Variants overlap and a click adds at most N. The rail
+  footnote and each checkbox's accessible name say which meaning a number has.
+  `facetOptions` and `toggleValue` in `lib/catalog-view.ts` own this and are tested
+  against the engine.
 - Message catalogs ship to islands as one shared chunk with both languages (about 3 kB
   gzipped today); the shell script imports only `i18n/locale.ts`.
 - A performance budget per page is enforced at build time (`apps/web/DESIGN.md`).

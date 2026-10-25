@@ -46,6 +46,8 @@ export async function openCatalog(loader: Loader): Promise<Catalog> {
         view = bundle.model(id).then((file) => {
           if (!file) return null;
           const listings = file.listings;
+          // Built once, so the engine reads each array into columns only once.
+          const active = listings.filter((l) => !l.gone);
           return {
             model: file.model,
             generations: file.generations,
@@ -55,7 +57,7 @@ export async function openCatalog(loader: Loader): Promise<Catalog> {
             listings(query = {}) {
               const { filters = {}, sort, offset, limit } = query;
               const { includeGone = false, ...rest } = filters;
-              const rows = includeGone ? listings : listings.filter((l) => !l.gone);
+              const rows = includeGone ? listings : active;
               return runQuery(rows, listingDefs, rest, sort, offset, limit) as ListingResult;
             },
           };

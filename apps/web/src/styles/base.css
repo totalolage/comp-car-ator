@@ -361,6 +361,73 @@ main:focus {
   flex: 1;
 }
 
+/* Long value lists (makes, models) scroll inside their group. */
+.facet-scroll {
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.facet-note {
+  margin: 0 0 var(--s2);
+  padding: 0 var(--s2);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.range {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s1);
+  padding: 2px var(--s2);
+}
+
+.range input {
+  min-width: 0;
+  padding: 1px var(--s1);
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.range input::placeholder {
+  color: var(--muted);
+}
+
+.bands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 2px var(--s2);
+}
+
+.band {
+  padding: 0 var(--s1);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.band:hover {
+  background: var(--mark-soft);
+}
+
+.band[aria-pressed="true"] {
+  background: var(--mark);
+  color: var(--on-mark);
+}
+
+/* The filters button only exists on narrow screens, where the rail folds away. */
+.rail-toggle {
+  display: none;
+}
+
 .button-quiet {
   justify-self: start;
   align-self: start;
@@ -392,6 +459,10 @@ main:focus {
 .empty {
   padding: var(--s6) 0;
   color: var(--muted);
+}
+
+.empty .button-quiet {
+  margin-top: var(--s2);
 }
 
 /* Dense data table -------------------------------------------------------------------- */
@@ -430,6 +501,40 @@ main:focus {
   color: var(--ink-strong);
   font-weight: 700;
   vertical-align: bottom;
+}
+
+/* Sortable headers: the whole label is the button; aria-sort on the cell carries the state. */
+.data th .sort {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.data th .sort:hover {
+  text-decoration: underline;
+}
+
+.sort-mark {
+  display: inline-block;
+  min-width: 1em;
+  font-size: var(--text-xs);
+  text-align: right;
+}
+
+.results-more {
+  margin-top: var(--s2);
+}
+
+.subcategories ul {
+  columns: 12rem;
+  column-gap: var(--s6);
+  margin-bottom: var(--s4);
+  padding: 0;
+  list-style: none;
 }
 
 .data tbody th {
@@ -489,6 +594,14 @@ main:focus {
   .split {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--s3);
+  }
+
+  .rail-toggle {
+    display: block;
+  }
+
+  .rail[data-open="false"] {
+    display: none;
   }
 
   .rail {

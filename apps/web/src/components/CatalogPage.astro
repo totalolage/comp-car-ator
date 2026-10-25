@@ -1,22 +1,68 @@
 ---
+/**
+ * The catalog: the whole catalog at `/`, or one category of it (`/make/skoda/`,
+ * `/body/wagon/`) with the category fixed as the island's scope. The first paint is the
+ * scoped query rendered at build time, so a category link opens already narrowed.
+ */
+import type { VariantFilters } from "@cca/catalog";
 import { i18n } from "../i18n/i18n.ts";
 import type { Lang } from "../i18n/messages.ts";
 import Base from "../layouts/Base.astro";
 import { buildCatalog } from "../lib/catalog.ts";
+import { catalogQuery, firstPaintRow, type Names } from "../lib/catalog-view.ts";
 import CatalogExplorer from "./CatalogExplorer.tsx";
 
 interface Props {
   lang: Lang;
+  /** Page path without the locale prefix. */
+  path?: string;
+  /** Category page: its title, breadcrumb label and fixed filter. */
+  category?: { title: string; scope: VariantFilters };
+  /** Sub-categories listed above the table (a make's models, a body type's makes). */
+  index?: { heading: string; links: { href: string; label: string; count: number }[] };
 }
-const { lang } = Astro.props;
+const { lang, path = "/", category, index } = Astro.props;
 const t = i18n(lang);
 const catalog = await buildCatalog();
-const initial = catalog.query({ sort: { key: "make", dir: "asc" }, limit: 200 });
-const makeNames = Object.fromEntries(
-  catalog.query({ limit: Number.MAX_SAFE_INTEGER }).rows.map((v) => [v.makeId, v.make]),
-);
+const scope = category?.scope;
+const query = catalogQuery({ filters: {} }, scope);
+const result = catalog.query(query);
+// The model facet shows only once a make is chosen; leave its (long) counts out until then.
+const initial = {
+  ...result,
+  rows: result.rows.map(firstPaintRow),
+  facets: {
+    ...result.facets,
+    values: { ...result.facets.values, model: scope?.make ? result.facets.values.model : [] },
+  },
+};
+// Names for the first paint's facets: makes, or on a make's page that make's models.
+const names: Names = {};
+for (const v of catalog.query({ ...query, limit: Number.MAX_SAFE_INTEGER }).rows) {
+  if (scope?.make) names[v.modelId] = v.model;
+  else names[v.makeId] = v.make;
+}
 ---
-<Base lang={lang} path="/">
-  <h1 class="page-title">{t.t("catalog.heading")}</h1>
-  <CatalogExplorer client:load lang={lang} initial={initial} makeNames={makeNames} />
+<Base
+  lang={lang}
+  path={path}
+  title={category?.title}
+  crumbs={category && [{ label: category.title }]}
+>
+  <h1 class="page-title">{category?.title ?? t.t("catalog.heading")}</h1>
+  {
+    index && (
+      <nav class="subcategories" aria-label={index.heading}>
+        <h2 class="section-title">{index.heading}</h2>
+        <ul>
+          {index.links.map((link) => (
+            <li>
+              <a href={link.href}>{link.label}</a> <span class="count">{link.count}</span>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    )
+  }
+  <CatalogExplorer client:load lang={lang} initial={initial} names={names} scope={scope} />
 </Base>

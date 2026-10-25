@@ -1,91 +1,181 @@
 /**
  * Catalog table + facet rail island. First paint comes from build-time props; after
  * hydration it opens the Bundle over fetch, applies the state in the URL and re-queries on
- * every facet change, writing the state back with lib/url-state so the URL stays shareable.
- * TODO(wave1-stream14): full facet set, range filters, sortable columns, density options.
+ * every facet, range or sort change, writing the state back with lib/url-state so the URL
+ * stays shareable. This island owns the catalog URL, the compare list (`cmp`) included: a
+ * change to the remembered compare list (the compare tray) is written back with the filters.
  */
-import { fetchLoader } from "@cca/bundle";
-import { type Catalog, openCatalog, type VariantResult } from "@cca/catalog";
-import { useEffect, useState } from "preact/hooks";
-import { i18n } from "../i18n/i18n.ts";
-import type { Lang } from "../i18n/messages.ts";
-import { type CatalogState, readCatalogState, writeCatalogState } from "../lib/url-state.ts";
 
-const FACETS = ["make", "body", "fuel", "transmission", "market"] as const;
-type Facet = (typeof FACETS)[number];
-const DEFAULT_SORT = { key: "make", dir: "asc" } as const;
-const LIMIT = 200;
+import { prefetch } from "astro:prefetch";
+import { fetchLoader } from "@cca/bundle";
+import {
+  type Catalog,
+  openCatalog,
+  type Range,
+  type VariantFilters,
+  type VariantResult,
+} from "@cca/catalog";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { type I18n, i18n } from "../i18n/i18n.ts";
+import type { Lang } from "../i18n/messages.ts";
+import {
+  COLUMNS,
+  catalogQuery,
+  DEFAULT_SORT,
+  type EnumFacet,
+  facetOptions,
+  type Names,
+  namesOf,
+  nextSort,
+  odometerBands,
+  PAGE,
+  RAIL,
+  type RangeFacet,
+  rangeFromText,
+  toggleValue,
+  withoutScope,
+} from "../lib/catalog-view.ts";
+import { siteStore } from "../lib/store.ts";
+import { type CatalogState, readCatalogState, writeCatalogState } from "../lib/url-state.ts";
 
 interface Props {
   lang: Lang;
   initial: VariantResult;
-  makeNames: Record<string, string>;
+  /** Make and model names the first paint needs; the rest come with the catalog. */
+  names: Names;
+  /** The category this page is about; always applied, never in the URL. */
+  scope?: VariantFilters;
 }
 
-export default function CatalogExplorer({ lang, initial, makeNames }: Props) {
+export default function CatalogExplorer({ lang, initial, names: initialNames, scope }: Props) {
   const t = i18n(lang);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
+  const [names, setNames] = useState(initialNames);
   const [state, setState] = useState<CatalogState>({ filters: {} });
-  const [result, setResult] = useState<VariantResult>(initial);
+  const [limit, setLimit] = useState(PAGE);
+  const [railOpen, setRailOpen] = useState(false);
+  // Bumped by "clear filters" so range fields drop half-typed text too.
+  const [resets, setResets] = useState(0);
 
   useEffect(() => {
-    setState(readCatalogState(location.search));
-    openCatalog(fetchLoader(new URL("/bundle/", location.href))).then(setCatalog);
+    setState(withoutScope(readCatalogState(location.search), scope));
+    openCatalog(fetchLoader(new URL("/bundle/", location.href))).then((c) => {
+      setNames(namesOf(c.query({ limit: Number.MAX_SAFE_INTEGER }).rows));
+      setCatalog(c);
+    });
+    // The compare tray changes the remembered list; carry it into the URL with the filters.
+    const store = siteStore();
+    let remembered = store.compare().join();
+    return store.subscribe(() => {
+      const compare = store.compare();
+      if (compare.join() === remembered) return;
+      remembered = compare.join();
+      setState((s) => ({ ...s, compare }));
+    });
   }, []);
+
+  const result = useMemo(
+    () => (catalog ? catalog.query(catalogQuery(state, scope, limit)) : initial),
+    [catalog, state, limit, scope, initial],
+  );
 
   useEffect(() => {
     if (!catalog) return;
-    const { filters, sort = DEFAULT_SORT } = state;
-    setResult(catalog.query({ filters, sort, limit: LIMIT }));
-    history.replaceState(
-      history.state,
-      "",
-      location.pathname + writeCatalogState(state) + location.hash,
-    );
+    const url = location.pathname + writeCatalogState(state) + location.hash;
+    if (url !== location.pathname + location.search + location.hash)
+      history.replaceState(history.state, "", url);
   }, [catalog, state]);
 
-  function toggle(facet: Facet, value: string) {
-    setState((current) => {
-      const selected = new Set<string>(current.filters[facet] ?? []);
-      if (selected.has(value)) selected.delete(value);
-      else selected.add(value);
-      return { ...current, filters: { ...current.filters, [facet]: [...selected] } };
+  function update(change: (filters: VariantFilters) => VariantFilters) {
+    setLimit(PAGE);
+    setState((s) => ({ ...s, filters: change(s.filters) }));
+  }
+
+  function toggle(facet: EnumFacet, value: string) {
+    update((filters) => toggleValue(filters, facet, value));
+  }
+
+  function setRange(facet: RangeFacet, range: Range | undefined) {
+    update((filters) => {
+      const next: Record<string, unknown> = { ...filters };
+      if (range && (range.min !== undefined || range.max !== undefined)) next[facet] = range;
+      else delete next[facet];
+      return next as VariantFilters;
     });
   }
 
-  // Any applied filter counts, including URL-only ones the rail does not show (`?year=…`).
-  const active = writeCatalogState({ filters: state.filters }) !== "";
+  const filters = state.filters;
+  const sort = state.sort ?? DEFAULT_SORT;
+  const applied = { ...filters, ...scope };
+  // Any applied filter counts, including URL-only ones the rail does not show.
+  const active = writeCatalogState({ filters }) !== "";
+  const activeCount = Object.keys(filters).length;
+  const clear = () => {
+    setResets((n) => n + 1);
+    update(() => ({}));
+  };
 
   return (
     <div class="split">
-      <aside class="rail" aria-label={t.t("catalog.filters")}>
-        {FACETS.map((facet) => (
-          <fieldset key={facet} class="facet" data-facet={facet}>
-            <legend>{t.t(`facet.${facet}`)}</legend>
-            {result.facets.values[facet].map(({ value, count }) => (
-              <label key={value} class="facet-option">
-                <input
-                  type="checkbox"
-                  name={facet}
-                  value={value}
-                  checked={(state.filters[facet] as string[] | undefined)?.includes(value) ?? false}
-                  disabled={!catalog}
-                  onChange={() => toggle(facet, value)}
-                />
-                <span class="facet-label">
-                  {facet === "make" ? (makeNames[value] ?? value) : t.label(facet, value)}
-                </span>
-                <span class="count">{count}</span>
-              </label>
-            ))}
-          </fieldset>
-        ))}
-        <button
-          type="button"
-          class="button-quiet"
-          disabled={!catalog || !active}
-          onClick={() => setState((s) => ({ ...s, filters: {} }))}
-        >
+      <button
+        type="button"
+        class="button-quiet rail-toggle"
+        aria-expanded={railOpen}
+        aria-controls="facet-rail"
+        onClick={() => setRailOpen((o) => !o)}
+      >
+        {t.t("catalog.filters")}
+        {activeCount > 0 && ` (${activeCount})`}
+      </button>
+      <aside id="facet-rail" class="rail" data-open={railOpen} aria-label={t.t("catalog.filters")}>
+        {RAIL.map((facet) => {
+          if (scope && facet.key in scope) return null;
+          if (facet.kind === "range") {
+            return (
+              <RangeFilter
+                key={`${facet.key}-${resets}`}
+                facet={facet.key}
+                value={filters[facet.key]}
+                bounds={result.facets.ranges[facet.key]}
+                disabled={!catalog}
+                t={t}
+                onChange={(r) => setRange(facet.key, r)}
+              />
+            );
+          }
+          if (facet.key === "model" && !applied.make?.length) return null;
+          const options = facetOptions(facet.key, result, applied, names, t);
+          if (options.length === 0) return null;
+          return (
+            <fieldset key={facet.key} class="facet" data-facet={facet.key}>
+              <legend>{t.t(`facet.${facet.key}`)}</legend>
+              <div class={options.length > 12 ? "facet-scroll" : undefined}>
+                {options.map(({ value, label, count, checked, adds }) => {
+                  const meaning = t.count(adds ? "count.facetAdds" : "count.variants", count);
+                  return (
+                    <label key={value} class="facet-option">
+                      <input
+                        type="checkbox"
+                        name={facet.key}
+                        value={value}
+                        checked={checked}
+                        disabled={!catalog}
+                        aria-label={`${label}, ${meaning}`}
+                        onChange={() => toggle(facet.key, value)}
+                      />
+                      <span class="facet-label">{label}</span>
+                      <span class="count" title={meaning} aria-hidden="true">
+                        {adds ? `+${count}` : count}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          );
+        })}
+        <p class="facet-note">{t.t("facet.note")}</p>
+        <button type="button" class="button-quiet" disabled={!catalog || !active} onClick={clear}>
           {t.t("catalog.clear")}
         </button>
       </aside>
@@ -94,33 +184,46 @@ export default function CatalogExplorer({ lang, initial, makeNames }: Props) {
           <output data-testid="total">{t.count("count.variants", result.total)}</output>
         </p>
         {result.rows.length === 0 ? (
-          <p class="empty">{t.t("catalog.empty")}</p>
+          <div class="empty">
+            <p>{t.t("catalog.empty")}</p>
+            {active && (
+              <button type="button" class="button-quiet" onClick={clear}>
+                {t.t("catalog.clear")}
+              </button>
+            )}
+          </div>
         ) : (
           <div class="table-scroll">
             <table class="data">
               <thead>
                 <tr>
-                  <th scope="col">{t.t("col.model")}</th>
-                  <th scope="col">{t.t("col.generation")}</th>
-                  <th scope="col">{t.t("col.years")}</th>
-                  <th scope="col">{t.t("col.body")}</th>
-                  <th scope="col">{t.t("col.fuel")}</th>
-                  <th scope="col" class="num">
-                    {t.t("col.power")}
-                  </th>
-                  <th scope="col">{t.t("col.transmission")}</th>
-                  <th scope="col" class="num">
-                    {t.t("col.newPrice")}
-                  </th>
-                  <th scope="col" class="num">
-                    {t.t("col.usedPrice")}
-                  </th>
-                  <th scope="col" class="num">
-                    {t.t("col.listings")}
-                  </th>
+                  <SortHeader
+                    t={t}
+                    label={t.t("col.model")}
+                    sortKey="make"
+                    sort={sort}
+                    onSort={(s) => setState((st) => ({ ...st, sort: s }))}
+                  />
+                  {COLUMNS.map((col) =>
+                    col.sort ? (
+                      <SortHeader
+                        key={col.id}
+                        t={t}
+                        label={t.t(col.label)}
+                        sortKey={col.sort}
+                        num={col.num}
+                        sort={sort}
+                        onSort={(s) => setState((st) => ({ ...st, sort: s }))}
+                      />
+                    ) : (
+                      <th key={col.id} scope="col" class={col.num ? "num" : undefined}>
+                        {t.t(col.label)}
+                      </th>
+                    ),
+                  )}
                 </tr>
               </thead>
-              <tbody>
+              <tbody onPointerOver={prefetchLink}>
                 {result.rows.map((v) => (
                   <tr key={v.id} data-variant={v.id}>
                     <th scope="row">
@@ -128,24 +231,160 @@ export default function CatalogExplorer({ lang, initial, makeNames }: Props) {
                         {v.make} {v.model}
                       </a>
                     </th>
-                    <td>{v.generation}</td>
-                    <td class="num">
-                      {v.years.from}–{v.years.to ?? ""}
-                    </td>
-                    <td>{t.label("body", v.body)}</td>
-                    <td>{t.label("fuel", v.fuel)}</td>
-                    <td class="num">{t.kw(v.powerKw)}</td>
-                    <td>{t.label("transmission", v.transmission)}</td>
-                    <td class="num">{t.czk(v.newPriceCzk?.min)}</td>
-                    <td class="num">{t.czk(v.used?.priceCzk.median)}</td>
-                    <td class="num">{v.used?.count ?? 0}</td>
+                    {COLUMNS.map((col) => (
+                      <td key={col.id} class={col.num ? "num" : undefined}>
+                        {col.cell(v, t)}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+        {result.total > result.rows.length && (
+          <p class="results-more">
+            <button
+              type="button"
+              class="button-quiet"
+              disabled={!catalog}
+              onClick={() => setLimit((l) => l + PAGE)}
+            >
+              {t.t("catalog.more", { n: Math.min(PAGE, result.total - result.rows.length) })}
+            </button>{" "}
+            <span class="count">
+              {t.t("catalog.shown", { shown: result.rows.length, total: result.total })}
+            </span>
+          </p>
+        )}
       </section>
     </div>
   );
+}
+
+/** Rows re-rendered after load miss Astro's per-link hover listener; prefetch them here. */
+function prefetchLink(e: PointerEvent) {
+  const link = (e.target as Element).closest?.("a");
+  if (link) prefetch(link.href);
+}
+
+function SortHeader(props: {
+  t: I18n;
+  label: string;
+  sortKey: Parameters<typeof nextSort>[1];
+  num?: boolean;
+  sort: Parameters<typeof nextSort>[0];
+  onSort(sort: ReturnType<typeof nextSort> | undefined): void;
+}) {
+  const { label, sortKey, num, sort, onSort } = props;
+  const current = sort.key === sortKey;
+  return (
+    <th
+      scope="col"
+      class={num ? "num" : undefined}
+      aria-sort={current ? (sort.dir === "asc" ? "ascending" : "descending") : undefined}
+    >
+      <button
+        type="button"
+        class="sort"
+        onClick={() => {
+          const next = nextSort(sort, sortKey);
+          const isDefault = next.key === DEFAULT_SORT.key && next.dir === DEFAULT_SORT.dir;
+          onSort(isDefault ? undefined : next);
+        }}
+      >
+        {label}
+        <span class="sort-mark" aria-hidden="true">
+          {current ? (sort.dir === "asc" ? "▲" : "▼") : ""}
+        </span>
+      </button>
+    </th>
+  );
+}
+
+/**
+ * Two number fields, from and to. Each keystroke that makes a range narrows the table at once;
+ * the typed text is kept as typed ("1," while writing 1,5, or a "from" above the "to") and is
+ * reset when the filter changes from elsewhere (a band pick) or the rail is cleared.
+ */
+function RangeFilter(props: {
+  facet: RangeFacet;
+  value: Range | undefined;
+  bounds: { min: number; max: number } | null;
+  disabled: boolean;
+  t: I18n;
+  onChange(range: Range | undefined): void;
+}) {
+  const { facet, value, bounds, disabled, t, onChange } = props;
+  const [draft, setDraft] = useState({ min: text(value?.min), max: text(value?.max) });
+  const typed = useRef(draft);
+  typed.current = draft;
+  useEffect(() => {
+    const current = rangeFromText(typed.current.min, typed.current.max);
+    if (current === null || current?.min !== value?.min || current?.max !== value?.max)
+      setDraft({ min: text(value?.min), max: text(value?.max) });
+  }, [value?.min, value?.max]);
+  if (!bounds && !value) return null;
+
+  const range = rangeFromText(draft.min, draft.max);
+  const edit = (end: "min" | "max", input: string) => {
+    const next = { ...draft, [end]: input };
+    setDraft(next);
+    const parsed = rangeFromText(next.min, next.max);
+    if (parsed !== null) onChange(parsed); // else keep the text until it makes a range
+  };
+  const legend = t.t(`facet.${facet}`);
+  const digits = facet === "consumptionL100km" ? 1 : 0;
+  // Years print bare (2020, not 2 020); other bounds in the page's number format.
+  const bound = (n: number | undefined) =>
+    n === undefined
+      ? ""
+      : facet === "year"
+        ? String(n)
+        : t.number(digits ? n : Math.round(n), digits);
+
+  return (
+    <fieldset class="facet" data-facet={facet}>
+      <legend>{legend}</legend>
+      <div class="range">
+        {(["min", "max"] as const).map((end) => (
+          <input
+            key={end}
+            type="text"
+            inputMode={digits ? "decimal" : "numeric"}
+            autoComplete="off"
+            aria-label={`${legend}: ${t.t(end === "min" ? "range.min" : "range.max")}`}
+            placeholder={`${t.t(end === "min" ? "range.min" : "range.max")} ${bound(bounds?.[end])}`}
+            value={draft[end]}
+            aria-invalid={range === null}
+            disabled={disabled}
+            onInput={(e) => edit(end, (e.target as HTMLInputElement).value)}
+          />
+        ))}
+      </div>
+      {facet === "odometerKm" && (
+        <div class="bands">
+          {odometerBands().map((band) => {
+            const pressed = value?.min === band.range.min && value?.max === band.range.max;
+            return (
+              <button
+                key={band.label}
+                type="button"
+                class="band"
+                aria-pressed={pressed}
+                disabled={disabled}
+                onClick={() => onChange(pressed ? undefined : band.range)}
+              >
+                {band.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </fieldset>
+  );
+}
+
+function text(n: number | undefined): string {
+  return n === undefined ? "" : String(n);
 }
