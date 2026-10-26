@@ -304,7 +304,8 @@ main:focus {
 .rail {
   position: sticky;
   top: calc(var(--masthead) + var(--s3));
-  max-height: calc(100vh - var(--masthead) - var(--s6));
+  /* Ends above the compare tray, so the rail's last controls stay reachable. */
+  max-height: calc(100vh - var(--masthead) - var(--s6) - var(--tray-space, 0px));
   overflow: auto;
   font-size: var(--text-sm);
 }
@@ -740,6 +741,303 @@ body {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* Model page -------------------------------------------------------------------------- */
+
+.variants,
+.stats,
+.chart {
+  margin: 0 0 var(--s4);
+}
+
+.data-auto {
+  width: auto;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* A listing's title cell: condition/sold tags after the title, its Variant on a second line. */
+.tag {
+  margin-left: var(--s1);
+  padding: 0 var(--s1);
+  border: 1px solid var(--rule-strong);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.tag-quiet {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.sub {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.data tr[data-gone] {
+  color: var(--muted);
+}
+
+.change {
+  margin-left: var(--s1);
+  font-size: var(--text-xs);
+}
+
+/* The landed price is a button that opens the row's breakdown. */
+.disclose {
+  /* Holds its visually hidden label, which must not escape the scroll box. */
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+
+.disclose::after {
+  content: " ▸";
+  font-size: var(--text-xs);
+}
+
+.disclose[aria-expanded="true"]::after {
+  content: " ▾";
+}
+
+.data tr[data-open] {
+  background: var(--mark-soft);
+}
+
+.data .detail > td {
+  padding: var(--s2) var(--s3) var(--s3);
+  white-space: normal;
+  background: var(--paper);
+}
+
+/* A detail row spans the whole (scrolling) table; its content stays in the visible box. */
+.listings-scroll {
+  container-type: inline-size;
+}
+
+.detail-grid {
+  position: sticky;
+  left: var(--s3);
+  max-width: calc(100cqi - 2 * var(--s3));
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s3) var(--s8);
+}
+
+.detail-grid h3 {
+  margin-bottom: var(--s1);
+  font-size: var(--text-sm);
+}
+
+.breakdown {
+  border-collapse: collapse;
+}
+
+/* Inside a .data row, so it overrides the table's cell rules. */
+.data .breakdown th,
+.data .breakdown td {
+  min-width: 0;
+  padding: 1px var(--s2) 1px 0;
+  border: 0;
+  font-weight: 400;
+}
+
+.data .breakdown tfoot th,
+.data .breakdown tfoot td {
+  border-top: 1px solid var(--rule-strong);
+  font-weight: 700;
+}
+
+.note {
+  max-width: 28rem;
+  margin-top: var(--s1);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0 var(--s2);
+  margin: var(--s2) 0;
+}
+
+.facts dt {
+  color: var(--muted);
+}
+
+.photos {
+  display: flex;
+  gap: var(--s2);
+}
+
+.photos img {
+  width: 8rem;
+  height: 6rem;
+  object-fit: cover;
+  background: var(--panel);
+}
+
+.facet-flag {
+  margin-bottom: var(--s3);
+}
+
+/* Price history chart. Market colours: categorical slots 1-3, validated for both schemes;
+   every line also has a legend entry and an end label, and the numbers are in a table. */
+.chart {
+  --market-CZ: light-dark(#2a78d6, #3987e5);
+  --market-DE: light-dark(#eb6834, #d95926);
+  --market-AT: light-dark(#1baf7a, #199e70);
+  max-width: 48rem;
+}
+
+[data-market="CZ"] {
+  --series: var(--market-CZ);
+}
+
+[data-market="DE"] {
+  --series: var(--market-DE);
+}
+
+[data-market="AT"] {
+  --series: var(--market-AT);
+}
+
+.chart-legend {
+  display: flex;
+  gap: var(--s3);
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.chart-key::before {
+  content: "";
+  display: inline-block;
+  width: 0.75rem;
+  height: 2px;
+  margin-right: var(--s1);
+  vertical-align: middle;
+  background: var(--series);
+}
+
+.chart-box {
+  position: relative;
+  height: 12rem;
+  margin: var(--s2) 0 var(--s1);
+  padding: var(--s2) 1.75rem 1.25rem 4.5rem;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.chart-plot {
+  position: relative;
+  height: 100%;
+}
+
+.chart-plot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.chart-grid {
+  stroke: var(--rule);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-line {
+  fill: none;
+  stroke: var(--series);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-y,
+.chart-x,
+.chart-label,
+.chart-dot,
+.chart-cross,
+.chart-tip {
+  position: absolute;
+  white-space: nowrap;
+}
+
+.chart-y {
+  right: calc(100% + var(--s2));
+  transform: translateY(-50%);
+}
+
+.chart-x {
+  top: calc(100% + var(--s1));
+  transform: translateX(-50%);
+}
+
+.chart-plot {
+  touch-action: pan-y;
+}
+
+.chart-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--series);
+  box-shadow: 0 0 0 2px var(--paper);
+}
+
+.chart-hover {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+.chart-cross {
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--rule-strong);
+}
+
+.chart-tip {
+  top: 0;
+  display: grid;
+  gap: 1px;
+  margin-left: var(--s2);
+  padding: var(--s1) var(--s2);
+  border: 1px solid var(--rule-strong);
+  background: var(--paper);
+  color: var(--ink);
+  pointer-events: none;
+}
+
+.chart-tip[data-flip] {
+  transform: translateX(calc(-100% - 2 * var(--s2)));
+}
+
+.chart-label {
+  transform: translate(0.5rem, -50%);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.chart-data summary {
+  cursor: pointer;
+  color: var(--link);
+  font-size: var(--text-sm);
 }
 
 /* Footer ------------------------------------------------------------------------------ */

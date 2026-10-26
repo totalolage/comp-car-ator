@@ -36,8 +36,14 @@ export interface I18n {
   kw(n: number | null | undefined): string;
   /** Litres per 100 km, one decimal. */
   l100(n: number | null | undefined): string;
+  /** Short CZK for chart axes: "450 tis. Kč" / "CZK 450K". */
+  czkShort(amount: number | null | undefined): string;
   /** Calendar date in Prague time: "24. 10. 2026" / "24 Oct 2026". */
   date(iso: string | null | undefined): string;
+  /** Day and month for chart axes: "24. 10." / "24 Oct". */
+  dayMonth(iso: string | null | undefined): string;
+  /** Month and year for chart axes: "říj 2026" / "Oct 2026". */
+  monthYear(iso: string | null | undefined): string;
   /** Site path in this locale: "/model/x/" → "/en/model/x/" for English. */
   path(path: string): string;
 }
@@ -75,7 +81,21 @@ function create(lang: Lang): I18n {
     }
     return f;
   };
-  const dates = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "Europe/Prague" });
+  const dateFormat = (options: Intl.DateTimeFormatOptions) => {
+    const f = new Intl.DateTimeFormat(locale, { timeZone: "Europe/Prague", ...options });
+    return (iso: string | null | undefined) => {
+      const d = iso ? new Date(iso) : null;
+      return !d || Number.isNaN(d.getTime()) ? MISSING : f.format(d);
+    };
+  };
+  const date = dateFormat({ dateStyle: "medium" });
+  const dayMonth = dateFormat({ day: "numeric", month: lang === "cs" ? "numeric" : "short" });
+  const monthYear = dateFormat({ month: "short", year: "numeric" });
+  const compact = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "CZK",
+    notation: "compact",
+  });
   const ok = (n: number | null | undefined): n is number =>
     typeof n === "number" && Number.isFinite(n);
   const interpolate = (text: string, vars?: Record<string, string | number>) =>
@@ -95,11 +115,10 @@ function create(lang: Lang): I18n {
     km: (n) => (ok(n) ? `${num(0).format(n)}\u00a0km` : MISSING),
     kw: (n) => (ok(n) ? `${num(0).format(n)}\u00a0kW` : MISSING),
     l100: (n) => (ok(n) ? `${num(1).format(n)}\u00a0l/100\u00a0km` : MISSING),
-    date(iso) {
-      if (!iso) return MISSING;
-      const d = new Date(iso);
-      return Number.isNaN(d.getTime()) ? MISSING : dates.format(d);
-    },
+    czkShort: (n) => (ok(n) ? compact.format(n) : MISSING),
+    date,
+    dayMonth,
+    monthYear,
     path: (p) => localePath(lang, p),
   };
 }
