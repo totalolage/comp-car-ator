@@ -51,15 +51,10 @@ export function createReplayHttp(cassette: Cassette): Http {
       if (!candidates) throw new ReplayMissError(url);
       const index = Math.min(served.get(key) ?? 0, candidates.length - 1);
       served.set(key, index + 1);
-      const { bodyBase64, ...response } = (candidates[index] as Interaction).response;
+      const { response } = candidates[index] as Interaction;
       const marker = detectChallenge(response);
       if (marker) throw new HttpBlockedError(url, response.tier, marker);
-      // Serve in the mode the request asks for, as the live adapter would.
-      const raw = bodyBase64 !== undefined ? Buffer.from(bodyBase64, "base64") : undefined;
-      const page: Page = { ...response };
-      if (binary) page.bytes = new Uint8Array(raw ?? Buffer.from(response.body, "utf8"));
-      else if (raw) page.body = raw.toString("utf8");
-      return page;
+      return toPage(response, binary ?? false);
     },
   };
 }
@@ -72,17 +67,7 @@ export function recordingHttp(inner: Http): { http: Http; cassette(): Cassette }
       async get(input) {
         const request = normalizeRequest(input);
         const page = await inner.get(request);
-        // Cookies are session state, not fixture data; keep them out of committed cassettes.
-        const { "set-cookie": _cookie, ...headers } = page.headers;
-        const { bytes, ...rest } = page;
-        interactions.push({
-          request: { url: request.url },
-          response: {
-            ...rest,
-            headers,
-            ...(bytes ? { bodyBase64: Buffer.from(bytes).toString("base64") } : {}),
-          },
-        });
+        interactions.push(toInteraction(request.url, page));
         return page;
       },
     },
@@ -100,7 +85,33 @@ export async function saveCassette(path: string | URL, cassette: Cassette): Prom
   await writeFile(path, `${JSON.stringify(cassette, null, 2)}\n`);
 }
 
-function matchKey(url: string): string {
+/** Stores a Page as an Interaction (also the raw response cache's entry format). */
+export function toInteraction(url: string, page: Page): Interaction {
+  // Cookies are session state, not fixture data; keep them out of committed cassettes.
+  const { "set-cookie": _cookie, ...headers } = page.headers;
+  const { bytes, ...rest } = page;
+  return {
+    request: { url },
+    response: {
+      ...rest,
+      headers,
+      ...(bytes ? { bodyBase64: Buffer.from(bytes).toString("base64") } : {}),
+    },
+  };
+}
+
+/** Serves a stored response in the mode the request asks for, as the live adapter would. */
+export function toPage(response: Interaction["response"], binary: boolean): Page {
+  const { bodyBase64, ...rest } = response;
+  const raw = bodyBase64 !== undefined ? Buffer.from(bodyBase64, "base64") : undefined;
+  const page: Page = { ...rest };
+  if (binary) page.bytes = new Uint8Array(raw ?? Buffer.from(rest.body, "utf8"));
+  else if (raw) page.body = raw.toString("utf8");
+  return page;
+}
+
+/** URL identity for matching: query parameter order and fragment ignored. */
+export function matchKey(url: string): string {
   const parsed = new URL(url);
   parsed.searchParams.sort();
   parsed.hash = "";
