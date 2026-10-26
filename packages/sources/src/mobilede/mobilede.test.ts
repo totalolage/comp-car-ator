@@ -34,9 +34,9 @@ const full = new URL("./fixtures/full.cassette.json", import.meta.url);
 const AUDI = 1900;
 /** Every make, a first incremental run: 5 new cars and 25 used ones on two pages. */
 const incremental = new URL("./fixtures/incremental.cassette.json", import.meta.url);
-/** Every make, a 1-result cap: two used cars at 38,999 € split by make. */
+/** Every make, a 1-result cap: two used cars at 38,999 €, so the bands around it split by make. */
 const makeSplit = new URL("./fixtures/make-split.cassette.json", import.meta.url);
-const SPLIT_PRICE = "38999:38999";
+const SPLIT_PRICE = "38998:38999";
 
 interface Run {
   observations: Observation[];
@@ -315,20 +315,22 @@ describe("mobile-de source", () => {
     expect(seen.filter((l) => l.photos.length > 0)).toHaveLength(7);
   });
 
-  it("full: splits a single price over the cap by make and recounts the parts", async () => {
+  it("full: splits a one- or two-euro band over the cap by make and recounts the parts", async () => {
     const run = await harvest(makeSplit, mobiledeSource({ resultCap: 1 }), "full");
     expect(run.error).toBeUndefined();
     expect(refs(run)).toEqual(new Set(["454384877", "44481897375264", "43061006993376"]));
     expect(slices(run)).toEqual(
       expect.arrayContaining([
         "new",
-        "used;make=1400;price=38999-38999",
-        "used;make=17200;price=38999-38999",
-        "used;make=20100;price=38999-38999",
+        "used;make=1400;price=38998-38999",
+        "used;make=17200;price=38998-38999",
+        "used;make=20100;price=38999-39000",
       ]),
     );
     // The split slice itself is never done: a resumed census probes it again.
-    expect(slices(run)).not.toContain("used;price=38999-38999");
+    expect(slices(run)).not.toContain("used;price=38998-38999");
+    // Halving a two-euro band would leave out a price with cents between its two euros.
+    expect(run.urls.some((u) => /^(\d+):\1$/.test(params(u).get("p") ?? ""))).toBe(false);
     // Probe, then before and after the parts' recount.
     const whole = run.urls.filter(
       (u) => params(u).get("p") === SPLIT_PRICE && !params(u).has("ms"),
@@ -336,7 +338,7 @@ describe("mobile-de source", () => {
     expect(whole).toHaveLength(3);
   });
 
-  it("full: fails when the make parts of a price miss results", async () => {
+  it("full: fails when the make parts of a band miss results", async () => {
     // A listing at that price under a make outside the taxonomy: the slice counts 3, its parts 2.
     const run = await harvest(
       makeSplit,
@@ -350,8 +352,8 @@ describe("mobile-de source", () => {
         },
       ),
     );
-    expect(String(run.error)).toMatch(/not harvested whole: used;price=38999-38999/);
-    expect(slices(run)).toContain("used;make=17200;price=38999-38999");
+    expect(String(run.error)).toMatch(/not harvested whole: used;price=38998-38999/);
+    expect(slices(run)).toContain("used;make=17200;price=38998-38999");
     expect(run.warnings.filter((w) => /miss results/.test(w))).toHaveLength(3);
   });
 

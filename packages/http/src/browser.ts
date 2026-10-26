@@ -4,7 +4,7 @@
  * until the first T2 fetch.
  */
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -267,7 +267,7 @@ async function navigate(
   for (;;) {
     // Judge the document from its network response first: reading the page while a challenge's
     // script runs (Akamai's sensor) can fail the challenge.
-    const served = document && (await responseOf(document));
+    const served = document && (await responseOf(document, timeoutMs));
     if (served && !detectChallenge(served)) {
       const snapshot = await snapshotOf(page, document);
       if (snapshot && !detectChallenge(snapshot)) return snapshot;
@@ -290,16 +290,22 @@ async function navigate(
 }
 
 /** A document response as the network delivered it, or null when its body is gone. */
-async function responseOf(response: Response): Promise<RawResponse | null> {
+async function responseOf(response: Response, timeoutMs: number): Promise<RawResponse | null> {
+  let timer: NodeJS.Timeout | undefined;
+  // A body that never ends must not hold the page past the timeout.
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), timeoutMs);
+  });
+  const read = (async () => ({
+    url: response.url(),
+    status: response.status(),
+    headers: await response.allHeaders(),
+    body: await response.text(),
+  }))().catch(() => null);
   try {
-    return {
-      url: response.url(),
-      status: response.status(),
-      headers: await response.allHeaders(),
-      body: await response.text(),
-    };
-  } catch {
-    return null;
+    return await Promise.race([read, timeout]);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -385,14 +391,16 @@ async function acceptLanguages(dir: string, locale: string) {
   let prefs: Record<string, any> = {};
   try {
     prefs = JSON.parse(await readFile(file, "utf8"));
-  } catch {
-    // A new profile.
+  } catch (error) {
+    // Only a new profile has none; anything else would lose the profile's other preferences.
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
   const language = locale.split("-")[0] as string;
   const languages = language === locale ? locale : `${locale},${language}`;
   prefs.intl = { ...prefs.intl, accept_languages: languages, selected_languages: languages };
   await mkdir(join(dir, "Default"), { recursive: true });
-  await writeFile(file, JSON.stringify(prefs));
+  await writeFile(`${file}.cca`, JSON.stringify(prefs));
+  await rename(`${file}.cca`, file);
 }
 
 /** A TCP port free on the loopback interface right now. */

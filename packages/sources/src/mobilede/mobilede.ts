@@ -18,13 +18,13 @@
  *   Tageszulassung), then price bands bisected on whole euros, neighbours sharing their bound
  *   (see `split`); with `makes`, a make per slice before the price bands. Price bands cover a
  *   slice by construction (every listing has a price), so they need no recount.
- *   Only a single price over the cap splits by make, and that split is recounted like
+ *   Only a band of one or two euros over the cap splits by make, and that split is recounted like
  *   AutoScout24's: the site's totals move by tens of listings a minute, too fast to recount a
  *   make split of a large slice. A slice's key names its filters ("used;price=0-15624",
- *   "used;make=25200;price=10000-10000"), so a failed census resumes where it stopped.
+ *   "used;make=25200;price=9999-10000"), so a failed census resumes where it stopped.
  * - full: every slice's pages newest first, a SliceDone after each slice that yielded as many
  *   distinct listings as it reports (paged a second time if it came out short); slices done
- *   earlier in the census are skipped; slices still short, over the cap at a single price, or
+ *   earlier in the census are skipped; slices still short, over the cap at one or two euros, or
  *   split into makes that miss results fail the run at the end.
  * - incremental: the same slices narrowed to listings online since the last run (`doc`, 1, 3,
  *   7 or 14 days; no window after a longer gap), newest first, each stopping at a page of
@@ -194,7 +194,7 @@ class Harvest {
   }
 
   /**
-   * Whether the make `parts` of a single-price slice reach every result of it: counted between
+   * Whether the make `parts` of a one- or two-euro slice reach every result of it: counted between
    * two counts of the slice and reaching the higher, three attempts (as AutoScout24's).
    */
   private async covered(slice: Slice, parts: readonly Slice[]): Promise<boolean> {
@@ -294,9 +294,9 @@ class Harvest {
  * Sub-slices that cover `slice`: price bands, then halves of a band sharing their middle euro
  * (the site compares whole euros: `p=0:122.99` reads as 0-12,299 €, "." being its thousands
  * separator; shared bounds leave no gap for prices with cents, and a listing on a bound simply
- * comes twice). A two-euro band splits into its two prices, the one place a price with cents
- * between them could be missed. A single price (or the open top band) splits by the page's
- * makes when `byMake`, else not at all.
+ * comes twice). A band of one or two euros is not halved (halves would leave out a price with
+ * cents between the two); it, or the open top band, splits by the page's makes when `byMake`,
+ * else not at all.
  */
 function split(slice: Slice, page: SearchPage, byMake: boolean): Slice[] | null {
   if (!slice.price) {
@@ -313,19 +313,13 @@ function split(slice: Slice, page: SearchPage, byMake: boolean): Slice[] | null 
       { ...slice, price: { from: mid, to } },
     ];
   }
-  if (to === from + 1) {
-    return [
-      { ...slice, price: { from, to: from } },
-      { ...slice, price: { from: to, to } },
-    ];
-  }
   if (byMake && slice.make === undefined && page.makes.length > 0) {
     return page.makes.map((make) => ({ ...slice, make }));
   }
   return null;
 }
 
-/** "new", "used;price=0-15624", "used;make=25200;price=10000-10000", "new;price=999999-". */
+/** "new", "used;price=0-15624", "used;make=25200;price=9999-10000", "new;price=999999-". */
 function sliceKey(slice: Slice): string {
   const parts: string[] = [slice.condition];
   if (slice.make !== undefined) parts.push(`make=${slice.make}`);

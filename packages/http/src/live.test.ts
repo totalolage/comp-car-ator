@@ -200,6 +200,23 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
     expect(page.body).toContain("webdriver=false");
   }, 120_000);
 
+  it("waits for an interstitial challenge to reload into the page", async () => {
+    handler = (req, res) => {
+      res.writeHead(200, { "content-type": "text/html" });
+      if (req.headers.cookie?.includes("passed=1")) {
+        res.end("<p>the page</p>");
+        return;
+      }
+      // Akamai's interstitial: it runs its sensor, sets a cookie and reloads.
+      res.end(
+        `<div id="sec-if-cpt-container"></div><script>setTimeout(() => { document.cookie = "passed=1"; location.reload(); }, 500)</script>`,
+      );
+    };
+    const page = await http.get({ url: `${base}/interstitial`, minTier: "T2" });
+    expect(page).toMatchObject({ status: 200, tier: "T2" });
+    expect(page.body).toContain("the page");
+  }, 120_000);
+
   it("sends the caller's headers on the navigation, not on the page's subresources", async () => {
     handler = recording((req, res) => {
       if (req.url === "/sub.js") {
