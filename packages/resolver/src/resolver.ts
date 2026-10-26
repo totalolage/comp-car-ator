@@ -11,6 +11,7 @@ import {
 import {
   CHASSIS_CODES,
   FUEL_BADGES,
+  LIFTBACKS,
   MAKE_GROUPS,
   MODEL_ALIASES,
   type ModelAliases,
@@ -45,17 +46,23 @@ export interface Resolver {
 /**
  * Register bodies that can be the car a listing's body names, tried when no Variant fits the
  * body itself. The register files cars by their EU type-approval body code, listing sites
- * by shape: an SUV without the off-road category is a wagon, MPV or hatchback there, a
- * liftback a sedan (or a hatchback), and one MPV is filed under either MPV or wagon.
- * Coupés, convertibles, vans and pickups have no stand-in: when none fits, the catalog
- * lacks the car.
+ * by shape. Its "suv" is the off-road category, so an SUV without it is a wagon, MPV or
+ * hatchback there, always the same car.
  */
-const REGISTER_BODIES: Partial<Record<Body, readonly Body[]>> = {
-  suv: ["wagon", "mpv", "hatchback"],
-  hatchback: ["sedan"],
-  sedan: ["hatchback"],
-  mpv: ["wagon"],
-  wagon: ["mpv"],
+const OFF_ROAD_STAND_INS: readonly Body[] = ["wagon", "mpv", "hatchback"];
+
+/**
+ * Body codes the register files one shape under: a liftback as a sedan, an MPV as a wagon.
+ * A generation can also have both as real bodies (Mazda 3 sedan and hatchback, Golf Variant
+ * and Golf Plus), so a code stands in only where the generation has no Variant of the stated
+ * body, or for a liftback in LIFTBACKS. Coupés, convertibles, vans and pickups have none:
+ * when none fits, the catalog lacks the car.
+ */
+const CODE_STAND_INS: Partial<Record<Body, Body>> = {
+  hatchback: "sedan",
+  sedan: "hatchback",
+  mpv: "wagon",
+  wagon: "mpv",
 };
 
 /** Power within this many kW counts as the same Variant (kW/PS rounding, ADR 0002). */
@@ -70,6 +77,10 @@ interface Model {
   generationWords: Map<GenerationId, string[]>;
   /** Lower-case words of the catalog's model name ("v", "class" for "V-Class"). */
   nameWords: Set<string>;
+  /** The bodies each generation has Variants of. */
+  generationBodies: Map<GenerationId, Set<Body>>;
+  /** A liftback the register files as either sedan or hatchback (LIFTBACKS). */
+  liftback: boolean;
 }
 
 /** Words that claim a generation for any make; a lone "I" or "V" only next to the model name. */
@@ -91,9 +102,9 @@ const ENGINE_LAYOUT = /^[vw]\d{1,2}$/i;
  *    transmission among the Variant's stated `transmissions` (a filter, not identity: a
  *    Variant that states none fits any gearbox), year inside the Variant's production years
  *    (manufacture year exactly, registration or model year ±1), and generation equal when
- *    the text names one. When no Variant fits a stated body, the register bodies that can
- *    be that car stand in for it (REGISTER_BODIES: an SUV filed as a wagon, a liftback as a
- *    sedan); a body is never dropped.
+ *    the text names one. When no Variant fits every field with the stated body, the register
+ *    bodies that can be that car stand in for it (an SUV filed as a wagon, a liftback as a
+ *    sedan; see standsIn); a body is never dropped.
  * 4. One fitting Variant is a match only if fuel and power are known and the text names at
  *    most one generation, all of them known to the catalog ("Octavia III" when the catalog
  *    has only the IV is not evidence for the IV). A word claims a generation when it is a
@@ -119,10 +130,14 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
         variants: [],
         generationWords: new Map(),
         nameWords: new Set(split(variant.model).map((w) => w.toLowerCase())),
+        generationBodies: new Map(),
+        liftback: LIFTBACKS[makeKey]?.includes(modelKey) === true,
       };
       models.set(modelKey, model);
     }
     model.variants.push(variant);
+    const bodies = model.generationBodies.get(variant.generationId) ?? new Set<Body>();
+    model.generationBodies.set(variant.generationId, bodies.add(variant.body));
     if (!model.generationWords.has(variant.generationId)) {
       model.generationWords.set(variant.generationId, generationWords(variant));
     }
@@ -184,7 +199,7 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
         );
       let fits = fitting((v) => body === undefined || v.body === body);
       if (fits.length === 0 && body !== undefined) {
-        fits = fitting((v) => REGISTER_BODIES[body]?.includes(v.body) === true);
+        fits = fitting((v) => standsIn(model, body, v));
       }
       const only = fits.length === 1 ? fits[0] : undefined;
       const evidence =
@@ -291,6 +306,14 @@ function generationWords(variant: CatalogVariant): string[] {
       ),
     ),
   ];
+}
+
+/** Whether Variant `v` can be the car a listing states as `stated` (OFF_ROAD_STAND_INS, CODE_STAND_INS). */
+function standsIn(model: Model, stated: Body, v: CatalogVariant): boolean {
+  if (stated === "suv") return OFF_ROAD_STAND_INS.includes(v.body);
+  if (CODE_STAND_INS[stated] !== v.body) return false;
+  const liftback = model.liftback && (stated === "hatchback" || stated === "sedan");
+  return liftback || model.generationBodies.get(v.generationId)?.has(stated) !== true;
 }
 
 /** Distinct generations named; two catalog spellings of one model share generation slugs. */

@@ -245,7 +245,23 @@ describe("Resolver", () => {
         { body: "wagon", fuel: "petrol", powerKw: 110 },
         { body: "wagon", fuel: "diesel", powerKw: 147 },
       ]),
+      ...variants("Škoda", "Octavia", { slug: "5e", name: "Octavia 5E", from: 2013, to: 2020 }, [
+        // Liftbacks of one generation filed under both codes.
+        { body: "sedan", fuel: "diesel", powerKw: 110 },
+        { body: "hatchback", fuel: "diesel", powerKw: 85 },
+      ]),
       ...variants("Volkswagen", "Golf", golf8, [{ body: "wagon", fuel: "petrol", powerKw: 110 }]),
+      ...variants("Volkswagen", "Golf", { slug: "mk5", name: "Golf V", from: 2004, to: 2008 }, [
+        { body: "wagon", fuel: "diesel", powerKw: 77 },
+        { body: "mpv", fuel: "diesel", powerKw: 103 },
+      ]),
+      ...variants("Mazda", "3", { slug: "bp", name: "Mazda3 BP", from: 2019 }, [
+        { body: "sedan", fuel: "petrol", powerKw: 110 },
+        { body: "hatchback", fuel: "diesel", powerKw: 85 },
+      ]),
+      ...variants("Ford", "S-Max", { slug: "wa6", name: "S-Max WA6", from: 2015, to: 2023 }, [
+        { body: "wagon", fuel: "diesel", powerKw: 132 },
+      ]),
       ...variants("Hyundai", "Tucson", { slug: "tl", name: "Tucson TL", from: 2015, to: 2020 }, [
         { body: "mpv", fuel: "diesel", powerKw: 104 },
         { body: "wagon", fuel: "diesel", powerKw: 104 },
@@ -277,6 +293,38 @@ describe("Resolver", () => {
       expect(at({ ...octavia, fuel: "diesel", powerKw: 147 })).toMatchObject({
         reason: "no-variant",
       });
+    });
+
+    it("takes another code only where the generation lacks the stated body", () => {
+      // The register files this MPV as a wagon only.
+      expect(at({ make: "Ford", model: "S-Max", fuel: "diesel", powerKw: 132, body: "mpv" })).toBe(
+        "ford/s-max/wa6/wagon-diesel-132kw",
+      );
+      // Mazda 3 has real sedans and hatchbacks: a diesel sedan is not the diesel hatchback.
+      expect(
+        at({ make: "Mazda", model: "3", fuel: "diesel", powerKw: 85, body: "sedan" }),
+      ).toMatchObject({ reason: "no-variant" });
+      // A Golf V Variant is not the Golf Plus the generation files as an MPV.
+      const golf5 = {
+        make: "VW",
+        model: "Golf",
+        fuel: "diesel",
+        firstRegistration: { year: 2006 },
+      } as const;
+      expect(at({ ...golf5, powerKw: 103, body: "wagon" })).toMatchObject({
+        reason: "no-variant",
+      });
+      // Octavia liftbacks are filed under both codes in one generation.
+      expect(
+        at({
+          make: "Škoda",
+          model: "Octavia",
+          fuel: "diesel",
+          powerKw: 110,
+          body: "hatchback",
+          firstRegistration: { year: 2017 },
+        }),
+      ).toBe("skoda/octavia/5e/sedan-diesel-110kw");
     });
 
     it("never takes a wagon for a hatchback, nor anything for a convertible", () => {
