@@ -97,6 +97,44 @@ Sentence case everywhere; no uppercase labels.
   "only differences" hides the rest. A Variant the catalog no longer has keeps its column
   ("no longer in the catalog") and stays out of the comparison.
 
+## Model page
+
+- `/model/<make>/<model>/` (and `/en/…`), one per model in the Bundle, breadcrumb Katalog ›
+  make (`/make/<make>/`) › model. Top to bottom: the model's Variants (generation, body, fuel,
+  power; years, consumption, new price from, used median per Market from the published cells,
+  active listing count linking to `?variant=<id>`, a "Porovnat" toggle that edits the compare
+  list through `siteStore`; the tray itself is #17), then the listings island
+  (`ModelExplorer`). EEA attribution shows under the Variants only once the Bundle has run
+  the `eea-co2` Source and a Variant carries CO₂ data.
+- `ModelExplorer` mirrors the catalog island over `model(id).listings()`: listing rail
+  (Variant, condition, country, registration year, odometer with one quick pick per published
+  band, landed price, asking price, power, fuel, gearbox, body, source; an enum facet with a
+  single value is hidden; "include sold (last 30 days)"), price statistics, the price history
+  chart, and the listings table. It owns only the listing URL state (`readListingState` /
+  `writeListingState`); a `cmp` the URL carries is kept and follows the store.
+  What it shows is `lib/listing-view.ts`, the one place in the UI that reads model-file shapes.
+- Listings table: title (links to the source; condition, sold and "not in statistics" tags;
+  its Variant on a second line), year, odometer, gearbox (from the listing), asking price in
+  its own currency with the move since first seen (▼/▲ %), landed price in CZ, country,
+  source, days listed. Default order is landed price ascending, so Czech and imported cars
+  compare directly; year, odometer, price, landed and days sort. The landed price is a
+  button (hover shows the breakdown as a tooltip): it expands the row to the landed-price
+  lines from Pricing with their notes, the original price and ČNB rate, the price history,
+  first/last seen, seller and location, and up to three photos (lazy, secondary).
+- Price statistics: p10, median, p90 of asking prices (CZK) and median days listed, one row
+  per country × condition (never pooled), for the current filters. A selection the Publisher
+  precomputed (at most one Variant, one year, one band pick) reads its cell; any other is
+  recomputed from the Listings by the same rules (ADR 0012); fewer than 3 Listings show no
+  quantiles.
+- Price history: the published weekly median per country as lines (inline SVG stretched to
+  the box, HTML labels so text stays 11px at any width; colours = categorical slots 1-3,
+  validated in both schemes, plus legend, end labels and a data table under the chart).
+  Hovering or touching the plot shows a crosshair at the nearest week with each country's
+  value; the data table is built when opened, so long histories add no first-paint HTML.
+  It is always the whole model's used
+  Listings: only the country filter applies, since a model file no longer has the Listings
+  that past weeks were computed from.
+
 ## Components (classes in base.css)
 
 `masthead`, `menu` / `menu-panel` / `tree`, `crumbs`, `page-title`, `page-summary`,
@@ -104,8 +142,10 @@ Sentence case everywhere; no uppercase labels.
 `facet-scroll`, `range`, `bands` / `band`, `rail-toggle`, `data` (table; `.num` right-aligns;
 `.sort` header buttons), `table-scroll`, `results-more`, `subcategories`, `count`, `badge`,
 `empty`, `colophon`, `pick`, `tray` / `tray-items` / `tray-item` / `tray-remove`,
-`compare-tools`, `compare-table` / `compare-group` / `compare-detail` / `compare-gone`,
-`visually-hidden`.
+`compare-tools`, `compare-table` / `compare-group` / `compare-detail` / `compare-gone`; model page: `data-auto`, `tag` / `tag-quiet`, `sub`, `change`,
+`disclose`, `detail` / `detail-grid`, `breakdown`, `note`, `facts`, `photos`, `facet-flag`,
+`chart` (`chart-legend`, `chart-key`, `chart-box`, `chart-plot`, `chart-line`, `chart-point`,
+`chart-dot`, `chart-label`, `chart-x`, `chart-y`, `chart-data`), `visually-hidden`.
 Rows are ~19px (2px vertical cell padding at 12px text), hairline rules, no zebra striping. A table's first cell is a row
 header (`<th scope="row">`) holding the link.
 
@@ -120,17 +160,22 @@ real `<input>`s inside `<label>`s with `<fieldset>`/`<legend>` groups; result co
 
 Enforced on every build by `scripts/check-budget.mjs` (fails the build), gzipped, per page:
 
-|                                | budget | catalog page | compare page | model page |
-| ------------------------------ | ------ | ------------ | ------------ | ---------- |
-| HTML                           | 30 kB  | 7.7 kB       | 3.4 kB       | 2.4 kB     |
-| CSS                            | 8 kB   | 3.1 kB       | 3.1 kB       | 3.1 kB     |
-| JS (all chunks the page loads) | 30 kB  | 23.7 kB      | 20.7 kB      | 5.0 kB     |
-| Total                          | 60 kB  | 34.4 kB      | 27.2 kB      | 10.4 kB    |
+|                                | budget | catalog page | model page | large model page |
+| ------------------------------ | ------ | ------------ | ---------- | ---------------- |
+| HTML                           | 30 kB  | 7.2 kB       | 8.9 kB     | 18.1 kB          |
+| CSS                            | 8 kB   | 3.5 kB       | 3.5 kB     | 3.5 kB           |
+| JS (all chunks the page loads) | 30 kB  | 22.7 kB      | 27.1 kB    | 27.1 kB          |
+| Total                          | 60 kB  | 33.4 kB      | 39.5 kB    | 48.7 kB          |
 
-Measured on the sample Bundle (2026-10-26). The catalog page's JS is Preact, its hooks, the
-island (with the catalog query engine) and the shared url-state/i18n chunk; category pages
-are the same page, and the compare page is the same stack with its own island. A model page
-loads only the shell and tray scripts and Astro's prefetch.
+Measured on the sample Bundle (2026-10-26); "large model page" is the Octavia page built from
+`node apps/web/scripts/large-model-bundle.ts <dir>` (a 2.06 MB raw model file of 6,000
+Listings with two years of weekly history, about the most popular model at scale) with
+`BUNDLE_DIR=<dir>`. The catalog page's JS is Preact, its hooks, the island (with the catalog
+query engine) and the shared url-state/i18n chunk, which carries both languages' messages
+(about 4.5 kB gzip); category pages are the same page. A model page adds its island
+(listing view, chart) and the store. The model page's HTML grows with the first 50 listing
+rows and the weekly history it serializes for hydration; the chart's data table is built
+only when opened.
 
 Query time is measured by `node apps/web/scripts/bench-catalog.ts` on a synthetic Bundle of
 50k Variants (about 110k Variant × listing-group rows). On devbox (2026-10-25, under load):

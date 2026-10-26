@@ -1,70 +1,162 @@
 ---
-import type { ModelId } from "@cca/vocabulary";
+/**
+ * A model page, rendered at build time from the Bundle: the model's Variants with their used
+ * prices per Market, then the listings island (rail, price statistics, price history chart,
+ * listings table). The first paint is the unfiltered view; the island applies the listing
+ * state in the URL after hydration. What is shown is lib/listing-view.ts.
+ */
+import type { FxTable, ModelId } from "@cca/vocabulary";
+import { MARKETS } from "@cca/vocabulary";
 import { i18n } from "../i18n/i18n.ts";
 import type { Lang } from "../i18n/messages.ts";
 import Base from "../layouts/Base.astro";
 import { buildCatalog } from "../lib/catalog.ts";
-import { writeCatalogState } from "../lib/url-state.ts";
+import {
+  firstPaintListing,
+  listingQuery,
+  priceStats,
+  variantMedians,
+  variantNames,
+} from "../lib/listing-view.ts";
+import { COMPARE_MAX, writeListingState } from "../lib/url-state.ts";
+import ModelExplorer from "./ModelExplorer.tsx";
 
-/**
- * Minimal model page, rendered at build time from the Bundle.
- * TODO(wave1-stream15): price history chart, landed-price breakdown, listing facets.
- */
 interface Props {
   lang: Lang;
   id: ModelId;
 }
 const { lang, id } = Astro.props;
 const t = i18n(lang);
-const view = await (await buildCatalog()).model(id);
+const catalog = await buildCatalog();
+const view = await catalog.model(id);
 if (!view) throw new Error(`Model ${id} is in the catalog index but has no model file`);
-const listings = view.listings({ sort: { key: "priceCzk", dir: "asc" }, limit: 500 });
 const name = `${view.model.make} ${view.model.name}`;
-const makeId = view.variants[0]?.makeId;
+const names = variantNames(view.variants, t);
+const medians = variantMedians(view);
+const result = view.listings(listingQuery({ filters: {} }));
+const initial = { ...result, rows: result.rows.map(firstPaintListing) };
+const all = view.listings({ filters: { includeGone: true }, limit: Number.MAX_SAFE_INTEGER });
+const fx: FxTable = {};
+for (const l of all.rows) {
+  const rate = catalog.manifest.fx[l.price.currency];
+  if (rate) fx[l.price.currency] = rate;
+}
+const counts = view.listings({ limit: 0 }).facets.values.variant;
+const count = (variant: string) => counts.find((c) => c.value === variant)?.count ?? 0;
+// EEA asks for attribution where its CO₂ data is shown.
+const eea =
+  catalog.manifest.sources.some((s) => s.id === "eea-co2" && s.lastRunAt) &&
+  view.variants.some((v) => v.co2GKm !== undefined);
 ---
 <Base
   lang={lang}
   path={`/model/${id}/`}
   title={name}
   crumbs={[
-    { label: view.model.make, href: makeId && t.path("/") + writeCatalogState({ filters: { make: [makeId] } }) },
+    { label: view.model.make, href: t.path(`/make/${view.model.makeId}/`) },
     { label: view.model.name },
   ]}
   recent={{ id, label: name }}
 >
   <h1 class="page-title">{name}</h1>
   <p class="page-summary">
-    {t.count("count.variants", view.variants.length)}, {t.count("count.listings", listings.total)}
+    {t.t("model.summary", {
+      variants: t.count("count.variants", view.variants.length),
+      listings: t.count("count.listings", result.total),
+    })}
   </p>
-  <h2 class="section-title">{t.t("model.listings")}</h2>
-  <div class="table-scroll">
-    <table class="data">
-      <thead>
-        <tr>
-          <th scope="col">{t.t("col.title")}</th>
-          <th scope="col" class="num">{t.t("col.year")}</th>
-          <th scope="col" class="num">{t.t("col.odometer")}</th>
-          <th scope="col" class="num">{t.t("col.price")}</th>
-          <th scope="col" class="num">{t.t("col.landed")}</th>
-          <th scope="col">{t.t("col.market")}</th>
-          <th scope="col">{t.t("col.source")}</th>
-          <th scope="col" class="num">{t.t("col.days")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {listings.rows.map((l) => (
-          <tr data-listing={l.id}>
-            <th scope="row"><a href={l.url} rel="noopener nofollow">{l.title}</a></th>
-            <td class="num">{l.year ?? "–"}</td>
-            <td class="num">{t.km(l.odometerKm)}</td>
-            <td class="num">{t.money(l.price.amount, l.price.currency)}</td>
-            <td class="num">{t.czk(l.landed?.totalCzk)}</td>
-            <td>{t.label("market", l.market)}</td>
-            <td>{l.source}</td>
-            <td class="num">{l.daysOnMarket}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+  {
+    view.variants.length > 0 && (
+      <section aria-labelledby="variants-title">
+        <h2 class="section-title" id="variants-title">{t.t("model.variants")}</h2>
+        <div class="table-scroll">
+          <table class="data">
+            <thead>
+              <tr>
+                <th scope="col">{t.t("model.variant")}</th>
+                <th scope="col" class="num">{t.t("col.years")}</th>
+                <th scope="col" class="num">{t.t("col.consumption")}</th>
+                <th scope="col" class="num">{t.t("col.newPrice")}</th>
+                {MARKETS.map((m) => (
+                  <th scope="col" class="num">
+                    {t.t("model.usedMedian")} {m}
+                  </th>
+                ))}
+                <th scope="col" class="num">{t.t("col.listings")}</th>
+                <th scope="col"><span class="visually-hidden">{t.t("model.compare")}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {view.variants.map((v) => (
+                <tr data-variant={v.id}>
+                  <th scope="row">{names[v.id]}</th>
+                  <td class="num">{`${v.years.from}–${v.years.to ?? ""}`}</td>
+                  <td class="num">{t.l100(v.consumptionL100km)}</td>
+                  <td class="num">{t.czk(v.newPriceCzk?.min)}</td>
+                  {MARKETS.map((m) => (
+                    <td class="num">{t.czk(medians[v.id]?.[m])}</td>
+                  ))}
+                  <td class="num">
+                    {count(v.id) > 0 ? (
+                      <a href={writeListingState({ filters: { variant: [v.id] } }) + "#listings"}>
+                        {t.number(count(v.id))}
+                      </a>
+                    ) : (
+                      "0"
+                    )}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="band compare-toggle"
+                      data-compare={v.id}
+                      aria-pressed="false"
+                      hidden
+                    >
+                      {t.t("model.compare")}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {eea && <p class="facet-note">{t.t("model.eea")}</p>}
+      </section>
+    )
+  }
+  <div id="listings">
+    <ModelExplorer
+      client:load
+      lang={lang}
+      modelId={id}
+      initial={initial}
+      initialStats={priceStats(view, { filters: {} })}
+      names={names}
+      fx={fx}
+      history={view.history}
+    />
   </div>
+  <p class="facet-note compare-status" aria-live="polite" data-full={t.t("model.compareFull", { n: COMPARE_MAX })}></p>
 </Base>
+<script>
+  // Compare toggles: the compare tray (#17) shows the list; this page only edits it via the store.
+  import { siteStore } from "../lib/store.ts";
+
+  const store = siteStore();
+  const buttons = [...document.querySelectorAll<HTMLButtonElement>("button[data-compare]")];
+  const status = document.querySelector<HTMLElement>(".compare-status");
+  const sync = () => {
+    const chosen = new Set(store.compare());
+    for (const b of buttons) b.setAttribute("aria-pressed", String(chosen.has(b.dataset.compare ?? "")));
+  };
+  for (const b of buttons) {
+    b.hidden = false;
+    b.addEventListener("click", () => {
+      const ok = store.toggleCompare(b.dataset.compare ?? "");
+      if (status) status.textContent = ok ? "" : (status.dataset.full ?? "");
+    });
+  }
+  store.subscribe(sync);
+  sync();
+</script>
