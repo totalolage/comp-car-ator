@@ -527,8 +527,8 @@ main:focus {
     animation-timeline: --table-box;
     animation-range:
       exit-crossing 0% exit-crossing 100000px,
-      exit-crossing max(0px, 100% - var(--table-head))
-      exit-crossing calc(max(0px, 100% - var(--table-head)) + 100000px);
+      exit-crossing max(0px, 100% - var(--table-head)) exit-crossing
+      calc(max(0px, 100% - var(--table-head)) + 100000px);
   }
 
   /* Keyboard focus scrolled into view lands below the header row, not behind it. */
