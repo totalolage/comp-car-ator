@@ -504,9 +504,11 @@ main:focus {
  * the page with a view timeline: from when the box's top passes under the masthead they
  * move down 1:1 with the scroll (the 100000px range and translate are equal, so the speed
  * is 1), and a second, added animation cancels that from --table-head before the box's
- * bottom, so the row stops on the last rows and leaves with them. --table-head must be at
- * least the header row's height, or the row overhangs the box. Without view timelines
- * (Firefox) the header row scrolls away with the rows.
+ * bottom, so the row stops on the last rows and leaves with them; a table shorter than
+ * --table-head never moves its header. --table-head should be at least the header row's
+ * height: a taller row overhangs the box bottom and is clipped there while the last rows
+ * leave. Tracking holds for tables up to 100000px tall; raise both numbers if one ever gets
+ * taller. Without view timelines (Firefox) the header row scrolls away with the rows.
  */
 @supports (animation-timeline: view()) {
   .table-scroll {
@@ -525,8 +527,8 @@ main:focus {
     animation-timeline: --table-box;
     animation-range:
       exit-crossing 0% exit-crossing 100000px,
-      exit-crossing calc(100% - var(--table-head))
-      exit-crossing calc(100% - var(--table-head) + 100000px);
+      exit-crossing max(0px, 100% - var(--table-head))
+      exit-crossing calc(max(0px, 100% - var(--table-head)) + 100000px);
   }
 
   /* Keyboard focus scrolled into view lands below the header row, not behind it. */
@@ -742,7 +744,8 @@ body {
 }
 
 .compare-table {
-  /* Variant names wrap to a few lines above the remove button. */
+  /* Variant names wrap to a few lines above the remove button; 7rem fits two-line names and
+     details. A longer name only clips the header as the table's last rows leave. */
   --table-head: 7rem;
   width: auto;
 }

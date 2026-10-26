@@ -60,7 +60,8 @@ Sentence case everywhere; no uppercase labels.
   which overlays the page and scrolls itself when it is taller than the viewport.
 - Tables sit in `.table-scroll`, a box as tall as its table that only scrolls sideways: a
   table wider than its column never widens the page. The header row stays under the masthead
-  while its table's rows pass and leaves with the last rows. A sideways scroll box would
+  while its table's rows pass and leaves with the last rows (a header row taller than the
+  table's `--table-head` allowance is clipped as it leaves). A sideways scroll box would
   catch a sticky header, so a CSS view timeline moves the header cells instead; where view
   timelines are missing (Firefox) the header row scrolls away with the rows.
 - Viewport heights use `dvh`, so they follow mobile browser chrome as it slides in and out
