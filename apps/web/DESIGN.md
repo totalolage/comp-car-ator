@@ -55,8 +55,8 @@ Sentence case everywhere; no uppercase labels.
   the header row sticks to the top of the box. Inside `.split` from 48rem the box is not
   capped and only scrolls sideways, so the page scrolls the rows and the header row scrolls
   away with them (a sideways scroll box cannot hand its header row to the page).
-- Viewport heights use `dvh` (with a `vh` fallback), so they follow mobile browser chrome as
-  it slides in and out instead of assuming the tallest viewport.
+- Viewport heights use `dvh`, so they follow mobile browser chrome as it slides in and out
+  instead of assuming the tallest viewport.
 - Content is fluid up to `--page-max` (100rem), with a 16px gutter (12px narrow).
 
 ## Catalog page
