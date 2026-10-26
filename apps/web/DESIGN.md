@@ -13,8 +13,8 @@ live in `src/styles/tokens.css`, shared components in `src/styles/base.css`.
   chrome" the way the green D-road signs mark the motorway.
 - **The c-c mark** sits before "comp-car-ator" in the masthead: a car drawn as one line whose
   wheels are two lowercase c's with a hyphen between them. It is the one image in the chrome,
-  an inline SVG in `currentColor` (white on the green), 1.75em wide so it scales with the
-  name, its bottom on the text baseline. The name stays live text and does not wrap; below
+  an inline SVG in `currentColor` (white on the green), 26px wide (1.75 × `--text-lg`) at
+  every width, its bottom on the text baseline. The name stays live text and does not wrap; below
   30rem only the mark shows and the name is visually hidden link text. Masters,
   favicons and usage rules: `assets/logo/README.md`.
 - **Highlighter yellow** (`--mark`) marks what the person chose or what differs: checked

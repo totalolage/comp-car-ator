@@ -109,10 +109,11 @@ a:hover {
   letter-spacing: -0.01em;
 }
 
-/* The c-c mark (assets/logo/README.md), at the scale of the approved masthead mock-up. */
+/* The c-c mark (assets/logo/README.md), at the scale of the approved masthead mock-up:
+   26px wide at every width, so it does not shrink with the narrow-screen name. */
 .wordmark svg {
-  width: 1.75em;
-  height: 1.09em;
+  width: calc(1.75 * var(--text-lg));
+  height: calc(1.09 * var(--text-lg));
 }
 
 .masthead-link {
@@ -831,14 +832,8 @@ body {
   }
 }
 
-/* Phones: the mark alone is the home link (26px, as on desktop); the name stays as its
-   accessible text. */
+/* Phones: the mark alone is the home link; the name stays as its accessible text. */
 @media (max-width: 29.99rem) {
-  .wordmark svg {
-    width: 2em;
-    height: 1.25em;
-  }
-
   .wordmark-name {
     position: absolute;
     width: 1px;
