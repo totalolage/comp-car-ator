@@ -304,7 +304,8 @@ main:focus {
 .rail {
   position: sticky;
   top: calc(var(--masthead) + var(--s3));
-  max-height: calc(100vh - var(--masthead) - var(--s6));
+  /* Ends above the compare tray, so the rail's last controls stay reachable. */
+  max-height: calc(100vh - var(--masthead) - var(--s6) - var(--tray-space, 0px));
   overflow: auto;
   font-size: var(--text-sm);
 }
