@@ -200,6 +200,32 @@ describe("rsv source", () => {
     expect(openYears("mk3")).toEqual([{ from: 2009, to: 2011 }]);
   });
 
+  it("gives a type's vehicles to the name that holds most of them, not to any shorter name", async () => {
+    const { header, row } = await realRow();
+    const car = (make: string, name: string, type: string) =>
+      withColumns(header, row, { "Tovární značka": make, "Obchodní označení": name, "Typ kód": type });
+    const rows = [
+      // Range Rover LG; a few "RANGE ROVER" rows carry the Sport's type LW.
+      ...Array(6).fill(car("LAND ROVER", "RANGE ROVER", "LG")),
+      ...Array(2).fill(car("LAND ROVER", "RANGE ROVER", "LW")),
+      ...Array(5).fill(car("LAND ROVER", "RANGE ROVER SPORT", "LW")),
+      // A trim word on the shorter name's type still folds in.
+      ...Array(9).fill(car("LAND ROVER", "DISCOVERY", "LR")),
+      ...Array(3).fill(car("LAND ROVER", "DISCOVERY HSE", "LR")),
+    ];
+    const http = syntheticHttp(header, rows.join("\r\n"), 1);
+    const { entries } = await harvest(http, "full", null, { minVehicles: 1 });
+    const models = new Map<string, Set<string>>();
+    for (const { variant: v } of entries) {
+      models.set(v.model, (models.get(v.model) ?? new Set()).add(v.generation.slug));
+    }
+    expect(Object.fromEntries([...models].map(([m, s]) => [m, [...s]]))).toEqual({
+      "Range Rover": ["lg"],
+      "Range Rover Sport": ["lw"],
+      Discovery: ["lr"],
+    });
+  });
+
   it("spells makes and models the way the Resolver's aliases know them", async () => {
     const { entries } = await harvest(await replay());
     const makes = new Set(entries.map((e) => e.variant.make));
@@ -447,6 +473,18 @@ async function realRow(): Promise<{ header: string; row: string }> {
   const row = rows.find((r) => !r.includes('"') && r.includes("OCTAVIA") && r.includes(",1Z,"));
   if (!header || !row) throw new Error("fixture has no plain Octavia II row");
   return { header, row };
+}
+
+/** `row` (a plain CSV line without quotes) with the named columns set. */
+function withColumns(header: string, row: string, values: Record<string, string>): string {
+  const columns = header.split(",").map((c) => c.trim());
+  const fields = row.split(",");
+  for (const [name, value] of Object.entries(values)) {
+    const i = columns.indexOf(name);
+    if (i < 0) throw new Error(`no column ${name}`);
+    fields[i] = value;
+  }
+  return fields.join(",");
 }
 
 async function unzipText(zip: Buffer): Promise<string> {
