@@ -1,0 +1,19 @@
+# mobile.de is an experimental, T2-only Source sliced by price
+
+mobile.de (Germany's largest listing site, ~1.5M cars) sits behind Akamai Bot Manager. From the home residential IP (Vodafone CZ, 2026-10-26) Akamai denied every browser an automation library launched (Patchright driving the system Chrome, with Playwright's default switches, with none at all, without locale emulation; Camoufox 156 with GeoIP and humanized input) and let through the same Chrome started as a plain process and attached over CDP afterwards: cold or warm profile, headed under Xvfb, new tab per URL, about 25 search pages in a row. It is not an IP block and not a Linux/Xvfb rejection. So Http's T2 `patchright` engine now starts Chrome itself and attaches (ADR 0005), and `mobiledeSource()` (`mobile-de`) reads mobile.de through it. The Source is registered and runs from the ingest CLI with `CCA_HTTP_BROWSER=patchright` under `xvfb-run`; no schedule runs it.
+
+## Considered options
+
+- **Official Search API** (`services.mobile.de`): account-based, for dealers and partners; no access for a private app.
+- **T0/T1** (fetch, Impit): 403 from Akamai on every request, homepage included.
+- **Camoufox**: denied (403) like launched Chrome; it stays an optional engine for other sites.
+- **Paid proxies, captcha solvers**: out (the project's $0 line).
+
+## Consequences
+
+- Experimental: Akamai's judgement can change, and reputation decays under load. After ~45 page loads in ~90 minutes, including the denied attempts above, the same client got Akamai's interstitial (`sec-if-cpt-container`) on every page, slowed responses, then denials, also with the setup that had passed. Http treats the interstitial as a challenge, so its circuit breaker stops the run after three blocked requests. Runs must stay small and spaced: the adapter asks for ≥5 s between documents, and a run should be scoped with `makes`.
+- Scale: German cars 2000+ are ~1.24M listings. A query serves 100 pages of 20 (2,000 results), so a full census is ~62,000 T2 pages, about a week of runs resumable through SliceDone; incremental runs see ~35,000 new listings a day. Useful scopes are a few makes.
+- Slicing is Condition → price bands → (a single price over the cap only) make. AutoScout24 (Condition → make → price) recounts a make split by summing per-make counts; on mobile.de totals move by tens of listings a minute, so summing ~100 make counts of a 1.2M slice over a quarter of an hour would rarely add up and the census would never finish. Price bands partition a slice by construction instead: every listing has a price (`p=0:` matches the unfiltered total), bounds are inclusive and accept cents, so a band `from:to.99` followed by `to+1:` misses nothing. Only one price with more than 2,000 listings (10,000 € has ~2,400) splits by make, with AutoScout24's recount; the taxonomy includes "Andere" for makes outside it.
+- Demo cars have no filter of their own (`con` is NEW or USED): the USED slice's Vorführfahrzeug and Tageszulassung listings are demo, as AutoScout24's offer types are. A price is `gross` only when the card shows the net price beside it ("MwSt. ausweisbar"); otherwise `unknown`.
+- Search pages carry their data in the Next.js flight payload, not in an API; a site redesign breaks the parser, which then throws "page changed" rather than emitting nothing.
+- Fixtures: the replay cassettes hold real search results captured during the access research, cut to the flight rows the parser reads. Akamai started challenging before a live recording through the adapter finished, so they were recorded by the adapter against a model of the site serving those listings with the site's query rules (packages/sources/src/mobilede/mobilede.test.ts). Re-record live when a run goes through, as AGENTS.md describes.

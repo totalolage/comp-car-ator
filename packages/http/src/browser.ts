@@ -3,7 +3,8 @@
  * it needs a local browser and, headed, a display (run under `xvfb-run`). Nothing here loads
  * until the first T2 fetch.
  */
-import { mkdtemp, rm } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { APIRequestContext, BrowserContext, Cookie, Page, Response } from "patchright";
@@ -12,7 +13,8 @@ import type { RawResponse, TierFetcher } from "./tiered.ts";
 
 export interface BrowserOptions {
   /**
-   * `patchright` (default): patched Playwright driving the system Chrome (`channel: "chrome"`).
+   * `patchright` (default): the system Chrome (`google-chrome` on PATH), started as a plain
+   * process and driven by Patchright over CDP.
    * `camoufox` (experimental): the Camoufox Firefox build; needs `camoufox-js` and
    * `playwright-core` installed and its browser fetched (`npx camoufox-js fetch`, ~1.3 GB).
    */
@@ -32,6 +34,8 @@ export interface BrowserOptions {
 
 interface Profile {
   context: BrowserContext;
+  /** Shuts the browser down. */
+  close(): Promise<void>;
   tempDir?: string;
   /** The browser's User-Agent, read on the first binary fetch. */
   userAgent?: Promise<string>;
@@ -83,18 +87,72 @@ export function createBrowserFetcher(
     const tempDir = options.profileDir ? undefined : await mkdtemp(join(tmpdir(), "cca-browser-"));
     const dir = tempDir ?? join(options.profileDir as string, locale);
     try {
-      if (engine === "camoufox") return { context: await launchCamoufox(dir, locale), tempDir };
-      const { chromium } = await import("patchright");
-      const context = await chromium.launchPersistentContext(dir, {
-        channel: "chrome",
-        headless,
-        viewport: null,
-        locale,
-        timeout: timeoutMs,
-      });
-      return { context, tempDir };
+      if (engine === "camoufox") {
+        const context = await launchCamoufox(dir, locale);
+        return { context, close: () => context.close(), tempDir };
+      }
+      return { ...(await launchChrome(dir, locale)), tempDir };
     } catch (error) {
       if (tempDir) await rm(tempDir, { recursive: true, force: true });
+      throw error;
+    }
+  }
+
+  /**
+   * Starts Chrome as a plain process and attaches Patchright over CDP once it runs. Akamai
+   * (mobile.de) denies a Chrome that Patchright launches itself, whatever its switches or locale
+   * emulation, but lets this one through (docs/adr/0005-fetch-tiers.md). The locale is Chrome's
+   * own `--lang`, so its Accept-Language and `navigator.languages` agree.
+   */
+  async function launchChrome(dir: string, locale: string): Promise<Omit<Profile, "tempDir">> {
+    await mkdir(dir, { recursive: true });
+    // Chrome writes its port here; a stale file from an earlier run must not be read.
+    const portFile = join(dir, "DevToolsActivePort");
+    await rm(portFile, { force: true });
+    const args = [
+      `--user-data-dir=${dir}`,
+      "--remote-debugging-port=0",
+      "--no-first-run",
+      "--no-default-browser-check",
+      `--lang=${locale}`,
+      ...(headless ? ["--headless=new"] : []),
+      "about:blank",
+    ];
+    const chrome = spawn("google-chrome", args, { stdio: "ignore" });
+    // "close" follows both an exit and a failed spawn.
+    const closed = new Promise<void>((resolve) => chrome.once("close", () => resolve()));
+    const failed = new Promise<never>((_, reject) => {
+      chrome.once("error", reject);
+      // A Chrome already running on this profile takes the request over and exits at once.
+      chrome.once("exit", (code) =>
+        reject(new Error(`Chrome exited (${code}) before DevTools started`)),
+      );
+    });
+    failed.catch(() => {});
+    const stop = async () => {
+      if (chrome.exitCode !== null || chrome.signalCode !== null) return await closed;
+      chrome.kill();
+      const killer = setTimeout(() => chrome.kill("SIGKILL"), 5_000);
+      await closed;
+      clearTimeout(killer);
+    };
+    try {
+      const port = await Promise.race([devToolsPort(portFile, timeoutMs), failed]);
+      const { chromium } = await import("patchright");
+      const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, {
+        timeout: timeoutMs,
+      });
+      const context = browser.contexts()[0];
+      if (!context) throw new Error("Chrome has no default browser context");
+      return {
+        context,
+        close: async () => {
+          await browser.close().catch(() => {});
+          await stop();
+        },
+      };
+    } catch (error) {
+      await stop();
       throw error;
     }
   }
@@ -119,9 +177,9 @@ export function createBrowserFetcher(
       await Promise.all(inFlight);
       await Promise.allSettled(
         all.map(async (pending) => {
-          const { context, tempDir } = await pending;
+          const { close, tempDir } = await pending;
           try {
-            await context.close();
+            await close();
           } finally {
             if (tempDir) await rm(tempDir, { recursive: true, force: true });
           }
@@ -284,6 +342,17 @@ async function fetchBinary(
     signal?.removeEventListener("abort", onAbort);
     requests.delete(created);
     await dispose();
+  }
+}
+
+/** The port in Chrome's `DevToolsActivePort` file, polled until Chrome writes it. */
+async function devToolsPort(file: string, timeoutMs: number): Promise<number> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const port = Number((await readFile(file, "utf8").catch(() => "")).split("\n")[0]);
+    if (Number.isInteger(port) && port > 0) return port;
+    if (Date.now() >= deadline) throw new Error(`Chrome did not open DevTools in ${timeoutMs} ms`);
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }
 

@@ -4,6 +4,7 @@ import { autoscout24Source } from "./autoscout24/autoscout24.ts";
 import { bazosSource } from "./bazos/bazos.ts";
 import { cnbSource } from "./cnb/cnb.ts";
 import { eeaCo2Source } from "./eea-co2/eea-co2.ts";
+import { mobiledeSource } from "./mobilede/mobilede.ts";
 import { rsvSource } from "./rsv/rsv.ts";
 import { sautoSource } from "./sauto/sauto.ts";
 import { skodaPricelistSource } from "./skoda-pricelist/skoda-pricelist.ts";
@@ -24,6 +25,8 @@ export const sources: Record<SourceId, () => Source> = {
   tipcars: () => tipcarsSource(),
   "autoscout24-de": () => autoscout24Source({ country: "DE" }),
   "autoscout24-at": () => autoscout24Source({ country: "AT" }),
+  /** Experimental: T2 only, not scheduled (docs/adr/0014-mobile-de-experimental.md). */
+  "mobile-de": () => mobiledeSource(),
   sauto: () => sautoSource(),
   "skoda-pricelist": () => skodaPricelistSource(),
   "vw-pricelist": () => vwPricelistSource(),

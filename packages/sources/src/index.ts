@@ -10,6 +10,7 @@ export {
   type EeaTable,
   eeaCo2Source,
 } from "./eea-co2/eea-co2.ts";
+export { type MobileDeOptions, mobiledeSource } from "./mobilede/mobilede.ts";
 export type { PriceListOptions } from "./pricelist/pricelist.ts";
 export { sources } from "./registry.ts";
 export { RSV_ATTRIBUTION, RSV_SITE, type RsvOptions, rsvSource } from "./rsv/rsv.ts";
