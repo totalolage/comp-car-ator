@@ -1,4 +1,10 @@
-import { type Cassette, createReplayHttp, type Http, loadCassette } from "@cca/http";
+import {
+  type Cassette,
+  createReplayHttp,
+  type Http,
+  type Interaction,
+  loadCassette,
+} from "@cca/http";
 import type { ListingSeen, Observation } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
 import { type Checkpoint, emptyCheckpoint, type HarvestMode } from "../source.ts";
@@ -86,6 +92,69 @@ const inPages = (
     if (!at || at(request.url, n)) response.body = response.body.replaceAll(from, to);
   }
 };
+
+/** Rewrites one ad's title in every list page, or its title and text on its ad page. */
+const rewrite = (c: Cassette, ref: string, on: "list" | "ad", title: string, text = "") => {
+  for (const { request, response } of c.interactions) {
+    const ad = request.url.includes(`/inzerat/${ref}/`);
+    if (on === "list" && !ad) {
+      const link = new RegExp(`(<a href="/inzerat/${ref}/[^"]*">)[^<]*(</a></h2>)`);
+      response.body = response.body.replace(link, `$1${title}$2`);
+    }
+    if (on === "ad" && ad) {
+      response.body = response.body
+        .replace(/(<h1 class=nadpisdetail>)[^<]*/i, `$1${title}`)
+        .replace(/(<div class=popisdetail>)[\s\S]*?(<\/div>)/, `$1${text}$2`);
+    }
+  }
+};
+
+/**
+ * The recorded Kia category as a list the test moves ads around in: ids in the site's order,
+ * each with its row as the list page shows it. An id ending in "*" is the ad bumped today.
+ */
+async function category() {
+  const { interactions } = await loadCassette(fixture("full"));
+  const rows = new Map<string, string>();
+  for (const { response } of interactions) {
+    for (const block of response.body.split(ROW).slice(1)) {
+      const ref = refIn(block);
+      if (!rows.has(ref)) rows.set(ref, block.replace("</div></body></html>", ""));
+    }
+  }
+  const page = (list: string[], offset: number): Interaction => {
+    const url = `https://auto.bazos.cz/kia/${offset === 0 ? "" : `${offset}/`}`;
+    const shown = list.slice(offset, offset + 20).map((id) => {
+      const row = rows.get(id.replace("*", "")) as string;
+      return ROW + (id.endsWith("*") ? row.replace(/\[\d+\.\d+\. \d{4}\]/, "[25.10. 2026]") : row);
+    });
+    const header = `Zobrazeno ${offset + 1}-${offset + shown.length} inzerátů z ${list.length}`;
+    const body = `<html><body><div class="maincontent">\n<div class="listainzerat inzeratyflex"><div class="inzeratynadpis">${header}</div></div>\n${shown.join("")}</div></body></html>`;
+    const headers = { "content-type": "text/html; charset=UTF-8" };
+    return {
+      request: { url },
+      response: { url, status: offset ? 404 : 200, headers, body, tier: "T0" },
+    };
+  };
+  return {
+    ids: [...rows.keys()],
+    /** A new ad, as a copy of another's row under a new id. */
+    post(ref: string, like: string) {
+      rows.set(ref, (rows.get(like) as string).replaceAll(like, ref));
+    },
+    /** The list pages served in request order, `[offset, list]` each, plus the ad pages. */
+    async cassette(served: [number, string[]][]): Promise<Cassette> {
+      const details = await loadCassette(fixture("details"));
+      return {
+        version: 1,
+        interactions: [
+          ...served.map(([offset, list]) => page(list, offset)),
+          ...details.interactions,
+        ],
+      };
+    },
+  };
+}
 
 /** The 29 ads in scope: priced Czech cars from 2000 on whose text states year and odometer. */
 const IN_SCOPE = [
@@ -249,6 +318,66 @@ describe("bazos source", () => {
     expect(refs(observations).sort()).toEqual(IN_SCOPE);
   });
 
+  // Probe from review: the walk misses an ad bumped above it and then above the walk over
+  // today's ads, while an ad it met is removed, so the ads met still match the final count.
+  describe("an ad met and later removed does not stand in for one the walk missed", () => {
+    const missed = "224864444";
+    const bumpedTwice = async (removed: (ids: string[]) => string, posted?: string) => {
+      const kia = await category();
+      const ids = kia.ids;
+      const gone = removed(ids);
+      if (posted) kia.post(posted, "224920358"); // a 1,200 Kč part: no ad page
+      const without = (list: string[], ...drop: string[]) =>
+        list.filter((id) => !drop.includes(id));
+      // 20 ads bumped before the walk over today's ads put the missed one off its first page.
+      const bumped = ids.slice(19, 39);
+      const rest = without(ids, missed, gone, ...bumped);
+      const top = posted ? [`${posted}*`] : [];
+      const duringWalk = [`${missed}*`, ...without(ids, missed)];
+      const beforeTopUp = [...top, ...bumped.map((id) => `${id}*`), `${missed}*`, ...rest];
+      const after = [`${missed}*`, ...top, ...bumped.map((id) => `${id}*`), ...rest];
+      return harvest(
+        await kia.cassette([
+          [0, ids],
+          [16, duringWalk],
+          [32, duringWalk],
+          [48, duringWalk],
+          [0, beforeTopUp],
+          [16, after],
+          [32, after],
+          // The walk is redone on a list that holds still.
+          [0, after],
+          [16, after],
+          [32, after],
+          [48, after],
+        ]),
+        "full",
+      );
+    };
+
+    it("an older ad removed: the ads met fall short of the highest count", async () => {
+      const { observations, error, warnings, listed } = await bumpedTwice(
+        (ids) => ids[18] as string,
+      );
+      expect(error).toBeUndefined();
+      expect(warnings).toContain("bazos: walk met fewer ads than the site counts");
+      expect(listed).toHaveLength(14);
+      expect(refs(observations).sort()).toEqual(IN_SCOPE);
+      expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
+    });
+
+    it("an ad dated today removed while one is posted: the walk over today's ads proves it gone", async () => {
+      const { observations, error, warnings } = await bumpedTwice(
+        (ids) => ids[5] as string,
+        "225600001",
+      );
+      expect(error).toBeUndefined();
+      expect(warnings).toContain("bazos: walk met fewer ads than the site counts");
+      expect(refs(observations).sort()).toEqual(IN_SCOPE.filter((ref) => ref !== "224426489"));
+      expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
+    });
+  });
+
   it("fewer ads than the site counts: no slice is done and the run fails", async () => {
     // The walk over today's ads (the second read of each page) counts 70 ads, not 59.
     const recorded = await cassette("full", (c) =>
@@ -262,6 +391,26 @@ describe("bazos source", () => {
     const { observations, error } = await harvest(recorded, "full");
     expect(String(error)).toMatch(/not harvested whole: kia/);
     expect(observations).toEqual([]);
+  });
+
+  it("leaves out new cars", async () => {
+    const recorded = await cassette("full", (c) => {
+      // Said in the list row: no ad page. Said on the ad page only: read, then left out.
+      rewrite(c, "224557936", "list", "Kia Ceed nový vůz 2026, 10 km");
+      rewrite(
+        c,
+        "224452818",
+        "ad",
+        "Kia Ceed 1.5 T-GDi nový vůz",
+        "Rok výroby 2026, najeto 10 km.",
+      );
+    });
+    const { observations, details } = await harvest(recorded, "full");
+    expect(details).not.toContain("224557936");
+    expect(details).toContain("224452818");
+    expect(refs(observations).sort()).toEqual(
+      IN_SCOPE.filter((ref) => ref !== "224557936" && ref !== "224452818"),
+    );
   });
 
   it("an unreadable ad is rejected and the harvest goes on", async () => {
@@ -314,7 +463,7 @@ describe("bazos source", () => {
     const { observations, error, listed, details } = await harvest(
       await cassette("full"),
       "incremental",
-      // 224898124 (2026-10-10) is not in the Ledger either: the last run found it out of scope.
+      // 224898124 (2026-10-10) is not in the Ledger either: the last run could not read it.
       {
         lastRunAt: new Date("2026-10-11T03:00:00Z"),
         isKnown: (ref) => !fresh.has(ref) && ref !== "224898124",
@@ -323,9 +472,28 @@ describe("bazos source", () => {
     expect(error).toBeUndefined();
     // /kia/16/ still holds ads from 2026-10-11; /kia/32/ is all older.
     expect(listed).toEqual(["/kia/", "/kia/16/", "/kia/32/"]);
-    expect(details.every((ref) => fresh.has(ref))).toBe(true);
-    expect(refs(observations).sort()).toEqual(IN_SCOPE.filter((ref) => fresh.has(ref)));
+    // An unknown ad on a page read is tried again, whatever its date.
+    expect(details.filter((ref) => !fresh.has(ref))).toEqual(["224898124"]);
+    expect(refs(observations).sort()).toEqual(
+      IN_SCOPE.filter((ref) => fresh.has(ref) || ref === "224898124"),
+    );
     expect(observations.some((o) => o.kind === "SliceDone")).toBe(false);
+  });
+
+  it("incremental run retries unknown ads older than the last run on the pages it reads", async () => {
+    // The last run (this morning) could not read two ads from 2026-10-11, so the Ledger does
+    // not know them; they sit on the first page, below today's ads.
+    const retry = new Set(["224923051", "224922323"]);
+    const { observations, error, listed, details } = await harvest(
+      await cassette("full"),
+      "incremental",
+      { lastRunAt: new Date("2026-10-25T03:00:00Z"), isKnown: (ref) => !retry.has(ref) },
+    );
+    expect(error).toBeUndefined();
+    // /kia/16/ is dated wholly before today: the walk ends there.
+    expect(listed).toEqual(["/kia/", "/kia/16/"]);
+    expect(details.sort()).toEqual([...retry].sort());
+    expect(refs(observations).sort()).toEqual([...retry].sort());
   });
 
   it("a list page cut short is fetched again", async () => {

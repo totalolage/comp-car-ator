@@ -16,21 +16,23 @@
  *   are (in a sample of 40 cars, list text stated the odometer for 20, ad pages for 37).
  *   The Ledger keeps what the last ListingSeen says, so every candidate ad gets its ad
  *   page, in both modes, rather than a mix of list and ad-page data. In scope: priced from
- *   10,000 Kč, not damaged, standing in Czechia (Bazoš also lists Slovak ads, as place
- *   "Slovensko"), year 2000 or later, odometer stated.
+ *   10,000 Kč, not damaged, not new (a title offering a new car with under 100 km), standing in
+ *   Czechia (Bazoš also lists Slovak ads, as place "Slovensko"), year 2000 or later, odometer
+ *   stated.
  * - full: per category, walk every page, then walk again from the top through today's ads
  *   (ads bumped or posted during the walk land there), and check the ads met cover the
  *   count the site reports. The category's ads are split by id into `parts` slices
  *   ("skoda;part=3/10"), each fetched and reported done in turn, so a census of the large
  *   categories (Škoda: ~31,000 ads) resumes part by part. A category whose walk cannot be
  *   reconciled reports no part done and fails the run at the end.
- * - incremental: per category, from the top, ad pages only for ads not in the Ledger and
- *   dated on or after the last run's day, stopping at the first page dated wholly before it.
+ * - incremental: per category, from the top, ad pages for the ads on each page read that are
+ *   not in the Ledger, stopping after the first page dated wholly before the last run's day.
  * - robots.txt disallows search, sort and price-filter parameters; the adapter reads only
  *   category pages and ad pages.
  * - Limits: the count check is a sanity check, not proof. A census still misses an ad that
- *   is bumped twice within one walk (behind the walk, then behind the top-up) or moved by
- *   the site into a category already walked; the next census sees it again. Edits that do
+ *   the site moves into a category already walked, and one bumped twice within one walk
+ *   (behind the walk, then behind the top-up) when an older ad met and removed before a
+ *   count rose again makes up the number; the next census sees them again. Edits that do
  *   not bump an ad wait for a full run. An ad whose text stops stating year or odometer
  *   leaves the scope and is retired like a removed one.
  *
@@ -198,25 +200,45 @@ class Harvest {
 
   /**
    * Every ad in a category, by id: one walk over all pages, then one over today's ads,
-   * which catches ads bumped from below the walk to above it. The site's count must not
-   * exceed the ads met; a walk that falls short or loses its place is redone once. Null
-   * when the category cannot be harvested whole.
+   * which catches ads bumped from below the walk to above it. A walk that loses its place
+   * or whose ads do not reconcile with the site's counts is redone once. Null when the
+   * category cannot be harvested whole.
+   *
+   * An ad met and removed later in the walk must not stand in for one the walk missed, so
+   * - the ads met must cover the highest count any page reported, which includes an ad
+   *   removed after that page,
+   * - and the ads met, less those the walk over today's ads proves gone, must cover the
+   *   count when that walk began. Gone: ads met dated today that it did not meet (every ad
+   *   dated today is above its end).
+   * An ad removed before a count rose again is not caught by either, so the check narrows
+   * the gap without closing it (see Limits).
    */
   private async collect(category: string): Promise<Map<string, Row> | null> {
     for (let attempt = 1; attempt <= 2; attempt++) {
       const rows = new Map<string, Row>();
+      const datedToday = new Set<string>();
+      const toppedUp = new Set<string>();
       let idless = 0;
-      let total = 0;
+      let highest = 0;
+      let final = 0;
       try {
         for await (const page of this.pages(category)) {
-          for (const row of page.rows) rows.set(row.id, row);
+          highest = Math.max(highest, page.total);
+          for (const row of page.rows) {
+            rows.set(row.id, row);
+            if (row.date === this.today) datedToday.add(row.id);
+          }
           idless += page.idless;
         }
         let first = true;
         for await (const page of this.pages(category)) {
-          if (first) total = page.total;
+          if (first) final = page.total;
           first = false;
-          for (const row of page.rows) rows.set(row.id, row);
+          highest = Math.max(highest, page.total);
+          for (const row of page.rows) {
+            rows.set(row.id, row);
+            toppedUp.add(row.id);
+          }
           idless += page.idless;
           if (page.rows.every((row) => row.date !== undefined && row.date < this.today)) break;
         }
@@ -230,14 +252,17 @@ class Harvest {
         this.ctx.log.warn("bazos: list rows without an ad id", { category, idless });
         return null;
       }
-      if (rows.size >= total) {
+      const gone = [...datedToday].filter((id) => !toppedUp.has(id)).length;
+      if (rows.size >= highest && rows.size - gone >= final) {
         this.stats.rows = rows.size;
         return rows;
       }
       this.ctx.log.warn("bazos: walk met fewer ads than the site counts", {
         category,
         met: rows.size,
-        total,
+        gone,
+        highest,
+        final,
         attempt,
       });
     }
@@ -245,12 +270,13 @@ class Harvest {
   }
 
   /**
-   * New ads, from the top. An ad dated before the last run's day was listed during that run,
-   * which recorded it or found it out of scope, so only unknown ads dated on or after that
-   * day get their ad page, and the walk ends at the first page dated wholly before it (the
-   * ads there are known or out of scope). Known-ness alone cannot end it: TOP ads, known
-   * and re-bumped daily, fill the first pages, and out-of-scope ads never become known.
-   * Without a last run every unknown ad is fetched.
+   * New ads, from the top: every candidate on a page read that the Ledger did not know before
+   * this run gets its ad page, whatever its date, so an ad the last run could not read is
+   * tried again. The walk ends after the first page dated wholly before the last run's day:
+   * that run listed those ads, so the ones below are known, out of scope, or left for the
+   * next full run. Known-ness alone cannot end it: TOP ads, known and re-bumped daily, fill
+   * the first pages, and out-of-scope ads never become known, so the pages read each time
+   * cost a few repeat ad pages for those. Without a last run every page is read.
    */
   private async *incremental(category: string): AsyncGenerator<Observation> {
     const cutoff = this.ctx.checkpoint.lastRunAt && pragueDate(this.ctx.checkpoint.lastRunAt);
@@ -260,7 +286,7 @@ class Harvest {
       for await (const page of this.pages(category)) {
         // Known means known before this run; taken for every row before any is yielded.
         const fresh = page.rows.filter((row) => {
-          if (isOld(row) || handled.has(row.id)) return false;
+          if (handled.has(row.id)) return false;
           if (!row.malformed && !this.isCandidate(category, row)) return false;
           if (this.knewBefore(row.id)) return false;
           handled.add(row.id);
@@ -321,15 +347,16 @@ class Harvest {
 
   /**
    * A candidate is worth a detail page: priced, standing in Czechia, a car by its title, not
-   * older than 2000.
+   * older than 2000 nor new.
    */
   private isCandidate(category: string, row: Row): boolean {
     if (row.malformed || row.price === null || row.city === SLOVAKIA) return false;
     if (row.price < MIN_PRICE || row.price > MAX_PRICE) return false;
     if (nonCarReason(row.title) !== null) return false;
     if (!makeModelOf(row.title, CATEGORY_MAKES[category])) return false;
-    const year = yearIn(carFactsOf(row.title, "", this.thisYear));
-    return year === undefined || year >= MIN_YEAR;
+    const facts = carFactsOf(row.title, "", this.thisYear);
+    const year = yearIn(facts);
+    return facts.condition !== "new" && (year === undefined || year >= MIN_YEAR);
   }
 
   /** The Observation for one listed ad, from its detail page; nothing when out of scope. */
@@ -380,6 +407,8 @@ class Harvest {
     const facts = carFactsOf(title, detail.description, this.thisYear);
     const year = yearIn(facts);
     if (year === undefined || year < MIN_YEAR || facts.odometerKm === undefined) return null;
+    // The scope is used cars; a demonstrator counts as one, a new car does not.
+    if (facts.condition === "new") return null;
     const vehicle: VehicleDescriptor = {
       ...names,
       sourceTaxonomy: { make: category },
