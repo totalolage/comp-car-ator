@@ -59,7 +59,7 @@ function syntheticBundle(): BundleContent {
     body: "wagon",
     fuel: "diesel",
     powerKw,
-    transmission: "manual",
+    transmissions: ["manual"],
     used: null,
   });
   const variants = [variant("mk/m/a", 85), variant("mk/m/b", 110)];

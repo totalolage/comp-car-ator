@@ -103,7 +103,8 @@ Sentence case everywhere; no uppercase labels.
   make (`/make/<make>/`) › model. Top to bottom: the model's Variants (generation, body, fuel,
   power; years, consumption, new price from, used median per Market from the published cells,
   active listing count linking to `?variant=<id>`, a "Porovnat" toggle that edits the compare
-  list through `siteStore`; the tray itself is #17), then the listings island
+  list through `siteStore().toggleCompare(id, label)` with the Variant's tray name in both
+  languages), then the listings island
   (`ModelExplorer`). EEA attribution shows under the Variants only once the Bundle has run
   the `eea-co2` Source and a Variant carries CO₂ data.
 - `ModelExplorer` mirrors the catalog island over `model(id).listings()`: listing rail
@@ -111,7 +112,7 @@ Sentence case everywhere; no uppercase labels.
   band, landed price, asking price, power, fuel, gearbox, body, source; an enum facet with a
   single value is hidden; "include sold (last 30 days)"), price statistics, the price history
   chart, and the listings table. It owns only the listing URL state (`readListingState` /
-  `writeListingState`); a `cmp` the URL carries is kept and follows the store.
+  `writeListingState`); model pages have no `cmp` (ADR 0009).
   What it shows is `lib/listing-view.ts`, the one place in the UI that reads model-file shapes.
 - Listings table: title (links to the source; condition, sold and "not in statistics" tags;
   its Variant on a second line), year, odometer, gearbox (from the listing), asking price in

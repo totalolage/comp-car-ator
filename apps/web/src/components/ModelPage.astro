@@ -11,6 +11,7 @@ import { i18n } from "../i18n/i18n.ts";
 import type { Lang } from "../i18n/messages.ts";
 import Base from "../layouts/Base.astro";
 import { buildCatalog } from "../lib/catalog.ts";
+import { variantLabels } from "../lib/compare-view.ts";
 import {
   firstPaintListing,
   listingPage,
@@ -110,6 +111,7 @@ const eea =
                       type="button"
                       class="band compare-toggle"
                       data-compare={v.id}
+                      data-label={JSON.stringify(variantLabels(v))}
                       aria-pressed="false"
                       hidden
                     >
@@ -140,8 +142,9 @@ const eea =
   <p class="facet-note compare-status" aria-live="polite" data-full={t.t("model.compareFull", { n: COMPARE_MAX })}></p>
 </Base>
 <script>
-  // Compare toggles: the compare tray (#17) shows the list; this page only edits it via the store.
-  import { siteStore } from "../lib/store.ts";
+  // Compare toggles: the compare tray shows the list; this page only edits it via the store,
+  // passing each Variant's name in every locale so the tray can show it (ADR 0009).
+  import { type CompareLabel, siteStore } from "../lib/store.ts";
 
   const store = siteStore();
   const buttons = [...document.querySelectorAll<HTMLButtonElement>("button[data-compare]")];
@@ -153,7 +156,8 @@ const eea =
   for (const b of buttons) {
     b.hidden = false;
     b.addEventListener("click", () => {
-      const ok = store.toggleCompare(b.dataset.compare ?? "");
+      const label: CompareLabel = JSON.parse(b.dataset.label ?? "{}");
+      const ok = store.toggleCompare(b.dataset.compare ?? "", label);
       if (status) status.textContent = ok ? "" : (status.dataset.full ?? "");
     });
   }

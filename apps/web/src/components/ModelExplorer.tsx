@@ -17,7 +17,7 @@ import {
   type Range,
   type Sort,
 } from "@cca/catalog";
-import type { FxTable, ModelId, VariantId } from "@cca/vocabulary";
+import type { FxTable, ModelId } from "@cca/vocabulary";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { type I18n, i18n, MISSING } from "../i18n/i18n.ts";
 import type { Lang, MessageKey } from "../i18n/messages.ts";
@@ -40,14 +40,7 @@ import {
   toggleListingValue,
   withRange,
 } from "../lib/listing-view.ts";
-import { siteStore } from "../lib/store.ts";
-import {
-  type ListingState,
-  readCatalogState,
-  readListingState,
-  writeCatalogState,
-  writeListingState,
-} from "../lib/url-state.ts";
+import { type ListingState, readListingState, writeListingState } from "../lib/url-state.ts";
 import HistoryChart from "./HistoryChart.tsx";
 import RangeFilter from "./RangeFilter.tsx";
 
@@ -84,27 +77,13 @@ export default function ModelExplorer(props: Props) {
   const [railOpen, setRailOpen] = useState(false);
   const [resets, setResets] = useState(0);
 
-  // The compare list in the URL (`cmp`), kept when the URL is replaced and updated when the
-  // store changes (the compare buttons, the tray), exactly as the catalog island does.
-  const [compare, setCompare] = useState<VariantId[] | undefined>(undefined);
-
   useEffect(() => {
     setState(readListingState(location.search));
-    setCompare(readCatalogState(location.search).compare);
-    const store = siteStore();
-    let remembered = store.compare().join();
-    const unsubscribe = store.subscribe(() => {
-      const next = store.compare();
-      if (next.join() === remembered) return;
-      remembered = next.join();
-      setCompare(next);
-    });
     // TODO(wave1-stream15): the catalog interface loads catalog.json before any model file; a model page
     // needs only its own file (reported to the orchestrator as a catalog interface follow-up).
     openCatalog(fetchLoader(new URL("/bundle/", location.href)))
       .then((c) => c.model(modelId))
       .then(setView);
-    return unsubscribe;
   }, [modelId]);
 
   const result = useMemo(
@@ -118,14 +97,10 @@ export default function ModelExplorer(props: Props) {
 
   useEffect(() => {
     if (!view) return;
-    const query = [writeListingState(state), writeCatalogState({ compare })]
-      .map((q) => q.slice(1))
-      .filter(Boolean)
-      .join("&");
-    const url = location.pathname + (query ? `?${query}` : "") + location.hash;
+    const url = location.pathname + writeListingState(state) + location.hash;
     if (url !== location.pathname + location.search + location.hash)
       history.replaceState(history.state, "", url);
-  }, [view, state, compare]);
+  }, [view, state]);
 
   function update(change: (s: ListingState) => ListingState) {
     setLimit(LISTING_PAGE);
