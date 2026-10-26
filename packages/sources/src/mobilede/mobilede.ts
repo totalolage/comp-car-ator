@@ -6,7 +6,7 @@
  * (`CCA_HTTP_BROWSER=patchright`, headed under `xvfb-run`; docs/adr/0005-fetch-tiers.md), and a
  * page takes seconds. The registry has it; no schedule runs it. A full census of the ~1.2M
  * listings is ~62,000 pages (about a week of runs, resumable through SliceDone); narrow it with
- * `makes`. Access research: docs/adr/0014-mobile-de-experimental.md.
+ * `makes` (from the ingest CLI: `CCA_MOBILEDE_MAKES`, see registry.ts). Access research: docs/adr/0014-mobile-de-experimental.md.
  *
  * - Search pages embed their results in the Next.js flight data (`self.__next_f.push`):
  *   `searchResults { numResultsTotal, listings[] }` with the listing facts, one card per listing
@@ -72,6 +72,9 @@ type SliceCondition = keyof typeof CON;
 
 export function mobiledeSource(options: MobileDeOptions = {}): Source {
   const makes = options.makes && [...new Set(options.makes)].sort((a, b) => a - b);
+  if (makes?.some((make) => !Number.isInteger(make) || make < 1)) {
+    throw new RangeError(`mobile-de makes must be site make ids, got ${options.makes?.join(",")}`);
+  }
   const cap = options.resultCap ?? RESULT_CAP;
   if (!Number.isInteger(cap) || cap < 1 || cap > RESULT_CAP) {
     throw new RangeError(`mobile-de resultCap must be a whole number from 1 to ${RESULT_CAP}`);

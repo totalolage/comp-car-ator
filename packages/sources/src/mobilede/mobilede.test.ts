@@ -138,6 +138,7 @@ describe("mobile-de source", () => {
     expect(mobiledeSource()).toMatchObject({ id: "mobile-de", scope: undefined });
     expect(mobiledeSource({ makes: [3500, 1900, 3500] }).scope).toBe("makes:1900,3500");
     expect(() => mobiledeSource({ resultCap: 2001 })).toThrow(RangeError);
+    expect(() => mobiledeSource({ makes: [Number.NaN] })).toThrow(RangeError);
   });
 
   it("asks for cars standing in Germany, 2000+, undamaged, newest first, at T2", async () => {

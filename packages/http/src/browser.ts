@@ -137,7 +137,9 @@ export function createBrowserFetcher(
       clearTimeout(killer);
     };
     try {
-      const port = await Promise.race([devToolsPort(portFile, timeoutMs), failed]);
+      const gone = () =>
+        chrome.pid === undefined || chrome.exitCode !== null || !!chrome.signalCode;
+      const port = await Promise.race([devToolsPort(portFile, timeoutMs, gone), failed]);
       const { chromium } = await import("patchright");
       const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, {
         timeout: timeoutMs,
@@ -345,12 +347,16 @@ async function fetchBinary(
   }
 }
 
-/** The port in Chrome's `DevToolsActivePort` file, polled until Chrome writes it. */
-async function devToolsPort(file: string, timeoutMs: number): Promise<number> {
+/**
+ * The port in Chrome's `DevToolsActivePort` file, polled until Chrome writes it; stops polling
+ * once the process is `gone`.
+ */
+async function devToolsPort(file: string, timeoutMs: number, gone: () => boolean) {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
     const port = Number((await readFile(file, "utf8").catch(() => "")).split("\n")[0]);
     if (Number.isInteger(port) && port > 0) return port;
+    if (gone()) throw new Error("Chrome exited before DevTools started");
     if (Date.now() >= deadline) throw new Error(`Chrome did not open DevTools in ${timeoutMs} ms`);
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
