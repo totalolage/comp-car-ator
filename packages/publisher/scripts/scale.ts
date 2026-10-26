@@ -1,5 +1,5 @@
 /**
- * Measured scale run of the Publisher on a synthetic Ledger (numbers: docs/adr/0010-publisher-statistics.md).
+ * Measured scale run of the Publisher on a synthetic Ledger (numbers: docs/adr/0012-publisher-statistics.md).
  * Run each step in its own process so the peak memory belongs to that step:
  *
  *   node packages/publisher/scripts/scale.ts generate <ledger.sqlite> [listings] [variants] [days]

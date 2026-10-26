@@ -43,7 +43,7 @@ Measured run with `packages/publisher/scripts/scale.ts` on a synthetic Ledger (`
 
 Before the columnar encoding the same Bundle was 119.5 MB raw and `catalog.json` 25.7 MB raw with sparser specs (stream 15 measured 41 MB with full specs). Synthetic data repeats itself more than real listings, so expect real compressed sizes up to ~2× these. Time and memory grow with the published Listings plus the history samples: one number per used Listing per week it was active, kept for every Listing the Ledger ever saw (~8 bytes each; a Listing on sale 2 months adds ~9). Extrapolated, not measured: a 1M-Listing Ledger with ~450k published Listings needs ~40 s and ~3 GB, dominated by the published rows; the history part stays under ~100 MB until the Ledger holds roughly ten million Listing-weeks. If it outgrows that, the fix inside the Publisher is a retention window for history.
 
-Vercel Hobby (checked 2026-10-25, vercel.com/docs/limits): no limit on build output file count (CLI uploads cap at 15,000 files of up to 100 MB each), automatic gzip/brotli for JSON, 100 GB/month transfer and 1M CDN requests/month. Transfer is the binding limit, so per-model files and `catalog.json` are sized by their compressed bytes.
+Vercel Hobby (checked 2026-10-26, vercel.com/docs/limits): no limit on build output files created during a build (the 15,000-file and 100 MB total-size caps apply only to the source files a CLI deployment uploads; neither is a per-file limit), automatic gzip/brotli for JSON, 100 GB/month transfer and 1M CDN requests/month. Transfer is the binding limit, so per-model files and `catalog.json` are sized by their compressed bytes.
 
 ## Considered options
 

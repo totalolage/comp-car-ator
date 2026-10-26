@@ -8,7 +8,7 @@ import {
 import { CONDITIONS, type Condition, MARKETS, type Market, type VariantId } from "@cca/vocabulary";
 
 /**
- * The outlier rule (docs/adr/0010-publisher-statistics.md). Asking prices below the floor are
+ * The outlier rule (docs/adr/0012-publisher-statistics.md). Asking prices below the floor are
  * placeholders, instalments or deposits. Above it, a cohort (resolution target × Market ×
  * Condition) of at least FENCE_MIN_COUNT Listings with a nonzero IQR on ln(price) drops
  * prices outside Tukey's far fences, [Q1 − 3·IQR, Q3 + 3·IQR].

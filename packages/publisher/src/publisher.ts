@@ -39,7 +39,7 @@ export interface PublishOptions {
 /**
  * Publisher's interface: turns the Ledger's current state into Bundle files. Pure apart
  * from reading the Ledger; deterministic for a given Ledger state and `now` (byte-identical
- * files). Rules for statistics, outliers, new prices and compaction: docs/adr/0010-publisher-statistics.md.
+ * files). Rules for statistics, outliers, new prices and compaction: docs/adr/0012-publisher-statistics.md.
  *
  * Listings the Resolver cannot place on a known model are left out (Wave 1 stream 11 will
  * shrink that set). Listings whose currency has no FX rate are left out too.
