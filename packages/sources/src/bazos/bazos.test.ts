@@ -404,7 +404,7 @@ describe("bazos source", () => {
         "Kia Ceed 1.5 T-GDi nový vůz",
         "Rok výroby 2026, najeto 10 km.",
       );
-      // Said in the description only, or made this year with next to no km.
+      // Said in the description only.
       rewrite(
         c,
         "224563165",
@@ -412,7 +412,21 @@ describe("bazos source", () => {
         "Kia Ceed 1.5 T-GDi 2026",
         "Nový vůz. Rok výroby 2026, najeto 10 km.",
       );
-      rewrite(c, "224564821", "ad", "Kia Ceed 1.5 T-GDi", "Rok výroby 2026, najeto 0 km.");
+      // Registered this year with next to no km but never called new: used cars.
+      rewrite(
+        c,
+        "224564821",
+        "ad",
+        "Kia Ceed 1.5 T-GDi",
+        "Ojetý vůz. První registrace 2026, najeto 50 km.",
+      );
+      rewrite(
+        c,
+        "224554662",
+        "ad",
+        "Kia Ceed 1.5 T-GDi exdealer",
+        "Exdealer, první registrace 2026, najeto 50 km.",
+      );
       // New parts, a car bought new, or a new car bought instead: used cars still.
       rewrite(
         c,
@@ -431,12 +445,14 @@ describe("bazos source", () => {
       rewrite(c, "224859984", "ad", "Kia Ceed 1.5 T-GDi", "Rok výroby 2026, najeto 5 000 km.");
     });
     const { observations, details } = await harvest(recorded, "full");
-    const left = ["224557936", "224452818", "224563165", "224564821"];
+    const left = ["224557936", "224452818", "224563165"];
     expect(details).not.toContain("224557936");
     expect(details).toContain("224452818");
     expect(refs(observations).sort()).toEqual(IN_SCOPE.filter((ref) => !left.includes(ref)));
-    const kept = ["224672197", "224787227", "224859984"].map((ref) => listing(observations, ref));
-    expect(kept.map((o) => o?.condition)).toEqual(["used", "used", "used"]);
+    const kept = ["224564821", "224554662", "224672197", "224787227", "224859984"].map((ref) =>
+      listing(observations, ref),
+    );
+    expect(kept.map((o) => o?.condition)).toEqual(["used", "used", "used", "used", "used"]);
   });
 
   it("an unreadable ad is rejected and the harvest goes on", async () => {
