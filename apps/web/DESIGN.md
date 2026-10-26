@@ -48,8 +48,7 @@ Sentence case everywhere; no uppercase labels.
   neither scrolls on its own: the longer one scrolls with the page; the shorter one stays
   pinned under the masthead if it fits the viewport, or scrolls until its end is in view and
   then stays, so the split scrolls only while the longer column has more to show (the footer
-  follows it). Both stop above the compare tray. Long facet lists still scroll inside their
-  group.
+  follows it). Both stop above the compare tray.
 - Tables sit in `.table-scroll`, a box at most one viewport tall (below the masthead, above
   the tray) that scrolls both ways: a table wider than its column never widens the page, and
   the header row sticks to the top of the box. Inside `.split` from 48rem the box is not
@@ -77,7 +76,7 @@ Sentence case everywhere; no uppercase labels.
   and source counts overlap, so they stay plain. A footnote under the rail says this, and
   each checkbox's accessible name carries the count's meaning (ADR 0009). Enum options keep a fixed
   order (vocabulary order, or by name), and a chosen value with no matches stays listed so it
-  can be unchosen. Lists over 12 values scroll inside their group.
+  can be unchosen. Long lists (makes, models) show in full; the page scrolls them.
 - Range fields narrow on every keystroke that parses (Czech `1,5` is fine); the placeholder
   shows the bound the other filters leave.
 - Table: make and model link to the model page, then generation, years, body, fuel, power,
@@ -151,7 +150,7 @@ Sentence case everywhere; no uppercase labels.
 
 `masthead`, `menu` / `menu-panel` / `tree`, `crumbs`, `page-title`, `page-summary`,
 `section-title`, `split` / `rail` / `results`, `facet` / `facet-option` / `facet-note`, `button-quiet`,
-`facet-scroll`, `range`, `bands` / `band`, `rail-toggle`, `data` (table; `.num` right-aligns;
+`range`, `bands` / `band`, `rail-toggle`, `data` (table; `.num` right-aligns;
 `.sort` header buttons), `table-scroll`, `results-more`, `subcategories`, `count`, `badge`,
 `empty`, `colophon`, `pick`, `tray` / `tray-items` / `tray-item` / `tray-remove`,
 `compare-tools`, `compare-table` / `compare-group` / `compare-detail` / `compare-gone`; model page: `variants`, `stats`, `data-auto`, `tag` / `tag-quiet`, `sub`, `change`,

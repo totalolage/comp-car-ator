@@ -379,12 +379,6 @@ main:focus {
   flex: 1;
 }
 
-/* Long value lists (makes, models) scroll inside their group. */
-.facet-scroll {
-  max-height: 16rem;
-  overflow-y: auto;
-}
-
 .facet-note {
   margin: 0 0 var(--s2);
   padding: 0 var(--s2);
@@ -500,6 +494,7 @@ main:focus {
 @media (width >= 48rem) {
   .split .table-scroll {
     max-height: none;
+    overflow-y: hidden;
   }
 }
 
