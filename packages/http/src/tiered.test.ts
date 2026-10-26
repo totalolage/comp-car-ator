@@ -375,6 +375,14 @@ describe("Http policy: tiers and challenges", () => {
     ],
     ["akamai", { status: 403, headers: { server: "AkamaiGHost" }, body: "" }],
     [
+      "akamai",
+      {
+        status: 200,
+        headers: {},
+        body: '<div id="sec-if-cpt-container" role="main" style="display: none"></div>',
+      },
+    ],
+    [
       "edgeone",
       {
         status: 200,
