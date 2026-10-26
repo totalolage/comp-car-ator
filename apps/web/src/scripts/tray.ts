@@ -45,6 +45,8 @@ function mount(tray: HTMLElement) {
   function render() {
     const ids = store.compare();
     const active = document.activeElement as HTMLElement | null;
+    // Before any removal: a removed item takes the focused button out of the tray.
+    const hadFocus = !!active && tray.contains(active);
     const shown = [...items.keys()];
     let successor: HTMLElement | null | undefined;
     // Remove first, so survivors move only for a real reorder.
@@ -79,7 +81,6 @@ function mount(tray: HTMLElement) {
     count.textContent = fill(text.count, { n: ids.length });
     full.hidden = ids.length < COMPARE_MAX;
     open.href = localePath(lang, "/compare/") + writeCatalogState({ compare: ids });
-    const hadFocus = !!active && tray.contains(active);
     tray.hidden = ids.length === 0;
     reserve();
     if (hadFocus && (tray.hidden || successor === null)) document.getElementById("main")?.focus();
