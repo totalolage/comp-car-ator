@@ -217,6 +217,46 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
     expect(page.body).toContain("the page");
   }, 120_000);
 
+  it("rejects an aborted fetch at once while a challenge is being waited out", async () => {
+    const challenge = stuckChallenge();
+    handler = challenge.handle;
+    const controller = new AbortController();
+    const pending = http.get({ url: `${base}/stuck`, minTier: "T2", signal: controller.signal });
+    pending.catch(() => {});
+    await challenge.waiting;
+    const abortedAt = Date.now();
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    // Unfixed, the fetch waits out the 20 s challenge allowance first.
+    expect(Date.now() - abortedAt).toBeLessThan(1000);
+  }, 120_000);
+
+  it("rejects a fetch at close() while a challenge is being waited out", async () => {
+    const challenge = stuckChallenge();
+    handler = challenge.handle;
+    // One browser at a time: the shared one relaunches if a later test needs it.
+    await http.close();
+    const own = createLiveHttp({
+      hostIntervalMs: 0,
+      attempts: 1,
+      browser: { engine: "patchright" },
+    });
+    const pending = own.get({ url: `${base}/stuck`, minTier: "T2" });
+    pending.catch(() => {});
+    try {
+      await Promise.race([
+        challenge.waiting,
+        pending.then(() => Promise.reject(new Error("the fetch ended before the challenge"))),
+      ]);
+      const closedAt = Date.now();
+      await own.close();
+      await expect(pending).rejects.toThrow();
+      expect(Date.now() - closedAt).toBeLessThan(1000);
+    } finally {
+      await own.close();
+    }
+  }, 120_000);
+
   it("sends the caller's headers on the navigation, not on the page's subresources", async () => {
     handler = recording((req, res) => {
       if (req.url === "/sub.js") {
@@ -388,6 +428,27 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
     }
   }, 120_000);
 });
+
+/**
+ * Serves an Akamai interstitial that never clears. `waiting` resolves a moment after the
+ * browser has loaded it (its script calls back), once T2 is waiting for it to navigate on.
+ */
+function stuckChallenge() {
+  let loaded: () => void = () => {};
+  const waiting = new Promise<void>((resolve) => {
+    loaded = () => setTimeout(resolve, 1000);
+  });
+  const handle: Handler = (req, res) => {
+    if (req.url === "/stuck/loaded") {
+      res.end();
+      loaded();
+      return;
+    }
+    res.writeHead(200, { "content-type": "text/html" });
+    res.end(`<div id="sec-if-cpt-container"></div><script>fetch("/stuck/loaded")</script>`);
+  };
+  return { handle, waiting };
+}
 
 /**
  * Serves `path` slowly, the way a large download goes: the response ends after `release` settles

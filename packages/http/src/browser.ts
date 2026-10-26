@@ -216,6 +216,10 @@ export function createBrowserFetcher(
       try {
         await sendHeaders(page, url, headers);
         return await navigate(page, url, headers.referer, timeoutMs, challengeWaitMs);
+      } catch (error) {
+        // An abort closes the page; report the abort rather than the closed page.
+        signal?.throwIfAborted();
+        throw error;
       } finally {
         signal?.removeEventListener("abort", onAbort);
         await page.close().catch(() => {});
@@ -284,13 +288,19 @@ async function navigate(
       throw new Error(`Page kept navigating for ${challengeWaitMs} ms: ${url}`);
     }
     // A challenge that passes navigates to the page; wait for that without touching the page.
+    // Only a timeout goes round again: a closed page (an abort, close()) ends the fetch now.
+    if (page.isClosed()) throw new Error(`Page closed while waiting out a challenge: ${url}`);
     await page
       .waitForEvent("framenavigated", {
         predicate: (frame) => frame === page.mainFrame(),
         timeout: remaining,
       })
       .then(() => page.waitForLoadState("domcontentloaded", { timeout: timeoutMs }))
-      .catch(() => {});
+      .catch((error: unknown) => {
+        if (page.isClosed() || !(error instanceof Error) || error.name !== "TimeoutError") {
+          throw error;
+        }
+      });
   }
 }
 
