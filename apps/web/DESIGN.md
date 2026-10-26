@@ -143,7 +143,7 @@ Sentence case everywhere; no uppercase labels.
 `facet-scroll`, `range`, `bands` / `band`, `rail-toggle`, `data` (table; `.num` right-aligns;
 `.sort` header buttons), `table-scroll`, `results-more`, `subcategories`, `count`, `badge`,
 `empty`, `colophon`, `pick`, `tray` / `tray-items` / `tray-item` / `tray-remove`,
-`compare-tools`, `compare-table` / `compare-group` / `compare-detail` / `compare-gone`; model page: `data-auto`, `tag` / `tag-quiet`, `sub`, `change`,
+`compare-tools`, `compare-table` / `compare-group` / `compare-detail` / `compare-gone`; model page: `variants`, `stats`, `data-auto`, `tag` / `tag-quiet`, `sub`, `change`,
 `disclose`, `detail` / `detail-grid`, `breakdown`, `note`, `facts`, `photos`, `facet-flag`,
 `chart` (`chart-legend`, `chart-key`, `chart-box`, `chart-plot`, `chart-line`, `chart-point`,
 `chart-dot`, `chart-label`, `chart-x`, `chart-y`, `chart-data`), `visually-hidden`.
