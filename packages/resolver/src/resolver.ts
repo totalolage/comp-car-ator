@@ -11,6 +11,7 @@ import {
 import {
   CHASSIS_CODES,
   FUEL_BADGES,
+  GENERATION_NAMES,
   LIFTBACKS,
   MAKE_GROUPS,
   MODEL_ALIASES,
@@ -141,7 +142,8 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
     const bodies = model.generationBodies.get(variant.generationId) ?? new Set<Body>();
     model.generationBodies.set(variant.generationId, bodies.add(variant.body));
     if (!model.generationWords.has(variant.generationId)) {
-      model.generationWords.set(variant.generationId, generationWords(variant));
+      const named = GENERATION_NAMES[makeKey]?.[modelKey]?.[variant.generation.slug] ?? [];
+      model.generationWords.set(variant.generationId, [...generationWords(variant), ...named]);
     }
   }
 
@@ -185,6 +187,9 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
         );
       };
       const unknownGeneration = words.some((w) => claims(w) && !known.has(w));
+      // Two numerals ("Fabia II ... III") contradict each other, even where one register
+      // type holds both generations.
+      const numerals = new Set(words.filter((w) => /^[IVX]+$/.test(w) && claims(w)));
 
       const fitting = (fitsBody: (v: CatalogVariant) => boolean) =>
         model.variants.filter(
@@ -210,6 +215,7 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
         fuel !== undefined &&
         powerKw !== undefined &&
         generationSlugs(named) <= 1 &&
+        numerals.size <= 1 &&
         !unknownGeneration;
       if (only && evidence) {
         return {

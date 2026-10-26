@@ -9,7 +9,7 @@ import type { FuelWording } from "./hints.ts";
  * entry is the group's key; it does not have to be the catalog's spelling, because catalog
  * names are looked up through the same groups. Slugs not in any group stand for themselves.
  */
-export const ALIASES_VERSION = 5;
+export const ALIASES_VERSION = 6;
 
 export const MAKE_GROUPS: readonly (readonly string[])[] = [
   ["volkswagen", "vw"],
@@ -27,8 +27,31 @@ const MERCEDES_CLASSES =
     " ",
   );
 
-/** BMW series: "Řada 3", "3er", "3 Series", "Serie 3", and engine badges "320", "320d". */
-const BMW_SERIES = ["1", "2", "3", "4", "5", "6", "7", "8"];
+/**
+ * BMW series: "Řada 3", "3er", "3 Series", "Serie 3", engine badges "320", "320d", and the
+ * chassis codes some sites put in the model field ("E46", "F31"). A chassis code still
+ * claims its generation.
+ */
+const BMW_SERIES: Readonly<Record<string, readonly string[]>> = {
+  "1": ["e81", "e82", "e87", "e88", "f20", "f21", "f40"],
+  "2": ["f22", "f23", "f44", "f45", "f46", "g42"],
+  "3": ["e46", "e90", "e91", "e92", "e93", "f30", "f31", "f34", "g20", "g21"],
+  "4": ["f32", "f33", "f36", "g22", "g23", "g26"],
+  "5": ["e39", "e60", "e61", "f07", "f10", "f11", "g30", "g31", "g60", "g61"],
+  "6": ["e63", "e64", "f06", "f12", "f13"],
+  "7": ["e38", "e65", "e66", "f01", "f02", "g11", "g12"],
+  "8": ["g14", "g15", "g16"],
+};
+
+/** Volkswagen vans named with their generation first ("T7 Multivan", "T6.1 Transporter"). */
+const VW_VANS = ["multivan", "transporter", "caravelle", "california"].map((van) => [
+  van,
+  ...["t4", "t5", "t6", "t6-1", "t7"].map((t) => `${t}-${van}`),
+]);
+
+function classNames(c: string): string[] {
+  return [c, `${c}-class`, `${c}-klasse`, `trida-${c}`, `tridy-${c}`, `${c}-trida`];
+}
 
 export interface ModelAliases {
   groups?: readonly (readonly string[])[];
@@ -46,25 +69,23 @@ export interface ModelAliases {
 
 export const MODEL_ALIASES: Readonly<Record<string, ModelAliases>> = {
   "mercedes-benz": {
-    groups: MERCEDES_CLASSES.map((c) => [
-      c,
-      `${c}-class`,
-      `${c}-klasse`,
-      `trida-${c}`,
-      `tridy-${c}`,
-      `${c}-trida`,
+    // The M-Class is badged ML: "Třídy M" and "ML 350" are one Model.
+    groups: MERCEDES_CLASSES.filter((c) => c !== "m").map((c) => [
+      ...classNames(c),
+      ...(c === "ml" ? classNames("m") : []),
     ]),
     // "C220d", "E400" written as one word.
     badge: { pattern: /^([a-z]{1,3})\d{2,3}[a-z]?$/, suffix: "" },
   },
   bmw: {
-    groups: BMW_SERIES.map((n) => [
+    groups: Object.entries(BMW_SERIES).map(([n, chassis]) => [
       `${n}-series`,
       `${n}er`,
       `rada-${n}`,
       `serie-${n}`,
       `series-${n}`,
       `${n}-reihe`,
+      ...chassis,
     ]),
     badge: { pattern: /^([1-8])\d\d[a-z]{0,2}$/, suffix: "-series" },
   },
@@ -72,6 +93,7 @@ export const MODEL_ALIASES: Readonly<Record<string, ModelAliases>> = {
     submodels: { "range-rover": ["sport", "velar", "evoque"], discovery: ["sport"] },
   },
   volkswagen: {
+    groups: VW_VANS,
     submodels: { golf: ["plus", "sportsvan"], tiguan: ["allspace"], touran: ["cross"] },
   },
   citroen: { submodels: { c4: ["picasso", "cactus", "aircross", "x"] } },
@@ -126,4 +148,22 @@ export const FUEL_BADGES: Readonly<Record<string, readonly FuelWording[]>> = {
 export const LIFTBACKS: Readonly<Record<string, readonly string[]>> = {
   skoda: ["octavia", "superb"],
   audi: ["a5", "a7", "s5", "s7", "rs5", "rs7"],
+};
+
+/**
+ * Generation names listings use that the catalog's generations lack: the register keys a
+ * type Wikidata does not date by its code ("Octavia 5E"), while listings write "Octavia III".
+ * A type the register keeps across two generations names both (Fabia 5J: II and III), so
+ * either numeral is no stronger evidence than none. Keyed by make group key, model key and
+ * generation slug; a slug that later changes (Wikidata dates the type) just stops matching.
+ */
+export const GENERATION_NAMES: Readonly<
+  Record<string, Readonly<Record<string, Readonly<Record<string, readonly string[]>>>>>
+> = {
+  skoda: {
+    octavia: { "1u": ["I"], "5e": ["III"], nx: ["IV"] },
+    fabia: { "6y": ["I"], "5j": ["II", "III"], pj: ["IV"] },
+    superb: { "3u": ["I"], "3t": ["II", "III"], nz: ["IV"] },
+    kodiaq: { ns: ["I"], ps: ["II"] },
+  },
 };

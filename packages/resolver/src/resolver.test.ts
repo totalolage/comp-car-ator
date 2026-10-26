@@ -852,6 +852,114 @@ describe("Resolver", () => {
     expect(variantOf(sauto)).toBe("skoda/kodiaq/mk1/suv-diesel-140kw");
   });
 
+  describe("names listings use that the catalog lacks", () => {
+    // Register types Wikidata does not date are named by their code ("Octavia 5E").
+    const coded = createResolver([
+      ...variants("Škoda", "Octavia", { slug: "5e", name: "Octavia 5E", from: 2013, to: 2020 }, [
+        { body: "wagon", fuel: "diesel", powerKw: 110 },
+      ]),
+      ...variants("Škoda", "Fabia", { slug: "5j", name: "Fabia 5J", from: 2007, to: 2022 }, [
+        { body: "hatchback", fuel: "petrol", powerKw: 70 },
+      ]),
+      ...variants("Škoda", "Fabia", { slug: "mk4", name: "Fabia IV (Mk4, PJ)", from: 2021 }, [
+        { body: "hatchback", fuel: "petrol", powerKw: 70 },
+      ]),
+      ...variants("Volkswagen", "Transporter", { slug: "7h", name: "Transporter 7H", from: 2003 }, [
+        { body: "mpv", fuel: "diesel", powerKw: 110 },
+      ]),
+      ...variants("Volkswagen", "Multivan", { slug: "st", name: "Multivan ST", from: 2021 }, [
+        { body: "mpv", fuel: "diesel", powerKw: 110 },
+      ]),
+      ...variants("Mercedes-Benz", "ML", { slug: "w166", name: "W166", from: 2011, to: 2015 }, [
+        { body: "suv", fuel: "diesel", powerKw: 190 },
+      ]),
+      ...variants("BMW", "3 Series", { slug: "346", name: "3 Series 346", from: 2000, to: 2006 }, [
+        { body: "sedan", fuel: "diesel", powerKw: 110 },
+      ]),
+    ]);
+    const at = (vehicle: VehicleDescriptor) => {
+      const r = coded.resolve(vehicle);
+      return r.status === "matched" ? r.variantId : r;
+    };
+
+    it("reads Škoda generation numerals onto the register's type codes", () => {
+      const octavia = { make: "Škoda", fuel: "diesel", firstRegistration: { year: 2017 } } as const;
+      expect(at({ ...octavia, model: "Octavia III", trim: "Combi 2.0 TDI 110 kW" })).toBe(
+        "skoda/octavia/5e/wagon-diesel-110kw",
+      );
+      // The catalog has no Octavia II here: the numeral still blocks a match.
+      expect(at({ ...octavia, model: "Octavia II", trim: "Combi 2.0 TDI 110 kW" })).toMatchObject({
+        status: "model",
+      });
+      // 5J holds both the Fabia II and III, so either numeral fits it, but not both at once.
+      const fabia = { make: "Škoda", trim: "1.0 TSI 70 kW", fuel: "petrol" } as const;
+      for (const model of ["Fabia II", "Fabia III"]) {
+        expect(at({ ...fabia, model, firstRegistration: { year: 2016 } })).toBe(
+          "skoda/fabia/5j/hatchback-petrol-70kw",
+        );
+      }
+      expect(
+        at({
+          ...fabia,
+          model: "Fabia II",
+          trim: "III 1.0 TSI 70 kW",
+          firstRegistration: { year: 2016 },
+        }),
+      ).toMatchObject({ status: "model" });
+      // A generation catalogued under its own name next to the aggregate type: "IV" names
+      // only it, and a year both span stays on the Model without a numeral.
+      expect(at({ ...fabia, model: "Fabia IV", firstRegistration: { year: 2022 } })).toBe(
+        "skoda/fabia/mk4/hatchback-petrol-70kw",
+      );
+      expect(at({ ...fabia, model: "Fabia", firstRegistration: { year: 2022 } })).toMatchObject({
+        status: "model",
+        reason: "ambiguous",
+      });
+    });
+
+    it("finds vans, classes and series named their own way, keeping generation claims", () => {
+      expect(
+        at({
+          make: "Mercedes-Benz",
+          model: "Třídy M",
+          trim: "ML 350 CDI",
+          fuel: "diesel",
+          powerKw: 190,
+          firstRegistration: { year: 2013 },
+        }),
+      ).toBe("mercedes-benz/ml/w166/suv-diesel-190kw");
+      expect(
+        at({
+          make: "VW",
+          model: "T6.1 Transporter",
+          fuel: "diesel",
+          powerKw: 110,
+          firstRegistration: { year: 2021 },
+        }),
+      ).toMatchObject({ status: "model", modelId: "volkswagen/transporter" });
+      // "T7" and "E46" name generations the catalog does not: the Model, not a Variant.
+      expect(
+        at({
+          make: "VW",
+          model: "T7 Multivan",
+          fuel: "diesel",
+          powerKw: 110,
+          firstRegistration: { year: 2023 },
+        }),
+      ).toMatchObject({ status: "model", modelId: "volkswagen/multivan" });
+      expect(
+        at({
+          make: "BMW",
+          model: "E46",
+          trim: "320d",
+          fuel: "diesel",
+          powerKw: 110,
+          firstRegistration: { year: 2003 },
+        }),
+      ).toMatchObject({ status: "model", modelId: "bmw/3-series" });
+    });
+  });
+
   it("reports unknown makes and models without falling back to a shorter model", () => {
     expect(resolve({ make: "Lada", model: "Niva" })).toEqual({
       status: "unmatched",
