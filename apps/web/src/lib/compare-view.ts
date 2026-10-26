@@ -95,12 +95,13 @@ export function variantLabel(v: VariantRow, t: I18n): string {
 const variantName = (v: VariantRow) => `${v.make} ${v.generation}`;
 
 const variantDetail = (v: VariantRow, t: I18n) =>
-  [
-    t.kw(v.powerKw),
-    t.label("body", v.body),
-    t.label("fuel", v.fuel),
-    t.label("transmission", v.transmission),
-  ].join(" · ");
+  [t.kw(v.powerKw), t.label("body", v.body), t.label("fuel", v.fuel), gearbox(v, t)]
+    .filter(Boolean)
+    .join(" · ");
+
+/** The Variant's transmissions, e.g. "manuální, automatická"; empty when the catalog has none. */
+const gearbox = (v: VariantRow, t: I18n) =>
+  (v.transmissions ?? []).map((g) => t.label("transmission", g)).join(", ");
 
 /**
  * Fresh names for the listed `ids` the catalog still has, for
@@ -162,7 +163,7 @@ const GROUPS: { id: string; label: MessageKey; lines(t: I18n): LineSpec[] }[] = 
         line("body", "col.body", (v, t) => t.label("body", v.body)),
         line("fuel", "col.fuel", (v, t) => t.label("fuel", v.fuel)),
         line("power", "col.power", (v, t) => t.kw(v.powerKw)),
-        line("transmission", "col.transmission", (v, t) => t.label("transmission", v.transmission)),
+        line("transmission", "col.transmission", (v, t) => gearbox(v, t) || MISSING),
         line("drive", "spec.drive", (v, t) => (v.drive ? t.label("drive", v.drive) : MISSING)),
       ];
     },
