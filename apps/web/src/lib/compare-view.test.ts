@@ -40,7 +40,7 @@ function variant(id: string, extra: Partial<VariantRow> = {}): VariantRow {
     body: "wagon",
     fuel: "diesel",
     powerKw: 110,
-    transmission: "automatic",
+    transmissions: ["automatic"],
     seats: 5,
     newPriceCzk: { min: 800_000, max: 900_000, source: "list", count: 3 },
     used: used(600_000),
@@ -88,6 +88,17 @@ describe("compare view", () => {
       values: ["5 l/100 km", "5 l/100 km"],
       differs: false,
     });
+  });
+
+  it("prints a Variant's transmissions as one list and drops them when unknown", () => {
+    const both = variant("both", { transmissions: ["manual", "automatic"] });
+    const unknown = variant("unknown", { transmissions: undefined });
+    const view = compareView(["both", "a", "unknown"], index(both, a, unknown), cs);
+    expect(line(view, "transmission")).toMatchObject({
+      values: ["manuální, automatická", "automatická", MISSING],
+      differs: true,
+    });
+    expect(view.columns[2]?.detail).toBe("110\u00a0kW · kombi · nafta");
   });
 
   it("leaves out lines no Variant has a value for", () => {
