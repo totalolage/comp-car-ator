@@ -2,8 +2,8 @@
 
 cars.f8y.dev reads like a printed parts catalog for cars, after McMaster-Carr: the page is
 the table, navigation is a text index, filters narrow the table in place, and every view is
-a URL. No product cards, no hero, no imagery in the shell. Tokens live in
-`src/styles/tokens.css`, shared components in `src/styles/base.css`.
+a URL. No product cards, no hero, no imagery in the shell apart from the logo mark. Tokens
+live in `src/styles/tokens.css`, shared components in `src/styles/base.css`.
 
 ## World
 
@@ -11,6 +11,12 @@ a URL. No product cards, no hero, no imagery in the shell. Tokens live in
   mode is the same sheet inverted (`light-dark()` tokens follow the OS setting).
 - **Motorway-sign green** (`--sign`) is the masthead band and nothing else; it marks "site
   chrome" the way the green D-road signs mark the motorway.
+- **The c-c mark** sits before "comp-car-ator" in the masthead: a car drawn as one line whose
+  wheels are two lowercase c's with a hyphen between them. It is the one image in the chrome,
+  an inline SVG in `currentColor` (white on the green), 26px wide (1.75 × `--text-lg`) at
+  every width, its bottom on the text baseline. The name stays live text and does not wrap; below
+  30rem only the mark shows and the name is visually hidden link text. Masters,
+  favicons and usage rules: `assets/logo/README.md`.
 - **Highlighter yellow** (`--mark`) marks what the person chose or what differs: checked
   facets, the compare count, table row and facet hover (McMaster's pale `#FFFFB5`), and the
   compare page's differing values. Never decoration.
@@ -148,8 +154,8 @@ Sentence case everywhere; no uppercase labels.
 
 ## Components (classes in base.css)
 
-`masthead`, `menu` / `menu-panel` / `tree`, `crumbs`, `page-title`, `page-summary`,
-`section-title`, `split` / `rail` / `results`, `facet` / `facet-option` / `facet-note`, `button-quiet`,
+`masthead`, `wordmark` (mark + site name), `menu` / `menu-panel` / `tree`, `crumbs`,
+`page-title`, `page-summary`, `section-title`, `split` / `rail` / `results`, `facet` / `facet-option` / `facet-note`, `button-quiet`,
 `range`, `bands` / `band`, `rail-toggle`, `data` (table; `.num` right-aligns;
 `.sort` header buttons), `table-scroll`, `results-more`, `subcategories`, `count`, `badge`,
 `empty`, `colophon`, `pick`, `tray` / `tray-items` / `tray-item` / `tray-remove`,
@@ -173,10 +179,10 @@ Enforced on every build by `scripts/check-budget.mjs` (fails the build), gzipped
 
 |                                | budget | catalog page | compare page | model page | large model page |
 | ------------------------------ | ------ | ------------ | ------------ | ---------- | ---------------- |
-| HTML                           | 30 kB  | 7.6 kB       | 3.4 kB       | 9.2 kB     | 18.5 kB          |
+| HTML                           | 30 kB  | 8.1 kB       | 3.8 kB       | 9.7 kB     | 18.9 kB          |
 | CSS                            | 8 kB   | 4.0 kB       | 4.0 kB       | 4.0 kB     | 4.0 kB           |
 | JS (all chunks the page loads) | 30 kB  | 27.0 kB      | 23.5 kB      | 29.8 kB    | 29.8 kB          |
-| Total                          | 60 kB  | 38.6 kB      | 30.9 kB      | 43.0 kB    | 52.3 kB          |
+| Total                          | 60 kB  | 39.1 kB      | 31.4 kB      | 43.5 kB    | 52.8 kB          |
 
 Measured on the sample Bundle (2026-10-26); "large model page" is the Octavia page built from
 `node apps/web/scripts/large-model-bundle.ts <dir>` (a 2.06 MB raw model file of 6,000
@@ -196,6 +202,7 @@ engine reads the rows into columns once), parsing `catalog.json` 0.4 s.
 
 Bundle data (`/bundle/*.json`) is reported, not budgeted: its size follows the catalog and
 is owned by the Bundle format and the catalog page. Rules that keep the shell inside the
-budget: no web fonts, no images in chrome, one shared CSS file, Preact islands only where
-state changes in place, the shell script stays framework-free and does not import the
-message catalogs (`i18n/locale.ts` holds what it needs).
+budget: no web fonts, no images in chrome except the inline mark (one path, under 0.4 kB),
+one shared CSS file, Preact islands only where state changes in place, the shell script
+stays framework-free and does not import the message catalogs (`i18n/locale.ts` holds what
+it needs).

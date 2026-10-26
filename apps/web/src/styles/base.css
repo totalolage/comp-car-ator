@@ -99,13 +99,25 @@ a:hover {
 }
 
 .wordmark {
-  display: flex;
-  align-items: center;
+  /* One grid row, centred in the band; the mark's bottom edge sits on the text baseline. */
+  display: grid;
+  grid-auto-flow: column;
+  align-content: center;
+  align-items: baseline;
+  column-gap: 0.4em;
   margin-right: var(--s4);
+  white-space: nowrap;
   color: inherit;
   font-size: var(--text-lg);
   font-weight: 700;
   letter-spacing: -0.01em;
+}
+
+/* The c-c mark (assets/logo/README.md), at the scale of the approved masthead mock-up:
+   26px wide at every width, so it does not shrink with the narrow-screen name. */
+.wordmark svg {
+  width: calc(1.75 * var(--text-lg));
+  height: calc(1.09 * var(--text-lg));
 }
 
 .masthead-link {
@@ -1141,5 +1153,16 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
     gap: 0 var(--s4);
+  }
+}
+
+/* Phones: the mark alone is the home link; the name stays as its accessible text. */
+@media (max-width: 29.99rem) {
+  .wordmark-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
   }
 }
