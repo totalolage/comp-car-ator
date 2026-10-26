@@ -312,7 +312,7 @@ class Harvest {
           return true;
         });
         this.stats.rows += page.rows.length;
-        // The rows shown are read; a row left out waits for a later run.
+        // The rows shown are read; one left out may wait for the next full run.
         if (page.uneven) this.unfinished.add(category);
         for (const row of fresh) yield* this.observe(category, row);
         if (page.rows.every(isOld)) return;
@@ -327,7 +327,7 @@ class Harvest {
   /**
    * A category's pages from the top, each overlapping the one before by a few rows. Ends
    * at the page whose header reaches the count. Throws LostPlace when ads keep moving up
-   * past the overlap faster than the walk can step back.
+   * past the overlap faster than the walk can step back, or a page shows none of its rows.
    */
   private async *pages(category: string): AsyncGenerator<ListPage> {
     let offset = 0;
@@ -335,6 +335,8 @@ class Harvest {
     let stepsBack = 0;
     for (;;) {
       const page = await this.listPage(category, offset);
+      // A page showing none of its rows leaves the walk nowhere to go on from.
+      if (page.uneven && page.rows.length === 0) throw new LostPlace(category, offset);
       if (previous && !page.rows.some((row) => previous?.has(row.id))) {
         if (offset === 0 || ++stepsBack > MAX_STEPS_BACK) throw new LostPlace(category, offset);
         offset = Math.max(0, offset - STRIDE);

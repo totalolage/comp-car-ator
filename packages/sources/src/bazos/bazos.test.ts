@@ -540,14 +540,29 @@ describe("bazos source", () => {
   });
 
   describe("a list page cut short", () => {
-    /** Drops the last row of /kia/16/ from its first `times` reads. */
-    const cut = (c: Cassette, times: number) => {
-      let left = times;
-      for (const { request, response } of c.interactions) {
-        if (request.url.endsWith("/kia/16/") && left-- > 0) {
-          response.body = response.body.slice(0, response.body.lastIndexOf(ROW));
-        }
-      }
+    const lastRow = (body: string) => body.slice(0, body.lastIndexOf(ROW));
+    const everyRow = (body: string) => body.slice(0, body.indexOf(ROW));
+    /**
+     * Serves `path` as its last recording on each of 8 reads (the 8th repeats), cut by `drop`
+     * on the reads `short` picks (1-based).
+     */
+    const cutAt = (
+      c: Cassette,
+      path: string,
+      short: (read: number) => boolean,
+      drop: (body: string) => string = lastRow,
+    ) => {
+      const at = ({ request }: Interaction) => request.url.endsWith(path);
+      const recorded = c.interactions.filter(at).at(-1) as Interaction;
+      const reads = Array.from({ length: 8 }, (_, i) => ({
+        request: recorded.request,
+        response: {
+          ...recorded.response,
+          body: short(i + 1) ? drop(recorded.response.body) : recorded.response.body,
+        },
+      }));
+      c.interactions.splice(0, c.interactions.length, ...c.interactions.filter((i) => !at(i)));
+      c.interactions.push(...reads);
     };
     /** The Kia list pages again as a Mazda category, harvested after Kia and never cut. */
     const withMazda = (c: Cassette) => {
@@ -561,18 +576,37 @@ describe("bazos source", () => {
         });
       }
     };
-    const stayingShort = () =>
+    const stayingShort = (path = "/kia/16/", drop = lastRow) =>
       cassette("full", (c) => {
         withMazda(c);
-        cut(c, Number.POSITIVE_INFINITY);
+        cutAt(c, path, () => true, drop);
       });
     const short = "Bazoš list page has 19 rows, its header 20: https://auto.bazos.cz/kia/16/";
+    const unmatched = "bazos: walk met a list page whose rows do not match its header";
 
     it("is fetched again", async () => {
-      const once = await harvest(await cassette("full", (c) => cut(c, 1)), "full");
+      const recorded = await cassette("full", (c) => cutAt(c, "/kia/16/", (read) => read === 1));
+      const once = await harvest(recorded, "full");
       expect(once.error).toBeUndefined();
       expect(once.listed.slice(0, 3)).toEqual(["/kia/", "/kia/16/", "/kia/16/"]);
       expect(refs(once.observations).sort()).toEqual(IN_SCOPE);
+    });
+
+    // Reads of /kia/16/ in a full run: the 1st in the walk, the 2nd in the walk over today's
+    // ads, each a read later when a read before it was short.
+    it.each([
+      ["the walk", [1, 2]],
+      ["the walk over today's ads", [2, 3]],
+    ])("short twice in %s, the census walk is redone and taken", async (_, reads) => {
+      const recorded = await cassette("full", (c) =>
+        cutAt(c, "/kia/16/", (read) => reads.includes(read)),
+      );
+      const { observations, error, warnings, listed } = await harvest(recorded, "full");
+      expect(error).toBeUndefined();
+      expect(warnings).toContain(unmatched);
+      expect(listed.filter((path) => path === "/kia/")).toHaveLength(4);
+      expect(refs(observations).sort()).toEqual(IN_SCOPE);
+      expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
     });
 
     it("staying short, incremental reads the rows shown and goes on to later pages and categories", async () => {
@@ -601,8 +635,23 @@ describe("bazos source", () => {
       expect(warnings).toContain("bazos: categories not harvested whole: kia");
     });
 
-    it("staying short in a full run, that category reports no slice done while the others do", async () => {
+    it("showing no rows, incremental gives up on that category and goes on to the next", async () => {
       const { observations, error, warnings, listed } = await harvest(
+        await stayingShort("/kia/", everyRow),
+        "incremental",
+        {},
+        undefined,
+        ["kia", "mazda"],
+      );
+      expect(error).toBeUndefined();
+      expect(warnings).toContain("bazos: lost its place in kia at offset 0");
+      expect(listed.slice(0, 3)).toEqual(["/kia/", "/kia/", "/mazda/"]);
+      expect(refs(observations).sort()).toEqual(IN_SCOPE);
+      expect(warnings).toContain("bazos: categories not harvested whole: kia");
+    });
+
+    it("staying short in a full run, that category reports no slice done while the others do", async () => {
+      const { observations, error, warnings, listed, details } = await harvest(
         await stayingShort(),
         "full",
         {},
@@ -610,7 +659,7 @@ describe("bazos source", () => {
         ["kia", "mazda"],
       );
       expect(warnings).toContain(short);
-      expect(warnings).toContain("bazos: walk met a list page whose rows do not match its header");
+      expect(warnings).toContain(unmatched);
       // The Kia walk is redone once, then the Mazda census runs as usual.
       expect(listed.filter((path) => path === "/kia/")).toHaveLength(4);
       expect(listed.filter((path) => path.startsWith("/mazda/"))).toEqual([
@@ -621,7 +670,9 @@ describe("bazos source", () => {
         "/mazda/",
         "/mazda/16/",
       ]);
-      // Kia yields nothing: no ad page read, nothing retired, no slice done.
+      // Kia yields nothing: its ad pages are not read (the two categories list the same
+      // ads, so each ad page is read once, for Mazda), nothing is retired, no slice is done.
+      expect(new Set(details).size).toBe(details.length);
       expect(refs(observations).sort()).toEqual(IN_SCOPE);
       expect(observations.filter((o) => o.kind === "ListingGone")).toEqual([
         { kind: "ListingGone", ref: "224911426" },
