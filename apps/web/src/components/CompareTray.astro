@@ -1,0 +1,45 @@
+---
+/**
+ * The compare tray: a bar fixed to the bottom of every page while the compare list has
+ * Variants, with their names, a remove button each, "clear" and a link to the compare page.
+ * Strings are rendered here per locale; scripts/tray.ts fills the list from siteStore() and
+ * changes the list only through it, so it never touches a page's URL.
+ */
+import { i18n } from "../i18n/i18n.ts";
+import type { Lang } from "../i18n/messages.ts";
+import { COMPARE_MAX } from "../lib/url-state.ts";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = i18n(lang);
+---
+<aside
+  class="tray"
+  aria-labelledby="tray-title"
+  data-tray
+  data-count={t.t("compare.count", { max: COMPARE_MAX })}
+  data-remove={t.t("compare.remove")}
+  data-unnamed={t.t("compare.unnamed")}
+  hidden
+>
+  <h2 id="tray-title" class="tray-title">
+    {t.t("compare.tray")} <span class="badge" aria-live="polite" data-tray-count></span>
+  </h2>
+  <ol class="tray-items" data-tray-items></ol>
+  <p class="tray-full" data-tray-full hidden>{t.t("compare.full")}</p>
+  <div class="tray-actions">
+    <button type="button" class="button-quiet" data-tray-clear>{t.t("compare.clear")}</button>
+    <a class="tray-open" href={t.path("/compare/")} data-tray-open>{t.t("compare.open")} →</a>
+  </div>
+  <template data-tray-item>
+    <li class="tray-item">
+      <span class="tray-name"></span>
+      <button type="button" class="tray-remove"><span aria-hidden="true">×</span></button>
+    </li>
+  </template>
+</aside>
+<script>
+  import "../scripts/tray.ts";
+</script>

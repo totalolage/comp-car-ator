@@ -41,6 +41,47 @@ describe("site store", () => {
     expect(store.compare()).toEqual(["x", "y", "z", "w"]);
   });
 
+  it("names compared Variants per locale and forgets the names of removed ones", () => {
+    const storage = new MemoryStorage();
+    const store = openStore(storage, clock);
+    store.toggleCompare("a", { cs: "Škoda Octavia IV · kombi", en: "Škoda Octavia IV · estate" });
+    store.toggleCompare("b");
+    expect(openStore(storage, clock).compareLabel("a")).toEqual({
+      cs: "Škoda Octavia IV · kombi",
+      en: "Škoda Octavia IV · estate",
+    });
+    expect(store.compareLabel("b")).toBeUndefined();
+    store.setCompare(["b", "a"], { b: { en: "VW Golf VIII" } });
+    expect(store.compare()).toEqual(["b", "a"]);
+    expect(store.compareLabel("a")?.cs).toBe("Škoda Octavia IV · kombi");
+    expect(store.compareLabel("b")).toEqual({ en: "VW Golf VIII" });
+    store.toggleCompare("a");
+    expect(store.compareLabel("a")).toBeUndefined();
+    store.setCompare([]);
+    expect(store.compare()).toEqual([]);
+    expect(store.compareLabel("b")).toBeUndefined();
+  });
+
+  it("never adds a Variant back when refreshing names", () => {
+    const store = openStore(new MemoryStorage(), clock);
+    store.setCompare(["a", "b"]);
+    store.toggleCompare("b"); // removed while the catalog was loading
+    store.setCompare(store.compare(), { a: { cs: "A" }, b: { cs: "B" } });
+    expect(store.compare()).toEqual(["a"]);
+    expect(store.compareLabel("b")).toBeUndefined();
+  });
+
+  it("does not notify when a write changes nothing", () => {
+    const store = openStore(new MemoryStorage(), clock);
+    store.setCompare(["a"], { a: { cs: "A" } });
+    let calls = 0;
+    store.subscribe(() => calls++);
+    store.setCompare(["a"], { a: { cs: "A" } });
+    store.setCompare(store.compare());
+    expect(store.toggleCompare("a")).toBe(true);
+    expect(calls).toBe(1);
+  });
+
   it("persists across pages that open the same storage", () => {
     const storage = new MemoryStorage();
     openStore(storage, clock).toggleCompare("a");
@@ -86,12 +127,16 @@ describe("site store", () => {
       "cca:v1",
       JSON.stringify({
         compare: ["a", 7, "", "a", "b"],
+        labels: { a: { cs: "A", de: "A", en: 3 }, b: "B", z: { cs: "Z" } },
         recents: [{ id: "x" }, null],
         searches: "nope",
       }),
     );
     const store = openStore(storage, clock);
     expect(store.compare()).toEqual(["a", "b"]);
+    expect(store.compareLabel("a")).toEqual({ cs: "A" });
+    expect(store.compareLabel("b")).toBeUndefined();
+    expect(store.compareLabel("z")).toBeUndefined();
     expect(store.recents()).toEqual([]);
     expect(store.savedSearches()).toEqual([]);
   });

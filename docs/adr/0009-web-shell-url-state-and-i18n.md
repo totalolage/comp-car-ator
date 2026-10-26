@@ -14,8 +14,9 @@ that, each a small interface tested on its own:
   view carries no compare list; `cmp=` means an explicitly empty one. Parameter names are
   short aliases of the catalog query engine's filter keys; `VariantFilters` and
   `ListingFilters` stay the definition of what a filter means.
-- `lib/store.ts`: `siteStore()` holds the compare list (max 4), recently viewed models and
-  saved searches under one versioned localStorage key (`cca:v1`). There is one instance per
+- `lib/store.ts`: `siteStore()` holds the compare list (max 4, with each Variant's display
+  name per locale), recently viewed models and saved searches under one versioned
+  localStorage key (`cca:v1`). There is one instance per
   page, so islands and the shell script notify each other; other tabs arrive through the
   `storage` event. `openStore(storage)` builds it over any `Storage` (tests use an in-memory
   one). Saved searches store the canonical query string plus `lastTotal`, which is what
@@ -44,6 +45,11 @@ and hash, so switching language keeps the view.
   countries and sources, so for those the union needs one engine query per option, and
   every number in the rail would shift on each click. Per-value counts were chosen instead
   (Consequences).
+- **The compare list in the URL only, or the URL's list shown without adopting it**: a
+  shared link would then disagree with the tray and the pick boxes on the same page. The
+  shared list replaces the remembered one instead (Consequences).
+- **Loading the catalog index for the tray's names**: the index grows to megabytes at 50k
+  Variants, and model pages load about 5 kB of JavaScript today. The store caches names.
 - **A custom hover-prefetch script**: Astro's built-in `prefetch` (`prefetchAll`, `hover`)
   does it in about 1 kB, so the shell has no prefetch code of its own.
 
@@ -56,10 +62,22 @@ and hash, so switching language keeps the view.
   Category tree pages (`/make/<make>/`, `/body/<body>/`) avoid that for the common entry
   points: the category is the island's fixed scope, rendered narrowed at build time and kept
   out of the query string (`withoutScope` drops a conflicting URL value).
-- The compare tray (#17) reads the list from `cmp` when the URL has it (even empty) and from
-  the store otherwise; the header compare link already follows the store. The catalog URL
-  has one owner, `CatalogExplorer`: it subscribes to the store and writes a changed compare
-  list back as `cmp` with the filters, so the tray changes the list only through the store.
+- The compare list is one list per browser, in the store; everything that shows it renders
+  from the store and follows it across islands and tabs. Every URL has one owner, and only
+  that owner reads or writes `cmp` in it: `CatalogExplorer` on catalog pages, `CompareTable`
+  on the compare page (`/compare/?cmp=…`). A `cmp` a page opens with (even `cmp=`) replaces
+  the remembered list, so a shared link shows its sender's comparison; the owner then writes
+  the store's list back into its URL on every change. The compare tray (a bar on every page
+  but the compare page) and the header compare link never touch a URL: they change the list
+  through the store and link to `/compare/?cmp=…`. Model pages have no `cmp`; they add
+  Variants with `siteStore().toggleCompare(id, label)`. An open comparison therefore changes
+  when another tab changes the list, which is the point of one list.
+- The store caches each compared Variant's name in every locale (`toggleCompare(id,
+  label)`, `setCompare(ids, labels)`), so the tray can name the list on pages that never load
+  the catalog. Pages that load it refresh the names with `setCompare(store.compare(), …)`,
+  reading the list at that moment, so a refresh never brings a removed Variant back; a write
+  that changes nothing does not notify. An id the catalog no longer has (an old link, a
+  changed Variant id) stays in the list as a "no longer in the catalog" column until removed.
 - Facet counts in the catalog rail are per value: how many Variants have that value under
   every other facet's filters (the engine's disjunctive counts, unchanged). Checking or
   unchecking a value never changes the counts in its own facet (clearing the last make also

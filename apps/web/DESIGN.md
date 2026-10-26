@@ -12,8 +12,8 @@ a URL. No product cards, no hero, no imagery in the shell. Tokens live in
 - **Motorway-sign green** (`--sign`) is the masthead band and nothing else; it marks "site
   chrome" the way the green D-road signs mark the motorway.
 - **Highlighter yellow** (`--mark`) marks what the person chose or what differs: checked
-  facets, the compare count, table row and facet hover (McMaster's pale `#FFFFB5`). The compare tray (#17) uses it for
-  diff highlighting. Never decoration.
+  facets, the compare count, table row and facet hover (McMaster's pale `#FFFFB5`), and the
+  compare page's differing values. Never decoration.
 - **Links are blue** (`--link`), underlined on hover. Everything clickable that navigates is a
   plain link so it prefetches on hover and works without JavaScript.
 
@@ -36,7 +36,7 @@ Sentence case everywhere; no uppercase labels.
 │ │ facet groups │ │ count · dense table in .table-scroll, sticky header row              │ │
 │ └──────────────┘ └──────────────────────────────────────────────────────────────────────┘ │
 │ footer: data date, counts, note                                                            │
-└ tray slot (compare tray, #17) ─────────────────────────────────────────────────────────────┘
+└ compare tray (fixed bar while the list has Variants): Porovnání 2 ze 4 · names × · Porovnat ┘
 ```
 
 - Category tree: the "Kategorie" disclosure in the masthead opens a full-width index of makes
@@ -76,13 +76,36 @@ Sentence case everywhere; no uppercase labels.
   current one. 100 rows, then "show 100 more".
 - Below 48rem the rail folds behind a "Filters (n)" button above the table.
 
+## Compare
+
+- One compare list per browser (max 4, in the order added), kept by `siteStore()`; ADR 0009
+  has who may write `cmp` into which URL.
+- Catalog rows start with a pick box (`.pick`) whose accessible name is the Variant's full
+  label. Unchecked boxes are disabled while 4 are picked; the tray says the list is full.
+- The tray (`CompareTray.astro` + `scripts/tray.ts`, no framework) is fixed to the page
+  bottom on every page but the compare page, only while the list has Variants: title with
+  "n ze 4", one item per Variant (name, × remove), "clear", and "Porovnat →" to
+  `/compare/?cmp=…`. The page reserves the tray's measured height. Items are kept per
+  Variant, so a store update never takes keyboard focus; a removal moves focus to the next
+  remove button, clearing to the main content. Below 48rem the names scroll sideways in one
+  row.
+- The compare page (`CompareTable` island over `lib/compare-view.ts`): one column per
+  Variant (name linking to its model page, power · body · fuel · transmission, remove), line
+  labels in a sticky first column, grouped Variant / specifications / new price / used cars.
+  A line whose printed values differ between two or more Variants gets yellow (`--mark`)
+  value cells and a "≠" with a spoken "differs"; lines with no value anywhere are left out;
+  "only differences" hides the rest. A Variant the catalog no longer has keeps its column
+  ("no longer in the catalog") and stays out of the comparison.
+
 ## Components (classes in base.css)
 
 `masthead`, `menu` / `menu-panel` / `tree`, `crumbs`, `page-title`, `page-summary`,
 `section-title`, `split` / `rail` / `results`, `facet` / `facet-option` / `facet-note`, `button-quiet`,
 `facet-scroll`, `range`, `bands` / `band`, `rail-toggle`, `data` (table; `.num` right-aligns;
 `.sort` header buttons), `table-scroll`, `results-more`, `subcategories`, `count`, `badge`,
-`empty`, `colophon`.
+`empty`, `colophon`, `pick`, `tray` / `tray-items` / `tray-item` / `tray-remove`,
+`compare-tools`, `compare-table` / `compare-group` / `compare-detail` / `compare-gone`,
+`visually-hidden`.
 Rows are ~19px (2px vertical cell padding at 12px text), hairline rules, no zebra striping. A table's first cell is a row
 header (`<th scope="row">`) holding the link.
 
@@ -97,16 +120,17 @@ real `<input>`s inside `<label>`s with `<fieldset>`/`<legend>` groups; result co
 
 Enforced on every build by `scripts/check-budget.mjs` (fails the build), gzipped, per page:
 
-|                                | budget | catalog page | model page |
-| ------------------------------ | ------ | ------------ | ---------- |
-| HTML                           | 30 kB  | 6.9 kB       | 1.9 kB     |
-| CSS                            | 8 kB   | 2.5 kB       | 2.5 kB     |
-| JS (all chunks the page loads) | 30 kB  | 19.1 kB      | 3.9 kB     |
-| Total                          | 60 kB  | 28.5 kB      | 8.3 kB     |
+|                                | budget | catalog page | compare page | model page |
+| ------------------------------ | ------ | ------------ | ------------ | ---------- |
+| HTML                           | 30 kB  | 7.7 kB       | 3.4 kB       | 2.4 kB     |
+| CSS                            | 8 kB   | 3.1 kB       | 3.1 kB       | 3.1 kB     |
+| JS (all chunks the page loads) | 30 kB  | 23.7 kB      | 20.7 kB      | 5.0 kB     |
+| Total                          | 60 kB  | 34.4 kB      | 27.2 kB      | 10.4 kB    |
 
-Measured on the sample Bundle (2026-10-25). The catalog page's JS is Preact, its hooks, the
+Measured on the sample Bundle (2026-10-26). The catalog page's JS is Preact, its hooks, the
 island (with the catalog query engine) and the shared url-state/i18n chunk; category pages
-are the same page. A model page loads only the shell script and Astro's prefetch.
+are the same page, and the compare page is the same stack with its own island. A model page
+loads only the shell and tray scripts and Astro's prefetch.
 
 Query time is measured by `node apps/web/scripts/bench-catalog.ts` on a synthetic Bundle of
 50k Variants (about 110k Variant × listing-group rows). On devbox (2026-10-25, under load):

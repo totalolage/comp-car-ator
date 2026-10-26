@@ -61,6 +61,13 @@ describe("catalog URL state", () => {
     ]);
   });
 
+  it("shares a compare page link that reopens the same list, whatever the ids hold", () => {
+    const ids = ["skoda/octavia/mk4/wagon-diesel-110kw", "odd,id with space", "ž/ü"];
+    const link = writeCatalogState({ compare: ids });
+    expect(link.startsWith("?cmp=skoda/octavia/mk4/wagon-diesel-110kw,")).toBe(true);
+    expect(readCatalogState(link)).toEqual({ filters: {}, compare: ids });
+  });
+
   it("writes nothing for an empty state or empty selections", () => {
     expect(writeCatalogState({})).toBe("");
     expect(writeCatalogState({ filters: { fuel: [], year: {} } })).toBe("");

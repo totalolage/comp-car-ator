@@ -1,0 +1,22 @@
+---
+/**
+ * The compare page (`/compare/?cmp=…`): the static shell; the list itself comes from the URL
+ * or the browser's remembered list, so the CompareTable island renders it after hydration.
+ */
+import { i18n } from "../i18n/i18n.ts";
+import type { Lang } from "../i18n/messages.ts";
+import Base from "../layouts/Base.astro";
+import CompareTable from "./CompareTable.tsx";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = i18n(lang);
+const title = t.t("compare.title");
+---
+<Base lang={lang} path="/compare/" title={title} crumbs={[{ label: title }]} tray={false}>
+  <h1 class="page-title">{title}</h1>
+  <CompareTable client:load lang={lang} />
+  <noscript><p class="empty">{t.t("compare.noscript")}</p></noscript>
+</Base>

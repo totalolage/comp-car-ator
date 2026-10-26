@@ -6,6 +6,7 @@
  * view; the store only carries state across pages and visits.
  */
 import type { ModelId, VariantId } from "@cca/vocabulary";
+import { LANGS, type Lang } from "../i18n/locale.ts";
 import { COMPARE_MAX } from "./url-state.ts";
 
 export const RECENTS_MAX = 8;
@@ -33,11 +34,23 @@ export interface SavedSearch {
   lastTotal?: number;
 }
 
+/**
+ * A compared Variant's display name per locale, cached so the tray can name it on pages that
+ * do not load the catalog. The page that adds a Variant knows its row and gives both.
+ */
+export type CompareLabel = Partial<Record<Lang, string>>;
+
 export interface SiteStore {
+  /** The compare list in the order the Variants were added. One list per browser. */
   compare(): VariantId[];
+  compareLabel(id: VariantId): CompareLabel | undefined;
   /** Adds the Variant, or removes it when present. Returns false when the list is full. */
-  toggleCompare(id: VariantId): boolean;
-  setCompare(ids: VariantId[]): void;
+  toggleCompare(id: VariantId, label?: CompareLabel): boolean;
+  /**
+   * Replaces the list (a shared link, "clear", a removal). `labels` add or refresh names;
+   * a listed id without one keeps the name it had.
+   */
+  setCompare(ids: VariantId[], labels?: Record<VariantId, CompareLabel>): void;
   recents(): Recent[];
   addRecent(recent: Omit<Recent, "at">): void;
   savedSearches(): SavedSearch[];
@@ -62,6 +75,8 @@ export function siteStore(): SiteStore {
 
 interface Data {
   compare: VariantId[];
+  /** Names of the listed Variants; pruned to `compare` on every write. */
+  labels: Record<VariantId, CompareLabel>;
   recents: Recent[];
   searches: SavedSearch[];
 }
@@ -88,9 +103,13 @@ export function openStore(
     }
   }
 
+  /** Applies `change` and, if it changed anything, saves and notifies. */
   function update(change: (data: Data) => void): void {
     const data = load();
+    const before = JSON.stringify(data);
     change(data);
+    data.labels = pick(data.labels, data.compare);
+    if (JSON.stringify(data) === before) return;
     memory = data;
     try {
       backing?.setItem(KEY, JSON.stringify(data));
@@ -103,18 +122,26 @@ export function openStore(
 
   return {
     compare: () => load().compare,
-    toggleCompare(id) {
+    compareLabel: (id) => load().labels[id],
+    toggleCompare(id, label) {
       let ok = true;
       update((data) => {
         if (data.compare.includes(id)) data.compare = data.compare.filter((c) => c !== id);
         else if (data.compare.length >= COMPARE_MAX) ok = false;
-        else data.compare.push(id);
+        else {
+          data.compare.push(id);
+          if (label) data.labels[id] = label;
+        }
       });
       return ok;
     },
-    setCompare(ids) {
+    setCompare(ids, labels = {}) {
       update((data) => {
         data.compare = [...new Set(ids)].slice(0, COMPARE_MAX);
+        for (const id of data.compare) {
+          const label = labels[id];
+          if (label) data.labels[id] = { ...data.labels[id], ...label };
+        }
       });
     },
     recents: () => load().recents,
@@ -167,7 +194,14 @@ function browserStorage(): Storage | null {
 }
 
 function empty(): Data {
-  return { compare: [], recents: [], searches: [] };
+  return { compare: [], labels: {}, recents: [], searches: [] };
+}
+
+/** The entries of `record` for `ids`, in `ids` order. */
+function pick<T>(record: Record<string, T>, ids: readonly string[]): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const id of ids) if (Object.hasOwn(record, id)) out[id] = record[id] as T;
+  return out;
 }
 
 /** Keeps only well-formed entries from whatever was stored. */
@@ -178,6 +212,19 @@ function sanitize(raw: unknown): Data {
   const str = (v: unknown): v is string => typeof v === "string" && v !== "";
   if (Array.isArray(r.compare))
     data.compare = [...new Set(r.compare.filter(str))].slice(0, COMPARE_MAX);
+  if (r.labels && typeof r.labels === "object") {
+    const labels = r.labels as Record<string, unknown>;
+    for (const id of data.compare) {
+      const raw = Object.hasOwn(labels, id) ? labels[id] : undefined;
+      if (!raw || typeof raw !== "object") continue;
+      const label: CompareLabel = {};
+      for (const lang of LANGS) {
+        const value = (raw as Record<string, unknown>)[lang];
+        if (str(value)) label[lang] = value;
+      }
+      if (Object.keys(label).length) data.labels[id] = label;
+    }
+  }
   if (Array.isArray(r.recents)) {
     data.recents = r.recents
       .filter((x): x is Recent => !!x && str(x.id) && str(x.label) && str(x.at))

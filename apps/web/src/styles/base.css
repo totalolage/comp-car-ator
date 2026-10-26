@@ -555,6 +555,193 @@ main:focus {
   opacity: 0.7;
 }
 
+/* Compare: the catalog's pick boxes, the tray and the side-by-side table -------------- */
+
+.pick {
+  margin: 0 var(--s1) 0 0;
+  vertical-align: -0.125em;
+}
+
+/* The tray is fixed over the page bottom; tray.ts sets --tray-space to its height. */
+body {
+  padding-bottom: var(--tray-space, 0px);
+}
+
+.tray {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s1) var(--s3);
+  padding: var(--s2) var(--gutter);
+  border-top: 2px solid var(--rule-strong);
+  background: var(--paper);
+  font-size: var(--text-sm);
+}
+
+.tray[hidden] {
+  display: none;
+}
+
+.tray-title {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.tray-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+  min-width: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tray-item {
+  display: flex;
+  align-items: center;
+  max-width: 18rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 2px;
+}
+
+.tray-name {
+  overflow: hidden;
+  padding: 0 var(--s1) 0 var(--s2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tray-remove {
+  align-self: stretch;
+  padding: 0 var(--s2);
+  border: 0;
+  border-left: 1px solid var(--rule);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+
+.tray-remove:hover {
+  background: var(--panel);
+}
+
+.tray-full {
+  color: var(--muted);
+}
+
+.tray-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin-left: auto;
+}
+
+.tray-open {
+  font-weight: 700;
+}
+
+.compare-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s4);
+  margin-bottom: var(--s2);
+  font-size: var(--text-sm);
+}
+
+.compare-tools label {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+}
+
+.compare-legend {
+  color: var(--muted);
+}
+
+.compare-table {
+  width: auto;
+}
+
+.data.compare-table :is(th, td) {
+  min-width: 10rem;
+  max-width: 16rem;
+  white-space: normal;
+}
+
+.compare-table thead th {
+  vertical-align: top;
+}
+
+/* The line labels stay in view while the Variants scroll sideways. */
+.compare-table :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 9rem;
+  background: var(--paper);
+}
+
+.compare-table thead :is(th, td):first-child {
+  z-index: 2;
+  background: var(--panel);
+}
+
+.compare-table tbody tr:hover {
+  background: none;
+}
+
+.compare-table .compare-group th {
+  padding-top: var(--s3);
+  border-bottom-color: var(--rule-strong);
+  color: var(--ink-strong);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.compare-table tr[data-differs] td:not([data-gone]) {
+  background: var(--mark);
+  color: var(--on-mark);
+}
+
+.compare-mark {
+  font-weight: 700;
+}
+
+.compare-detail {
+  display: block;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.compare-table thead .button-quiet {
+  margin-top: var(--s1);
+  font-size: var(--text-xs);
+}
+
+.compare-gone {
+  color: var(--muted);
+  font-weight: 400;
+  font-style: italic;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* Footer ------------------------------------------------------------------------------ */
 
 .colophon {
@@ -602,6 +789,26 @@ main:focus {
 
   .rail[data-open="false"] {
     display: none;
+  }
+
+  /* One row of names that scrolls sideways, so the tray stays one line tall. */
+  .tray-items {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .tray-item {
+    flex: none;
+    max-width: 14rem;
+  }
+
+  .data.compare-table :is(th, td) {
+    min-width: 8rem;
+  }
+
+  .compare-table :is(th, td):first-child {
+    min-width: 6.5rem;
   }
 
   .rail {
