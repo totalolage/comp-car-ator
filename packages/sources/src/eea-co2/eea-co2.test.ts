@@ -84,6 +84,43 @@ describe("eea-co2 source", () => {
     expect(new Set(facts.map((f) => f.vehicle.firstRegistration?.year))).toEqual(new Set([2025]));
   });
 
+  it("skips malformed rows and keeps the valid rows around them", async () => {
+    const cassette = await loadCassette(skoda);
+    // The last 2024 page (25 rows): put malformed rows between valid ones.
+    const last = cassette.interactions.find(
+      (i) => i.request.url.includes("co2cars_2024Fv30") && i.request.url.includes("p=2"),
+    );
+    if (!last) throw new Error("cassette lacks the second 2024 page");
+    const json = JSON.parse(last.response.body) as { results: unknown[] };
+    const valid = json.results[0] as Record<string, unknown>;
+    json.results.splice(
+      1,
+      0,
+      null,
+      "OCTAVIA",
+      [],
+      { ...valid, Mk: 5 },
+      { ...valid, Cn: 7 },
+      { ...valid, Ft: 1 },
+      { ...valid, kw: "110" },
+    );
+    last.response.body = JSON.stringify(json);
+    const warnings: unknown[] = [];
+    const out: Observation[] = [];
+    for await (const o of eeaCo2Source({ ...options, tables: [tables[0] as EeaTable] }).harvest({
+      http: createReplayHttp(cassette),
+      mode: "full",
+      checkpoint: emptyCheckpoint,
+      now,
+      log: { info() {}, warn: (_message, data) => warnings.push(data) },
+      signal: new AbortController().signal,
+    })) {
+      out.push(o);
+    }
+    expect(out).toHaveLength(75);
+    expect(warnings).toEqual([{ table: "co2cars_2024Fv30", malformed: 7 }]);
+  });
+
   it("fails the run when DiscoData rejects the query", async () => {
     await expect(
       harvest(missingTable, "full", null, {

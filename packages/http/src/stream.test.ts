@@ -4,7 +4,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createLiveHttp,
   createReplayHttp,
@@ -203,7 +203,37 @@ describe("streamed responses", () => {
     await expect(http.get({ url, stream: true })).rejects.toBeInstanceOf(HttpNetworkError);
   });
 
-  it("streams at T1 too", async () => {
+  it.each(["T0", "T1"] as const)(
+    "ends the request at %s when its headers time out, closing the server's socket",
+    async (tier) => {
+      let closedAt: number | undefined;
+      const url = await serve((req) => {
+        req.socket.on("close", () => {
+          closedAt = Date.now();
+        });
+      });
+      const http = createLiveHttp({ hostIntervalMs: 0, timeoutMs: 200, attempts: 1 });
+      await expect(http.get({ url, stream: true, minTier: tier })).rejects.toBeInstanceOf(
+        HttpNetworkError,
+      );
+      const rejectedAt = Date.now();
+      await vi.waitFor(() => expect(closedAt).toBeDefined(), { timeout: 2_000 });
+      expect((closedAt as number) - rejectedAt).toBeLessThan(500);
+    },
+  );
+
+  it("refuses a T1 body too large to read in full", async () => {
+    const url = await serve((_req, res) => {
+      res.writeHead(200, { "content-type": "application/zip", "content-length": 2 ** 31 });
+      res.write(Buffer.alloc(1000));
+    });
+    const http = createLiveHttp({ hostIntervalMs: 0, attempts: 1 });
+    const error = await http.get({ url, stream: true, minTier: "T1" }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(HttpNetworkError);
+    expect(String((error as Error).cause)).toMatch(/too large to read in full/);
+  });
+
+  it("reads a stream request in full at T1 and serves it as chunks", async () => {
     const url = await serve((_req, res) => pieces(res, 40, 50_000));
     const page = await createLiveHttp({ hostIntervalMs: 0 }).get({
       url,

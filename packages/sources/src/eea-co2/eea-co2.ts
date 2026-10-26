@@ -11,6 +11,8 @@
  *   publishes once a year, provisional in spring and final in autumn).
  *
  * Licence: CC BY 4.0; see EEA_CO2_ATTRIBUTION.
+ * TODO(wave1-stream14): show EEA_CO2_ATTRIBUTION on the site (#14) before publishing a Bundle
+ * with EEA-derived Specs.
  */
 import type { Fuel, VariantFacts } from "@cca/vocabulary";
 import { makeName } from "../catalog-names.ts";
@@ -51,18 +53,18 @@ export interface EeaCo2Options {
   pageSize?: number;
 }
 
+/** A result row as DiscoData sends it; `rowOf` checks each field before use. */
 interface Row {
-  Mk: string | null;
-  Cn: string | null;
-  Ft: string | null;
-  Fm: string | null;
+  Mk: string;
+  Cn: string;
+  Ft: string;
+  Fm: string;
   kw: number | null;
   cc: number | null;
   mass: number | null;
   co2: number | null;
   fc: number | null;
   z: number | null;
-  r: number | null;
 }
 
 export function eeaCo2Source(options: EeaCo2Options = {}): Source {
@@ -76,17 +78,23 @@ export function eeaCo2Source(options: EeaCo2Options = {}): Source {
       for (const table of tables.filter((t) => t.year >= since)) {
         let rows = 0;
         let skipped = 0;
+        let malformed = 0;
         for (let page = 1; ; page++) {
           const batch = await getPage(ctx, query(table, options), page, pageSize);
-          for (const row of batch) {
-            const facts = toFacts(row, table.year);
+          for (const raw of batch) {
+            const row = rowOf(raw);
+            const facts = row && toFacts(row, table.year);
             if (facts) yield facts;
-            else skipped++;
+            else if (row) skipped++;
+            else malformed++;
           }
           rows += batch.length;
           if (batch.length < pageSize) break;
         }
-        ctx.log.info("eea-co2 table done", { table: table.table, rows, skipped });
+        if (malformed > 0) {
+          ctx.log.warn("eea-co2 rows malformed", { table: table.table, malformed });
+        }
+        ctx.log.info("eea-co2 table done", { table: table.table, rows, skipped, malformed });
       }
     },
   };
@@ -113,13 +121,13 @@ async function getPage(
   sql: string,
   page: number,
   pageSize: number,
-): Promise<Row[]> {
+): Promise<unknown[]> {
   ctx.signal.throwIfAborted();
   const params = new URLSearchParams({ query: sql, p: String(page), nrOfHits: String(pageSize) });
   const url = `${ENDPOINT}?${params}`;
   const response = await ctx.http.get({ url, locale: "en", signal: ctx.signal });
   if (response.status !== 200) throw new Error(`EEA DiscoData returned HTTP ${response.status}`);
-  const json = JSON.parse(response.body) as { results?: Row[]; errors?: { error: string }[] };
+  const json = JSON.parse(response.body) as { results?: unknown; errors?: { error: string }[] };
   if (!Array.isArray(json.results)) {
     throw new Error(`EEA DiscoData query failed: ${json.errors?.[0]?.error ?? response.body}`);
   }
@@ -146,10 +154,40 @@ function fuelOf(ft: string, fm: string): Fuel | undefined {
   return undefined;
 }
 
+/**
+ * The row when its fields have the types the query selects: text or null for the names, a
+ * number or null for the figures. Anything else (a null row, a number where a name belongs)
+ * is malformed and skipped, so one bad row does not end the run.
+ */
+function rowOf(raw: unknown): Row | undefined {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return undefined;
+  const r = raw as Record<string, unknown>;
+  const texts = [r.Mk, r.Cn, r.Ft, r.Fm];
+  const numbers = [r.kw, r.cc, r.mass, r.co2, r.fc, r.z];
+  if (!texts.every((v) => v === null || v === undefined || typeof v === "string")) return undefined;
+  if (!numbers.every((v) => v === null || v === undefined || typeof v === "number")) {
+    return undefined;
+  }
+  const text = (v: unknown) => (typeof v === "string" ? v : "");
+  const number = (v: unknown) => (typeof v === "number" ? v : null);
+  return {
+    Mk: text(r.Mk),
+    Cn: text(r.Cn),
+    Ft: text(r.Ft),
+    Fm: text(r.Fm),
+    kw: number(r.kw),
+    cc: number(r.cc),
+    mass: number(r.mass),
+    co2: number(r.co2),
+    fc: number(r.fc),
+    z: number(r.z),
+  };
+}
+
 function toFacts(row: Row, year: number): VariantFacts | undefined {
   const make = row.Mk ? makeName(row.Mk) : undefined;
-  const model = row.Cn?.trim();
-  const fuel = fuelOf(row.Ft ?? "", row.Fm ?? "");
+  const model = row.Cn.trim();
+  const fuel = fuelOf(row.Ft, row.Fm);
   const powerKw = positive(row.kw);
   if (!make || !model || !fuel || !powerKw) return undefined;
   const engineCc = fuel === "bev" ? undefined : positive(row.cc);

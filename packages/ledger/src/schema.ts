@@ -81,6 +81,12 @@ const MIGRATIONS: string[] = [
     PRIMARY KEY (source, ref, valid_from)
   );
   `,
+  // Catalog census: entries a Source's applied full census did not state are retired.
+  `
+  ALTER TABLE catalog_entries ADD COLUMN scope TEXT NOT NULL DEFAULT 'all';
+  ALTER TABLE catalog_entries ADD COLUMN last_seen_run INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE catalog_entries ADD COLUMN retired TEXT;
+  `,
 ];
 
 export function migrate(db: DatabaseSync): void {

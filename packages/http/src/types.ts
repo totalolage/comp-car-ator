@@ -25,9 +25,10 @@ export interface HttpRequest {
   /**
    * Deliver the body as `Page.chunks` instead of buffering it, for downloads too large for
    * memory (the vehicle register CSV). Retries, escalation and challenge detection happen on
-   * the status and headers, before the first byte. The live adapter's timeout then limits the
-   * wait for the headers and for each chunk, not the whole download; streamed responses are
-   * never cached.
+   * the status and headers, before the first byte. At T0 the live adapter's timeout then
+   * limits the wait for the headers and for each chunk, not the whole download; T1 and T2
+   * cannot stream, so they read the body in full under the timeout (T1 up to 256 MiB) and
+   * serve it as chunks. Streamed responses are never cached.
    */
   stream?: boolean;
   /**

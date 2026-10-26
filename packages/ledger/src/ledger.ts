@@ -89,8 +89,19 @@ export function openLedger(path: string): Ledger {
        WHERE source = :source AND scope = :scope AND gone IS NULL AND missed_full_runs >= :misses`,
     ),
     upsertCatalog: db.prepare(
-      `INSERT INTO catalog_entries (variant_id, source, data, updated) VALUES (?, ?, ?, ?)
-       ON CONFLICT (variant_id, source) DO UPDATE SET data = excluded.data, updated = excluded.updated`,
+      `INSERT INTO catalog_entries (variant_id, source, data, updated, scope, last_seen_run)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT (variant_id, source) DO UPDATE SET data = excluded.data, updated = excluded.updated,
+         scope = excluded.scope, last_seen_run = excluded.last_seen_run, retired = NULL`,
+    ),
+    // A catalog census states every Variant its Source knows: entries no run of the census
+    // stated are retired (re-keyed or withdrawn), so they leave the catalog at once.
+    retireCatalog: db.prepare(
+      `UPDATE catalog_entries SET retired = :day
+       WHERE source = :source AND scope = :scope AND retired IS NULL
+         AND last_seen_run < (
+           SELECT min(id) FROM runs WHERE source = :source AND scope = :scope AND mode = 'full'
+             AND id > :after)`,
     ),
     upsertFacts: db.prepare(
       `INSERT INTO variant_facts (source, key, data, updated) VALUES (?, ?, ?, ?)
@@ -161,7 +172,14 @@ export function openLedger(path: string): Ledger {
         summary.gone += Number(q.markGone.run(day, `${run.source}:${o.ref}`).changes);
         break;
       case "CatalogEntry":
-        q.upsertCatalog.run(variantIdOf(o.variant), run.source, JSON.stringify(o.variant), day);
+        q.upsertCatalog.run(
+          variantIdOf(o.variant),
+          run.source,
+          JSON.stringify(o.variant),
+          day,
+          run.scope,
+          runId,
+        );
         break;
       case "VariantFacts":
         q.upsertFacts.run(run.source, JSON.stringify(o.vehicle), JSON.stringify(o), day);
@@ -180,7 +198,10 @@ export function openLedger(path: string): Ledger {
 
   function catalog(): CatalogVariant[] {
     const rows = db
-      .prepare("SELECT variant_id, data FROM catalog_entries ORDER BY variant_id, updated, source")
+      .prepare(
+        `SELECT variant_id, data FROM catalog_entries WHERE retired IS NULL
+         ORDER BY variant_id, updated, source`,
+      )
       .all() as { variant_id: string; data: string }[];
     const merged = new Map<string, VariantSpec>();
     for (const row of rows) {
@@ -262,6 +283,7 @@ export function openLedger(path: string): Ledger {
         newListings: 0,
         priceChanges: 0,
         gone: 0,
+        retired: 0,
         census: "not-full",
       };
       let rejectedTotal = 0;
@@ -318,6 +340,9 @@ export function openLedger(path: string): Ledger {
         q.countMissed.run({ day, source: run.source, scope, after: censusAfter });
         summary.gone += Number(
           q.goneAfterMisses.run({ source: run.source, scope, misses: MISSES_TO_GONE }).changes,
+        );
+        summary.retired = Number(
+          q.retireCatalog.run({ day, source: run.source, scope, after: censusAfter }).changes,
         );
       }
       q.finishRun.run("complete", runId);

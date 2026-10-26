@@ -7,9 +7,12 @@
  *   name whose vehicles share the shorter name's type-approval types is the same model with a
  *   trim word ("Octavia Scout" → Octavia); one with types of its own is a model of its own
  *   ("Tiguan Allspace", "Golf Plus").
- * - Generations: one per type-approval type ("5E", "NX"), which changes with each design
- *   cycle. Wikidata names the ones whose production years it knows; types that fall in one
- *   Wikidata generation become one generation.
+ * - Generations: the type-approval type ("5E", "NX") changes with most design cycles, so a
+ *   type Wikidata does not date is one Generation, keyed by its code. A type that starts as a
+ *   dated Wikidata generation is that generation, keyed by Wikidata's word for it (mk7, b6),
+ *   and types that start as one generation are one. A type kept for the next generation too
+ *   (Golf 1K: V and VI) is split by production year; years the dates do not settle (an overlap,
+ *   past the last dated generation) are left out rather than guessed.
  * - Noise: a candidate with fewer than `minVehicles` vehicles is dropped (single imports,
  *   typos). Rare but real neighbours stay: an extra Variant makes a listing ambiguous (it
  *   resolves to the Model), a missing one could make it match the wrong Variant.
@@ -56,6 +59,7 @@ interface Candidate {
 export function createCatalog(options: CatalogOptions) {
   const span = options.year - options.minYear + 2;
   const candidates = new Map<string, Candidate>();
+  const omitted = { vehicles: 0 };
 
   return {
     get candidates(): number {
@@ -82,7 +86,13 @@ export function createCatalog(options: CatalogOptions) {
       });
     },
 
+    /** Vehicles left out of the last `entries`: years no single Generation holds. */
+    get omittedVehicles(): number {
+      return omitted.vehicles;
+    },
+
     entries(generations: readonly WikidataGeneration[]): CatalogEntry[] {
+      omitted.vehicles = 0;
       const rows = [...candidates].map(([key, c]) => {
         const [make, model, type, body, fuel, kw] = key.split("\t") as string[];
         return { make, model, type, body, fuel, powerKw: Number(kw), c } as Row;
@@ -90,7 +100,7 @@ export function createCatalog(options: CatalogOptions) {
       const merged = mergeModels(rows);
       const entries: CatalogEntry[] = [];
       for (const group of groupBy(merged, (r) => `${r.make}\t${r.model}`).values()) {
-        entries.push(...modelEntries(group, generations, options));
+        entries.push(...modelEntries(group, generations, options, omitted));
       }
       return entries.sort((a, b) => idOf(a).localeCompare(idOf(b)));
     },
@@ -137,62 +147,118 @@ function mergeModels(rows: Row[]): Row[] {
   return out;
 }
 
+/** A Generation the register's evidence identifies: a dated Wikidata one, or a type's own. */
+interface Generation {
+  slug: string;
+  wikidata?: WikidataGeneration;
+  /** The type that is its own Generation (Wikidata does not date its start). */
+  type?: string;
+}
+
+/** A chain member's production years, open-ended where unknown. */
+interface Span {
+  gen: Generation;
+  from: number;
+  to: number;
+}
+
 function modelEntries(
   modelRows: Row[],
   wikidata: readonly WikidataGeneration[],
   options: CatalogOptions,
+  omitted: { vehicles: number },
 ): CatalogEntry[] {
-  let rows = modelRows;
-  const { make, model } = rows[0] as Row;
+  const { make, model } = modelRows[0] as Row;
   const modelKey = slugify(`${make} ${model}`);
-  const known = wikidata.filter((g) => g.modelKey === modelKey);
+  // A dated generation's slug is its first word ("Mk7" → mk7, "W205", "B6"): Wikidata's, not
+  // the register's counts, so it stays put from run to run. Two with one slug name neither.
+  const slugOf = (g: WikidataGeneration) => slugify(g.words[0] ?? "");
+  const ofModel = wikidata.filter((g) => g.modelKey === modelKey && slugOf(g));
+  const known = ofModel.filter((g) => ofModel.filter((o) => slugOf(o) === slugOf(g)).length === 1);
+  const slugs = new Map(known.map((g) => [g, slugOf(g)]));
+  const dated = new Set(ofModel.map(slugOf));
 
   // Body letters on a numbered type are one type ("346L" sedan and "346C" coupé are the E46),
-  // and type codes with variant codes glued on ("BWYD6BA", "211U016F0") belong to the more
-  // common type they start with ("BWY", "211").
-  rows = rows.map((r) => ({
+  // and type codes with variant codes glued on ("BWYD6BA", "211U016F0") belong to the type
+  // they start with ("BWY", "211"): the shortest such type of the model, whatever the counts,
+  // so the folding does not change as vehicles register.
+  let rows = modelRows.map((r) => ({
     ...r,
     type: r.type.replace(/^([A-Z0-9]*\d[A-Z0-9]*?\d)[A-Z]$/, "$1"),
   }));
-  const counts = [...groupBy(rows, (r) => r.type)]
-    .map(([type, typeRows]) => ({ type, count: sum(typeRows.map((r) => r.c.count)) }))
-    .sort((a, b) => b.count - a.count);
-  const canonical = new Map<string, string>();
-  for (const [i, t] of counts.entries()) {
-    const base = counts.slice(0, i).find((p) => t.type.startsWith(p.type));
-    canonical.set(t.type, base ? (canonical.get(base.type) as string) : t.type);
-  }
-  rows = rows.map((r) => ({ ...r, type: canonical.get(r.type) as string }));
+  const types = [...new Set(rows.map((r) => r.type))].sort((a, b) => a.length - b.length);
+  const fold = (type: string) =>
+    types.find((t) => t.length >= 2 && t.length < type.length && type.startsWith(t)) ?? type;
+  rows = rows.map((r) => ({ ...r, type: fold(r.type) }));
 
-  // Types → generations.
-  const byType = [...groupBy(rows, (r) => r.type)].map(([type, typeRows]) => ({
-    type,
-    count: sum(typeRows.map((r) => r.c.count)),
-    years: addYears(typeRows.map((r) => r.c.years)),
-  }));
-  const named = new Map<string, { gen?: WikidataGeneration; types: typeof byType }>();
-  for (const t of byType.sort((a, b) => b.count - a.count)) {
-    const gen = bestGeneration(t.years, known, options);
-    const key = gen ? `wd:${known.indexOf(gen)}` : `type:${t.type}`;
-    const group = named.get(key) ?? { gen, types: [] };
-    group.types.push(t);
-    named.set(key, group);
+  // Types → Generations by production year.
+  const byType = [...groupBy(rows, (r) => r.type)].map(([type, typeRows]) => {
+    const years = addYears(typeRows.map((r) => r.c.years));
+    return { type, years, core: percentiles(years, 0.1, 0.9, options.minYear) };
+  });
+  const starts = new Map(
+    byType.map((t) => [t.type, t.core && startGeneration(t.years, t.core, known, options)]),
+  );
+  const claimed = new Set([...starts.values()].filter((g) => g !== undefined));
+  const generationOf = new Map(
+    byType.map((t) => {
+      const start = starts.get(t.type);
+      const first: Generation = start
+        ? { slug: slugs.get(start) as string, wikidata: start }
+        : { slug: slugify(t.type), type: t.type };
+      // A type whose code is a dated generation's word ("B6") would take its key: left out.
+      const chain =
+        t.core && !(first.type && dated.has(first.slug))
+          ? chainOf(first, t.core, known, claimed, slugs)
+          : [];
+      return [t.type, (year: number) => onlyMember(chain, ofModel, year)];
+    }),
+  );
+
+  // Each candidate's vehicles go to the Generation of their year; years no single Generation
+  // claims (overlaps, past the last dated one) are left out. Specs are tracked per candidate,
+  // not per year, so a candidate split across Generations states none.
+  const placed: (Row & { gen: Generation })[] = [];
+  for (const r of rows) {
+    const of = generationOf.get(r.type) as (year: number) => Generation | undefined;
+    const parts = new Map<Generation, Uint32Array>();
+    r.c.years.forEach((n, i) => {
+      if (n === 0) return;
+      const gen = of(options.minYear + i);
+      if (!gen) {
+        omitted.vehicles += n;
+        return;
+      }
+      const years = parts.get(gen) ?? new Uint32Array(r.c.years.length);
+      years[i] = n;
+      parts.set(gen, years);
+    });
+    const whole = parts.size === 1 && sum(parts.values().next().value as Uint32Array) === r.c.count;
+    for (const [gen, years] of parts) {
+      const c = whole
+        ? r.c
+        : { count: sum(years), years, specs: new Float64Array(r.c.specs.length) };
+      placed.push({ ...r, c, gen });
+    }
   }
 
   const entries: CatalogEntry[] = [];
-  for (const { gen, types } of named.values()) {
-    const typeSet = new Set(types.map((t) => t.type));
-    const slug = slugify((types[0] as (typeof types)[number]).type);
+  for (const genRows of groupBy(placed, (r) => r.gen.slug).values()) {
+    const gen = (genRows[0] as (typeof genRows)[number]).gen;
     // The name lists the generation's main types (≥5% of its vehicles), as listings may cite them.
-    const total = sum(types.map((t) => t.count));
-    const main = types.filter((t, i) => i === 0 || t.count >= total * 0.05).slice(0, 3);
+    const typeCounts = [...groupBy(genRows, (r) => r.type)]
+      .map(([type, typeRows]) => ({ type, count: sum(typeRows.map((r) => r.c.count)) }))
+      .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
+    const total = sum(typeCounts.map((t) => t.count));
+    const main = typeCounts.filter((t, i) => i === 0 || t.count >= total * 0.05).slice(0, 3);
     // Mercedes-Benz types are model series (205); listings write the chassis code (W205).
     const codes = main.map((t) =>
       make === "Mercedes-Benz" && /^\d{3}$/.test(t.type) ? `W${t.type}` : t.type,
     );
-    const label = gen?.numeral ?? gen?.words[0];
-    const extra = gen
-      ? [...new Set([...(gen.numeral ? gen.words : gen.words.slice(1)), ...codes])].filter(
+    const wd = gen.wikidata;
+    const label = wd?.numeral ?? wd?.words[0];
+    const extra = wd
+      ? [...new Set([...(wd.numeral ? wd.words : wd.words.slice(1)), ...codes])].filter(
           (w) => w !== label,
         )
       : [];
@@ -201,10 +267,7 @@ function modelEntries(
       : `${model} ${codes.join("/")}`;
 
     const variants = [
-      ...groupBy(
-        rows.filter((r) => typeSet.has(r.type)),
-        (r) => `${r.body}\t${r.fuel}\t${r.powerKw}`,
-      ).values(),
+      ...groupBy(genRows, (r) => `${r.body}\t${r.fuel}\t${r.powerKw}`).values(),
     ].map((vRows) => ({ ...(vRows[0] as Row), c: combine(vRows.map((r) => r.c)) }));
     const kept = variants.filter((v) => v.c.count >= options.minVehicles);
     if (kept.length === 0) continue;
@@ -220,7 +283,7 @@ function modelEntries(
           make,
           model,
           generation: {
-            slug,
+            slug: gen.slug,
             name,
             from: genYears.from,
             ...(genYears.to ? { to: genYears.to } : {}),
@@ -238,37 +301,95 @@ function modelEntries(
 }
 
 /**
- * The Wikidata generation this type is: the one whose start is at most two years before or
- * one year after the type's first core year (10th percentile of its vehicles: registrations
- * lag production), which the type does not outlast by more than a year, and no other
- * generation fits as well or spans the type's core years. Generations overlap (Octavia I was built until 2010 next to the
- * II), so the start decides. A type with many vehicles from `minYear` began before it; its
- * start is unknown, so only generations begun before it fit.
- * Wikidata often lacks end dates, so a missing end is not "still in production".
+ * The Wikidata generation a type starts as: the one whose start is at most two years before
+ * or one year after the type's first core year (10th percentile of its vehicles: registrations
+ * lag production), and no other generation starts as near or spans the type's core years.
+ * Generations overlap (Octavia I was built until 2010 next to the II), so the start decides.
+ * A type with many vehicles from `minYear` began before it; its start is unknown, so the
+ * latest generation begun before it that the type does not outlast fits.
  */
-function bestGeneration(
+function startGeneration(
   years: Uint32Array,
+  core: { from: number; to: number },
   known: readonly WikidataGeneration[],
   options: CatalogOptions,
 ): WikidataGeneration | undefined {
-  const core = percentiles(years, 0.1, 0.9, options.minYear);
-  if (!core) return undefined;
   const earlier = at0(years, 0) >= sum(years) * 0.05;
   const gap = (g: WikidataGeneration) => (earlier ? 0 : Math.abs(g.from - core.from));
   const near = (g: WikidataGeneration) => core.from - g.from <= 2 && g.from - core.from <= 1;
   const fits = known
-    .filter(
-      (g) =>
-        (earlier ? g.from < options.minYear : near(g)) &&
-        (g.to === undefined || core.to <= g.to + 1),
+    .filter((g) =>
+      earlier ? g.from < options.minYear && (g.to === undefined || core.to <= g.to + 1) : near(g),
     )
     .sort((a, b) => gap(a) - gap(b) || b.from - a.from);
   const [best, next] = fits;
   if (!best || (next && gap(next) <= gap(best) && !earlier)) return undefined;
   // The run-out of the previous generation (Passat B5 registered until 2005) is not the next.
+  // A generation without an end is not taken to span a later one's years.
   const covers = (g: WikidataGeneration) =>
-    g.from <= core.from && (g.to ?? options.year) >= core.to;
+    g.from <= core.from && g.to !== undefined && g.to >= core.to;
   return known.some((g) => g !== best && covers(g)) ? undefined : best;
+}
+
+/**
+ * The Generations a type was built as, in order. VW kept type 1K for Golf V and VI: a
+ * type that outlasts its generation continues as the dated generation starting within a year
+ * of that end, unless another type starts as that generation (then this type's later years
+ * are the run-out). A type Wikidata does not date is its own Generation until a dated one
+ * no other type claims starts inside its core years.
+ */
+function chainOf(
+  first: Generation,
+  core: { from: number; to: number },
+  known: readonly WikidataGeneration[],
+  claimed: ReadonlySet<WikidataGeneration>,
+  slugs: ReadonlyMap<WikidataGeneration, string>,
+): Span[] {
+  const spans: Span[] = [{ gen: first, from: -Infinity, to: first.wikidata?.to ?? Infinity }];
+  for (;;) {
+    const last = spans[spans.length - 1] as Span;
+    const next = known.filter(
+      (g) =>
+        !claimed.has(g) &&
+        !spans.some((s) => s.gen.wikidata === g) &&
+        (last.gen.wikidata
+          ? last.to < core.to && Math.abs(g.from - last.to) <= 1
+          : g.from > core.from + 1 && g.from <= core.to),
+    );
+    if (next.length !== 1) break;
+    const g = next[0] as WikidataGeneration;
+    if (!last.gen.wikidata) last.to = g.from - 1;
+    spans.push({
+      gen: { slug: slugs.get(g) as string, wikidata: g },
+      from: g.from,
+      to: g.to ?? Infinity,
+    });
+  }
+  // The last Generation's run-out: registrations a year past its end.
+  (spans[spans.length - 1] as Span).to += 1;
+  return spans;
+}
+
+/**
+ * The one Generation whose years hold `year`; none in an overlap or outside them all. A dated
+ * Generation also yields a year to any other dated generation of the model whose dates hold it
+ * (a successor another type claims): a year in both is left out. A generation Wikidata gives no
+ * end holds every year from its start, but against a later one only the later start is known,
+ * so it contests none of that one's years.
+ */
+function onlyMember(
+  spans: readonly Span[],
+  dated: readonly WikidataGeneration[],
+  year: number,
+): Generation | undefined {
+  const holding = spans.filter((s) => s.from <= year && year <= s.to);
+  const gen = holding.length === 1 ? (holding[0] as Span).gen : undefined;
+  if (!gen?.wikidata) return gen;
+  const own = gen.wikidata;
+  const contested = dated.some(
+    (g) => g !== own && g.from <= year && (g.to === undefined ? g.from > own.from : year <= g.to),
+  );
+  return contested ? undefined : gen;
 }
 
 /** Production years: 2nd to 98th percentile of registrations; open while still registering. */

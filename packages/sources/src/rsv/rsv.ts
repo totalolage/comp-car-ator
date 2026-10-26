@@ -11,7 +11,9 @@
  * and the export downloads as a ZIP holding one multi-GB CSV (the uncompressed stable URL is
  * several times larger and the server resets connections that last over an hour).
  *
- * - full: always reads the latest export.
+ * - full: always reads the latest export. Only a full run is a catalog census, which retires
+ *   Variants re-keyed since the last one (ADR 0011). TODO(wave1-stream18): schedule rsv as a
+ *   monthly full run (#18).
  * - incremental: reads it only when it was generated after the last run started.
  *
  * The register has no gearbox (Variants carry no `transmissions`). Rows it cannot map
@@ -197,6 +199,7 @@ async function countExport(
     cars,
     rejected,
     candidates: catalog.candidates,
+    omittedVehicles: catalog.omittedVehicles,
     variants: entries.length,
   });
   return entries;

@@ -1,7 +1,7 @@
 import { Readable } from "node:stream";
 import { createDeflateRaw, deflateRawSync } from "node:zlib";
 import { type Cassette, createReplayHttp, type Http, loadCassette, type Page } from "@cca/http";
-import type { CatalogEntry, Observation } from "@cca/vocabulary";
+import { type CatalogEntry, type Observation, variantIdOf } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
 import { emptyCheckpoint, type HarvestMode, type Logger } from "../source.ts";
 import { RSV_SITE, type RsvOptions, rsvSource } from "./rsv.ts";
@@ -76,17 +76,22 @@ describe("rsv source", () => {
     const generations = new Map(
       entries.map((e) => [`${e.variant.model}/${e.variant.generation.slug}`, e.variant.generation]),
     );
-    // Wikidata dates Octavia II and Golf IV, not Octavia I.
-    expect(generations.get("Octavia/1z")).toMatchObject({
+    // Wikidata dates Octavia II and Golf IV, not Octavia I; a dated generation is keyed by
+    // Wikidata's word for it, an undated type by its code.
+    expect(generations.get("Octavia/mk2")).toMatchObject({
       name: "Octavia II (Mk2, 1Z)",
       from: 2004,
     });
     expect(generations.get("Octavia/1u")?.name).toBe("Octavia 1U");
-    expect(generations.get("Golf/1j")?.name).toBe("Golf IV (Mk4, 1J)");
-    // Type 1K was built as Golf V and VI: no single Wikidata generation fits it.
-    expect(generations.get("Golf/1k")?.name).toBe("Golf 1K");
+    expect(generations.get("Golf/mk4")?.name).toBe("Golf IV (Mk4, 1J)");
+    // VW kept type 1K for Golf V (2003-2009) and VI (2008-2012) and type 3C for Passat B6
+    // (2005-2010) and B7 (2010-2015): split by production year, overlap years left out.
+    expect(generations.get("Golf/mk5")).toMatchObject({ name: "Golf V (Mk5, 1K)", to: 2007 });
+    expect(generations.get("Golf/mk6")).toMatchObject({ name: "Golf VI (Mk6, 1K)", from: 2011 });
+    expect(generations.get("Passat/b6")).toMatchObject({ name: "Passat B6 (3C)", to: 2009 });
+    expect(generations.get("Passat/b7")).toMatchObject({ name: "Passat B7 (3C)", from: 2011 });
+    expect([...generations.keys()].filter((k) => /^(Golf\/1k|Passat\/3c)/.test(k))).toEqual([]);
     // The B5's run-out registrations (type 3BG, 2004-2005) are not the B6.
-    expect(generations.get("Passat/3c")?.name).toBe("Passat B6 (3C)");
     expect(generations.get("Passat/3bg")?.name).toBe("Passat 3BG");
     // Mercedes-Benz types are model series; listings write the chassis code.
     expect(generations.get("C-Class/203")?.name).toBe("C-Class W203");
@@ -95,6 +100,104 @@ describe("rsv source", () => {
       expect.arrayContaining(["3 Series/346", "3 Series/390"]),
     );
     expect([...generations.keys()].some((k) => /^3 Series\/346[a-z]$/.test(k))).toBe(false);
+  });
+
+  it("leaves out Specs and years it cannot place in one Generation", async () => {
+    const { entries, logs } = await harvest(await replay());
+    const read = logs.find((l) => l.message === "rsv export read")?.data;
+    // Golf 1K vehicles of 2008-2009 fall in both Golf V's and VI's years.
+    expect(read?.omittedVehicles).toBeGreaterThanOrEqual(11);
+    const variant = (model: string, slug: string, body: string, kw: number) =>
+      variantsOf(entries, "Volkswagen", model).find(
+        (v) =>
+          v.generation.slug === slug && v.body === body && v.fuel === "diesel" && v.powerKw === kw,
+      );
+    // Golf 1K diesels of 77 kW: V's are the 1.9 TDI, VI's (all from 2011) the 1.6 TDI.
+    expect(variant("Golf", "mk5", "hatchback", 77)).toMatchObject({ engineCc: 1896 });
+    expect(variant("Golf", "mk6", "wagon", 77)).toMatchObject({ engineCc: 1598 });
+    // Passat 3C wagons of 103 kW were built as B6 and B7; their Spec counters cannot be split.
+    for (const slug of ["b6", "b7"]) {
+      const v = variant("Passat", slug, "wagon", 103);
+      expect(v).toBeDefined();
+      expect([v?.engineCc, v?.seats, v?.massKg]).toEqual([undefined, undefined, undefined]);
+    }
+  });
+
+  it("keys Variants by evidence that does not flip as counts change between exports", async () => {
+    const { header, row } = await realRow();
+    const ids = async (oneZ: number, zz: number, bindings: unknown[] = []) => {
+      const rows = [...Array(oneZ).fill(row), ...Array(zz).fill(row.replace(",1Z,", ",ZZ,"))];
+      const http = syntheticHttp(header, rows.join("\r\n"), 1, bindings);
+      const { entries } = await harvest(http, "full", null, { minVehicles: 1 });
+      return entries.map((e) => variantIdOf(e.variant));
+    };
+    // Without Wikidata each type is its own Generation, keyed by its code either way.
+    const byType = await ids(6, 5);
+    expect(byType).toHaveLength(2);
+    expect(await ids(5, 6)).toEqual(byType);
+    // Types that start as one dated generation are one, whichever has more vehicles.
+    const { entries } = await harvest(syntheticHttp(header, row, 1), "full", null, {
+      minVehicles: 1,
+    });
+    const year = entries[0]?.variant.years.from as number;
+    const octaviaII = {
+      modelLabel: { value: "Škoda Octavia" },
+      genLabel: { value: "Škoda Octavia II" },
+      from: { value: String(year - 1) },
+    };
+    const dated = await ids(6, 5, [octaviaII]);
+    expect(dated).toEqual([expect.stringMatching(/^skoda\/octavia\/mk2\//)]);
+    expect(await ids(5, 6, [octaviaII])).toEqual(dated);
+  });
+
+  it("leaves a type's years to a later generation another type starts as", async () => {
+    const { header, row } = await realRow();
+    const yearAt = header.split(",").indexOf("Rok výroby");
+    expect(yearAt).toBeGreaterThan(0);
+    const vehicle = (type: string, year: number) => {
+      const fields = row.replace(",1Z,", `,${type},`).split(",");
+      fields[yearAt] = String(year);
+      return fields.join(",");
+    };
+    // Type AA starts as Octavia II (2004-2010), type BB as Octavia III (2009-).
+    const rows = [
+      ...[2005, 2006, 2009, 2010, 2011].flatMap((y) => [vehicle("AA", y), vehicle("AA", y)]),
+      ...[2009, 2010, 2011].flatMap((y) => [vehicle("BB", y), vehicle("BB", y)]),
+    ];
+    const generation = (label: string, from: number, to?: number) => ({
+      modelLabel: { value: "Škoda Octavia" },
+      genLabel: { value: `Škoda Octavia ${label}` },
+      from: { value: String(from) },
+      ...(to ? { to: { value: String(to) } } : {}),
+    });
+    const http = syntheticHttp(header, rows.join("\r\n"), 1, [
+      generation("II", 2004, 2010),
+      generation("III", 2009),
+    ]);
+    const { entries, logs } = await harvest(http, "full", null, { minVehicles: 1 });
+    const years = (slug: string) =>
+      entries.filter((e) => e.variant.generation.slug === slug).map((e) => e.variant.years);
+    // AA's 2009-2011 vehicles are in III's years too (III is BB's), BB's 2009-2010 in II's:
+    // all left out.
+    expect(years("mk2")).toEqual([{ from: 2005, to: 2006 }]);
+    expect(years("mk3")).toEqual([{ from: 2011, to: 2011 }]);
+    expect(logs.find((l) => l.message === "rsv export read")?.data?.omittedVehicles).toBe(10);
+
+    // Without II's end, III's start still takes AA's later years away, but II no longer
+    // contests BB's.
+    const open = await harvest(
+      syntheticHttp(header, rows.join("\r\n"), 1, [
+        generation("II", 2004),
+        generation("III", 2009),
+      ]),
+      "full",
+      null,
+      { minVehicles: 1 },
+    );
+    const openYears = (slug: string) =>
+      open.entries.filter((e) => e.variant.generation.slug === slug).map((e) => e.variant.years);
+    expect(openYears("mk2")).toEqual([{ from: 2005, to: 2006 }]);
+    expect(openYears("mk3")).toEqual([{ from: 2009, to: 2011 }]);
   });
 
   it("spells makes and models the way the Resolver's aliases know them", async () => {
@@ -121,7 +224,10 @@ describe("rsv source", () => {
     const { entries } = await harvest(await replay());
     const octavia = variantsOf(entries, "Škoda", "Octavia").find(
       (v) =>
-        v.generation.slug === "1z" && v.body === "wagon" && v.fuel === "diesel" && v.powerKw === 77,
+        v.generation.slug === "mk2" &&
+        v.body === "wagon" &&
+        v.fuel === "diesel" &&
+        v.powerKw === 77,
     );
     expect(octavia).toMatchObject({
       engineCc: 1896,
@@ -365,8 +471,11 @@ function localHeader(): Buffer {
   return Buffer.concat([head, name]);
 }
 
-/** The site, its API and an export ZIP of `rows` copies of one row, deflated on the fly. */
-function syntheticHttp(header: string, row: string, rows: number): Http {
+/**
+ * The site, its API and an export ZIP of `rows` copies of `row` (one or more CSV lines),
+ * deflated on the fly; Wikidata answers with `bindings`.
+ */
+function syntheticHttp(header: string, row: string, rows: number, bindings: unknown[] = []): Http {
   const json = (url: string, body: unknown, headers: Record<string, string> = {}): Page => ({
     url,
     status: 200,
@@ -386,8 +495,9 @@ function syntheticHttp(header: string, row: string, rows: number): Http {
       if (url.includes("/vypiszregistru/synthetic")) {
         async function* csv() {
           yield Buffer.from(`﻿${header}\r\n`);
-          const block = Buffer.from(`${row}\r\n`.repeat(1000));
-          for (let i = 0; i < rows / 1000; i++) yield block;
+          const per = Math.min(rows, 1000);
+          const block = Buffer.from(`${row}\r\n`.repeat(per));
+          for (let i = 0; i < rows / per; i++) yield block;
         }
         const deflated = Readable.from(csv()).pipe(createDeflateRaw());
         async function* chunks() {
@@ -396,7 +506,7 @@ function syntheticHttp(header: string, row: string, rows: number): Http {
         }
         return { url, status: 200, headers: {}, body: "", chunks: chunks(), tier: "T0" };
       }
-      return json(url, { results: { bindings: [] } });
+      return json(url, { results: { bindings } });
     },
   };
 }

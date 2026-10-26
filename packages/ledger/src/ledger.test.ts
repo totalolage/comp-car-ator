@@ -190,6 +190,50 @@ describe("Ledger", () => {
     ]);
   });
 
+  it("a catalog census retires the entries its Source no longer states", async () => {
+    ledger = openLedger(":memory:");
+    const rekeyed: CatalogEntry = {
+      ...octavia,
+      variant: { ...octavia.variant, generation: { ...octavia.variant.generation, slug: "nx" } },
+    };
+    const ids = () => ledger.snapshot().catalog.map((v) => v.id);
+    await run("rsv", "full", "2026-09-01", [octavia]);
+    await run("skoda-prices", "full", "2026-09-02", [rekeyed]);
+    // Incremental runs, failed runs and censuses with rejections infer nothing.
+    await run("rsv", "incremental", "2026-09-15", [rekeyed]);
+    await expect(
+      run(
+        "rsv",
+        "full",
+        "2026-09-20",
+        (async function* () {
+          yield rekeyed;
+          throw new Error("download interrupted");
+        })(),
+      ),
+    ).rejects.toThrow();
+    const broken = { ...rekeyed, variant: { ...rekeyed.variant, powerKw: -1 } };
+    expect(await run("rsv", "full", "2026-09-25", [rekeyed, broken])).toMatchObject({
+      census: "skipped-rejections",
+      retired: 0,
+    });
+    expect(ids()).toEqual([
+      "skoda/octavia/mk4/wagon-diesel-110kw",
+      "skoda/octavia/nx/wagon-diesel-110kw",
+    ]);
+
+    // The next census states only the re-keyed Variant: rsv's old entry retires; the price
+    // list's own census is separate.
+    expect(await run("rsv", "full", "2026-10-01", [rekeyed])).toMatchObject({ retired: 1 });
+    expect(ids()).toEqual(["skoda/octavia/nx/wagon-diesel-110kw"]);
+    // Stating it again restores it.
+    await run("rsv", "full", "2026-11-01", [octavia, rekeyed]);
+    expect(ids()).toEqual([
+      "skoda/octavia/mk4/wagon-diesel-110kw",
+      "skoda/octavia/nx/wagon-diesel-110kw",
+    ]);
+  });
+
   it("fills missing Specs from partial VariantFacts without overriding CatalogEntries", async () => {
     ledger = openLedger(":memory:");
     await run("rsv", "full", "2026-10-01", [
