@@ -12,9 +12,6 @@ import type { I18n } from "../i18n/i18n.ts";
 import { columnAt, historyChart } from "../lib/history-chart.ts";
 import type { HistorySeries } from "../lib/listing-view.ts";
 
-/** Points get visible dots up to this many per series; longer series show only their last. */
-const DOTS_MAX = 30;
-
 export default function HistoryChart({ series, t }: { series: HistorySeries[]; t: I18n }) {
   const chart = historyChart(series);
   const [hover, setHover] = useState<string | null>(null);
@@ -65,16 +62,14 @@ export default function HistoryChart({ series, t }: { series: HistorySeries[]; t
             ))}
           </svg>
           {chart.lines.map((line) =>
-            line.points
-              .filter((_, i) => line.points.length <= DOTS_MAX || i === line.points.length - 1)
-              .map((p) => (
-                <span
-                  key={`${line.market}-${p.date}`}
-                  class="chart-dot"
-                  data-market={line.market}
-                  style={`left:${p.x}%;top:${p.y}%`}
-                />
-              )),
+            line.dots.map((p) => (
+              <span
+                key={`${line.market}-${p.date}`}
+                class="chart-dot"
+                data-market={line.market}
+                style={`left:${p.x}%;top:${p.y}%`}
+              />
+            )),
           )}
           {chart.lines.map((line) => {
             const p = line.points[line.points.length - 1];

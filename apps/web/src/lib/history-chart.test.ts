@@ -74,4 +74,32 @@ describe("history chart", () => {
     expect(long?.lines[0]?.d.match(/M/g)).toHaveLength(1);
     expect(historyChart([{ market: "CZ", points: [] }])).toBeNull();
   });
+
+  it("marks every point of a short series, and the last and isolated points of a long one", () => {
+    const monday = (week: number) =>
+      new Date(Date.UTC(2024, 0, 22 + 7 * week)).toISOString().slice(0, 10);
+    const weeks = Array.from({ length: 30 }, (_, i) => point(monday(i), 400_000 + i * 1000));
+    // 30 points is still short: every point gets a dot.
+    const short = historyChart([
+      { market: "CZ", points: [point("2024-01-01", 380_000), ...weeks.slice(1)] },
+    ]);
+    expect(short?.lines[0]?.dots).toHaveLength(30);
+    expect(
+      historyChart([{ market: "CZ", points: [point("2024-01-01", 1)] }])?.lines[0]?.dots,
+    ).toHaveLength(1);
+    // 31 points: one isolated week three weeks before 30 contiguous Mondays.
+    const long = historyChart([{ market: "CZ", points: [point("2024-01-01", 380_000), ...weeks] }]);
+    const line = long?.lines[0];
+    expect(line?.d.match(/M/g)).toHaveLength(2);
+    expect(line?.dots.map((p) => p.date)).toEqual(["2024-01-01", monday(29)]);
+    // A lone point at the end of a long series is the last point: marked once.
+    const tail = historyChart([{ market: "CZ", points: [...weeks, point("2024-12-30", 1)] }]);
+    expect(tail?.lines[0]?.dots.map((p) => p.date)).toEqual(["2024-12-30"]);
+    // A lone week between two gaps inside a long series keeps its dot.
+    const all = Array.from({ length: 40 }, (_, i) => point(monday(i), 400_000 + i * 1000));
+    const middle = historyChart([
+      { market: "CZ", points: [...all.slice(0, 15), all[17], ...all.slice(20)] as typeof all },
+    ]);
+    expect(middle?.lines[0]?.dots.map((p) => p.date)).toEqual([monday(17), monday(39)]);
+  });
 });

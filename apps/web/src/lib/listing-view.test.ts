@@ -354,12 +354,33 @@ describe("one listing", () => {
   it("reports a price move since the first sighting", async () => {
     const view = await sampleModel("skoda/octavia");
     const moved = active(view).find((l) => l.priceHistory.length > 1) as ListingRow;
-    const first = moved.priceHistory[0]?.price.amount as number;
+    const first = moved.priceHistory[0]?.priceCzk as number;
     expect(priceChange(moved)).toEqual({
-      amount: moved.price.amount - first,
-      percent: Math.round(((moved.price.amount - first) / first) * 100),
+      amount: moved.priceCzk - first,
+      percent: Math.round(((moved.priceCzk - first) / first) * 100),
     });
     expect(priceChange({ ...moved, priceHistory: moved.priceHistory.slice(-1) })).toBeNull();
+  });
+
+  it("compares a listing that switched currency by value, not by the number shown", async () => {
+    const view = await sampleModel("skoda/octavia");
+    const row = active(view)[0] as ListingRow;
+    const switched: ListingRow = {
+      ...row,
+      price: { amount: 500_000, currency: "CZK" },
+      priceCzk: 500_000,
+      priceHistory: [
+        { date: "2026-09-01", price: { amount: 20_000, currency: "EUR" }, priceCzk: 500_000 },
+        { date: "2026-10-01", price: { amount: 500_000, currency: "CZK" }, priceCzk: 500_000 },
+      ],
+    };
+    expect(priceChange(switched)).toBeNull();
+    const cheaper: ListingRow = {
+      ...switched,
+      price: { amount: 475_000, currency: "CZK" },
+      priceCzk: 475_000,
+    };
+    expect(priceChange(cheaper)).toEqual({ amount: -25_000, percent: -5 });
   });
 });
 

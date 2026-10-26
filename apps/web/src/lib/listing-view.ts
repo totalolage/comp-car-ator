@@ -368,12 +368,16 @@ export function historySeries(view: Pick<ModelView, "history">, state: ListingSt
 
 // --- one listing ----------------------------------------------------------------------
 
-/** Price move from the first recorded price to the current one, in the listing's currency. */
+/**
+ * Price move from the oldest price in the history to the current one, in CZK. Both sides
+ * convert at this Bundle's rates, so a listing that switched currency shows its change in
+ * value, not the change of the number on the page.
+ */
 export function priceChange(l: ListingRow): { amount: number; percent: number } | null {
-  const first = l.priceHistory[0]?.price.amount;
-  const amount = l.price.amount;
-  if (first === undefined || first === amount || first === 0) return null;
-  return { amount: amount - first, percent: Math.round(((amount - first) / first) * 100) };
+  const first = l.priceHistory[0]?.priceCzk;
+  const czk = l.priceCzk;
+  if (first === undefined || first === czk || first === 0) return null;
+  return { amount: czk - first, percent: Math.round(((czk - first) / first) * 100) };
 }
 
 export interface LandedBreakdown {

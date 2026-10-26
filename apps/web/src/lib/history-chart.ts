@@ -23,8 +23,12 @@ export interface HistoryChart {
   xUnit: "day" | "month";
   /** Round CZK values to label on the y axis, bottom to top. */
   yTicks: { y: number; value: number }[];
-  /** `d` breaks wherever a Market had a week without active Listings (a gap, not zero). */
-  lines: { market: Market; d: string; points: ChartPoint[] }[];
+  /**
+   * `d` breaks wherever a Market had a week without active Listings (a gap, not zero).
+   * `dots` are the points to mark: every point of a short series; in a longer one the last
+   * point and any point no line segment touches, which would otherwise not show at all.
+   */
+  lines: { market: Market; d: string; points: ChartPoint[]; dots: ChartPoint[] }[];
   /** Every date with a point, oldest first, with each Market's point on it: the hover stops. */
   columns: { x: number; date: string; points: (ChartPoint & { market: Market })[] }[];
 }
@@ -32,6 +36,8 @@ export interface HistoryChart {
 const DAY = 86_400_000;
 /** Points are Mondays plus the publish day, so anything over a week apart skipped a Monday. */
 const MAX_STEP_DAYS = 7;
+/** Series up to this many points mark every point; longer ones only the last and isolated. */
+const DOTS_MAX = 30;
 const MAX_X_TICKS = 6;
 const MONTHS_FROM = 60 * DAY;
 
@@ -57,14 +63,16 @@ export function historyChart(series: readonly HistorySeries[]): HistoryChart | n
 
   const lines = series.map((s) => {
     const points = s.points.map((p) => ({ ...p, x: round(x(p.date)), y: round(y(p.medianCzk)) }));
-    const d = points
-      .map((p, i) => {
-        const prev = s.points[i - 1];
-        const gap = !prev || (Date.parse(p.date) - Date.parse(prev.date)) / DAY > MAX_STEP_DAYS;
-        return `${gap ? "M" : "L"}${p.x} ${p.y}`;
-      })
-      .join("");
-    return { market: s.market, d, points };
+    const starts = s.points.map((p, i) => {
+      const prev = s.points[i - 1];
+      return !prev || (Date.parse(p.date) - Date.parse(prev.date)) / DAY > MAX_STEP_DAYS;
+    });
+    const d = points.map((p, i) => `${starts[i] ? "M" : "L"}${p.x} ${p.y}`).join("");
+    const last = points.length - 1;
+    const dots = points.filter(
+      (_, i) => points.length <= DOTS_MAX || i === last || (starts[i] && starts[i + 1]),
+    );
+    return { market: s.market, d, points, dots };
   });
 
   const byDate = new Map<string, HistoryChart["columns"][number]>();
