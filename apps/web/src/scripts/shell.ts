@@ -30,7 +30,7 @@ function render() {
   const compare = store.compare();
   for (const link of document.querySelectorAll<HTMLAnchorElement>("a[data-compare-link]")) {
     link.hidden = compare.length === 0;
-    link.href = localePath(lang, "/") + writeCatalogState({ compare });
+    link.href = localePath(lang, "/compare/") + writeCatalogState({ compare });
     const badge = link.querySelector("[data-compare-count]");
     if (badge) badge.textContent = String(compare.length);
   }

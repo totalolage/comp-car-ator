@@ -3,11 +3,12 @@
  * hydration it opens the Bundle over fetch, applies the state in the URL and re-queries on
  * every facet, range or sort change, writing the state back with lib/url-state so the URL
  * stays shareable. This island owns the catalog URL, the compare list (`cmp`) included: a
- * change to the remembered compare list (the compare tray) is written back with the filters.
+ * `cmp` it opens with replaces the remembered list, and a change to the remembered list (a
+ * pick box here, the compare tray, another tab) is written back with the filters (ADR 0009).
  */
 
 import { prefetch } from "astro:prefetch";
-import { fetchLoader } from "@cca/bundle";
+import { fetchLoader, type VariantRow } from "@cca/bundle";
 import {
   type Catalog,
   openCatalog,
@@ -15,6 +16,7 @@ import {
   type VariantFilters,
   type VariantResult,
 } from "@cca/catalog";
+import type { VariantId } from "@cca/vocabulary";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { type I18n, i18n } from "../i18n/i18n.ts";
 import type { Lang } from "../i18n/messages.ts";
@@ -35,8 +37,14 @@ import {
   toggleValue,
   withoutScope,
 } from "../lib/catalog-view.ts";
+import { compareLabels, variantLabel, variantLabels } from "../lib/compare-view.ts";
 import { siteStore } from "../lib/store.ts";
-import { type CatalogState, readCatalogState, writeCatalogState } from "../lib/url-state.ts";
+import {
+  type CatalogState,
+  COMPARE_MAX,
+  readCatalogState,
+  writeCatalogState,
+} from "../lib/url-state.ts";
 
 interface Props {
   lang: Lang;
@@ -56,18 +64,28 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
   const [railOpen, setRailOpen] = useState(false);
   // Bumped by "clear filters" so range fields drop half-typed text too.
   const [resets, setResets] = useState(0);
+  // The remembered compare list the pick boxes show; null until hydrated.
+  const [picked, setPicked] = useState<VariantId[] | null>(null);
 
   useEffect(() => {
-    setState(withoutScope(readCatalogState(location.search), scope));
-    openCatalog(fetchLoader(new URL("/bundle/", location.href))).then((c) => {
-      setNames(namesOf(c.query({ limit: Number.MAX_SAFE_INTEGER }).rows));
-      setCatalog(c);
-    });
-    // The compare tray changes the remembered list; carry it into the URL with the filters.
     const store = siteStore();
+    const initial = withoutScope(readCatalogState(location.search), scope);
+    if (initial.compare) store.setCompare(initial.compare);
+    setState(initial);
+    setPicked(store.compare());
+    openCatalog(fetchLoader(new URL("/bundle/", location.href))).then((c) => {
+      const rows = c.query({ limit: Number.MAX_SAFE_INTEGER }).rows;
+      setNames(namesOf(rows));
+      setCatalog(c);
+      const current = store.compare();
+      store.setCompare(current, compareLabels(current, rows));
+    });
+    // Picks, the compare tray and other tabs change the remembered list; carry it into the
+    // URL with the filters.
     let remembered = store.compare().join();
     return store.subscribe(() => {
       const compare = store.compare();
+      setPicked(compare);
       if (compare.join() === remembered) return;
       remembered = compare.join();
       setState((s) => ({ ...s, compare }));
@@ -227,6 +245,7 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
                 {result.rows.map((v) => (
                   <tr key={v.id} data-variant={v.id}>
                     <th scope="row">
+                      <PickBox t={t} variant={v} picked={picked} />
                       <a href={t.path(`/model/${v.modelId}/`)}>
                         {v.make} {v.model}
                       </a>
@@ -259,6 +278,29 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
         )}
       </section>
     </div>
+  );
+}
+
+/**
+ * Adds the row's Variant to the compare list or takes it out. Unchecked boxes are disabled
+ * while the list is full; the tray says why.
+ */
+function PickBox(props: { t: I18n; variant: VariantRow; picked: VariantId[] | null }) {
+  const { t, variant, picked } = props;
+  const checked = picked?.includes(variant.id) ?? false;
+  return (
+    <input
+      type="checkbox"
+      class="pick"
+      checked={checked}
+      disabled={!picked || (!checked && picked.length >= COMPARE_MAX)}
+      aria-label={t.t("compare.add", { name: variantLabel(variant, t) })}
+      onChange={(e) => {
+        // Refused (the list filled up in another tab): put the box back.
+        if (!siteStore().toggleCompare(variant.id, variantLabels(variant)))
+          (e.target as HTMLInputElement).checked = checked;
+      }}
+    />
   );
 }
 

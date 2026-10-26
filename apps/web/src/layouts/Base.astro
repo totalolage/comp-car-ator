@@ -1,13 +1,14 @@
 ---
 /**
  * The site shell every page renders in: skip link, header with the category menu, compare
- * link and language switch, optional breadcrumb, main content, data footer, and a slot for
- * the compare tray. Pages fill the default slot; the catalog page lays out its own facet
- * rail with the `.split` layout from styles/base.css.
+ * link and language switch, optional breadcrumb, main content, data footer, and the compare
+ * tray. Pages fill the default slot; the catalog page lays out its own facet rail with the
+ * `.split` layout from styles/base.css.
  */
 import "../styles/tokens.css";
 import "../styles/base.css";
 import CategoryMenu from "../components/CategoryMenu.astro";
+import CompareTray from "../components/CompareTray.astro";
 import { i18n } from "../i18n/i18n.ts";
 import type { Lang } from "../i18n/messages.ts";
 import { categoryTree } from "../lib/catalog.ts";
@@ -26,8 +27,10 @@ interface Props {
   crumbs?: Crumb[];
   /** Remembered as a recently viewed model when set. */
   recent?: { id: string; label: string };
+  /** The compare page shows the list itself and leaves the tray out. */
+  tray?: boolean;
 }
-const { lang, title, path, crumbs, recent } = Astro.props;
+const { lang, title, path, crumbs, recent, tray = true } = Astro.props;
 const t = i18n(lang);
 const other: Lang = lang === "cs" ? "en" : "cs";
 const tree = await categoryTree();
@@ -56,7 +59,7 @@ const trail: Crumb[] | undefined = crumbs && [
         <a class="wordmark" href={t.path("/")}>{site}</a>
         <CategoryMenu lang={lang} tree={tree} />
         <span class="masthead-fill"></span>
-        <a class="masthead-link" href={t.path("/")} data-compare-link hidden>
+        <a class="masthead-link" href={t.path("/compare/")} data-compare-link hidden>
           {t.t("nav.compare")} <span class="badge" data-compare-count>0</span>
         </a>
         <a
@@ -99,7 +102,7 @@ const trail: Crumb[] | undefined = crumbs && [
       </p>
       <p>{t.t("footer.note")}</p>
     </footer>
-    <slot name="tray" />
+    {tray && <CompareTray lang={lang} />}
     <script>
       import "../scripts/shell.ts";
     </script>

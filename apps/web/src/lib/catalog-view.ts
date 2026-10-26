@@ -2,8 +2,8 @@
  * What the catalog page shows, on top of the catalog query engine: which facets the rail
  * offers and in what order, the table's columns, and how URL state plus a category page's
  * scope become one engine query. The engine owns filtering, counting and sorting; this
- * module owns presentation only. It is also the one place that reads Variant aggregates
- * (`newPriceCzk`, `used`), so a Bundle format change lands here and nowhere else in the UI.
+ * module owns presentation only. With `compare-view.ts` it is the only place that reads
+ * Variant aggregates (`newPriceCzk`, `used`), so a Bundle format change lands in those two.
  */
 import { ODOMETER_BANDS, type VariantRow } from "@cca/bundle";
 import type {
