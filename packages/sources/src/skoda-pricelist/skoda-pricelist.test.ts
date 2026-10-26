@@ -13,11 +13,15 @@ import { skodaPricelistSource } from "./skoda-pricelist.ts";
 // with a footnote mark ("*") set after the Selection price of the 1,5 TSI/118 kW row;
 // kodiaq-stray-price.pdf has a price "1 111 000" set between two rows of its grid;
 // octavia-unknown-header.pdf is that Octavia list with the Liftback grid's "Motor" header
-// cell overwritten with "Unknown" (PyMuPDF redaction), its rows and prices intact.
+// cell overwritten with "Unknown" (PyMuPDF redaction), octavia-no-header.pdf with that
+// grid's header line removed; rows and prices intact in both.
 const cassetteFile = new URL("./fixtures/lists.cassette.json", import.meta.url);
 const footnoteFile = new URL("./fixtures/kodiaq-footnote.pdf", import.meta.url);
 const strayFile = new URL("./fixtures/kodiaq-stray-price.pdf", import.meta.url);
-const unknownHeaderFile = new URL("./fixtures/octavia-unknown-header.pdf", import.meta.url);
+const unreadGrids = {
+  "does not read": new URL("./fixtures/octavia-unknown-header.pdf", import.meta.url),
+  "is missing": new URL("./fixtures/octavia-no-header.pdf", import.meta.url),
+};
 const now = new Date("2026-10-25T18:00:00Z");
 const KODIAQ = "634e9e51-81c5-4c60-8503-4ab557399835";
 const ENYAQ = "6de4c5ec-a6b4-4057-988d-0724f9d5b40d";
@@ -223,23 +227,26 @@ describe("skoda-pricelist source", { timeout: 30_000 }, () => {
     expect(offers.some((o) => o.validTo)).toBe(false);
   });
 
-  it("a grid whose header does not read rejects its list's withdrawals", async () => {
-    const unknown = Buffer.from(await readFile(unknownHeaderFile)).toString("base64");
-    const listed = await harvest({ source: skodaPricelistSource({ models: ["octavia"] }) });
-    expect(listed).toHaveLength(74);
-    const warnings: string[] = [];
-    const offers = await harvest({
-      source: skodaPricelistSource({ models: ["octavia"] }),
-      cassette: await edit(OCTAVIA, (r) => ({ ...r, bodyBase64: unknown })),
-      inForce: listed.map((o) => ({ ...o, validFrom: "2026-09-01" })),
-      warnings,
-    });
-    expect(warnings).toContain("skoda-pricelist: rejected row");
-    // The Liftback grid does not read; the other grids do, and nothing is withdrawn.
-    expect(offers.length).toBeGreaterThan(0);
-    expect(offers.length).toBeLessThan(74);
-    expect(offers.some((o) => o.validTo)).toBe(false);
-  });
+  it.each(Object.entries(unreadGrids))(
+    "a grid whose header %s rejects its list's withdrawals",
+    async (_, file) => {
+      const unknown = Buffer.from(await readFile(file)).toString("base64");
+      const listed = await harvest({ source: skodaPricelistSource({ models: ["octavia"] }) });
+      expect(listed).toHaveLength(74);
+      const warnings: string[] = [];
+      const offers = await harvest({
+        source: skodaPricelistSource({ models: ["octavia"] }),
+        cassette: await edit(OCTAVIA, (r) => ({ ...r, bodyBase64: unknown })),
+        inForce: listed.map((o) => ({ ...o, validFrom: "2026-09-01" })),
+        warnings,
+      });
+      expect(warnings).toContain("skoda-pricelist: rejected row");
+      // The Liftback grid does not read; the other grids do, and nothing is withdrawn.
+      expect(offers.length).toBeGreaterThan(0);
+      expect(offers.length).toBeLessThan(74);
+      expect(offers.some((o) => o.validTo)).toBe(false);
+    },
+  );
 
   it("reads a price-list link whose label is wrapped in markup", async () => {
     const offers = await harvest({
