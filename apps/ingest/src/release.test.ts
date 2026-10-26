@@ -603,6 +603,16 @@ describe("schedule", () => {
     ]);
   });
 
+  it("leaves the experimental mobile-de Source unscheduled", () => {
+    expect(
+      plan(
+        ["sauto", "mobile-de"],
+        new Date("2026-10-25T01:00:00Z"),
+        census("2026-10-18T03:00:00Z"),
+      ),
+    ).toEqual([{ source: "sauto", mode: "full" }]);
+  });
+
   it("repeats a census that has not completed since its scheduled day", () => {
     const monday = new Date("2026-10-26T01:00:00Z");
     expect(plan(["sauto"], monday, census("2026-10-18T03:00:00Z"))).toEqual([

@@ -26,6 +26,8 @@ export const schedules: Record<SourceId, Schedule> = {
   // Price lists change with model years and campaigns; a weekly read is enough.
   "skoda-pricelist": { daily: false, full: "weekly" },
   "vw-pricelist": { daily: false, full: "weekly" },
+  // Experimental and T2-only (headed Chrome); run by manual dispatch only (ADR 0015).
+  "mobile-de": { daily: false, full: "never" },
 };
 
 export interface Harvest {
