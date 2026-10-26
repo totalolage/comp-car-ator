@@ -491,26 +491,65 @@ main:focus {
 
 /* Dense data table -------------------------------------------------------------------- */
 
-/* A table wider than its column scrolls sideways in its own box, never the page. A box that
-   scrolls on one axis scrolls on both, so the header row sticks to the box's top instead of
-   the masthead; capping the box at the viewport below the masthead keeps it in view. */
+/* A table wider than its column scrolls sideways in its own box, never the page. The box is
+   as tall as its table, so the page is the only vertical scroller and scrolls the rows. */
 .table-scroll {
-  max-height: calc(100dvh - var(--masthead) - var(--tray-space, 0px));
-  overflow: auto;
-  /* Keyboard focus scrolled into view lands below the sticky header row, not behind it. */
-  scroll-padding-top: 2rem;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
-/* Beside the rail the page is the only vertical scroller (see .split), so the box only
-   scrolls sideways and its header row scrolls away with the rows. */
-@media (width >= 48rem) {
-  .split .table-scroll {
-    max-height: none;
-    overflow-y: hidden;
+/*
+ * A box that scrolls sideways is a scroll container on both axes, so a sticky header row
+ * would stick to the box, which never scrolls vertically. Instead the header cells follow
+ * the page with a view timeline: from when the box's top passes under the masthead they
+ * move down 1:1 with the scroll (the 100000px range and translate are equal, so the speed
+ * is 1), and a second, added animation cancels that from --table-head before the box's
+ * bottom, so the row stops on the last rows and leaves with them. --table-head must be at
+ * least the header row's height, or the row overhangs the box. Without view timelines
+ * (Firefox) the header row scrolls away with the rows.
+ */
+@supports (animation-timeline: view()) {
+  .table-scroll {
+    view-timeline: --table-box block;
+    view-timeline-inset: var(--masthead) 0px;
+  }
+
+  /* Longhands only: the minifier folds a timeline into the animation shorthand, which
+     browsers then reject. */
+  .data thead :is(th, td) {
+    animation-name: table-head-follow, table-head-stop;
+    animation-duration: auto;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+    animation-composition: replace, add;
+    animation-timeline: --table-box;
+    animation-range:
+      exit-crossing 0% exit-crossing 100000px,
+      exit-crossing calc(100% - var(--table-head))
+      exit-crossing calc(100% - var(--table-head) + 100000px);
+  }
+
+  /* Keyboard focus scrolled into view lands below the header row, not behind it. */
+  .data tbody * {
+    scroll-margin-top: var(--table-head);
+  }
+}
+
+@keyframes table-head-follow {
+  to {
+    translate: 0 100000px;
+  }
+}
+
+@keyframes table-head-stop {
+  to {
+    translate: 0 -100000px;
   }
 }
 
 .data {
+  /* Header row height or more; see .table-scroll. */
+  --table-head: 2rem;
   width: 100%;
   border-collapse: collapse;
   font-size: var(--text-sm);
@@ -527,8 +566,9 @@ main:focus {
 }
 
 .data thead th {
-  position: sticky;
-  top: 0;
+  /* Over the body rows it moves across. */
+  position: relative;
+  z-index: 2;
   background: var(--panel);
   border-bottom-color: var(--rule-strong);
   color: var(--ink-strong);
@@ -702,6 +742,8 @@ body {
 }
 
 .compare-table {
+  /* Variant names wrap to a few lines above the remove button. */
+  --table-head: 7rem;
   width: auto;
 }
 
@@ -725,7 +767,7 @@ body {
 }
 
 .compare-table thead :is(th, td):first-child {
-  z-index: 2;
+  z-index: 3;
   background: var(--panel);
 }
 

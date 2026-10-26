@@ -55,11 +55,14 @@ Sentence case everywhere; no uppercase labels.
   pinned under the masthead if it fits the viewport, or scrolls until its end is in view and
   then stays, so the split scrolls only while the longer column has more to show (the footer
   follows it). Both stop above the compare tray.
-- Tables sit in `.table-scroll`, a box at most one viewport tall (below the masthead, above
-  the tray) that scrolls both ways: a table wider than its column never widens the page, and
-  the header row sticks to the top of the box. Inside `.split` from 48rem the box is not
-  capped and only scrolls sideways, so the page scrolls the rows and the header row scrolls
-  away with them (a sideways scroll box cannot hand its header row to the page).
+- The page is the only vertical scroller on the catalog, model and compare pages: no table,
+  list or panel scrolls vertically on its own. The one exception is the Kategorie menu panel,
+  which overlays the page and scrolls itself when it is taller than the viewport.
+- Tables sit in `.table-scroll`, a box as tall as its table that only scrolls sideways: a
+  table wider than its column never widens the page. The header row stays under the masthead
+  while its table's rows pass and leaves with the last rows. A sideways scroll box would
+  catch a sticky header, so a CSS view timeline moves the header cells instead; where view
+  timelines are missing (Firefox) the header row scrolls away with the rows.
 - Viewport heights use `dvh`, so they follow mobile browser chrome as it slides in and out
   instead of assuming the tallest viewport.
 - Content is fluid up to `--page-max` (100rem), with a 16px gutter (12px narrow).
