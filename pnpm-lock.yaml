@@ -331,6 +331,10 @@ importers:
       "@cca/vocabulary":
         specifier: workspace:*
         version: link:../vocabulary
+    devDependencies:
+      "@cca/catalog":
+        specifier: workspace:*
+        version: link:../catalog
 
   packages/resolver:
     dependencies:

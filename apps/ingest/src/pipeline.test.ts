@@ -88,7 +88,7 @@ describe("ingest pipeline", () => {
     expect(result.rows.map((r) => r.id)).toEqual([
       "volkswagen/golf/mk8/hatchback-petrol-110kw-automatic",
     ]);
-    expect(result.rows[0]?.used?.priceCzk.median).toBe(365_025);
+    expect(result.rows[0]?.used?.priceCzk?.median).toBe(365_025);
 
     const [listing] = (await catalog.model("volkswagen/golf"))?.listings().rows ?? [];
     expect(listing?.priceCzk).toBe(365_025);

@@ -41,13 +41,7 @@ function synthetic(n: number): BundleContent {
     const from = 2000 + Math.floor(rand() * 26);
     const price = 150_000 + Math.floor(rand() * 2_000_000);
     const groups = rand() < 0.6 ? Math.ceil(rand() * 4) : 0;
-    const q = (m: number) => ({
-      min: m * 0.6,
-      p25: m * 0.8,
-      median: m,
-      p75: m * 1.2,
-      max: m * 1.5,
-    });
+    const q = (m: number) => ({ count: groups * 5, p10: m * 0.7, median: m, p90: m * 1.4 });
     return {
       id: `${model.id}/v${i}`,
       makeId: model.makeId,
@@ -63,7 +57,9 @@ function synthetic(n: number): BundleContent {
       transmission: pick(TRANSMISSIONS),
       seats: pick([2, 4, 5, 5, 5, 7]),
       consumptionL100km: Math.round((3 + rand() * 9) * 10) / 10,
-      ...(rand() < 0.3 ? { newPriceCzk: { min: price, max: price * 1.3 } } : {}),
+      ...(rand() < 0.3
+        ? { newPriceCzk: { min: price, max: price * 1.3, source: "list" as const, count: 1 } }
+        : {}),
       used: groups
         ? {
             count: groups * 5,
@@ -71,6 +67,7 @@ function synthetic(n: number): BundleContent {
             landedCzk: q(price / 2 + 20_000),
             odometerKm: q(120_000),
             years: { min: from, max: from + 5 },
+            byMarket: {},
             markets: {},
             sources: {},
             groups: Array.from({ length: groups }, () => ({
@@ -87,7 +84,7 @@ function synthetic(n: number): BundleContent {
   });
   return {
     manifest: {
-      format: 1,
+      format: 2,
       generatedAt: "2026-10-25T00:00:00Z",
       fx: {} as BundleContent["manifest"]["fx"],
       sources: [],

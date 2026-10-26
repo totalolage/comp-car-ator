@@ -12,13 +12,14 @@ import { openCatalog } from "./index.ts";
 
 /** Listing aggregates with one (market, source) group per entry, all at one price. */
 function used(median: number, groups: [Market, string, number][]): UsedStats {
-  const q = { min: median, p25: median, median, p75: median, max: median };
   const count = groups.reduce((n, [, , c]) => n + c, 0);
+  const q = { count, p10: median, median, p90: median };
   return {
     count,
     priceCzk: q,
     landedCzk: q,
     odometerKm: null,
+    byMarket: {},
     years: null,
     markets: Object.fromEntries(groups.map(([m, , c]) => [m, c])),
     sources: Object.fromEntries(groups.map(([, src, c]) => [src, c])),
@@ -107,7 +108,7 @@ const variants = [
 
 const content: BundleContent = {
   manifest: {
-    format: 1,
+    format: 2,
     generatedAt: "2026-10-24T16:00:00.000Z",
     fx: {},
     sources: [],
@@ -134,7 +135,7 @@ const content: BundleContent = {
           gone: "2026-10-20",
         }),
       ],
-      stats: { byYear: [], byOdometerBand: [] },
+      stats: [],
       history: [],
     },
   ],

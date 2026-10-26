@@ -108,7 +108,7 @@ function variantFacetDefs(
       year: (r) => r.variant.years.from,
       powerKw: (r) => r.variant.powerKw,
       newPriceCzk: (r) => r.variant.newPriceCzk?.min,
-      usedPriceCzk: (r) => r.variant.used?.priceCzk.median,
+      usedPriceCzk: (r) => r.variant.used?.priceCzk?.median,
       usedCount: (r) => r.variant.used?.count ?? 0,
       consumptionL100km: (r) => r.variant.consumptionL100km,
     },

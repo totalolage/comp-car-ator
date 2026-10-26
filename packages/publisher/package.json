@@ -14,5 +14,8 @@
     "@cca/ledger": "workspace:*",
     "@cca/pricing": "workspace:*",
     "@cca/vocabulary": "workspace:*"
+  },
+  "devDependencies": {
+    "@cca/catalog": "workspace:*"
   }
 }

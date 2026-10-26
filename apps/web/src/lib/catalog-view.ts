@@ -246,7 +246,7 @@ export const COLUMNS: Column[] = [
     label: "col.usedPrice",
     sort: "usedPriceCzk",
     num: true,
-    cell: (v, t) => t.czk(v.used?.priceCzk.median),
+    cell: (v, t) => t.czk(v.used?.priceCzk?.median),
   },
   // Landed CZK covers imports; for Czech Listings it is the asking price plus seller extras.
   {

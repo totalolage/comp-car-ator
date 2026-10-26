@@ -1,4 +1,5 @@
 import type { ModelId } from "@cca/vocabulary";
+import { decodeTable, encodeTable, type Table } from "./columns.ts";
 import {
   BUNDLE_FORMAT,
   type BundleContent,
@@ -28,12 +29,30 @@ function modelPath(id: ModelId): string {
   return `models/${id}.json`;
 }
 
+/**
+ * How the long row lists sit in the files: as columnar Tables (./columns.ts), which keeps a
+ * 50k-Variant catalog at a few MB. The reader turns them back into the decoded documents.
+ */
+type EncodedCatalog = Omit<CatalogIndex, "variants"> & { variants: Table };
+type EncodedModel = Omit<ModelFile, "listings" | "stats"> & { listings: Table; stats: Table };
+
 /** Writer: encodes decoded documents into Bundle files. Pure; persisting them is the caller's job. */
 export function encodeBundle(content: BundleContent): BundleFiles {
   const files: BundleFiles = new Map();
   files.set(MANIFEST, json(content.manifest));
-  files.set(CATALOG, json(content.catalog));
-  for (const model of content.models) files.set(modelPath(model.model.id), json(model));
+  const { variants, ...catalog } = content.catalog;
+  files.set(
+    CATALOG,
+    json({ ...catalog, variants: encodeTable(variants) } satisfies EncodedCatalog),
+  );
+  for (const { listings, stats, ...model } of content.models) {
+    const encoded: EncodedModel = {
+      ...model,
+      listings: encodeTable(listings),
+      stats: encodeTable(stats),
+    };
+    files.set(modelPath(model.model.id), json(encoded));
+  }
   return files;
 }
 
@@ -65,16 +84,19 @@ export async function openBundle(loader: Loader): Promise<BundleReader> {
     catalog() {
       catalog ??= loader(CATALOG).then((text) => {
         if (text === null) throw new BundleFormatError("Bundle has no catalog.json");
-        return JSON.parse(text) as CatalogIndex;
+        const { variants, ...rest } = JSON.parse(text) as EncodedCatalog;
+        return { ...rest, variants: decodeTable(variants) };
       });
       return catalog;
     },
     model(id) {
       let model = models.get(id);
       if (!model) {
-        model = loader(modelPath(id)).then((text) =>
-          text === null ? null : (JSON.parse(text) as ModelFile),
-        );
+        model = loader(modelPath(id)).then((text) => {
+          if (text === null) return null;
+          const { listings, stats, ...rest } = JSON.parse(text) as EncodedModel;
+          return { ...rest, listings: decodeTable(listings), stats: decodeTable(stats) };
+        });
         models.set(id, model);
       }
       return model;
