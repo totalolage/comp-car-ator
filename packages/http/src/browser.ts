@@ -93,7 +93,7 @@ export function createBrowserFetcher(
       }
       return { ...(await launchChrome(dir, locale)), tempDir };
     } catch (error) {
-      if (tempDir) await rm(tempDir, { recursive: true, force: true });
+      if (tempDir) await rm(tempDir, { recursive: true, force: true, maxRetries: 5 });
       throw error;
     }
   }
@@ -102,7 +102,8 @@ export function createBrowserFetcher(
    * Starts Chrome as a plain process and attaches Patchright over CDP once it runs. Akamai
    * (mobile.de) denies a Chrome that Patchright launches itself, whatever its switches or locale
    * emulation, but lets this one through (docs/adr/0005-fetch-tiers.md). The locale is Chrome's
-   * own `--lang`, so its Accept-Language and `navigator.languages` agree.
+   * own language (environment and `--lang`), so its Accept-Language and `navigator.languages`
+   * agree.
    */
   async function launchChrome(dir: string, locale: string): Promise<Omit<Profile, "tempDir">> {
     await mkdir(dir, { recursive: true });
@@ -118,7 +119,10 @@ export function createBrowserFetcher(
       ...(headless ? ["--headless=new"] : []),
       "about:blank",
     ];
-    const chrome = spawn("google-chrome", args, { stdio: "ignore" });
+    // Chrome on Linux takes its language from the environment, not `--lang`.
+    const language = locale.replace("-", "_");
+    const env = { ...process.env, LANGUAGE: language, LANG: `${language}.UTF-8` };
+    const chrome = spawn("google-chrome", args, { stdio: "ignore", env });
     // "close" follows both an exit and a failed spawn.
     const closed = new Promise<void>((resolve) => chrome.once("close", () => resolve()));
     const failed = new Promise<never>((_, reject) => {
@@ -183,7 +187,7 @@ export function createBrowserFetcher(
           try {
             await close();
           } finally {
-            if (tempDir) await rm(tempDir, { recursive: true, force: true });
+            if (tempDir) await rm(tempDir, { recursive: true, force: true, maxRetries: 5 });
           }
         }),
       );
