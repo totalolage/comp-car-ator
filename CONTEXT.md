@@ -123,7 +123,7 @@ A Run written to a file instead of the Ledger: its Observations and whether the 
 _Avoid_: dump, artifact (in code)
 
 **Data release**:
-A GitHub Release of the public repo holding one ingest's Ledger, the Bundle published from it and a manifest. The newest is where the next ingest starts and what the site builds from.
+A GitHub Release of the private ingest repo holding one ingest's Ledger, the Bundle published from it and a manifest. The newest is where the next ingest starts and what the site builds from.
 _Avoid_: snapshot, backup, export
 
 ## Relationships

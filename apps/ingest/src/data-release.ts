@@ -36,7 +36,7 @@ export interface Manifest {
   createdAt: string;
   /** The release this one's Ledger was restored from. */
   previous: string | null;
-  /** Commit of the public repo the ingest ran. */
+  /** Commit of the app repo the ingest ran. */
   commit: string | null;
   assets: Record<string, { sha256: string; bytes: number }>;
   runs: RunOutcome[];

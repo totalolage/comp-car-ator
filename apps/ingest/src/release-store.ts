@@ -1,6 +1,6 @@
 /**
  * Where data releases (Ledger + Bundle + manifest, ADR 0014) live between ingest runs. Two
- * adapters: GitHub Releases of the public repo (the ingest workflow) and a local directory
+ * adapters: GitHub Releases of the private ingest repo (the ingest workflow) and a local directory
  * (local runs and tests).
  */
 import { cp, mkdir, readdir, rename, rm } from "node:fs/promises";

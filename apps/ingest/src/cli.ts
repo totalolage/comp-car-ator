@@ -1,7 +1,7 @@
 /**
  * ingest CLI. Run with `pnpm ingest <command> ...` from the repo root.
  *
- *   run --source cnb[,sauto] --mode incremental|full --ledger ledger.sqlite [--out bundle/] [--replay x.cassette.json]
+ *   run --source cnb[,sauto] --mode incremental|full --ledger ledger.sqlite [--out bundle/] [--replay x.cassette.json] [--cache dir/]
  *   publish --ledger ledger.sqlite --out bundle/
  *
  * The scheduled pipeline (docs/adr/0014-daily-ingest-pipeline.md); --store is
@@ -9,6 +9,10 @@
  *   plan --store S [--date ISO] [--source a,b --mode m]   {"base": tag or "", "harvests": [...]}
  *   restore --store S --ledger ledger.sqlite [--base tag] [--init]
  *   harvest --source cnb --mode incremental|full --ledger ledger.sqlite --out cnb.ndjson
+ *           [--cache dir/] [--max-minutes N]   (a harvest past N minutes stops as failed)
+ *
+ * Live Http: --cache keeps raw responses on disk (use a per-run directory); the T2 stealth
+ * browser is opt-in with CCA_HTTP_BROWSER=patchright|camoufox (ADR 0005).
  *   release --store S --runs dir/ [--base tag] [--work dir/] [--keep 14] [--commit sha] [--init]
  *           (prints the new tag)
  *   import --ledger ledger.sqlite --observations file.json
@@ -56,6 +60,8 @@ const { positionals, values } = parseArgs({
     date: { type: "string" },
     base: { type: "string" },
     init: { type: "boolean", default: false },
+    cache: { type: "string" },
+    "max-minutes": { type: "string" },
   },
 });
 
@@ -80,6 +86,11 @@ function knownSource(id: string) {
   return factory();
 }
 
+/** The live Http, with the raw response cache when --cache is given. */
+function liveHttp() {
+  return createLiveHttp(values.cache ? { cache: { dir: values.cache } } : {});
+}
+
 const command = positionals[0];
 const now = new Date();
 
@@ -88,9 +99,8 @@ switch (command) {
     const mode = harvestMode();
     const ids = required("source").split(",");
     const ledger = openLedger(required("ledger"));
-    const http = values.replay
-      ? createReplayHttp(await loadCassette(values.replay))
-      : createLiveHttp();
+    const live = values.replay ? null : liveHttp();
+    const http = live ?? createReplayHttp(await loadCassette(values.replay as string));
     let failed = false;
     for (const id of ids) {
       try {
@@ -101,6 +111,7 @@ switch (command) {
         log.warn(`${id} ${mode} run failed`, { error: String(error) });
       }
     }
+    await live?.close();
     if (values.out) await writeBundleFiles(values.out, publish(ledger, { now }));
     ledger.close();
     process.exitCode = failed ? 1 : 0;
@@ -133,10 +144,9 @@ switch (command) {
   }
   case "harvest": {
     const ledger = openLedger(required("ledger"));
-    // TODO(wave1-stream1): once #22 lands, pass `cache: { dir }` (per-run directory) and
-    // `await http.close()` after the harvest; T2 is opted into with CCA_HTTP_BROWSER.
-    const http = createLiveHttp();
+    const http = liveHttp();
     const source = knownSource(required("source"));
+    const minutes = Number(values["max-minutes"] ?? 0);
     const report = await harvestToLog({
       ledger,
       source,
@@ -145,7 +155,9 @@ switch (command) {
       now,
       out: required("out"),
       log,
+      signal: minutes > 0 ? AbortSignal.timeout(minutes * 60_000) : undefined,
     });
+    await http.close();
     ledger.close();
     log.info(`${source.id} harvest ${report.error ? "failed" : "complete"}`, { ...report });
     process.exitCode = report.error ? 1 : 0;

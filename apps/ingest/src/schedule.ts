@@ -16,9 +16,16 @@ export interface Schedule {
 /** Listing sites: incremental daily, a census every Sunday. */
 const LISTINGS: Schedule = { daily: true, full: "weekly" };
 
-/** Sources that differ from LISTINGS. Catalog and register sources: `{ daily: false, full: "monthly" }`. */
+/** Sources that differ from LISTINGS. */
 export const schedules: Record<SourceId, Schedule> = {
   cnb: { daily: true, full: "never" },
+  // Only a full run of the register is a catalog census, which retires stale entries (#46).
+  rsv: { daily: false, full: "monthly" },
+  // EEA publishes once a year.
+  "eea-co2": { daily: false, full: "monthly" },
+  // Price lists change with model years and campaigns; a weekly read is enough.
+  "skoda-pricelist": { daily: false, full: "weekly" },
+  "vw-pricelist": { daily: false, full: "weekly" },
 };
 
 export interface Harvest {
