@@ -43,7 +43,12 @@ export interface HarvestReport {
   error: string | null;
 }
 
-/** Harvests one Source into a run log. Resolves even when the harvest fails; see `error`. */
+/**
+ * Harvests one Source into a run log. Resolves even when the harvest fails; see `error`. An
+ * aborted `signal` fails the harvest even when the Source ignores it: the run stops after the
+ * observation in hand is written, so what was harvested (and every finished slice) is kept, and
+ * it never ends as complete.
+ */
 export async function harvestToLog(options: HarvestToLogOptions): Promise<HarvestReport> {
   const { ledger, source, http, mode, now, out, log = silentLogger } = options;
   const signal = options.signal ?? new AbortController().signal;
@@ -74,7 +79,9 @@ export async function harvestToLog(options: HarvestToLogOptions): Promise<Harves
       })) {
         await write({ observation });
         report.observations++;
+        signal.throwIfAborted();
       }
+      signal.throwIfAborted();
       await write({ end: "complete" });
     } catch (error) {
       if (writeError) throw writeError;

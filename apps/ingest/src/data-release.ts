@@ -81,8 +81,11 @@ export async function findRelease(store: ReleaseStore, tag?: string): Promise<Da
 }
 
 export interface RestoreOptions {
-  /** Restore this release instead of the newest (every job of one ingest uses the same base). */
-  base?: string;
+  /**
+   * The release to restore (every job of one ingest uses the same base): a tag, null for "no
+   * data release yet" (the first run; rejects if one exists by now), or undefined for the newest.
+   */
+  base?: string | null;
   /** Allow a fresh Ledger when there is no data release yet (the first run). */
   init?: boolean;
 }
@@ -91,14 +94,17 @@ export interface RestoreOptions {
  * Writes the base (default: newest) release's Ledger to `path`, checked against the manifest's
  * sha256, and returns the release. With no data release at all it rejects unless `init` (then it
  * leaves `path` for a fresh Ledger and returns null): a missing release must never silently start
- * an empty Ledger that would then replace the real one.
+ * an empty Ledger that would then replace the real one. A null base rejects once any data release
+ * exists, so a retried first run cannot restore a release made after its harvests.
  */
 export async function restoreLedger(
   store: ReleaseStore,
   path: string,
   options: RestoreOptions = {},
 ): Promise<DataRelease | null> {
-  const release = await findRelease(store, options.base);
+  const release = await findRelease(store, options.base ?? undefined);
+  if (options.base === null && release)
+    throw new Error(`Expected no data release, but ${release.tag} exists (made after the plan)`);
   if (!release) {
     if (options.init) return null;
     throw new Error("No data release to restore the Ledger from (pass --init for the first run)");
@@ -125,8 +131,12 @@ export interface ReleaseRunsOptions {
   /** Scratch directory for the Ledger and assets. */
   work: string;
   now: Date;
-  /** The release the harvests restored; it must still be the newest. Default: the newest. */
-  base?: string;
+  /**
+   * The release the harvests restored, or null when there was none (the first run). It must
+   * still be the newest. Required: defaulting to the newest would record the run logs onto a
+   * Ledger they were not harvested against.
+   */
+  base: string | null;
   /** Allow starting a fresh Ledger when no data release exists (the first run). */
   init?: boolean;
   /** Data releases to keep, newest first. Default 14. */
@@ -141,7 +151,7 @@ export interface ReleaseResult {
 }
 
 /**
- * Restores the latest Ledger, records the run logs into it (oldest run first), publishes the
+ * Restores the base Ledger, records the run logs into it (oldest run first), publishes the
  * Bundle and releases both as the new latest, then prunes old data releases. A failed harvest
  * is recorded as a failed run, as it would be in process; any other failure rejects before
  * anything is released. Rejects without releasing when a newer release than the base appeared.

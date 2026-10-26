@@ -18,7 +18,7 @@ import { ASSETS, findRelease, type Manifest, releaseRuns, restoreLedger } from "
 import { githubReleaseStore } from "./github-release-store.ts";
 import { SAMPLE } from "./ingest.ts";
 import { localReleaseStore, type ReleaseStore } from "./release-store.ts";
-import { harvestToLog } from "./run-log.ts";
+import { harvestToLog, recordLog } from "./run-log.ts";
 import { plan } from "./schedule.ts";
 
 const noHttp = createReplayHttp({ version: 1, interactions: [] });
@@ -277,7 +277,7 @@ describe.each([
 
   /** One scheduled day: each harvest job restores the Ledger and writes a log; one release. */
   async function ingestDay(now: Date, sources: Source[], init = false) {
-    const base = (await findRelease(h.store))?.tag;
+    const base = (await findRelease(h.store))?.tag ?? null;
     const logs: string[] = [];
     for (const source of sources) {
       const job = await mkdtemp(join(dir, "job-"));
@@ -297,6 +297,7 @@ describe.each([
       logs,
       work: join(dir, `work-${now.getTime()}`),
       now,
+      base,
       init,
     });
   }
@@ -397,6 +398,36 @@ describe.each([
     expect((await h.store.list()).map((r) => r.tag)).toEqual([second.tag, first.tag]);
   });
 
+  it("refuses to release a retried first run's logs once a data release exists", async () => {
+    const out = join(dir, "first.ndjson");
+    const ledger = openLedger(":memory:");
+    await harvestToLog({
+      ledger,
+      source: census({ A: ["a1"] }),
+      http: noHttp,
+      mode: "full",
+      now: day("2026-10-26"),
+      out,
+    });
+    ledger.close();
+    const first = () =>
+      releaseRuns({
+        store: h.store,
+        logs: [out],
+        work: join(dir, `first-${Math.random()}`),
+        now: day("2026-10-26"),
+        base: null,
+        init: true,
+      });
+    const released = await first();
+    // A re-run of the failed-looking first ingest: same plan (no base), same run logs.
+    await expect(first()).rejects.toThrow(/Expected no data release/);
+    await expect(
+      restoreLedger(h.store, join(dir, "l.sqlite"), { base: null, init: true }),
+    ).rejects.toThrow(/Expected no data release/);
+    expect((await h.store.list()).map((r) => r.tag)).toEqual([released.tag]);
+  });
+
   it("refuses a Ledger asset that does not match its manifest", async () => {
     const { tag } = await ingestDay(SAMPLE.now, [cnbSource()], true);
     await h.tamper(tag, ASSETS.ledger);
@@ -421,6 +452,7 @@ describe.each([
         logs,
         work: join(dir, date),
         now: day(date),
+        base: (await findRelease(h.store))?.tag ?? null,
         init: true,
         keep: 2,
       });
@@ -484,6 +516,62 @@ describe("run logs", () => {
       out,
     });
     await expect(run).rejects.toThrow(/ENOENT/);
+    ledger.close();
+  });
+
+  /** Wraps a Source so `controller` aborts when it reaches observation `at`; it never checks. */
+  function abortingAt(source: Source, at: number, controller: AbortController): Source {
+    return {
+      ...source,
+      async *harvest(ctx) {
+        let index = 0;
+        for await (const observation of source.harvest(ctx)) {
+          if (index++ === at) controller.abort();
+          yield observation;
+        }
+        if (index === at) controller.abort();
+      },
+    };
+  }
+
+  /** Harvests into a log until the deadline, then records the log into a fresh Ledger. */
+  async function harvestPastDeadline(slices: Record<string, string[]>, abortAt: number) {
+    const dir = await mkdtemp(join(tmpdir(), "cca-deadline-"));
+    const out = join(dir, "run.ndjson");
+    const controller = new AbortController();
+    const ledger = openLedger(":memory:");
+    const report = await harvestToLog({
+      ledger,
+      source: abortingAt(census(slices), abortAt, controller),
+      http: noHttp,
+      mode: "full",
+      now: day("2026-10-26"),
+      out,
+      signal: controller.signal,
+    });
+    await expect(recordLog(ledger, out)).rejects.toThrow(/harvest failed/);
+    await rm(dir, { recursive: true, force: true });
+    return { report, ledger };
+  }
+
+  it("fails a harvest past its deadline even when the Source ignores the signal", async () => {
+    // Aborts as the Source reaches b1: b1 is kept, slice B never finishes.
+    const { report, ledger } = await harvestPastDeadline({ A: ["a1"], B: ["b1"] }, 2);
+    expect(report).toMatchObject({ observations: 3, error: expect.stringMatching(/abort/i) });
+    const checkpoint = ledger.checkpoint("autoscout24-de", "de");
+    expect(checkpoint.sliceDoneAt("A")).toEqual(day("2026-10-26"));
+    expect(checkpoint.sliceDoneAt("B")).toBeNull();
+    expect(checkpoint.lastRunAt).toBeNull();
+    expect([...ledger.snapshot().listings()].map((l) => l.ref).sort()).toEqual(["a1", "b1"]);
+    ledger.close();
+  });
+
+  it("never completes a census whose deadline passed after its last observation", async () => {
+    const { report, ledger } = await harvestPastDeadline({ A: ["a1"] }, 2);
+    expect(report).toMatchObject({ observations: 2, error: expect.stringMatching(/abort/i) });
+    const checkpoint = ledger.checkpoint("autoscout24-de", "de");
+    expect(checkpoint.sliceDoneAt("A")).toEqual(day("2026-10-26"));
+    expect(checkpoint.lastRunAt).toBeNull();
     ledger.close();
   });
 });

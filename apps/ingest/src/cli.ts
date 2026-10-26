@@ -8,13 +8,14 @@
  * `github:<owner>/<repo>` (GITHUB_TOKEN) or a local directory:
  *   plan --store S [--date ISO] [--source a,b --mode m]   {"base": tag or "", "harvests": [...]}
  *   restore --store S --ledger ledger.sqlite [--base tag] [--init]
+ *           (--base "" expects no data release yet: the first run, with --init)
  *   harvest --source cnb --mode incremental|full --ledger ledger.sqlite --out cnb.ndjson
  *           [--cache dir/] [--max-minutes N]   (a harvest past N minutes stops as failed)
  *
  * Live Http: --cache keeps raw responses on disk (use a per-run directory); the T2 stealth
  * browser is opt-in with CCA_HTTP_BROWSER=patchright|camoufox (ADR 0005).
- *   release --store S --runs dir/ [--base tag] [--work dir/] [--keep 14] [--commit sha] [--init]
- *           (prints the new tag)
+ *   release --store S --runs dir/ --base tag|"" [--work dir/] [--keep 14] [--commit sha] [--init]
+ *           (--base is the plan's base, "" on the first run; prints the new tag)
  *   import --ledger ledger.sqlite --observations file.json
  *   sample-bundle            regenerate fixtures/sample-bundle
  */
@@ -72,6 +73,11 @@ function required(name: keyof typeof values): string {
     process.exit(2);
   }
   return value;
+}
+
+/** --base: a tag, "" for "no data release yet" (null), or absent for the newest (undefined). */
+function base(): string | null | undefined {
+  return values.base === undefined ? undefined : values.base || null;
 }
 
 function harvestMode(): HarvestMode {
@@ -134,10 +140,7 @@ switch (command) {
     const release = await restoreLedger(
       releaseStoreFrom(required("store"), TAG_PREFIX),
       required("ledger"),
-      {
-        base: values.base || undefined,
-        init: values.init,
-      },
+      { base: base(), init: values.init },
     );
     log.info(release ? `restored Ledger from ${release.tag}` : "no data release yet; new Ledger");
     break;
@@ -165,6 +168,11 @@ switch (command) {
   }
   case "release": {
     const dir = required("runs");
+    const expected = base();
+    if (expected === undefined) {
+      console.error('--base is required: the plan\'s base, or "" when there was none');
+      process.exit(2);
+    }
     const logs = (await readdir(dir, { recursive: true }))
       .filter((name) => name.endsWith(".ndjson"))
       .map((name) => join(dir, name));
@@ -177,7 +185,7 @@ switch (command) {
       logs,
       work: values.work ?? join(dir, ".work"),
       now,
-      base: values.base || undefined,
+      base: expected,
       init: values.init,
       keep: Number(values.keep),
       commit: values.commit,
