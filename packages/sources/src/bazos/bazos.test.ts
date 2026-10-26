@@ -404,13 +404,39 @@ describe("bazos source", () => {
         "Kia Ceed 1.5 T-GDi nový vůz",
         "Rok výroby 2026, najeto 10 km.",
       );
+      // Said in the description only, or made this year with next to no km.
+      rewrite(
+        c,
+        "224563165",
+        "ad",
+        "Kia Ceed 1.5 T-GDi 2026",
+        "Nový vůz. Rok výroby 2026, najeto 10 km.",
+      );
+      rewrite(c, "224564821", "ad", "Kia Ceed 1.5 T-GDi", "Rok výroby 2026, najeto 0 km.");
+      // New parts, a car bought new, or a new car bought instead: used cars still.
+      rewrite(
+        c,
+        "224672197",
+        "ad",
+        "Kia Ceed 1.5 T-GDi",
+        "Rok výroby 2019, najeto 85 000 km. Nové pneumatiky, nová STK, nová spojka.",
+      );
+      rewrite(
+        c,
+        "224787227",
+        "ad",
+        "Kia Ceed 1.5 T-GDi",
+        "Koupen jako nový vůz v ČR, rok výroby 2018, najeto 120 000 km. Důvod prodeje: nové auto.",
+      );
+      rewrite(c, "224859984", "ad", "Kia Ceed 1.5 T-GDi", "Rok výroby 2026, najeto 5 000 km.");
     });
     const { observations, details } = await harvest(recorded, "full");
+    const left = ["224557936", "224452818", "224563165", "224564821"];
     expect(details).not.toContain("224557936");
     expect(details).toContain("224452818");
-    expect(refs(observations).sort()).toEqual(
-      IN_SCOPE.filter((ref) => ref !== "224557936" && ref !== "224452818"),
-    );
+    expect(refs(observations).sort()).toEqual(IN_SCOPE.filter((ref) => !left.includes(ref)));
+    const kept = ["224672197", "224787227", "224859984"].map((ref) => listing(observations, ref));
+    expect(kept.map((o) => o?.condition)).toEqual(["used", "used", "used"]);
   });
 
   it("an unreadable ad is rejected and the harvest goes on", async () => {

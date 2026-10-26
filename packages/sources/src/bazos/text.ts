@@ -96,7 +96,7 @@ export interface CarFacts {
   body?: Body;
   seller: Seller;
   priceBasis: PriceBasis;
-  /** "předváděcí" (demonstrator) or a new car with next to no km. */
+  /** "předváděcí" (demonstrator), or a new car: next to no km, said new or made this year. */
   condition: "used" | "demo" | "new";
 }
 
@@ -119,7 +119,12 @@ export function carFactsOf(title: string, description: string, thisYear: number)
     body: bodyIn(t),
     seller: sellerOf(both),
     priceBasis: priceBasisOf(both),
-    condition: conditionOf(t, odometerKm),
+    condition: conditionOf(
+      t,
+      d,
+      odometerKm,
+      (year.manufactureYear ?? year.firstRegistration?.year) === thisYear,
+    ),
   };
 }
 
@@ -453,10 +458,20 @@ function priceBasisOf(text: string): PriceBasis {
 const DEMO = w("předváděc\\p{L}*");
 const NEW_CAR = w("nový vůz|nové vozidlo|nové auto|nový automobil|skladov\\p{L}* vůz");
 
-function conditionOf(title: string, odometerKm: number | undefined): CarFacts["condition"] {
+/**
+ * New takes next to no km plus the seller calling the car new, in the title or the
+ * description, or a car made this year. The km bound keeps used ads that say "koupen jako
+ * nový vůz" or "důvod prodeje: nové auto"; wording about parts ("nové pneumatiky") is no cue.
+ */
+function conditionOf(
+  title: string,
+  description: string,
+  odometerKm: number | undefined,
+  madeThisYear: boolean,
+): CarFacts["condition"] {
   if (DEMO.test(title)) return "demo";
-  if (NEW_CAR.test(title) && odometerKm !== undefined && odometerKm < 100) return "new";
-  return "used";
+  if (odometerKm === undefined || odometerKm >= 100) return "used";
+  return NEW_CAR.test(title) || NEW_CAR.test(description) || madeThisYear ? "new" : "used";
 }
 
 // --- non-car titles ---------------------------------------------------------------------
