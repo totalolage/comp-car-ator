@@ -93,7 +93,7 @@ export interface RestoreOptions {
 /**
  * Writes the base (default: newest) release's Ledger to `path`, checked against the manifest's
  * sha256, and returns the release. With no data release at all it rejects unless `init` (then it
- * leaves `path` for a fresh Ledger and returns null): a missing release must never silently start
+ * clears `path` for a fresh Ledger and returns null): a missing release must never silently start
  * an empty Ledger that would then replace the real one. A null base rejects once any data release
  * exists, so a retried first run cannot restore a release made after its harvests.
  */
@@ -106,7 +106,10 @@ export async function restoreLedger(
   if (options.base === null && release)
     throw new Error(`Expected no data release, but ${release.tag} exists (made after the plan)`);
   if (!release) {
-    if (options.init) return null;
+    if (options.init) {
+      await rm(path, { force: true });
+      return null;
+    }
     throw new Error("No data release to restore the Ledger from (pass --init for the first run)");
   }
   const expected = release.manifest.assets[ASSETS.ledger];
@@ -158,6 +161,8 @@ export interface ReleaseResult {
  */
 export async function releaseRuns(options: ReleaseRunsOptions): Promise<ReleaseResult> {
   const { store, work, now, keep = 14, log = silentLogger } = options;
+  if (!Number.isInteger(keep) || keep < 1)
+    throw new Error(`keep must be a whole number of at least 1, not ${keep}`);
   await mkdir(work, { recursive: true });
   const ledgerPath = join(work, "ledger.sqlite");
   const base = await restoreLedger(store, ledgerPath, { base: options.base, init: options.init });

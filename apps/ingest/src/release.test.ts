@@ -310,7 +310,10 @@ describe.each([
 
   it("refuses to start a new Ledger unless told it is the first run", async () => {
     await expect(restoreLedger(h.store, join(dir, "l.sqlite"))).rejects.toThrow(/--init/);
+    // A Ledger left by an earlier attempt in the same scratch directory is not reused.
+    await writeFile(join(dir, "l.sqlite"), "left over");
     expect(await restoreLedger(h.store, join(dir, "l.sqlite"), { init: true })).toBeNull();
+    await expect(readFile(join(dir, "l.sqlite"))).rejects.toThrow(/ENOENT/);
   });
 
   it("releases the Ledger and the Bundle it publishes, and the next run builds on them", async () => {
@@ -432,6 +435,14 @@ describe.each([
     const { tag } = await ingestDay(SAMPLE.now, [cnbSource()], true);
     await h.tamper(tag, ASSETS.ledger);
     await expect(restoreLedger(h.store, join(dir, "l.sqlite"))).rejects.toThrow(/sha256/);
+  });
+
+  it("refuses a retention that would prune the release it makes", async () => {
+    for (const keep of [0, Number.NaN])
+      await expect(
+        releaseRuns({ store: h.store, logs: [], work: dir, now: SAMPLE.now, base: null, keep }),
+      ).rejects.toThrow(/keep/);
+    expect(await h.store.list()).toEqual([]);
   });
 
   it("keeps the newest data releases", async () => {
