@@ -44,9 +44,18 @@ Sentence case everywhere; no uppercase labels.
   models. It is `<details>`, so it needs no script; the shell script only closes it on Escape
   or an outside click.
 - `.split` = rail + results. Below 48rem it stacks and the rail becomes a grid of facet groups.
-- Tables sit in `.table-scroll`, a box at most one viewport tall (below the masthead) that
-  scrolls both ways: a table wider than its column never widens the page, and the header row
-  sticks to the top of the box at every width.
+- Scrolling: the page is the only vertical scroller on wide screens. The masthead sticks to
+  the top. Both `.split` columns are sticky: the longer one scrolls with the page; the
+  shorter one stays pinned under the masthead if it fits the viewport, or scrolls until its
+  end is in view and then stays, so the page scrolls only while the longer column has more
+  to show. Both stop above the compare tray.
+- Tables sit in `.table-scroll`, a box at most one viewport tall (below the masthead, above
+  the tray) that scrolls both ways: a table wider than its column never widens the page, and
+  the header row sticks to the top of the box. Beside the rail on wide screens the box is not
+  capped and only scrolls sideways, so the page scrolls the rows and the header row scrolls
+  away with them (a sideways scroll box cannot hand its header row to the page).
+- Viewport heights use `dvh` (with a `vh` fallback) so mobile browser chrome sliding in and
+  out leaves no band at the page bottom.
 - Content is fluid up to `--page-max` (100rem), with a 16px gutter (12px narrow).
 
 ## Catalog page

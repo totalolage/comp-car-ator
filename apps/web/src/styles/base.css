@@ -12,11 +12,16 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* Scrolled-to targets land between the sticky masthead and the fixed compare tray. */
+  scroll-padding: var(--masthead) 0 var(--tray-space, 0px);
 }
 
+/* Viewport heights use dvh (vh where unsupported): it tracks mobile browser chrome as it
+   slides away, where vh is the tallest viewport and leaves a band below short pages. */
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--paper);
@@ -166,7 +171,8 @@ a:hover {
   left: 0;
   right: 0;
   top: var(--masthead);
-  max-height: calc(100vh - var(--masthead));
+  max-height: calc(100vh - var(--masthead) - var(--tray-space, 0px));
+  max-height: calc(100dvh - var(--masthead) - var(--tray-space, 0px));
   overflow: auto;
   display: grid;
   grid-template-columns: 1fr 12rem;
@@ -298,15 +304,29 @@ main:focus {
   display: grid;
   grid-template-columns: var(--rail) minmax(0, 1fr);
   gap: var(--s6);
-  align-items: start;
+}
+
+/*
+ * Both columns are sticky and the page is the only vertical scroller. The longer column
+ * sets the grid's height, so it scrolls with the page. The shorter one sits at the end of
+ * its grid area and sticks by its bottom edge above the tray: taller than the viewport, it
+ * scrolls with the page until its end is in view and then stays; shorter, min-height
+ * stretches it to the viewport below the masthead, so its content stays pinned under the
+ * masthead. The far-negative top keeps the sticky view rectangle taller than any column;
+ * otherwise a column taller than the viewport has its bottom inset cut to fit and never
+ * sticks by its end.
+ */
+.rail,
+.results {
+  position: sticky;
+  top: -100000px;
+  bottom: var(--tray-space, 0px);
+  align-self: end;
+  min-height: calc(100vh - var(--masthead) - var(--s3) - var(--tray-space, 0px));
+  min-height: calc(100dvh - var(--masthead) - var(--s3) - var(--tray-space, 0px));
 }
 
 .rail {
-  position: sticky;
-  top: calc(var(--masthead) + var(--s3));
-  /* Ends above the compare tray, so the rail's last controls stay reachable. */
-  max-height: calc(100vh - var(--masthead) - var(--s6) - var(--tray-space, 0px));
-  overflow: auto;
   font-size: var(--text-sm);
 }
 
@@ -472,10 +492,19 @@ main:focus {
    scrolls on one axis scrolls on both, so the header row sticks to the box's top instead of
    the masthead; capping the box at the viewport below the masthead keeps it in view. */
 .table-scroll {
-  max-height: calc(100dvh - var(--masthead));
+  max-height: calc(100vh - var(--masthead) - var(--tray-space, 0px));
+  max-height: calc(100dvh - var(--masthead) - var(--tray-space, 0px));
   overflow: auto;
   /* Keyboard focus scrolled into view lands below the sticky header row, not behind it. */
   scroll-padding-top: 2rem;
+}
+
+/* Beside the rail the page is the only vertical scroller (see .split), so the box only
+   scrolls sideways and its header row scrolls away with the rows. */
+@media (min-width: 48rem) {
+  .split .table-scroll {
+    max-height: none;
+  }
 }
 
 .data {
@@ -577,6 +606,7 @@ body {
   align-items: center;
   gap: var(--s1) var(--s3);
   padding: var(--s2) var(--gutter);
+  padding-bottom: calc(var(--s2) + env(safe-area-inset-bottom, 0px));
   border-top: 2px solid var(--rule-strong);
   background: var(--paper);
   font-size: var(--text-sm);
@@ -1081,6 +1111,13 @@ body {
     gap: var(--s3);
   }
 
+  .rail,
+  .results {
+    position: static;
+    align-self: auto;
+    min-height: 0;
+  }
+
   .rail-toggle {
     display: block;
   }
@@ -1110,8 +1147,6 @@ body {
   }
 
   .rail {
-    position: static;
-    max-height: none;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
     gap: 0 var(--s4);
