@@ -17,6 +17,7 @@ import {
   landedBreakdown,
   listingBands,
   listingFacetOptions,
+  listingPage,
   listingQuery,
   nextListingSort,
   priceChange,
@@ -161,6 +162,17 @@ describe("listing query", () => {
     const de = rows.find((l) => l.market === "DE");
     // An import's landed price adds transport, inspection and registration to the price.
     expect(de?.landed?.totalCzk).toBeGreaterThan(de?.priceCzk ?? 0);
+  });
+
+  it("puts listings the outlier rule excluded after all others, whatever the sort", async () => {
+    const view = await sampleModel("skoda/octavia");
+    for (const dir of ["asc", "desc"] as const) {
+      const page = listingPage(view, { filters: {}, sort: { key: "priceCzk", dir } });
+      expect(page.rows.at(-1)?.excluded).toBe(true);
+      expect(page.rows.slice(0, -1).every((l) => !l.excluded)).toBe(true);
+      expect(page.total).toBe(13);
+    }
+    expect(listingPage(view, { filters: {} }, 3).rows).toHaveLength(3);
   });
 
   it("sorts by landed price both ways and picks each column's natural order", () => {

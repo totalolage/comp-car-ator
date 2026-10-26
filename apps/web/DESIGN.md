@@ -117,7 +117,8 @@ Sentence case everywhere; no uppercase labels.
   its Variant on a second line), year, odometer, gearbox (from the listing), asking price in
   its own currency with the move since first seen (▼/▲ %), landed price in CZ, country,
   source, days listed. Default order is landed price ascending, so Czech and imported cars
-  compare directly; year, odometer, price, landed and days sort. The landed price is a
+  compare directly; year, odometer, price, landed and days sort. Listings the outlier rule
+  left out of statistics (placeholder prices) always come last, tagged. The landed price is a
   button (hover shows the breakdown as a tooltip): it expands the row to the landed-price
   lines from Pricing with their notes, the original price and ČNB rate, the price history,
   first/last seen, seller and location, and up to three photos (lazy, secondary).
@@ -164,8 +165,8 @@ Enforced on every build by `scripts/check-budget.mjs` (fails the build), gzipped
 | ------------------------------ | ------ | ------------ | ---------- | ---------------- |
 | HTML                           | 30 kB  | 7.2 kB       | 8.9 kB     | 18.1 kB          |
 | CSS                            | 8 kB   | 3.5 kB       | 3.5 kB     | 3.5 kB           |
-| JS (all chunks the page loads) | 30 kB  | 22.7 kB      | 27.1 kB    | 27.1 kB          |
-| Total                          | 60 kB  | 33.4 kB      | 39.5 kB    | 48.7 kB          |
+| JS (all chunks the page loads) | 30 kB  | 22.7 kB      | 27.2 kB    | 27.2 kB          |
+| Total                          | 60 kB  | 33.4 kB      | 39.6 kB    | 48.9 kB          |
 
 Measured on the sample Bundle (2026-10-26); "large model page" is the Octavia page built from
 `node apps/web/scripts/large-model-bundle.ts <dir>` (a 2.06 MB raw model file of 6,000

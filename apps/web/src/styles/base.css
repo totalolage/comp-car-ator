@@ -746,7 +746,7 @@ body {
 
 .stats,
 .chart {
-  margin-bottom: var(--s4);
+  margin: 0 0 var(--s4);
 }
 
 .data-auto {
@@ -788,6 +788,8 @@ body {
 
 /* The landed price is a button that opens the row's breakdown. */
 .disclose {
+  /* Holds its visually hidden label, which must not escape the scroll box. */
+  position: relative;
   padding: 0;
   border: 0;
   background: none;
@@ -816,7 +818,15 @@ body {
   background: var(--paper);
 }
 
+/* A detail row spans the whole (scrolling) table; its content stays in the visible box. */
+.listings-scroll {
+  container-type: inline-size;
+}
+
 .detail-grid {
+  position: sticky;
+  left: var(--s3);
+  max-width: calc(100cqi - 2 * var(--s3));
   display: flex;
   flex-wrap: wrap;
   gap: var(--s3) var(--s8);

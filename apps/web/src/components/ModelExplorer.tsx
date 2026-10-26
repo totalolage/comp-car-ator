@@ -32,7 +32,7 @@ import {
   landedSummary,
   listingBands,
   listingFacetOptions,
-  listingQuery,
+  listingPage,
   nextListingSort,
   priceChange,
   priceStats,
@@ -108,7 +108,7 @@ export default function ModelExplorer(props: Props) {
   }, [modelId]);
 
   const result = useMemo(
-    () => (view ? view.listings(listingQuery(state, limit)) : initial),
+    () => (view ? listingPage(view, state, limit) : initial),
     [view, state, limit, initial],
   );
   const stats = useMemo(
@@ -236,7 +236,7 @@ export default function ModelExplorer(props: Props) {
             )}
           </div>
         ) : (
-          <div class="table-scroll">
+          <div class="table-scroll listings-scroll">
             <table class="data listings">
               <thead>
                 <tr>

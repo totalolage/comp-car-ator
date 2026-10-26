@@ -62,6 +62,23 @@ export function listingQuery(state: ListingState, limit = LISTING_PAGE): Listing
 }
 
 /**
+ * The table's rows: the engine's result in its sort order, except that Listings the outlier
+ * rule excluded (placeholder prices like 1 CZK, typos) go after all others, so they never
+ * head a price sort. They stay in the table, tagged, and in the counts.
+ */
+export function listingPage(
+  view: Pick<ModelView, "listings">,
+  state: ListingState,
+  limit = LISTING_PAGE,
+): ListingResult {
+  const all = view.listings({ ...listingQuery(state), limit: Number.MAX_SAFE_INTEGER });
+  const kept = all.rows.filter((l) => !l.excluded);
+  const rows =
+    kept.length === all.rows.length ? kept : [...kept, ...all.rows.filter((l) => l.excluded)];
+  return { ...all, rows: rows.slice(0, limit) };
+}
+
+/**
  * A Variant's name on its model page: generation, body, fuel and power. The gearbox is not
  * part of a Variant (listings state their own), and ids are never parsed. Two Variants that
  * would read the same get the end of their id appended.

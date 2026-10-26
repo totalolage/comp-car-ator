@@ -13,7 +13,7 @@ import Base from "../layouts/Base.astro";
 import { buildCatalog } from "../lib/catalog.ts";
 import {
   firstPaintListing,
-  listingQuery,
+  listingPage,
   priceStats,
   variantMedians,
   variantNames,
@@ -33,7 +33,7 @@ if (!view) throw new Error(`Model ${id} is in the catalog index but has no model
 const name = `${view.model.make} ${view.model.name}`;
 const names = variantNames(view.variants, t);
 const medians = variantMedians(view);
-const result = view.listings(listingQuery({ filters: {} }));
+const result = listingPage(view, { filters: {} });
 const initial = { ...result, rows: result.rows.map(firstPaintListing) };
 const all = view.listings({ filters: { includeGone: true }, limit: Number.MAX_SAFE_INTEGER });
 const fx: FxTable = {};
