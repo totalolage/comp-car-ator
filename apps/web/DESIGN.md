@@ -162,22 +162,23 @@ real `<input>`s inside `<label>`s with `<fieldset>`/`<legend>` groups; result co
 
 Enforced on every build by `scripts/check-budget.mjs` (fails the build), gzipped, per page:
 
-|                                | budget | catalog page | model page | large model page |
-| ------------------------------ | ------ | ------------ | ---------- | ---------------- |
-| HTML                           | 30 kB  | 7.2 kB       | 8.9 kB     | 18.1 kB          |
-| CSS                            | 8 kB   | 3.5 kB       | 3.5 kB     | 3.5 kB           |
-| JS (all chunks the page loads) | 30 kB  | 22.7 kB      | 27.2 kB    | 27.2 kB          |
-| Total                          | 60 kB  | 33.4 kB      | 39.6 kB    | 48.9 kB          |
+|                                | budget | catalog page | compare page | model page | large model page |
+| ------------------------------ | ------ | ------------ | ------------ | ---------- | ---------------- |
+| HTML                           | 30 kB  | 7.6 kB       | 3.4 kB       | 9.2 kB     | 18.5 kB          |
+| CSS                            | 8 kB   | 4.0 kB       | 4.0 kB       | 4.0 kB     | 4.0 kB           |
+| JS (all chunks the page loads) | 30 kB  | 27.0 kB      | 23.5 kB      | 29.8 kB    | 29.8 kB          |
+| Total                          | 60 kB  | 38.6 kB      | 30.9 kB      | 43.0 kB    | 52.3 kB          |
 
 Measured on the sample Bundle (2026-10-26); "large model page" is the Octavia page built from
 `node apps/web/scripts/large-model-bundle.ts <dir>` (a 2.06 MB raw model file of 6,000
 Listings with two years of weekly history, about the most popular model at scale) with
 `BUNDLE_DIR=<dir>`. The catalog page's JS is Preact, its hooks, the island (with the catalog
-query engine) and the shared url-state/i18n chunk, which carries both languages' messages
-(about 4.5 kB gzip); category pages are the same page. A model page adds its island
-(listing view, chart) and the store. The model page's HTML grows with the first 50 listing
-rows and the weekly history it serializes for hydration; the chart's data table is built
-only when opened.
+query engine), the shared url-state/i18n chunk, which carries both languages' messages, and
+the tray script; category pages are the same page, and the compare page is the same stack
+with its own island. A model page adds its island (listing view, chart) and is the page
+closest to the JS budget: new messages or island code land on it first. Its HTML grows with
+the first 50 listing rows, the weekly history it serializes for hydration and each
+Variant's tray name; the chart's data table is built only when opened.
 
 Query time is measured by `node apps/web/scripts/bench-catalog.ts` on a synthetic Bundle of
 50k Variants (about 110k Variant × listing-group rows). On devbox (2026-10-25, under load):
