@@ -42,16 +42,19 @@ interface Profile {
   userAgent?: Promise<string>;
 }
 
+/** How long Chrome may take to start and attach, ms (at least the fetch timeout). */
+const LAUNCH_TIMEOUT_MS = 120_000;
+
 /**
  * Navigates a browser tab to the URL and returns the rendered document. A document that is a
  * challenge (judged from its network response, so the page is never read while the challenge's
  * script runs) is waited out until the page navigates past it or `challengeWaitMs` passes, then
- * returned as it is so the policy can escalate or report the block. Accept-Language becomes the browser's locale;
- * the other request headers go on the page's main-frame navigations only (and their redirects),
- * over the browser's own, so subresources keep the browser's fingerprint. Binary
- * requests go through a request API context of their own that carries the browser's User-Agent
- * and cookies (and hands the cookies it changed back), so an abort or close() can dispose it
- * and close the connection.
+ * returned as it is so the policy can escalate or report the block. Accept-Language becomes the
+ * browser's locale; the other request headers go on the page's main-frame navigations only (and
+ * their redirects), over the browser's own, so subresources keep the browser's fingerprint.
+ * Binary requests go through a request API context of their own that carries the browser's
+ * User-Agent and cookies (and hands the cookies it changed back), so an abort or close() can
+ * dispose it and close the connection.
  */
 export function createBrowserFetcher(
   options: BrowserOptions,
@@ -141,9 +144,11 @@ export function createBrowserFetcher(
       const gone = () =>
         chrome.pid === undefined || chrome.exitCode !== null || !!chrome.signalCode;
       const endpoint = `http://127.0.0.1:${port}`;
-      await Promise.race([devToolsReady(endpoint, timeoutMs, gone), failed]);
+      // Starting Chrome is a one-off that a loaded machine can stretch past a page's timeout.
+      const startMs = Math.max(timeoutMs, LAUNCH_TIMEOUT_MS);
+      await Promise.race([devToolsReady(endpoint, startMs, gone), failed]);
       const { chromium } = await import("patchright");
-      const browser = await chromium.connectOverCDP(endpoint, { timeout: timeoutMs });
+      const browser = await chromium.connectOverCDP(endpoint, { timeout: startMs });
       const context = browser.contexts()[0];
       if (!context) throw new Error("Chrome has no default browser context");
       return {
