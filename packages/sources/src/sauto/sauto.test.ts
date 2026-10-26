@@ -84,6 +84,79 @@ function replaceResponse(
   }
 }
 
+/** A synthetic listing as the API serves it, in search results and as its own detail. */
+const car = (id: number, fields: ApiItem = {}): ApiItem => ({
+  id,
+  price: 100000,
+  sorting_date: "2026-10-25T10:00:00",
+  manufacturing_date: "2021-01-01",
+  manufacturer_cb: { name: "Dacia", seo_name: "dacia", value: 15 },
+  model_cb: { name: "Spring", seo_name: "spring", value: 9057 },
+  condition_cb: { name: "Nové", value: 1 },
+  ...fields,
+});
+const cars = (...ids: number[]) => ids.map((id) => car(id));
+
+/**
+ * Runs sautoSource({ pageSize: 4 }) against a synthetic API: `search` answers each search
+ * query; a detail serves the last search item with its id, merged with `details[id]`.
+ * `consume` sees each observation before the harvest resumes, as the Ledger would.
+ */
+async function harvestSite(
+  mode: HarvestMode,
+  search: (query: URLSearchParams) => { total: number; results: ApiItem[] },
+  options: {
+    checkpoint?: Partial<Checkpoint>;
+    details?: Record<string, ApiItem>;
+    consume?: (o: Observation) => void;
+  } = {},
+): Promise<{ observations: Observation[]; urls: string[]; error?: unknown }> {
+  const served = new Map<string, ApiItem>();
+  const urls: string[] = [];
+  const http: Http = {
+    async get(request) {
+      const url = typeof request === "string" ? request : request.url;
+      urls.push(url);
+      const { pathname, searchParams } = new URL(url);
+      const id = pathname.split("/").pop() ?? "";
+      let body: unknown;
+      if (id === "search") {
+        const page = search(searchParams);
+        for (const item of page.results) served.set(String(item.id), item);
+        body = { pagination: { total: page.total }, results: page.results };
+      } else {
+        body = { result: { ...served.get(id), ...options.details?.[id] } };
+      }
+      return { url, status: 200, headers: {}, body: JSON.stringify(body), tier: "T0" };
+    },
+  };
+  const ctx: HarvestContext = {
+    http,
+    mode,
+    checkpoint: { ...emptyCheckpoint, ...options.checkpoint },
+    now,
+    log: silentLogger,
+    signal: new AbortController().signal,
+  };
+  const observations: Observation[] = [];
+  try {
+    for await (const o of sautoSource({ pageSize: 4 }).harvest(ctx)) {
+      observations.push(o);
+      options.consume?.(o);
+    }
+  } catch (error) {
+    return { observations, urls, error };
+  }
+  return { observations, urls };
+}
+
+const NEW_LOW = "new/0-134217728";
+/** The search for the `nove` band below PRICE_TOP; every other band is empty. */
+const newLow = (query: URLSearchParams) =>
+  query.get("condition_seo") === "nove" && query.get("price_from") === "0";
+const empty = { total: 0, results: [] };
+const ALL_SLICES = ["new", "demo", "used"].flatMap((c) => [`${c}/0-134217728`, `${c}/134217728-`]);
+
 const isDetail = (ref: string) => (url: string) => url.endsWith(`/api/v1/items/${ref}`);
 const firstSearchPage = (url: string) =>
   url.includes("/items/search?") && !url.includes("price_from") && url.includes("offset=0");
@@ -402,6 +475,7 @@ describe("sauto source", () => {
         category_id: "838",
         condition_seo: "nove,predvadeci,ojete",
         operating_lease: "false",
+        vehicle_age_from: "2000",
         limit: "100",
         offset: String(offset),
       });
@@ -439,6 +513,100 @@ describe("sauto source", () => {
     );
     expect(searches(urls).length).toBeGreaterThan(1);
     expect(listings(observations)).toHaveLength(9);
+  });
+
+  it("full run leaves a band whose pages hold fewer results than its total not done, and fails", async () => {
+    const { observations, urls, error } = await harvestSite("full", (q) =>
+      newLow(q) ? { total: 6, results: cars(1001, 1002) } : empty,
+    );
+    expect(String(error)).toMatch(/fewer results than reported: new\/0-134217728$/);
+    expect(listings(observations).map((o) => o.ref)).toEqual(["1001", "1002"]);
+    expect(slices(observations)).toEqual(ALL_SLICES.filter((s) => s !== NEW_LOW));
+    // Paged once more before giving up.
+    expect(searches(urls).filter((u) => newLow(new URL(u).searchParams))).toHaveLength(2);
+  });
+
+  it("full run does not count a page served twice towards its band's total", async () => {
+    // Offsets 0 and 3 (pageSize 4, step 3) both answer 1–4, of a total of 6.
+    const { observations, error } = await harvestSite("full", (q) =>
+      newLow(q) ? { total: 6, results: cars(1, 2, 3, 4) } : empty,
+    );
+    expect(String(error)).toMatch(/fewer results than reported: new\/0-134217728$/);
+    expect(listings(observations).map((o) => o.ref)).toEqual(["1", "2", "3", "4"]);
+    expect(slices(observations)).not.toContain(NEW_LOW);
+  });
+
+  it("full run finishes a short band when paging it again reaches its total", async () => {
+    let passes = 0;
+    const { observations, error } = await harvestSite("full", (q) => {
+      if (!newLow(q)) return empty;
+      passes++;
+      return { total: 3, results: passes === 1 ? cars(1, 2) : cars(1, 2, 3) };
+    });
+    expect(error).toBeUndefined();
+    expect(listings(observations).map((o) => o.ref)).toEqual(["1", "2", "3"]);
+    expect(slices(observations)).toEqual(ALL_SLICES);
+  });
+
+  it("first incremental run judges a listing known as it was before the run yielded it", async () => {
+    // The second page repeats the first (the order moved); the third holds unseen listings.
+    const pages: Record<string, ApiItem[]> = {
+      0: cars(1, 2, 3, 4),
+      4: cars(1, 2, 3, 4),
+      8: cars(5, 6, 7, 8),
+      12: [],
+    };
+    const recorded = new Set<string>();
+    const { observations, error } = await harvestSite(
+      "incremental",
+      (q) => ({ total: 12, results: pages[q.get("offset") ?? ""] ?? [] }),
+      {
+        checkpoint: { isKnown: (ref) => recorded.has(ref) },
+        consume: (o) => {
+          if (o.kind === "ListingSeen") recorded.add(o.ref);
+        },
+      },
+    );
+    expect(error).toBeUndefined();
+    expect(listings(observations).map((o) => o.ref)).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ]);
+  });
+
+  it("keeps listings made before 2000 out, and counts them towards a band's total", async () => {
+    const results = [
+      car(1, { manufacturing_date: "1999-12-01" }),
+      car(2, { manufacturing_date: "2000-01-01" }),
+      // Without a year of manufacture, the first registration's year counts.
+      car(3, { manufacturing_date: null, in_operation_date: "1999-06-01" }),
+      car(4, { manufacturing_date: null, in_operation_date: "2000-03-01" }),
+      // Only the detail dates this one.
+      car(5, { manufacturing_date: null }),
+    ];
+    const details = { 5: { manufacturing_date: "1998-01-01" } };
+    const incremental = await harvestSite(
+      "incremental",
+      (q) => (q.get("offset") === "0" ? { total: 5, results } : empty),
+      { details },
+    );
+    expect(incremental.error).toBeUndefined();
+    expect(listings(incremental.observations).map((o) => o.ref)).toEqual(["2", "4"]);
+    expect(searches(incremental.urls).every((u) => u.includes("vehicle_age_from=2000"))).toBe(true);
+    expect(incremental.urls.some((u) => /\/items\/[13]$/.test(u))).toBe(false);
+    const full = await harvestSite("full", (q) => (newLow(q) ? { total: 5, results } : empty), {
+      details,
+    });
+    expect(full.error).toBeUndefined();
+    expect(listings(full.observations).map((o) => o.ref)).toEqual(["2", "4"]);
+    expect(slices(full.observations)).toEqual(ALL_SLICES);
+    expect(searches(full.urls).every((u) => u.includes("vehicle_age_from=2000"))).toBe(true);
   });
 
   it("stops when the run is aborted", async () => {

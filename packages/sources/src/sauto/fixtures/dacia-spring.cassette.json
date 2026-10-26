@@ -3,10 +3,10 @@
   "interactions": [
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -73,10 +73,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&limit=4&offset=4&manufacturer_model_seo=dacia%3Aspring"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=4&manufacturer_model_seo=dacia%3Aspring"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&limit=4&offset=4&manufacturer_model_seo=dacia%3Aspring",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=4&manufacturer_model_seo=dacia%3Aspring",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -143,10 +143,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&limit=4&offset=8&manufacturer_model_seo=dacia%3Aspring"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=8&manufacturer_model_seo=dacia%3Aspring"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&limit=4&offset=8&manufacturer_model_seo=dacia%3Aspring",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=8&manufacturer_model_seo=dacia%3Aspring",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -213,10 +213,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&limit=4&offset=12&manufacturer_model_seo=dacia%3Aspring"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=12&manufacturer_model_seo=dacia%3Aspring"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&limit=4&offset=12&manufacturer_model_seo=dacia%3Aspring",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=12&manufacturer_model_seo=dacia%3Aspring",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -241,10 +241,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -255,10 +255,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -269,10 +269,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=predvadeci&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=predvadeci&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=predvadeci&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=predvadeci&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -283,10 +283,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=predvadeci&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=predvadeci&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=predvadeci&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=predvadeci&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -297,10 +297,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -311,10 +311,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=67108863"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=67108863"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=67108863",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=67108863",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -325,10 +325,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=33554431"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=33554431"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=33554431",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=33554431",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -339,10 +339,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=16777215"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=16777215"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=16777215",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=16777215",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -353,10 +353,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=8388607"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=8388607"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=8388607",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=8388607",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -367,10 +367,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=4194303"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=4194303"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=4194303",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=4194303",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -381,10 +381,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=2097151"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=2097151"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=2097151",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=2097151",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -395,10 +395,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=1048575"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=1048575"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=1048575",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=1048575",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -409,10 +409,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=524287"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=524287"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=524287",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=524287",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -423,10 +423,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=262143"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=262143"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=262143",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=262143",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -437,10 +437,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=3&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=262143"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=3&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=262143"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=3&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=262143",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=3&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=262143",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -451,10 +451,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=262144&price_to=524287"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=262144&price_to=524287"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=262144&price_to=524287",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=262144&price_to=524287",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -465,10 +465,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=3&manufacturer_model_seo=dacia%3Aspring&price_from=262144&price_to=524287"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=3&manufacturer_model_seo=dacia%3Aspring&price_from=262144&price_to=524287"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=3&manufacturer_model_seo=dacia%3Aspring&price_from=262144&price_to=524287",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=3&manufacturer_model_seo=dacia%3Aspring&price_from=262144&price_to=524287",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -479,10 +479,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=524288&price_to=1048575"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=524288&price_to=1048575"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=524288&price_to=1048575",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=524288&price_to=1048575",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -493,10 +493,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=1048576&price_to=2097151"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=1048576&price_to=2097151"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=1048576&price_to=2097151",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=1048576&price_to=2097151",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -507,10 +507,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=2097152&price_to=4194303"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=2097152&price_to=4194303"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=2097152&price_to=4194303",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=2097152&price_to=4194303",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -521,10 +521,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=4194304&price_to=8388607"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=4194304&price_to=8388607"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=4194304&price_to=8388607",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=4194304&price_to=8388607",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -535,10 +535,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=8388608&price_to=16777215"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=8388608&price_to=16777215"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=8388608&price_to=16777215",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=8388608&price_to=16777215",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -549,10 +549,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=16777216&price_to=33554431"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=16777216&price_to=33554431"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=16777216&price_to=33554431",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=16777216&price_to=33554431",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -563,10 +563,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=33554432&price_to=67108863"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=33554432&price_to=67108863"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=33554432&price_to=67108863",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=33554432&price_to=67108863",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -577,10 +577,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=67108864&price_to=134217727"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=67108864&price_to=134217727"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=67108864&price_to=134217727",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=67108864&price_to=134217727",
         "status": 200,
         "headers": {
           "content-type": "application/json"
@@ -591,10 +591,10 @@
     },
     {
       "request": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728"
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728"
       },
       "response": {
-        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728",
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728",
         "status": 200,
         "headers": {
           "content-type": "application/json"

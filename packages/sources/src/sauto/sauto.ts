@@ -12,9 +12,11 @@
  * incremental: walks the newest-first order and yields listings that are unknown or changed
  *   since the last run (`sorting_date` after it), down to the last run (see `incremental`).
  * full: a census sliced by condition and price band; a band over `sliceLimit` results is
- *   halved until each fits under the 10,000 cap. Each band yields SliceDone when finished.
+ *   halved until each fits under the 10,000 cap. Each band yields SliceDone once one pass
+ *   over it reaches the band's total; a band that stays short fails the run at its end.
  *
- * Listings without a price (price by agreement) are out of scope and skipped.
+ * In scope: priced listings (not price by agreement) made in 2000 or later. Searches filter
+ * the year (`vehicle_age_from`); listings that slip through are skipped.
  */
 import {
   type Body,
@@ -40,6 +42,8 @@ const WINDOW = 10_000;
 const SINCE_MARGIN_MS = 2 * 3_600_000;
 /** Upper bound of the bisected price bands, CZK; one open band above it. */
 const PRICE_TOP = 2 ** 27;
+/** Earliest year in scope, of manufacture or else first registration (`vehicle_age_from`). */
+const FIRST_YEAR = 2000;
 
 /** Sauto `condition_seo` values in scope; damaged cars and veterans are left out. */
 const CONDITIONS = { nove: "new", predvadeci: "demo", ojete: "used" } as const;
@@ -69,14 +73,7 @@ export function sautoSource(options: SautoOptions = {}): Source {
     ...(filter ? { scope: filter } : {}),
     async *harvest(ctx: HarvestContext): AsyncIterable<Observation> {
       const run = new Run(ctx, filter, pageSize);
-      if (ctx.mode === "incremental") {
-        yield* run.incremental();
-        return;
-      }
-      for (const condition of CONDITION_SEOS) {
-        yield* run.band(condition, { from: 0, to: PRICE_TOP }, sliceLimit);
-        yield* run.band(condition, { from: PRICE_TOP }, sliceLimit);
-      }
+      yield* ctx.mode === "incremental" ? run.incremental() : run.full(sliceLimit);
     },
   };
 }
@@ -96,6 +93,8 @@ interface Query {
 class Run {
   /** Refs already yielded in this run: pages overlap and bumped listings shift between them. */
   private readonly done = new Set<string>();
+  /** `checkpoint.isKnown` as it was before this run yielded the listing. */
+  private readonly knownBefore = new Map<string, boolean>();
   private readonly ctx: HarvestContext;
   private readonly filter: string | undefined;
   private readonly pageSize: number;
@@ -120,16 +119,18 @@ class Run {
       : undefined;
     for (let offset = 0; offset + this.pageSize <= WINDOW; offset += this.pageSize) {
       const page = await this.search({ conditions: CONDITION_SEOS, offset });
-      // A first run stops at a page of known listings; a page with none priced proves nothing.
-      let more = since === undefined && page.items.every((item) => refOf(item) && isUnpriced(item));
+      // A first run stops at a page of known listings; a page with none in scope proves nothing.
+      let more = since === undefined && page.items.every(isSkipped);
       for (const item of page.items) {
         const ref = refOf(item);
-        // Unpriced listings never become known, so only their timestamp keeps the walk going.
-        const unpriced = ref !== undefined && isUnpriced(item);
-        const known = ref !== undefined && checkpoint.isKnown(ref);
+        // Skipped listings never become known, so only their timestamp keeps the walk going.
+        const skipped = isSkipped(item);
+        // Known as of the run's start: a page repeated after its listings were yielded (and
+        // recorded) must not read as a page of known ones.
+        const known = ref !== undefined && this.wasKnown(ref);
         const changed = since !== undefined && text(item.sorting_date) >= since;
-        if (since !== undefined ? changed : !known && !unpriced) more = true;
-        if (!unpriced && (!known || changed)) yield* this.listing(item);
+        if (since !== undefined ? changed : !known && !skipped) more = true;
+        if (!skipped && (!known || changed)) yield* this.listing(item);
       }
       if (!more || page.items.length < this.pageSize || offset + this.pageSize >= page.total) {
         return;
@@ -143,45 +144,107 @@ class Run {
     this.ctx.log.warn("sauto first incremental run stopped at the 10,000-result window");
   }
 
+  private wasKnown(ref: string): boolean {
+    let known = this.knownBefore.get(ref);
+    if (known === undefined) {
+      known = this.ctx.checkpoint.isKnown(ref);
+      this.knownBefore.set(ref, known);
+    }
+    return known;
+  }
+
+  /** The census: every band, then a failure naming the bands that came out short. */
+  async *full(limit: number): AsyncIterable<Observation> {
+    const short: string[] = [];
+    for (const condition of CONDITION_SEOS) {
+      yield* this.band(condition, { from: 0, to: PRICE_TOP }, limit, short);
+      yield* this.band(condition, { from: PRICE_TOP }, limit, short);
+    }
+    if (short.length > 0) {
+      throw new Error(`Sauto slices yielded fewer results than reported: ${short.join(", ")}`);
+    }
+  }
+
   /**
    * One full-run slice: a condition and price band. Halves the band while the query holds
-   * more than `limit` results, so every leaf can be paged to the end.
+   * more than `limit` results, so every leaf can be paged to the end. A leaf that comes out
+   * short still yields its listings, but no SliceDone; its key goes to `short`.
    */
-  async *band(condition: ConditionSeo, band: Band, limit: number): AsyncIterable<Observation> {
+  private async *band(
+    condition: ConditionSeo,
+    band: Band,
+    limit: number,
+    short: string[],
+  ): AsyncIterable<Observation> {
     const slice = `${CONDITIONS[condition]}/${band.from}-${band.to ?? ""}`;
     if (this.ctx.checkpoint.sliceDoneAt(slice)) {
       this.ctx.log.info("sauto slice already done in this census", { slice });
       return;
     }
-    const query = { conditions: [condition], band, offset: 0 };
-    let page = await this.search(query);
-    if (page.total > limit) {
+    const first = await this.search({ conditions: [condition], band, offset: 0 });
+    if (first.total > limit) {
       const mid = band.to === undefined ? band.from * 2 : Math.floor((band.from + band.to) / 2);
       // Never down to [0, 1): `price_to=0` would drop the bound.
       if (mid <= band.from || (band.from === 0 && mid <= 1)) {
-        throw new Error(`Sauto slice ${slice} holds ${page.total} results and cannot be split`);
+        throw new Error(`Sauto slice ${slice} holds ${first.total} results and cannot be split`);
       }
-      yield* this.band(condition, { from: band.from, to: mid }, limit);
-      yield* this.band(condition, { ...band, from: mid }, limit);
+      yield* this.band(condition, { from: band.from, to: mid }, limit, short);
+      yield* this.band(condition, { ...band, from: mid }, limit, short);
       return;
     }
-    // Page the whole band before the slow detail requests, so the order barely moves under
-    // us; consecutive pages overlap a little in case deletions shift it up.
-    const items = [...page.items];
-    const step = this.pageSize - Math.min(5, Math.floor(this.pageSize / 4));
-    while (page.items.length === this.pageSize && query.offset + step < page.total) {
-      query.offset += step;
-      if (query.offset + this.pageSize > WINDOW) {
-        throw new Error(`Sauto slice ${slice} grew past the ${WINDOW}-result window`);
-      }
-      page = await this.search(query);
-      items.push(...page.items);
-    }
+    // Page the whole band before the slow detail requests, so the order barely moves under us.
+    const { items, complete } = await this.census(slice, { conditions: [condition], band }, first);
     for (const item of items) {
-      if (refOf(item) && isUnpriced(item)) continue;
+      if (isSkipped(item)) continue;
       yield* this.listing(item, CONDITIONS[condition]);
     }
-    yield { kind: "SliceDone", slice };
+    if (complete) yield { kind: "SliceDone", slice };
+    else short.push(slice);
+  }
+
+  /**
+   * Every search item of a leaf band, paged once more when a pass has fewer distinct results
+   * than the band reports (a listing removed meanwhile shifts the next one onto a page already
+   * read). A pass is complete when it alone reaches the highest total its pages reported;
+   * skipped listings count, as the total counts them. The items of both passes come out.
+   * Consecutive pages overlap a little in case deletions shift the order up.
+   */
+  private async census(
+    slice: string,
+    band: Omit<Query, "offset">,
+    first: Page,
+  ): Promise<{ items: Item[]; complete: boolean }> {
+    const items = new Map<string, Item>();
+    const step = this.pageSize - Math.min(5, Math.floor(this.pageSize / 4));
+    for (let pass = 1; pass <= 2; pass++) {
+      const distinct = new Set<string>();
+      let offset = 0;
+      let page = pass === 1 ? first : await this.search({ ...band, offset });
+      let reported = 0;
+      for (;;) {
+        reported = Math.max(reported, page.total);
+        for (const [i, item] of page.items.entries()) {
+          // A malformed entry has no id: its place stands in for it.
+          const key = refOf(item) ?? `@${offset + i}`;
+          distinct.add(key);
+          if (!items.has(key)) items.set(key, item);
+        }
+        if (page.items.length < this.pageSize || offset + step >= page.total) break;
+        offset += step;
+        if (offset + this.pageSize > WINDOW) {
+          throw new Error(`Sauto slice ${slice} grew past the ${WINDOW}-result window`);
+        }
+        page = await this.search({ ...band, offset });
+      }
+      if (distinct.size >= reported) return { items: [...items.values()], complete: true };
+      this.ctx.log.warn("sauto slice came out short", {
+        slice,
+        pass,
+        distinct: distinct.size,
+        reported,
+      });
+    }
+    return { items: [...items.values()], complete: false };
   }
 
   /**
@@ -220,14 +283,21 @@ class Run {
       this.ctx.log.info("sauto listing out of scope", { ref, condition: conditionCode });
       return;
     }
+    // The search filters the year; a detail that dates the listing earlier still drops it.
+    const year = yearOf({ ...item, ...detail });
+    if (year !== undefined && year < FIRST_YEAR) {
+      this.ctx.log.info("sauto listing out of scope", { ref, year });
+      return;
+    }
     yield toListingSeen(ref, item, detail, condition);
   }
 
-  private async search(query: Query): Promise<{ total: number; items: Item[] }> {
+  private async search(query: Query): Promise<Page> {
     const params = new URLSearchParams({
       category_id: String(CATEGORY),
       condition_seo: query.conditions.join(","),
       operating_lease: "false",
+      vehicle_age_from: String(FIRST_YEAR),
       limit: String(this.pageSize),
       offset: String(query.offset),
     });
@@ -263,6 +333,11 @@ class Run {
     this.ctx.log.info("sauto fetched", { url, status: page.status });
     return page;
   }
+}
+
+interface Page {
+  total: number;
+  items: Item[];
 }
 
 function parseJson(body: string, url: string): unknown {
@@ -425,6 +500,24 @@ function refOf(item: Item): string | undefined {
 /** Price by agreement: the listing shows no price, so it has nothing to compare. */
 function isUnpriced(item: Item): boolean {
   return item.price_by_agreement === true || item.price === null || item.price === 0;
+}
+
+/** The year `vehicle_age_from` filters on: of manufacture, else of first registration. */
+function yearOf(item: Item): number | undefined {
+  return yearMonth(item.manufacturing_date)?.year ?? yearMonth(item.in_operation_date)?.year;
+}
+
+function isTooOld(item: Item): boolean {
+  const year = yearOf(item);
+  return year !== undefined && year < FIRST_YEAR;
+}
+
+/**
+ * An item with an id that is out of scope: no ListingSeen. Malformed items (no id) are not
+ * skipped; they come out as an observation the Ledger rejects (see `listing`).
+ */
+function isSkipped(item: Item): boolean {
+  return refOf(item) !== undefined && (isUnpriced(item) || isTooOld(item));
 }
 
 function codebook(value: unknown): { name: string; seo: string; value?: string } | undefined {
