@@ -41,7 +41,7 @@ function variants(): VariantRow[] {
     const from = 2005 + Math.floor(next() * 20);
     const price = 200_000 + Math.floor(next() * 800_000);
     const groups = Math.floor(next() * 4);
-    const q = (m: number) => ({ min: m, p25: m, median: m, p75: m, max: m });
+    const q = (m: number) => ({ count: groups * 2, p10: m, median: m, p90: m });
     const used: UsedStats | null = groups
       ? {
           count: groups * 2,
@@ -49,6 +49,7 @@ function variants(): VariantRow[] {
           landedCzk: q(price + 30_000),
           odometerKm: q(90_000),
           years: { min: from, max: from + 3 },
+          byMarket: {},
           markets: {},
           sources: {},
           groups: Array.from({ length: groups }, (_, g) => ({
@@ -76,7 +77,9 @@ function variants(): VariantRow[] {
       transmission: pick(TRANSMISSIONS),
       ...(next() < 0.8 ? { seats: pick([4, 5, 7]) } : {}),
       ...(next() < 0.7 ? { consumptionL100km: Math.round(40 + next() * 60) / 10 } : {}),
-      ...(next() < 0.4 ? { newPriceCzk: { min: price * 2, max: price * 2.4 } } : {}),
+      ...(next() < 0.4
+        ? { newPriceCzk: { min: price * 2, max: price * 2.4, source: "list" as const, count: 1 } }
+        : {}),
       used,
     };
   });
@@ -87,7 +90,7 @@ beforeAll(async () => {
   const rows = variants();
   const content: BundleContent = {
     manifest: {
-      format: 1,
+      format: 2,
       generatedAt: "2026-10-25T00:00:00Z",
       fx: {} as BundleContent["manifest"]["fx"],
       sources: [],
