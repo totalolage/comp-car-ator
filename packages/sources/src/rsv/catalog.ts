@@ -119,12 +119,14 @@ interface Row {
 }
 
 /**
- * Spellings of one model id ("UP!" and "UP", "ATOS-PRIME" and "ATOS PRIME") are one model,
- * named by the spelling with most vehicles; else their Variants would share ids.
+ * Spellings of one model id on one type ("UP!" and "UP", "ATOS-PRIME" and "ATOS PRIME") are
+ * one model, named by the spelling with most vehicles; else their Variants would share ids.
+ * Names of one id on types of their own ("Ka", "Ka+") keep their spelling.
  */
 function spellModels(rows: Row[]): Row[] {
+  const keyOf = (r: Row) => `${r.make}\t${slugify(r.model)}\t${r.type}`;
   const spelling = new Map<string, string>();
-  for (const [key, group] of groupBy(rows, (r) => `${r.make}\t${slugify(r.model)}`)) {
+  for (const [key, group] of groupBy(rows, keyOf)) {
     const counts = [...groupBy(group, (r) => r.model)].map(([model, modelRows]) => ({
       model,
       count: sum(modelRows.map((r) => r.c.count)),
@@ -134,7 +136,7 @@ function spellModels(rows: Row[]): Row[] {
   }
   return rows.map((r) => ({
     ...r,
-    model: spelling.get(`${r.make}\t${slugify(r.model)}`) ?? r.model,
+    model: spelling.get(keyOf(r)) ?? r.model,
   }));
 }
 

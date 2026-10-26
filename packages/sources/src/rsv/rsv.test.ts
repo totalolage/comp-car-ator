@@ -213,6 +213,9 @@ describe("rsv source", () => {
       ...Array(6).fill(car("LAND ROVER", "RANGE ROVER", "LG")),
       ...Array(2).fill(car("LAND ROVER", "RANGE ROVER", "LW")),
       ...Array(5).fill(car("LAND ROVER", "RANGE ROVER SPORT", "LW")),
+      // A sibling's row of that type joins the Sport too.
+      car("LAND ROVER", "RANGE ROVER VELAR", "LW"),
+      ...Array(4).fill(car("LAND ROVER", "RANGE ROVER VELAR", "LY")),
       // A trim word on the shorter name's type still folds in.
       ...Array(9).fill(car("LAND ROVER", "DISCOVERY", "LR")),
       ...Array(3).fill(car("LAND ROVER", "DISCOVERY HSE", "LR")),
@@ -226,6 +229,7 @@ describe("rsv source", () => {
     expect(Object.fromEntries([...models].map(([m, s]) => [m, [...s]]))).toEqual({
       "Range Rover": ["lg"],
       "Range Rover Sport": ["lw"],
+      "Range Rover Velar": ["ly"],
       Discovery: ["lr"],
     });
   });
@@ -250,6 +254,9 @@ describe("rsv source", () => {
         ["GM DAEWOO", "KALOS"],
         // A make followed by another make is a company of both: left as it is.
         ["BMW ALPINA", "B3"],
+        ["HONDA ACURA", "MDX"],
+        // A company of several makes whose model word decides none.
+        ["DAIMLER CHRYSLER", "GRAND CHEROKEE"],
       ]),
     ).toEqual([
       "Škoda|Octavia",
@@ -268,6 +275,8 @@ describe("rsv source", () => {
       "Mercedes-Benz|A-Class",
       "Daewoo|Kalos",
       "BMW Alpina|B3",
+      "Honda Acura|MDX",
+      "Daimler Chrysler|Grand Cherokee",
     ]);
   });
 
@@ -284,7 +293,8 @@ describe("rsv source", () => {
       ["BMW", "IX XDRIVE40", "BMW|iX"],
       ["AUDI", "Q4 35 E-TRON", "Audi|Q4 e-tron"],
       ["AUDI", "Q4 SPORTBACK 40 E-TRON", "Audi|Q4 Sportback e-tron"],
-      ["AUDI", "A3, S3", "Audi|A3"],
+      // Audi lists the S model next to the base model: which one a vehicle is stays open.
+      ["AUDI", "A3, S3", "Audi|A3, S3"],
       ["AUDI", "TT", "Audi|TT"],
       ["CITROEN", "C 5", "Citroën|C5"],
       ["FIAT", "500 L", "Fiat|500L"],
@@ -312,13 +322,21 @@ describe("rsv source", () => {
 
   it("drops a model name without letters and joins spellings of one model id", async () => {
     const { header, row } = await realRow();
-    const car = (name: string) =>
+    const car = (make: string, name: string, type: string) =>
       withColumns(header, row, {
-        "Tovární značka": "VOLKSWAGEN",
+        "Tovární značka": make,
         "Obchodní označení": name,
-        "Typ kód": "121",
+        "Typ kód": type,
       });
-    const rows = [car("UP!"), car("UP!"), car("UP"), car(".")];
+    const rows = [
+      car("VOLKSWAGEN", "UP!", "121"),
+      car("VOLKSWAGEN", "UP!", "121"),
+      car("VOLKSWAGEN", "UP", "121"),
+      car("VOLKSWAGEN", ".", "121"),
+      // One id, but a type each: both spellings stay.
+      car("FORD", "KA", "RU8"),
+      car("FORD", "KA+", "UK2"),
+    ];
     const { entries, logs } = await harvest(
       syntheticHttp(header, rows.join("\r\n"), 1),
       "full",
@@ -327,7 +345,7 @@ describe("rsv source", () => {
         minVehicles: 1,
       },
     );
-    expect(new Set(entries.map((e) => e.variant.model))).toEqual(new Set(["Up!"]));
+    expect(new Set(entries.map((e) => e.variant.model))).toEqual(new Set(["Up!", "Ka", "Ka+"]));
     expect(entries.map((e) => variantIdOf(e.variant))).toEqual([
       ...new Set(entries.map((e) => variantIdOf(e.variant))),
     ]);

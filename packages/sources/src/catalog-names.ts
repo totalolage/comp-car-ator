@@ -55,14 +55,15 @@ const MAKES: Record<string, string> = {
   "micro-compact": "Smart",
   "micro-compact-car": "Smart",
   "micro-compact-car-smart": "Smart",
-  // Title-cased makes, listed so a make the text starts with is recognised.
+  // Title-cased makes, listed so a make the text starts with is recognised and a sub-brand
+  // after it ("HONDA ACURA") is not taken for a model.
   ...Object.fromEntries(
     (
-      "Abarth Alpina Alpine Audi Bentley Brabus Bugatti Cadillac Chevrolet Chrysler Dacia " +
+      "Abarth Acura Alpina Alpine Audi Bentley Brabus Bugatti Buick Cadillac Chevrolet Chrysler Dacia " +
       "Daewoo Daihatsu Dodge Ferrari Fiat Ford Genesis Honda Hummer Hyundai Infiniti Isuzu " +
       "Jaguar Jeep Lamborghini Lancia Lexus Lotus Maserati Mazda Mclaren Mitsubishi Nissan " +
       "Opel Peugeot Polestar Porsche Renault Rover Saab Smart Subaru Suzuki Tesla Toyota " +
-      "Vauxhall Volvo"
+      "Vauxhall Volvo Datsun Scion Lincoln Mercury Pontiac Holden Maybach GMC"
     )
       .split(" ")
       .map((make) => [slugify(make), make]),
@@ -91,7 +92,7 @@ const COMPANIES: Record<string, (first: string) => string | undefined> = {
 };
 
 function daimlerChrysler(first: string): string | undefined {
-  if (/^(?:PT|VOYAGER|GRAND|CROSSFIRE|SEBRING|NEON|300C|300M)$/.test(first)) return "Chrysler";
+  if (/^(?:PT|VOYAGER|CROSSFIRE|SEBRING|NEON|300C|300M)$/.test(first)) return "Chrysler";
   const letters = /^([A-Z]{1,3})\d{0,3}$/.exec(first)?.[1];
   return letters && MERCEDES_CLASSES.has(letters) ? "Mercedes-Benz" : undefined;
 }
@@ -162,6 +163,12 @@ const LEXUS = /^(CT|ES|GS|GX|HS|IS|LBX|LC|LM|LS|LX|NX|RC|RX|RZ|SC|UX)(\d{3}[A-Z]
 /** Mini models a trim word comes with ("COUNTRYMAN COOPER S", "JCW CLUBMAN"). */
 const MINI_MODELS = new Set(["COUNTRYMAN", "CLUBMAN", "PACEMAN", "ACEMAN"]);
 
+/**
+ * Makes whose lists name different models ("A3, S3": the A3 and its S model; "SX4, S-CROSS"):
+ * which one a vehicle is cannot be told, so the list stays the name.
+ */
+const LISTS_MODELS = new Set(["audi", "suzuki"]);
+
 /** Makes whose models are numbers ("Mazda 2", "DS 7"), which some rows glue onto the make. */
 const NUMBERED_MAKES = new Set(["mazda", "ds", "jaecoo", "omoda"]);
 
@@ -182,7 +189,7 @@ const TYPOS: Record<string, Record<string, string>> = {
  */
 export function modelName(make: string, raw: string): string | undefined {
   const makeSlug = slugify(make);
-  const tokens = modelTokens(raw).map((t) => TYPOS[makeSlug]?.[t] ?? t);
+  const tokens = modelTokens(raw, LISTS_MODELS.has(makeSlug)).map((t) => TYPOS[makeSlug]?.[t] ?? t);
   // Some rows repeat the make ("ŠKODA OCTAVIA", "LYNK & CO 01"), or glue it onto a model
   // number ("MAZDA2", "JAECOO7") where the make names models by number.
   const prefix = (n: number) => slugify(tokens.slice(0, n).join(" "));
@@ -234,10 +241,14 @@ export function modelName(make: string, raw: string): string | undefined {
   return named(make, tokens, badge && ((t) => badge.test(t)));
 }
 
-/** The words of a commercial name, upper case, without diacritics and alternative names. */
-function modelTokens(raw: string): string[] {
-  // "A3, S3", "TUCSON, IX35", "TRANSIT/TOURNEO": the first name ("1,6" and "S/T" stay).
-  const first = raw.split(/(?<!\d),|,(?!\d)|;|\/(?=[^\s/]{2})/)[0] ?? "";
+/**
+ * The words of a commercial name, upper case, without diacritics and, unless `keepList`, the
+ * alternative names after the first.
+ */
+function modelTokens(raw: string, keepList = false): string[] {
+  // "TUCSON, IX35", "KONA, KAUAI", "TRANSIT/TOURNEO": one car under its market names, so the
+  // first name ("1,6" and "S/T" stay).
+  const first = keepList ? raw : (raw.split(/(?<!\d),|,(?!\d)|;|\/(?=[^\s/]{2})/)[0] ?? "");
   return (
     first
       // "CEE'D", "CEE´D": the apostrophe goes ("Ceed", as Kia now spells it).
@@ -263,7 +274,9 @@ function modelTokens(raw: string): string[] {
  */
 function joinSplitNames(tokens: string[]): void {
   const [a, b] = tokens;
-  const lettersNumber = /^[A-Z]{1,3}$/.test(a ?? "") && /^\d{1,2}$/.test(b ?? "");
+  // Letters that are not a word ("XC", "GT", "C"; and Toyota's RAV): "EVO 5" stays.
+  const letters = /^(?:[A-Z]{1,2}|[^AEIOUY\d]{3}|RAV)$/.test(a ?? "");
+  const lettersNumber = letters && /^\d{1,2}$/.test(b ?? "");
   const numberLetter = /^\d{2,3}$/.test(a ?? "") && /^[A-Z]$/.test(b ?? "");
   if (a && b && (lettersNumber || numberLetter)) {
     // Mazda writes "CX-5", "MX-5".
