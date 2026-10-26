@@ -9,7 +9,9 @@ import { vwPricelistSource } from "./vw-pricelist.ts";
 // Ceníky pages and their four lists: Tiguan, Tiguan Family, Tiguan People, ID. Polo) and
 // recorded through the real adapter in a full run, then trimmed: the overview keeps those two
 // model cards, each Ceníky page its download links, and each PDF its "Platnost od" page and
-// the pages with table headers (Ghostscript pdfwrite, -dFILTERIMAGE -dFILTERVECTOR).
+// the pages with table headers (Ghostscript pdfwrite, -dFILTERIMAGE -dFILTERVECTOR). The
+// overview's flight data, taken from the live page 2026-10-26, keeps the two models' rows
+// (Tiguan's current and previous generation, ID. Polo) and their categories, in two pushes.
 // tiguan-uncoded-row.pdf is that Tiguan list with a price "1 234 000" set in the "Cena s DPH"
 // column below the last row; tiguan-split-table.pdf is that Tiguan list with its table split
 // over two pages (PyMuPDF), the second under a header whose "Cena s DPH" reads "Cena celkem";
@@ -85,6 +87,7 @@ describe("vw-pricelist source", { timeout: 30_000 }, () => {
         model: "Tiguan",
         trim: "2,0 TSI 4MOTION / 150 kW Life",
         modelYear: 2027,
+        body: "suv",
         fuel: "petrol",
         powerKw: 150,
         transmission: "automatic",
@@ -104,6 +107,37 @@ describe("vw-pricelist source", { timeout: 30_000 }, () => {
       price: { amount: 999_000 },
       validFrom: "2026-10-08",
     });
+  });
+
+  it("states the body the model overview files each model under", async () => {
+    const offers = await harvest();
+    const bodies = (model: string) =>
+      new Set(offers.filter((o) => o.vehicle.model === model).map((o) => o.vehicle.body));
+    // "SUV"; "Elektrické vozy" and "Hatchback": only the latter names a body.
+    expect(bodies("Tiguan")).toEqual(new Set(["suv"]));
+    expect(bodies("ID. Polo")).toEqual(new Set(["hatchback"]));
+  });
+
+  it("leaves body out for a model the overview files under no body", async () => {
+    const warnings: string[] = [];
+    const unfiled = await edit("/modely", (r) => ({
+      ...r,
+      body: r.body.replace('6e4:[\\"Elektrické vozy\\",\\"Hatchback\\"]', "6e4:[]"),
+    }));
+    const offers = await harvest({ cassette: unfiled, warnings });
+    expect(offers.filter((o) => o.vehicle.model === "ID. Polo")).toHaveLength(7);
+    expect(offers.some((o) => o.vehicle.model === "ID. Polo" && o.vehicle.body)).toBe(false);
+    expect(offers.find((o) => o.ref === "tiguan/CT1CPT03")?.vehicle.body).toBe("suv");
+    expect(warnings).toEqual([]);
+
+    // Without flight data no model has a body, and the run says so.
+    const cards = await edit("/modely", (r) => ({
+      ...r,
+      body: r.body.replace(/<script>[\s\S]*?<\/script>/g, ""),
+    }));
+    const bare = await harvest({ cassette: cards, warnings });
+    expect(bare.some((o) => o.vehicle.body)).toBe(false);
+    expect(warnings).toEqual(["vw-pricelist: the model overview files no model by body"]);
   });
 
   it("full runs withdraw codes the lists dropped, incremental runs never", async () => {
