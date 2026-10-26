@@ -10,8 +10,9 @@
  *   can sit on two lines ("Laurin" over "& Klement"). Each engine row prices it in every trim
  *   line that offers it, "–" where none does. The list's own date is its "Platnost od".
  * - Rows carry no sales codes, so an Offer's code is built from what the row prices: model
- *   (with Combi/Coupé), engine, fuel, manual/automatic, drive and trim line. A price on a grid
- *   page that no row read rejects the list's withdrawals (the row would look dropped).
+ *   (with Combi/Coupé), engine, fuel, manual/automatic, drive and trim line. A price no row
+ *   read on a page of grids or engines, and a grid header that does not read, reject the
+ *   list's withdrawals (the rows would look dropped).
  * - Model year and body come from the public configurator (CC3) the site links to: its model
  *   tiles state the model year and group models by body. Missing CC3 data only leaves those
  *   two fields out.
@@ -137,12 +138,23 @@ function read(lines: PdfLine[], model: ModelLists): Edition {
   const used = new Set<PdfCell>();
   const pages = new Set<number>();
   lines.forEach((line, i) => {
-    if (!isHeader(line)) return;
-    pages.add(line.page);
-    readGrid(lines, i, model, edition, used);
+    if (isHeader(line)) {
+      pages.add(line.page);
+      readGrid(lines, i, model, edition, used);
+    } else if (new Set(line.cells.map((c) => headerKind(c.text)).filter(Boolean)).size >= 2) {
+      edition.rejected.push({
+        row: `page ${line.page}: ${line.cells.map((c) => c.text).join(" | ")}`,
+        reason: "grid header does not read",
+      });
+    }
   });
-  // A price on a grid page that no row read is a row this reader missed: its Offer would
-  // look dropped, so it rejects the list's withdrawals.
+  // A price no row read is a row this reader missed: its Offer would look dropped, so it
+  // rejects the list's withdrawals. That is such a price on a grid page, or on a page that
+  // names an engine ("1,5 TSI/110 kW") but whose grid header did not read; the other pages
+  // price options and packages.
+  for (const line of lines) {
+    if (line.cells.some((c) => ENGINE.test(c.text))) pages.add(line.page);
+  }
   for (const line of lines) {
     if (!pages.has(line.page)) continue;
     for (const c of line.cells) {
@@ -158,6 +170,8 @@ function read(lines: PdfLine[], model: ModelLists): Edition {
 }
 
 const PRICE = /^\d{1,3}(?: \d{3})+$/;
+/** An engine cell of a grid row: "1,5 TSI/150 kW iV", "210 kW". */
+const ENGINE = /^(?:\d,\d \S+\/ ?)?\d+ ?kW(?: \S+)?$/;
 
 /** A header cell's column kind, by its first word ("Verze SUV" labels an engine column). */
 function headerKind(text: string): Kind | undefined {

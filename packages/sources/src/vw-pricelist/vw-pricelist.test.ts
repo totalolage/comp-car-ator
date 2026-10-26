@@ -11,9 +11,11 @@ import { vwPricelistSource } from "./vw-pricelist.ts";
 // model cards, each Ceníky page its download links, and each PDF its "Platnost od" page and
 // the pages with table headers (Ghostscript pdfwrite, -dFILTERIMAGE -dFILTERVECTOR).
 // tiguan-uncoded-row.pdf is that Tiguan list with a price "1 234 000" set in the "Cena s DPH"
-// column below the last row.
+// column below the last row; tiguan-split-table.pdf is that Tiguan list with its table split
+// over two pages (PyMuPDF), the second under a header whose "Cena s DPH" reads "Cena celkem".
 const cassetteFile = new URL("./fixtures/lists.cassette.json", import.meta.url);
 const uncodedFile = new URL("./fixtures/tiguan-uncoded-row.pdf", import.meta.url);
+const splitFile = new URL("./fixtures/tiguan-split-table.pdf", import.meta.url);
 const now = new Date("2026-10-25T18:00:00Z");
 
 interface Run {
@@ -105,7 +107,7 @@ describe("vw-pricelist source", { timeout: 30_000 }, () => {
       edition("tiguan/CT1A4Z03", "2026-07-01"),
       edition("touareg/RC857JE2", "2025-12-16"),
       edition("tiguan/CT1CPT03", "2026-07-01"),
-      // Started after every current Tiguan list: seen gone by this run.
+      // Started after every current Tiguan list: none is newer, so it stays in force.
       edition("tiguan/CT1A7T03", "2026-10-05"),
     ];
     const full = await harvest({ inForce });
@@ -114,7 +116,6 @@ describe("vw-pricelist source", { timeout: 30_000 }, () => {
       { ...(inForce[0] as ListPrice), validTo: "2026-09-30" },
       // Its model left the overview.
       { ...(inForce[1] as ListPrice), validTo: "2026-10-24" },
-      { ...(inForce[3] as ListPrice), validTo: "2026-10-24" },
     ]);
     expect((await harvest({ mode: "incremental", inForce })).some((o) => o.validTo)).toBe(false);
   });
@@ -150,6 +151,20 @@ describe("vw-pricelist source", { timeout: 30_000 }, () => {
     });
     expect(warnings).toContain("vw-pricelist: rejected row");
     expect(offers.filter((o) => o.ref.startsWith("tiguan/"))).toHaveLength(39);
+    expect(offers.some((o) => o.validTo)).toBe(false);
+  });
+
+  it("a table whose header does not read rejects its model's withdrawals", async () => {
+    const split = Buffer.from(await readFile(splitFile)).toString("base64");
+    const warnings: string[] = [];
+    const offers = await harvest({
+      cassette: await edit("/Tiguan_MY2027_01102026.pdf", (r) => ({ ...r, bodyBase64: split })),
+      inForce: [edition("tiguan/CT1E4Z03", "2026-07-01")],
+      warnings,
+    });
+    expect(warnings).toContain("vw-pricelist: rejected row");
+    expect(offers.some((o) => o.ref === "tiguan/CT1CAM03")).toBe(true);
+    expect(offers.some((o) => o.ref === "tiguan/CT1E4Z03")).toBe(false);
     expect(offers.some((o) => o.validTo)).toBe(false);
   });
 

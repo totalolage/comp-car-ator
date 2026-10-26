@@ -110,6 +110,7 @@ function headerKind(text: string): Kind | undefined {
 }
 
 const SALES_CODE = /^(?=[A-Z0-9]*\d)[A-Z0-9]{8}$/;
+const PRICE = /^\d{1,3}(?: \d{3})+(?:,-)?(?: Kč)?$/;
 
 function read(lines: PdfLine[], model: ModelLists, url: string): Edition {
   const validFrom = validFromOf(lines);
@@ -129,7 +130,21 @@ function read(lines: PdfLine[], model: ModelLists, url: string): Edition {
       line = "";
       continue;
     }
-    if (!header || row.page !== header.page) continue;
+    // A table header that does not read, or a priced sales-code row outside the tables read,
+    // would make its Offers look dropped.
+    if (new Set(rowKinds.filter(Boolean)).size >= 2) {
+      edition.rejected.push({ row: cellText(row), reason: "table header does not read" });
+      continue;
+    }
+    if (!header || row.page !== header.page) {
+      if (
+        row.cells.some((c) => SALES_CODE.test(c.text)) &&
+        row.cells.some((c) => PRICE.test(c.text))
+      ) {
+        edition.rejected.push({ row: cellText(row), reason: "priced row outside any table" });
+      }
+      continue;
+    }
     const cells: Partial<Record<Kind, string>> = {};
     for (const c of row.cells) {
       const kind = kinds[columnOf(c, header.cells)];
@@ -139,10 +154,7 @@ function read(lines: PdfLine[], model: ModelLists, url: string): Edition {
     if (!code || !SALES_CODE.test(code)) {
       if (czk(cells.price ?? "") !== undefined) {
         // A priced row this reader cannot key would look dropped: reject it.
-        edition.rejected.push({
-          row: row.cells.map((c) => c.text).join(" | "),
-          reason: "priced row without a sales code",
-        });
+        edition.rejected.push({ row: cellText(row), reason: "priced row without a sales code" });
       } else if (row.cells.length === 1 && cells.engine && !/\d{3}/.test(cells.engine)) {
         // A trim line's name stands alone in the first column.
         line = cells.engine;
@@ -150,7 +162,7 @@ function read(lines: PdfLine[], model: ModelLists, url: string): Edition {
       continue;
     }
     const engine = cells.engine ?? "";
-    const text = row.cells.map((c) => c.text).join(" | ");
+    const text = cellText(row);
     const price = czk(cells.price ?? "");
     const powerKw = Number(
       /^(\d+)\s*\//.exec(cells.power ?? "")?.[1] ?? /(\d+) ?kW\b/.exec(engine)?.[1],
@@ -174,6 +186,10 @@ function read(lines: PdfLine[], model: ModelLists, url: string): Edition {
     edition.offers.push(offer);
   }
   return edition;
+}
+
+function cellText(row: PdfLine): string {
+  return row.cells.map((c) => c.text).join(" | ");
 }
 
 function decode(html: string): string {

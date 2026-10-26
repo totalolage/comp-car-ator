@@ -11,9 +11,9 @@
  *   came from. Withdrawals happen in full runs only (a full run is a census of the lists):
  *   an Offer in force that a model's documents no longer list, when every one of those
  *   documents was fetched and read without a rejected row, ends the day before the first of
- *   them issued after its edition started (or the day before the run, when none was); an
- *   Offer of a model the brand's index no longer lists ends the day before the run, provided
- *   every listed model read cleanly. A list that fails to read withdraws nothing (ADR 0003).
+ *   them issued after its edition started; while none was, it stays in force. An Offer of a
+ *   model the brand's index no longer lists ends the day before the run, provided every
+ *   listed model read cleanly. A list that fails to read withdraws nothing (ADR 0003, 0013).
  * - Two lists of one model may price an Offer: the same price on the same day is one edition,
  *   different days are two editions (the Ledger keeps the newer in force), and two prices on
  *   one day reject the Offer.
@@ -212,9 +212,17 @@ async function* harvest(
     let end: IsoDate | undefined;
     if (days) {
       // The first current list issued after the edition is the earliest evidence it was left
-      // out. An estimate for models with several lists: rows carry no list of origin.
+      // out. An estimate for models with several lists: rows carry no list of origin. A list
+      // no newer than the edition is no evidence it ended.
       const later = days.find((day) => day > edition.validFrom);
-      end = dayBefore(later ?? runDay);
+      if (!later) {
+        ctx.log.info(`${site.id}: offer missing from a list no newer than it; kept in force`, {
+          ref: edition.ref,
+          validFrom: edition.validFrom,
+        });
+        continue;
+      }
+      end = dayBefore(later);
     } else if (!listed.has(key) && indexClean) {
       end = dayBefore(runDay);
     }

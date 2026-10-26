@@ -11,10 +11,13 @@ import { skodaPricelistSource } from "./skoda-pricelist.ts";
 // keep title and modelId, and each PDF keeps its "Platnost od" page and price-table pages
 // (Ghostscript pdfwrite, -dFILTERIMAGE -dFILTERVECTOR). kodiaq-footnote.pdf is that Kodiaq list
 // with a footnote mark ("*") set after the Selection price of the 1,5 TSI/118 kW row;
-// kodiaq-stray-price.pdf has a price "1 111 000" set between two rows of its grid.
+// kodiaq-stray-price.pdf has a price "1 111 000" set between two rows of its grid;
+// octavia-unknown-header.pdf is that Octavia list with the Liftback grid's "Motor" header
+// cell overwritten with "Unknown" (PyMuPDF redaction), its rows and prices intact.
 const cassetteFile = new URL("./fixtures/lists.cassette.json", import.meta.url);
 const footnoteFile = new URL("./fixtures/kodiaq-footnote.pdf", import.meta.url);
 const strayFile = new URL("./fixtures/kodiaq-stray-price.pdf", import.meta.url);
+const unknownHeaderFile = new URL("./fixtures/octavia-unknown-header.pdf", import.meta.url);
 const now = new Date("2026-10-25T18:00:00Z");
 const KODIAQ = "634e9e51-81c5-4c60-8503-4ab557399835";
 const ENYAQ = "6de4c5ec-a6b4-4057-988d-0724f9d5b40d";
@@ -161,8 +164,9 @@ describe("skoda-pricelist source", { timeout: 30_000 }, () => {
     const inForce = [
       edition("kodiaq/kodiaq.2-0-tdi-85-kw.diesel.m.fwd.selection", "2026-09-01"),
       edition("citigo/citigo-e-iv.bev.x.fwd.style", "2026-03-01"),
-      // Missing from the very list it started in: seen gone by this run.
+      // Missing from a list of its own day: no list is newer, so nothing dates its end.
       edition("kodiaq/kodiaq.made-up.x.x.x.rs", "2026-10-21"),
+      edition("octavia/octavia.made-up.x.x.x.rs", "2026-10-23"),
     ];
     const full = await harvest({ inForce });
     expect(full.filter((o) => o.validTo)).toEqual([
@@ -170,7 +174,6 @@ describe("skoda-pricelist source", { timeout: 30_000 }, () => {
       { ...(inForce[0] as ListPrice), validTo: "2026-10-20" },
       // Its model left the index: ends the day before the run.
       { ...(inForce[1] as ListPrice), validTo: "2026-10-24" },
-      { ...(inForce[2] as ListPrice), validTo: "2026-10-24" },
     ]);
     expect((await harvest({ mode: "incremental", inForce })).some((o) => o.validTo)).toBe(false);
   });
@@ -217,6 +220,24 @@ describe("skoda-pricelist source", { timeout: 30_000 }, () => {
     });
     expect(warnings).toContain("skoda-pricelist: rejected row");
     expect(offers.filter((o) => o.vehicle.model === "Kodiaq")).toHaveLength(23);
+    expect(offers.some((o) => o.validTo)).toBe(false);
+  });
+
+  it("a grid whose header does not read rejects its list's withdrawals", async () => {
+    const unknown = Buffer.from(await readFile(unknownHeaderFile)).toString("base64");
+    const listed = await harvest({ source: skodaPricelistSource({ models: ["octavia"] }) });
+    expect(listed).toHaveLength(74);
+    const warnings: string[] = [];
+    const offers = await harvest({
+      source: skodaPricelistSource({ models: ["octavia"] }),
+      cassette: await edit(OCTAVIA, (r) => ({ ...r, bodyBase64: unknown })),
+      inForce: listed.map((o) => ({ ...o, validFrom: "2026-09-01" })),
+      warnings,
+    });
+    expect(warnings).toContain("skoda-pricelist: rejected row");
+    // The Liftback grid does not read; the other grids do, and nothing is withdrawn.
+    expect(offers.length).toBeGreaterThan(0);
+    expect(offers.length).toBeLessThan(74);
     expect(offers.some((o) => o.validTo)).toBe(false);
   });
 
