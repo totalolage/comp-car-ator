@@ -2,7 +2,7 @@
  * Compare tray behaviour (components/CompareTray.astro), without a framework: renders the
  * compare list from the store on every change from this page or another tab, and removes
  * or clears through the store. Items are kept per Variant id, so a re-render never takes
- * keyboard focus away; after a removal focus moves to the next remove button.
+ * keyboard focus away; after a removal focus moves to the next remove button (`render`).
  */
 import { type Lang, localePath } from "../i18n/locale.ts";
 import { siteStore } from "../lib/store.ts";
@@ -29,14 +29,36 @@ function mount(tray: HTMLElement) {
     let li = items.get(id);
     if (!li) {
       li = template.content.firstElementChild?.cloneNode(true) as HTMLLIElement;
-      li.querySelector("button")?.addEventListener("click", () => remove(id));
+      li.querySelector("button")?.addEventListener("click", () =>
+        store.setCompare(store.compare().filter((c) => c !== id)),
+      );
       items.set(id, li);
     }
     return li;
   }
 
+  /**
+   * Brings the list in line with the store. Focus inside a removed item (removed here, in
+   * another island or another tab) moves to the next item's remove button, else the previous
+   * one's, else the main content; focus on a surviving item stays where it is.
+   */
   function render() {
     const ids = store.compare();
+    const active = document.activeElement as HTMLElement | null;
+    const shown = [...items.keys()];
+    let successor: HTMLElement | null | undefined;
+    // Remove first, so survivors move only for a real reorder.
+    for (const [id, li] of items) {
+      if (ids.includes(id)) continue;
+      if (active && li.contains(active)) {
+        const at = shown.indexOf(id);
+        const rest = shown.filter((c) => ids.includes(c));
+        const next = rest[at] ?? rest[at - 1];
+        successor = next ? items.get(next)?.querySelector("button") : null;
+      }
+      li.remove();
+      items.delete(id);
+    }
     ids.forEach((id, i) => {
       const li = item(id);
       const label = store.compareLabel(id);
@@ -46,29 +68,24 @@ function mount(tray: HTMLElement) {
       span.textContent = name;
       span.title = name;
       li.querySelector("button")?.setAttribute("aria-label", fill(text.remove, { name }));
-      // Move only what is out of place: moving the focused item would blur it.
       if (list.children[i] !== li) list.insertBefore(li, list.children[i] ?? null);
     });
-    for (const [id, li] of items) {
-      if (ids.includes(id)) continue;
-      li.remove();
+    // Keep `items` in list order for the next removal's successor.
+    for (const id of ids) {
+      const li = items.get(id) as HTMLLIElement;
       items.delete(id);
+      items.set(id, li);
     }
     count.textContent = fill(text.count, { n: ids.length });
     full.hidden = ids.length < COMPARE_MAX;
     open.href = localePath(lang, "/compare/") + writeCatalogState({ compare: ids });
+    const hadFocus = !!active && tray.contains(active);
     tray.hidden = ids.length === 0;
     reserve();
-  }
-
-  function remove(id: string) {
-    const ids = store.compare();
-    const at = ids.indexOf(id);
-    const rest = ids.filter((c) => c !== id);
-    store.setCompare(rest);
-    const next = rest[at] ?? rest[at - 1];
-    const target = next ? items.get(next)?.querySelector("button") : null;
-    (target ?? document.getElementById("main"))?.focus();
+    if (hadFocus && (tray.hidden || successor === null)) document.getElementById("main")?.focus();
+    else if (successor) successor.focus();
+    // A reorder moved the focused item, which blurs it in some browsers.
+    else if (hadFocus && active?.isConnected && document.activeElement !== active) active.focus();
   }
 
   // The tray is fixed over the page bottom; the page reserves its height so nothing hides
@@ -78,10 +95,7 @@ function mount(tray: HTMLElement) {
     document.body.style.setProperty("--tray-space", `${height}px`);
   }
 
-  $<HTMLButtonElement>("[data-tray-clear]").addEventListener("click", () => {
-    store.setCompare([]);
-    document.getElementById("main")?.focus();
-  });
+  $<HTMLButtonElement>("[data-tray-clear]").addEventListener("click", () => store.setCompare([]));
   new ResizeObserver(reserve).observe(tray);
   render();
   store.subscribe(render);

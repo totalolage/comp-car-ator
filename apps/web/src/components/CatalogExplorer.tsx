@@ -70,7 +70,10 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
   useEffect(() => {
     const store = siteStore();
     const initial = withoutScope(readCatalogState(location.search), scope);
+    // A shared list replaces the remembered one; without one the URL takes the remembered
+    // list, so a copied URL carries what the pick boxes show.
     if (initial.compare) store.setCompare(initial.compare);
+    else if (store.compare().length) initial.compare = store.compare();
     setState(initial);
     setPicked(store.compare());
     openCatalog(fetchLoader(new URL("/bundle/", location.href))).then((c) => {

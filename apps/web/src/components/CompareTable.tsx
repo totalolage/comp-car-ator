@@ -23,6 +23,7 @@ export default function CompareTable({ lang }: Props) {
   // null until hydrated: the static page cannot know the list.
   const [ids, setIds] = useState<VariantId[] | null>(null);
   const [byId, setById] = useState<Map<VariantId, VariantRow> | null>(null);
+  const [failed, setFailed] = useState(false);
   const [differencesOnly, setDifferencesOnly] = useState(false);
   const [focus, setFocus] = useState<VariantId | "main" | null>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -31,16 +32,32 @@ export default function CompareTable({ lang }: Props) {
     const store = siteStore();
     const shared = readCatalogState(location.search).compare;
     if (shared) store.setCompare(shared);
-    const sync = () => setIds(store.compare());
+    let shown: VariantId[] = [];
+    const sync = () => {
+      const next = store.compare();
+      // A removed column takes its focused remove button with it, whichever page or tab
+      // removed it: hand focus to the next column's button, else the previous, else main.
+      const active = (document.activeElement as HTMLElement | null)?.dataset?.remove;
+      if (active && !next.includes(active)) {
+        const at = shown.indexOf(active);
+        const rest = shown.filter((id) => next.includes(id));
+        setFocus(rest[at] ?? rest[at - 1] ?? "main");
+      }
+      shown = next;
+      setIds(next);
+    };
     sync();
     const off = store.subscribe(sync);
-    openCatalog(fetchLoader(new URL("/bundle/", location.href))).then((c) => {
-      const rows = c.query({ limit: Number.MAX_SAFE_INTEGER }).rows;
-      setById(new Map(rows.map((v) => [v.id, v])));
-      // Names only: the list is read now, so a removal made while loading stays removed.
-      const current = store.compare();
-      store.setCompare(current, compareLabels(current, rows));
-    });
+    openCatalog(fetchLoader(new URL("/bundle/", location.href))).then(
+      (c) => {
+        const rows = c.query({ limit: Number.MAX_SAFE_INTEGER }).rows;
+        setById(new Map(rows.map((v) => [v.id, v])));
+        // Names only: the list is read now, so a removal made while loading stays removed.
+        const current = store.compare();
+        store.setCompare(current, compareLabels(current, rows));
+      },
+      () => setFailed(true),
+    );
     return off;
   }, []);
 
@@ -61,6 +78,16 @@ export default function CompareTable({ lang }: Props) {
     setFocus(null);
   }, [focus]);
 
+  if (failed && ids?.length) {
+    return (
+      <div class="empty" role="alert">
+        <p>{t.t("compare.failed")}</p>
+        <button type="button" class="button-quiet" onClick={() => location.reload()}>
+          {t.t("compare.retry")}
+        </button>
+      </div>
+    );
+  }
   if (!ids || (ids.length > 0 && !byId)) {
     return (
       <p class="empty" aria-busy="true">
@@ -82,12 +109,8 @@ export default function CompareTable({ lang }: Props) {
   const store = siteStore();
   const view = compareView(ids, byId, t, { differencesOnly });
   const present = view.columns.filter((c) => c.variant).length;
-  const remove = (id: VariantId) => {
-    const at = ids.indexOf(id);
-    const rest = ids.filter((c) => c !== id);
-    store.setCompare(rest);
-    setFocus(rest[at] ?? rest[at - 1] ?? "main");
-  };
+  // Focus follows from the store update (see `sync`).
+  const remove = (id: VariantId) => store.setCompare(ids.filter((c) => c !== id));
   const clear = () => {
     store.setCompare([]);
     setFocus("main");
@@ -99,7 +122,7 @@ export default function CompareTable({ lang }: Props) {
         <label>
           <input
             type="checkbox"
-            checked={differencesOnly}
+            checked={differencesOnly && present > 1}
             disabled={present < 2}
             onChange={(e) => setDifferencesOnly((e.target as HTMLInputElement).checked)}
           />

@@ -103,6 +103,9 @@ describe("compare view", () => {
     expect(view.groups[0]?.lines.map((l) => l.id)).toEqual(["fuel", "power", "drive"]);
     const same = compareView(["a", "a2"], index(a, variant("a2")), cs, { differencesOnly: true });
     expect(same.groups).toEqual([]);
+    // Down to one Variant in the catalog, nothing can differ: show it whole.
+    const one = compareView(["a", "gone"], index(a), cs, { differencesOnly: true });
+    expect(line(one, "make")?.values).toEqual(["Škoda", MISSING]);
   });
 
   it("keeps an id the catalog no longer has as a stale column outside the comparison", () => {

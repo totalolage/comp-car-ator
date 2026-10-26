@@ -44,7 +44,8 @@ export interface CompareView {
  * The side-by-side view of `ids`. Values are compared as printed, so two prices that round
  * to the same crown do not differ, and a value one Variant lacks differs from one another
  * has. Lines no Variant has a value for are left out; with `differencesOnly`, so are lines
- * that do not differ (and groups left empty).
+ * that do not differ (and groups left empty), as long as two or more Variants are still in
+ * the catalog: with fewer nothing can differ, and hiding every line would hide the Variant.
  */
 export function compareView(
   ids: readonly VariantId[],
@@ -62,6 +63,7 @@ export function compareView(
     };
   });
   const present = columns.flatMap((c) => (c.variant ? [c.variant] : []));
+  const onlyDiffering = differencesOnly && present.length > 1;
   const groups: CompareGroup[] = [];
   for (const group of GROUPS) {
     const lines: CompareLine[] = [];
@@ -69,7 +71,7 @@ export function compareView(
       const shown = present.map((v) => line.value(v, t));
       if (shown.every((s) => s === MISSING)) continue;
       const differs = new Set(shown).size > 1;
-      if (differencesOnly && !differs) continue;
+      if (onlyDiffering && !differs) continue;
       lines.push({
         id: line.id,
         label: line.label,
