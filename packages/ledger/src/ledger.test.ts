@@ -177,14 +177,18 @@ describe("Ledger", () => {
       const insert = db.prepare(
         "INSERT INTO catalog_entries (variant_id, source, data, updated) VALUES (?, 'rsv', ?, '2026-10-01')",
       );
+      const v = octavia.variant;
       const dot = {
-        ...octavia.variant,
+        ...v,
         make: "Lada - Vaz",
         model: ".",
         generation: { slug: "2111", name: ". 2111" },
       };
       insert.run("lada-vaz//2111/wagon-diesel-110kw", JSON.stringify(dot));
-      insert.run("skoda/octavia/mk4/wagon-diesel-110kw", JSON.stringify(octavia.variant));
+      insert.run("/octavia/mk4/wagon-diesel-110kw", JSON.stringify({ ...v, make: "?" }));
+      const noGeneration = { ...v, generation: { ...v.generation, slug: "-" } };
+      insert.run("skoda/octavia//wagon-diesel-110kw", JSON.stringify(noGeneration));
+      insert.run("skoda/octavia/mk4/wagon-diesel-110kw", JSON.stringify(v));
       db.prepare("UPDATE meta SET value = '2' WHERE key = 'schema_version'").run();
       db.close();
 
