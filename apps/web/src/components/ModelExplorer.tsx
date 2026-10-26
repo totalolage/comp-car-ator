@@ -285,25 +285,23 @@ function EnumFacet(props: {
   return (
     <fieldset class="facet" data-facet={facet}>
       <legend>{t.t(`facet.${facet}` as MessageKey)}</legend>
-      <div class={options.length > 12 ? "facet-scroll" : undefined}>
-        {options.map(({ value, label, count, checked }) => (
-          <label key={value} class="facet-option">
-            <input
-              type="checkbox"
-              name={facet}
-              value={value}
-              checked={checked}
-              disabled={disabled}
-              aria-label={`${label}, ${t.count("count.listingsFacet", count)}`}
-              onChange={() => onToggle(value)}
-            />
-            <span class="facet-label">{label}</span>
-            <span class="count" aria-hidden="true">
-              {count}
-            </span>
-          </label>
-        ))}
-      </div>
+      {options.map(({ value, label, count, checked }) => (
+        <label key={value} class="facet-option">
+          <input
+            type="checkbox"
+            name={facet}
+            value={value}
+            checked={checked}
+            disabled={disabled}
+            aria-label={`${label}, ${t.count("count.listingsFacet", count)}`}
+            onChange={() => onToggle(value)}
+          />
+          <span class="facet-label">{label}</span>
+          <span class="count" aria-hidden="true">
+            {count}
+          </span>
+        </label>
+      ))}
     </fieldset>
   );
 }

@@ -39,7 +39,7 @@ Sentence case everywhere; no uppercase labels.
 │ Katalog › Škoda › Octavia                                                   (breadcrumb)  │
 │ Page title                                                                                │
 │ ┌ rail 15rem ──┐ ┌ results ─────────────────────────────────────────────────────────────┐ │
-│ │ facet groups │ │ count · dense table in .table-scroll, sticky header row              │ │
+│ │ facet groups │ │ count · dense table in .table-scroll                                 │ │
 │ └──────────────┘ └──────────────────────────────────────────────────────────────────────┘ │
 │ footer: data date, counts, note                                                            │
 └ compare tray (fixed bar while the list has Variants): Porovnání 2 ze 4 · names × · Porovnat ┘
@@ -50,9 +50,22 @@ Sentence case everywhere; no uppercase labels.
   models. It is `<details>`, so it needs no script; the shell script only closes it on Escape
   or an outside click.
 - `.split` = rail + results. Below 48rem it stacks and the rail becomes a grid of facet groups.
-- Tables sit in `.table-scroll`, a box at most one viewport tall (below the masthead) that
-  scrolls both ways: a table wider than its column never widens the page, and the header row
-  sticks to the top of the box at every width.
+- Scrolling: the masthead sticks to the top. From 48rem both `.split` columns are sticky and
+  neither scrolls on its own: the longer one scrolls with the page; the shorter one stays
+  pinned under the masthead if it fits the viewport, or scrolls until its end is in view and
+  then stays, so the split scrolls only while the longer column has more to show (the footer
+  follows it). Both stop above the compare tray.
+- The page is the only vertical scroller on the catalog, model and compare pages: no table,
+  list or panel scrolls vertically on its own. The one exception is the Kategorie menu panel,
+  which overlays the page and scrolls itself when it is taller than the viewport.
+- Tables sit in `.table-scroll`, a box as tall as its table that only scrolls sideways: a
+  table wider than its column never widens the page. The header row stays under the masthead
+  while its table's rows pass and leaves with the last rows (a header row taller than the
+  table's `--table-head` allowance is clipped as it leaves). A sideways scroll box would
+  catch a sticky header, so a CSS view timeline moves the header cells instead; where view
+  timelines are missing (Firefox) the header row scrolls away with the rows.
+- Viewport heights use `dvh`, so they follow mobile browser chrome as it slides in and out
+  instead of assuming the tallest viewport.
 - Content is fluid up to `--page-max` (100rem), with a 16px gutter (12px narrow).
 
 ## Catalog page
@@ -73,7 +86,7 @@ Sentence case everywhere; no uppercase labels.
   and source counts overlap, so they stay plain. A footnote under the rail says this, and
   each checkbox's accessible name carries the count's meaning (ADR 0009). Enum options keep a fixed
   order (vocabulary order, or by name), and a chosen value with no matches stays listed so it
-  can be unchosen. Lists over 12 values scroll inside their group.
+  can be unchosen. Long lists (makes, models) show in full; the page scrolls them.
 - Range fields narrow on every keystroke that parses (Czech `1,5` is fine); the placeholder
   shows the bound the other filters leave.
 - Table: make and model link to the model page, then generation, years, body, fuel, power,
@@ -147,7 +160,7 @@ Sentence case everywhere; no uppercase labels.
 
 `masthead`, `wordmark` (mark + site name), `menu` / `menu-panel` / `tree`, `crumbs`,
 `page-title`, `page-summary`, `section-title`, `split` / `rail` / `results`, `facet` / `facet-option` / `facet-note`, `button-quiet`,
-`facet-scroll`, `range`, `bands` / `band`, `rail-toggle`, `data` (table; `.num` right-aligns;
+`range`, `bands` / `band`, `rail-toggle`, `data` (table; `.num` right-aligns;
 `.sort` header buttons), `table-scroll`, `results-more`, `subcategories`, `count`, `badge`,
 `empty`, `colophon`, `pick`, `tray` / `tray-items` / `tray-item` / `tray-remove`,
 `compare-tools`, `compare-table` / `compare-group` / `compare-detail` / `compare-gone`; model page: `variants`, `stats`, `data-auto`, `tag` / `tag-quiet`, `sub`, `change`,

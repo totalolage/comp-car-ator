@@ -12,11 +12,15 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* Scrolled-to targets land between the sticky masthead and the fixed compare tray. */
+  scroll-padding: var(--masthead) 0 var(--tray-space, 0px);
 }
 
+/* Viewport heights use dvh: it follows mobile browser chrome as it slides in and out, where
+   vh is the tallest viewport and leaves a band below short pages. */
 body {
   margin: 0;
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--paper);
@@ -178,7 +182,7 @@ a:hover {
   left: 0;
   right: 0;
   top: var(--masthead);
-  max-height: calc(100vh - var(--masthead));
+  max-height: calc(100dvh - var(--masthead) - var(--tray-space, 0px));
   overflow: auto;
   display: grid;
   grid-template-columns: 1fr 12rem;
@@ -310,15 +314,28 @@ main:focus {
   display: grid;
   grid-template-columns: var(--rail) minmax(0, 1fr);
   gap: var(--s6);
-  align-items: start;
+}
+
+/*
+ * Both columns are sticky and the page is the only vertical scroller. The longer column
+ * sets the grid's height, so it scrolls with the page. The shorter one sits at the end of
+ * its grid area and sticks by its bottom edge above the tray: taller than the viewport, it
+ * scrolls with the page until its end is in view and then stays; shorter, min-height
+ * stretches it to the viewport below the masthead, so its content stays pinned under the
+ * masthead. The far-negative top keeps the sticky view rectangle taller than the column;
+ * otherwise a column taller than the viewport has its bottom inset cut to fit and never
+ * sticks by its end. It holds for columns up to 100000px; raise it if one ever gets taller.
+ */
+.rail,
+.results {
+  position: sticky;
+  top: -100000px;
+  bottom: var(--tray-space, 0px);
+  align-self: end;
+  min-height: calc(100dvh - var(--masthead) - var(--s3) - var(--tray-space, 0px));
 }
 
 .rail {
-  position: sticky;
-  top: calc(var(--masthead) + var(--s3));
-  /* Ends above the compare tray, so the rail's last controls stay reachable. */
-  max-height: calc(100vh - var(--masthead) - var(--s6) - var(--tray-space, 0px));
-  overflow: auto;
   font-size: var(--text-sm);
 }
 
@@ -372,12 +389,6 @@ main:focus {
 
 .facet-label {
   flex: 1;
-}
-
-/* Long value lists (makes, models) scroll inside their group. */
-.facet-scroll {
-  max-height: 16rem;
-  overflow-y: auto;
 }
 
 .facet-note {
@@ -480,17 +491,67 @@ main:focus {
 
 /* Dense data table -------------------------------------------------------------------- */
 
-/* A table wider than its column scrolls sideways in its own box, never the page. A box that
-   scrolls on one axis scrolls on both, so the header row sticks to the box's top instead of
-   the masthead; capping the box at the viewport below the masthead keeps it in view. */
+/* A table wider than its column scrolls sideways in its own box, never the page. The box is
+   as tall as its table, so the page is the only vertical scroller and scrolls the rows. */
 .table-scroll {
-  max-height: calc(100dvh - var(--masthead));
-  overflow: auto;
-  /* Keyboard focus scrolled into view lands below the sticky header row, not behind it. */
-  scroll-padding-top: 2rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/*
+ * A box that scrolls sideways is a scroll container on both axes, so a sticky header row
+ * would stick to the box, which never scrolls vertically. Instead the header cells follow
+ * the page with a view timeline: from when the box's top passes under the masthead they
+ * move down 1:1 with the scroll (the 100000px range and translate are equal, so the speed
+ * is 1), and a second, added animation cancels that from --table-head before the box's
+ * bottom, so the row stops on the last rows and leaves with them; a table shorter than
+ * --table-head never moves its header. --table-head should be at least the header row's
+ * height: a taller row overhangs the box bottom and is clipped there while the last rows
+ * leave. Tracking holds for tables up to 100000px tall; raise both numbers if one ever gets
+ * taller. Without view timelines (Firefox) the header row scrolls away with the rows.
+ */
+@supports (animation-timeline: view()) {
+  .table-scroll {
+    view-timeline: --table-box block;
+    view-timeline-inset: var(--masthead) 0px;
+  }
+
+  /* Longhands only: the minifier folds a timeline into the animation shorthand, which
+     browsers then reject. */
+  .data thead :is(th, td) {
+    animation-name: table-head-follow, table-head-stop;
+    animation-duration: auto;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+    animation-composition: replace, add;
+    animation-timeline: --table-box;
+    animation-range:
+      exit-crossing 0% exit-crossing 100000px,
+      exit-crossing max(0px, 100% - var(--table-head)) exit-crossing
+      calc(max(0px, 100% - var(--table-head)) + 100000px);
+  }
+
+  /* Keyboard focus scrolled into view lands below the header row, not behind it. */
+  .data tbody * {
+    scroll-margin-top: var(--table-head);
+  }
+}
+
+@keyframes table-head-follow {
+  to {
+    translate: 0 100000px;
+  }
+}
+
+@keyframes table-head-stop {
+  to {
+    translate: 0 -100000px;
+  }
 }
 
 .data {
+  /* Header row height or more; see .table-scroll. */
+  --table-head: 2rem;
   width: 100%;
   border-collapse: collapse;
   font-size: var(--text-sm);
@@ -507,8 +568,9 @@ main:focus {
 }
 
 .data thead th {
-  position: sticky;
-  top: 0;
+  /* Over the body rows it moves across. */
+  position: relative;
+  z-index: 2;
   background: var(--panel);
   border-bottom-color: var(--rule-strong);
   color: var(--ink-strong);
@@ -589,6 +651,7 @@ body {
   align-items: center;
   gap: var(--s1) var(--s3);
   padding: var(--s2) var(--gutter);
+  padding-bottom: calc(var(--s2) + env(safe-area-inset-bottom, 0px));
   border-top: 2px solid var(--rule-strong);
   background: var(--paper);
   font-size: var(--text-sm);
@@ -681,6 +744,9 @@ body {
 }
 
 .compare-table {
+  /* Variant names wrap to a few lines above the remove button; 7rem fits two-line names and
+     details. A longer name only clips the header as the table's last rows leave. */
+  --table-head: 7rem;
   width: auto;
 }
 
@@ -704,7 +770,7 @@ body {
 }
 
 .compare-table thead :is(th, td):first-child {
-  z-index: 2;
+  z-index: 3;
   background: var(--panel);
 }
 
@@ -1068,7 +1134,7 @@ body {
 
 /* Narrow screens ---------------------------------------------------------------------- */
 
-@media (max-width: 47.99rem) {
+@media (width < 48rem) {
   :root {
     --gutter: var(--s3);
   }
@@ -1091,6 +1157,13 @@ body {
   .split {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--s3);
+  }
+
+  .rail,
+  .results {
+    position: static;
+    align-self: auto;
+    min-height: 0;
   }
 
   .rail-toggle {
@@ -1122,8 +1195,6 @@ body {
   }
 
   .rail {
-    position: static;
-    max-height: none;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
     gap: 0 var(--s4);

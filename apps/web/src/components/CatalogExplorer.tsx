@@ -174,28 +174,26 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
           return (
             <fieldset key={facet.key} class="facet" data-facet={facet.key}>
               <legend>{t.t(`facet.${facet.key}`)}</legend>
-              <div class={options.length > 12 ? "facet-scroll" : undefined}>
-                {options.map(({ value, label, count, checked, adds }) => {
-                  const meaning = t.count(adds ? "count.facetAdds" : "count.variants", count);
-                  return (
-                    <label key={value} class="facet-option">
-                      <input
-                        type="checkbox"
-                        name={facet.key}
-                        value={value}
-                        checked={checked}
-                        disabled={!catalog}
-                        aria-label={`${label}, ${meaning}`}
-                        onChange={() => toggle(facet.key, value)}
-                      />
-                      <span class="facet-label">{label}</span>
-                      <span class="count" title={meaning} aria-hidden="true">
-                        {adds ? `+${count}` : count}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
+              {options.map(({ value, label, count, checked, adds }) => {
+                const meaning = t.count(adds ? "count.facetAdds" : "count.variants", count);
+                return (
+                  <label key={value} class="facet-option">
+                    <input
+                      type="checkbox"
+                      name={facet.key}
+                      value={value}
+                      checked={checked}
+                      disabled={!catalog}
+                      aria-label={`${label}, ${meaning}`}
+                      onChange={() => toggle(facet.key, value)}
+                    />
+                    <span class="facet-label">{label}</span>
+                    <span class="count" title={meaning} aria-hidden="true">
+                      {adds ? `+${count}` : count}
+                    </span>
+                  </label>
+                );
+              })}
             </fieldset>
           );
         })}
