@@ -206,7 +206,8 @@ class Run {
    * Every search item of a leaf band, paged once more when a pass has fewer distinct results
    * than the band reports (a listing removed meanwhile shifts the next one onto a page already
    * read). A pass is complete when it alone reaches the highest total its pages reported;
-   * skipped listings count, as the total counts them. The items of both passes come out.
+   * skipped listings count, as the total counts them. The items of both passes come out, each
+   * as last served, so a listing priced or dated into scope by the second pass is not skipped.
    * Consecutive pages overlap a little in case deletions shift the order up.
    */
   private async census(
@@ -227,7 +228,7 @@ class Run {
           // A malformed entry has no id: its place stands in for it.
           const key = refOf(item) ?? `@${offset + i}`;
           distinct.add(key);
-          if (!items.has(key)) items.set(key, item);
+          items.set(key, item);
         }
         if (page.items.length < this.pageSize || offset + step >= page.total) break;
         offset += step;

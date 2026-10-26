@@ -155,6 +155,11 @@ const NEW_LOW = "new/0-134217728";
 const newLow = (query: URLSearchParams) =>
   query.get("condition_seo") === "nove" && query.get("price_from") === "0";
 const empty = { total: 0, results: [] };
+/** A search over `list`, served in pages of 4 from the query's offset. */
+const paged = (list: ApiItem[]) => (query: URLSearchParams) => {
+  const offset = Number(query.get("offset"));
+  return { total: list.length, results: list.slice(offset, offset + 4) };
+};
 const ALL_SLICES = ["new", "demo", "used"].flatMap((c) => [`${c}/0-134217728`, `${c}/134217728-`]);
 
 const isDetail = (ref: string) => (url: string) => url.endsWith(`/api/v1/items/${ref}`);
@@ -541,11 +546,35 @@ describe("sauto source", () => {
     const { observations, error } = await harvestSite("full", (q) => {
       if (!newLow(q)) return empty;
       passes++;
-      return { total: 3, results: passes === 1 ? cars(1, 2) : cars(1, 2, 3) };
+      // The first pass misses 3 and serves 1 without a price; the second has it priced.
+      const unpriced = car(1, { price: null, price_by_agreement: true });
+      return { total: 3, results: passes === 1 ? [unpriced, car(2)] : cars(1, 2, 3) };
     });
     expect(error).toBeUndefined();
     expect(listings(observations).map((o) => o.ref)).toEqual(["1", "2", "3"]);
     expect(slices(observations)).toEqual(ALL_SLICES);
+  });
+
+  it("full run judges each pass alone, against the highest total its pages reported", async () => {
+    // Two short passes that together hold all 3 results.
+    let passes = 0;
+    const apart = await harvestSite("full", (q) => {
+      if (!newLow(q)) return empty;
+      passes++;
+      return { total: 3, results: passes === 1 ? cars(1, 2) : cars(2, 3) };
+    });
+    expect(String(apart.error)).toMatch(/fewer results than reported: new\/0-134217728$/);
+    expect(listings(apart.observations).map((o) => o.ref)).toEqual(["1", "2", "3"]);
+    expect(slices(apart.observations)).not.toContain(NEW_LOW);
+    // The first page reports 6, the next only 5; 5 distinct do not reach 6.
+    const shrunk = await harvestSite("full", (q) => {
+      if (!newLow(q)) return empty;
+      return q.get("offset") === "0"
+        ? { total: 6, results: cars(1, 2, 3, 4) }
+        : { total: 5, results: cars(4, 5) };
+    });
+    expect(String(shrunk.error)).toMatch(/fewer results than reported: new\/0-134217728$/);
+    expect(slices(shrunk.observations)).not.toContain(NEW_LOW);
   });
 
   it("first incremental run judges a listing known as it was before the run yielded it", async () => {
@@ -581,26 +610,25 @@ describe("sauto source", () => {
   });
 
   it("keeps listings made before 2000 out, and counts them towards a band's total", async () => {
-    const results = [
+    // A first page of nothing in scope, which must not end a first run's walk.
+    const list = [
       car(1, { manufacturing_date: "1999-12-01" }),
-      car(2, { manufacturing_date: "2000-01-01" }),
       // Without a year of manufacture, the first registration's year counts.
       car(3, { manufacturing_date: null, in_operation_date: "1999-06-01" }),
+      car(6, { manufacturing_date: "1990-01-01" }),
+      car(7, { price: null, price_by_agreement: true }),
+      car(2, { manufacturing_date: "2000-01-01" }),
       car(4, { manufacturing_date: null, in_operation_date: "2000-03-01" }),
       // Only the detail dates this one.
       car(5, { manufacturing_date: null }),
     ];
     const details = { 5: { manufacturing_date: "1998-01-01" } };
-    const incremental = await harvestSite(
-      "incremental",
-      (q) => (q.get("offset") === "0" ? { total: 5, results } : empty),
-      { details },
-    );
+    const incremental = await harvestSite("incremental", paged(list), { details });
     expect(incremental.error).toBeUndefined();
     expect(listings(incremental.observations).map((o) => o.ref)).toEqual(["2", "4"]);
     expect(searches(incremental.urls).every((u) => u.includes("vehicle_age_from=2000"))).toBe(true);
-    expect(incremental.urls.some((u) => /\/items\/[13]$/.test(u))).toBe(false);
-    const full = await harvestSite("full", (q) => (newLow(q) ? { total: 5, results } : empty), {
+    expect(incremental.urls.some((u) => /\/items\/[1367]$/.test(u))).toBe(false);
+    const full = await harvestSite("full", (q) => (newLow(q) ? paged(list)(q) : empty), {
       details,
     });
     expect(full.error).toBeUndefined();
