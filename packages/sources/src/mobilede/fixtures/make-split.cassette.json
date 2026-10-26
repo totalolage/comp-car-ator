@@ -31,10 +31,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A999999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A999999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A999999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A999999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -45,10 +45,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A499999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A499999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A499999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A499999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -59,10 +59,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A249999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A249999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A249999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A249999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -73,10 +73,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A124999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A124999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A124999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A124999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -87,10 +87,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A62499.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A62499"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A62499.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A62499",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -101,10 +101,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A31249.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A31249"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A31249.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=0%3A31249",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -115,10 +115,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31250%3A62499.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31249%3A62499"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31250%3A62499.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31249%3A62499",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -129,10 +129,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31250%3A46874.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31249%3A46874"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31250%3A46874.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31249%3A46874",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -143,10 +143,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31250%3A39062.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31249%3A39061"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31250%3A39062.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31249%3A39061",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -157,10 +157,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31250%3A35156.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31249%3A35155"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31250%3A35156.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=31249%3A35155",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -171,10 +171,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=35157%3A39062.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=35155%3A39061"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=35157%3A39062.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=35155%3A39061",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -185,10 +185,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=35157%3A37109.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=35155%3A37108"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=35157%3A37109.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=35155%3A37108",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -199,10 +199,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=37110%3A39062.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=37108%3A39061"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=37110%3A39062.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=37108%3A39061",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -213,10 +213,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=37110%3A38086.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=37108%3A38084"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=37110%3A38086.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=37108%3A38084",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -227,10 +227,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38087%3A39062.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38084%3A39061"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38087%3A39062.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38084%3A39061",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -241,10 +241,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38087%3A38574.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38084%3A38572"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38087%3A38574.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38084%3A38572",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -255,10 +255,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38575%3A39062.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38572%3A39061"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38575%3A39062.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38572%3A39061",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -269,10 +269,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38575%3A38818.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38572%3A38816"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38575%3A38818.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38572%3A38816",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -283,10 +283,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38819%3A39062.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38816%3A39061"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38819%3A39062.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38816%3A39061",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -297,10 +297,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38819%3A38940.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38816%3A38938"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38819%3A38940.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38816%3A38938",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -311,10 +311,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38941%3A39062.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38938%3A39061"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38941%3A39062.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38938%3A39061",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -325,10 +325,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38941%3A39001.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38938%3A38999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38941%3A39001.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38938%3A38999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -339,10 +339,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38941%3A38971.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38938%3A38968"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38941%3A38971.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38938%3A38968",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -353,10 +353,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38972%3A39001.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38968%3A38999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38972%3A39001.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38968%3A38999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -367,10 +367,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38972%3A38986.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38968%3A38983"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38972%3A38986.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38968%3A38983",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -381,10 +381,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38987%3A39001.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38983%3A38999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38987%3A39001.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38983%3A38999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -395,10 +395,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38987%3A38994.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38983%3A38991"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38987%3A38994.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38983%3A38991",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -409,10 +409,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38995%3A39001.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38991%3A38999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38995%3A39001.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38991%3A38999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -423,10 +423,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38995%3A38998.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38991%3A38995"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38995%3A38998.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38991%3A38995",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -437,10 +437,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39001.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38995%3A38999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39001.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38995%3A38999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -451,38 +451,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39000.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38995%3A38997"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39000.99",
-        "status": 200,
-        "headers": {
-          "content-type": "text/html; charset=utf-8"
-        },
-        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":2,\\\"listings\\\":[{\\\"id\\\":454384877,\\\"type\\\":\\\"topOfPage\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"14482\\\",\\\"loc\\\":\\\"Potsdam\\\",\\\"pw\\\":\\\"150 kW (204 PS)\\\",\\\"ft\\\":\\\"Diesel\\\",\\\"ml\\\":\\\"0 km\\\",\\\"cc\\\":\\\"1.968 cm³\\\",\\\"csmpt\\\":\\\"5,7 l/100km (komb.)\\\",\\\"emiss\\\":\\\"148 g CO₂/km (komb.)\\\",\\\"co2class\\\":\\\"CO₂-Klasse E (komb.)\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"con\\\":\\\"Neuwagen\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"EstateCar\\\",\\\"emc\\\":\\\"Euro 6e\\\",\\\"nw\\\":\\\"1.975 kg\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":72999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Audi\\\"},\\\"model\\\":{\\\"localized\\\":\\\"A5\\\"},\\\"numImages\\\":20,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Kombi\\\",\\\"isConditionNew\\\":true,\\\"customDimensions\\\":{\\\"10\\\":\\\"platinum\\\"},\\\"leasingRate\\\":{\\\"type\\\":\\\"COMMERCIAL\\\",\\\"downPayment\\\":0,\\\"termOfContract\\\":48,\\\"annualMileage\\\":10000,\\\"netRate\\\":555,\\\"leasingFactor\\\":0.81},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":44481897375264,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"07/2016\\\",\\\"pw\\\":\\\"270 kW (367 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"122.000 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Weiß\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"SportsCar\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"HIGH_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Mercedes-Benz\\\"},\\\"model\\\":{\\\"localized\\\":\\\"GLE 450\\\"},\\\"numImages\\\":15,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Sportwagen/Coupé\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":43061006993376,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"11/2017\\\",\\\"pw\\\":\\\"265 kW (360 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"119.990 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"OffRoad\\\",\\\"emc\\\":\\\"Euro6\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Porsche\\\"},\\\"model\\\":{\\\"localized\\\":\\\"Macan\\\"},\\\"numImages\\\":14,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"SUV/Geländewagen/Pickup\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null}],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n2:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-44481897375264-7\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/5a/5a5a7e0e-6324-4fe1-86f2-55bf2d5b7e35\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-8-title\\\",\\\"title\\\":\\\"Mercedes-Benz GLE 450 GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\",\\\"subTitle\\\":\\\"GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":44481897375264,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n3:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-43061006993376-0\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/52/52017e90-e6f9-45a7-8102-0dd78efbee29\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-1-title\\\",\\\"title\\\":\\\"Porsche Macan GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\",\\\"subTitle\\\":\\\"GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":43061006993376,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n\"])</script></body></html>",
-        "tier": "T2"
-      }
-    },
-    {
-      "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A38999.99"
-      },
-      "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A38999.99",
-        "status": 200,
-        "headers": {
-          "content-type": "text/html; charset=utf-8"
-        },
-        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":2,\\\"listings\\\":[{\\\"id\\\":454384877,\\\"type\\\":\\\"topOfPage\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"14482\\\",\\\"loc\\\":\\\"Potsdam\\\",\\\"pw\\\":\\\"150 kW (204 PS)\\\",\\\"ft\\\":\\\"Diesel\\\",\\\"ml\\\":\\\"0 km\\\",\\\"cc\\\":\\\"1.968 cm³\\\",\\\"csmpt\\\":\\\"5,7 l/100km (komb.)\\\",\\\"emiss\\\":\\\"148 g CO₂/km (komb.)\\\",\\\"co2class\\\":\\\"CO₂-Klasse E (komb.)\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"con\\\":\\\"Neuwagen\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"EstateCar\\\",\\\"emc\\\":\\\"Euro 6e\\\",\\\"nw\\\":\\\"1.975 kg\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":72999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Audi\\\"},\\\"model\\\":{\\\"localized\\\":\\\"A5\\\"},\\\"numImages\\\":20,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Kombi\\\",\\\"isConditionNew\\\":true,\\\"customDimensions\\\":{\\\"10\\\":\\\"platinum\\\"},\\\"leasingRate\\\":{\\\"type\\\":\\\"COMMERCIAL\\\",\\\"downPayment\\\":0,\\\"termOfContract\\\":48,\\\"annualMileage\\\":10000,\\\"netRate\\\":555,\\\"leasingFactor\\\":0.81},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":44481897375264,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"07/2016\\\",\\\"pw\\\":\\\"270 kW (367 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"122.000 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Weiß\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"SportsCar\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"HIGH_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Mercedes-Benz\\\"},\\\"model\\\":{\\\"localized\\\":\\\"GLE 450\\\"},\\\"numImages\\\":15,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Sportwagen/Coupé\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":43061006993376,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"11/2017\\\",\\\"pw\\\":\\\"265 kW (360 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"119.990 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"OffRoad\\\",\\\"emc\\\":\\\"Euro6\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Porsche\\\"},\\\"model\\\":{\\\"localized\\\":\\\"Macan\\\"},\\\"numImages\\\":14,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"SUV/Geländewagen/Pickup\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null}],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n2:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-44481897375264-7\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/5a/5a5a7e0e-6324-4fe1-86f2-55bf2d5b7e35\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-8-title\\\",\\\"title\\\":\\\"Mercedes-Benz GLE 450 GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\",\\\"subTitle\\\":\\\"GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":44481897375264,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n3:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-43061006993376-0\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/52/52017e90-e6f9-45a7-8102-0dd78efbee29\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-1-title\\\",\\\"title\\\":\\\"Porsche Macan GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\",\\\"subTitle\\\":\\\"GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":43061006993376,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n\"])</script></body></html>",
-        "tier": "T2"
-      }
-    },
-    {
-      "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1400&p=38999%3A38999.99"
-      },
-      "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1400&p=38999%3A38999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38995%3A38997",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -493,10 +465,24 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=38999%3A38999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38997%3A38999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=38999%3A38999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38997%3A38999",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":2,\\\"listings\\\":[{\\\"id\\\":454384877,\\\"type\\\":\\\"topOfPage\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"14482\\\",\\\"loc\\\":\\\"Potsdam\\\",\\\"pw\\\":\\\"150 kW (204 PS)\\\",\\\"ft\\\":\\\"Diesel\\\",\\\"ml\\\":\\\"0 km\\\",\\\"cc\\\":\\\"1.968 cm³\\\",\\\"csmpt\\\":\\\"5,7 l/100km (komb.)\\\",\\\"emiss\\\":\\\"148 g CO₂/km (komb.)\\\",\\\"co2class\\\":\\\"CO₂-Klasse E (komb.)\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"con\\\":\\\"Neuwagen\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"EstateCar\\\",\\\"emc\\\":\\\"Euro 6e\\\",\\\"nw\\\":\\\"1.975 kg\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":72999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Audi\\\"},\\\"model\\\":{\\\"localized\\\":\\\"A5\\\"},\\\"numImages\\\":20,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Kombi\\\",\\\"isConditionNew\\\":true,\\\"customDimensions\\\":{\\\"10\\\":\\\"platinum\\\"},\\\"leasingRate\\\":{\\\"type\\\":\\\"COMMERCIAL\\\",\\\"downPayment\\\":0,\\\"termOfContract\\\":48,\\\"annualMileage\\\":10000,\\\"netRate\\\":555,\\\"leasingFactor\\\":0.81},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":44481897375264,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"07/2016\\\",\\\"pw\\\":\\\"270 kW (367 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"122.000 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Weiß\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"SportsCar\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"HIGH_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Mercedes-Benz\\\"},\\\"model\\\":{\\\"localized\\\":\\\"GLE 450\\\"},\\\"numImages\\\":15,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Sportwagen/Coupé\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":43061006993376,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"11/2017\\\",\\\"pw\\\":\\\"265 kW (360 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"119.990 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"OffRoad\\\",\\\"emc\\\":\\\"Euro6\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Porsche\\\"},\\\"model\\\":{\\\"localized\\\":\\\"Macan\\\"},\\\"numImages\\\":14,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"SUV/Geländewagen/Pickup\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null}],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n2:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-44481897375264-7\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/5a/5a5a7e0e-6324-4fe1-86f2-55bf2d5b7e35\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-8-title\\\",\\\"title\\\":\\\"Mercedes-Benz GLE 450 GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\",\\\"subTitle\\\":\\\"GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":44481897375264,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n3:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-43061006993376-0\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/52/52017e90-e6f9-45a7-8102-0dd78efbee29\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-1-title\\\",\\\"title\\\":\\\"Porsche Macan GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\",\\\"subTitle\\\":\\\"GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":43061006993376,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38997%3A38998"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38997%3A38998",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -507,10 +493,80 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=17200&p=38999%3A38999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38998%3A38999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=17200&p=38999%3A38999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38998%3A38999",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":2,\\\"listings\\\":[{\\\"id\\\":454384877,\\\"type\\\":\\\"topOfPage\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"14482\\\",\\\"loc\\\":\\\"Potsdam\\\",\\\"pw\\\":\\\"150 kW (204 PS)\\\",\\\"ft\\\":\\\"Diesel\\\",\\\"ml\\\":\\\"0 km\\\",\\\"cc\\\":\\\"1.968 cm³\\\",\\\"csmpt\\\":\\\"5,7 l/100km (komb.)\\\",\\\"emiss\\\":\\\"148 g CO₂/km (komb.)\\\",\\\"co2class\\\":\\\"CO₂-Klasse E (komb.)\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"con\\\":\\\"Neuwagen\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"EstateCar\\\",\\\"emc\\\":\\\"Euro 6e\\\",\\\"nw\\\":\\\"1.975 kg\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":72999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Audi\\\"},\\\"model\\\":{\\\"localized\\\":\\\"A5\\\"},\\\"numImages\\\":20,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Kombi\\\",\\\"isConditionNew\\\":true,\\\"customDimensions\\\":{\\\"10\\\":\\\"platinum\\\"},\\\"leasingRate\\\":{\\\"type\\\":\\\"COMMERCIAL\\\",\\\"downPayment\\\":0,\\\"termOfContract\\\":48,\\\"annualMileage\\\":10000,\\\"netRate\\\":555,\\\"leasingFactor\\\":0.81},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":44481897375264,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"07/2016\\\",\\\"pw\\\":\\\"270 kW (367 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"122.000 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Weiß\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"SportsCar\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"HIGH_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Mercedes-Benz\\\"},\\\"model\\\":{\\\"localized\\\":\\\"GLE 450\\\"},\\\"numImages\\\":15,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Sportwagen/Coupé\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":43061006993376,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"11/2017\\\",\\\"pw\\\":\\\"265 kW (360 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"119.990 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"OffRoad\\\",\\\"emc\\\":\\\"Euro6\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Porsche\\\"},\\\"model\\\":{\\\"localized\\\":\\\"Macan\\\"},\\\"numImages\\\":14,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"SUV/Geländewagen/Pickup\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null}],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n2:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-44481897375264-7\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/5a/5a5a7e0e-6324-4fe1-86f2-55bf2d5b7e35\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-8-title\\\",\\\"title\\\":\\\"Mercedes-Benz GLE 450 GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\",\\\"subTitle\\\":\\\"GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":44481897375264,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n3:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-43061006993376-0\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/52/52017e90-e6f9-45a7-8102-0dd78efbee29\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-1-title\\\",\\\"title\\\":\\\"Porsche Macan GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\",\\\"subTitle\\\":\\\"GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":43061006993376,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38998%3A38998"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38998%3A38998",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":0,\\\"listings\\\":[],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A38999"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A38999",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":2,\\\"listings\\\":[{\\\"id\\\":454384877,\\\"type\\\":\\\"topOfPage\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"14482\\\",\\\"loc\\\":\\\"Potsdam\\\",\\\"pw\\\":\\\"150 kW (204 PS)\\\",\\\"ft\\\":\\\"Diesel\\\",\\\"ml\\\":\\\"0 km\\\",\\\"cc\\\":\\\"1.968 cm³\\\",\\\"csmpt\\\":\\\"5,7 l/100km (komb.)\\\",\\\"emiss\\\":\\\"148 g CO₂/km (komb.)\\\",\\\"co2class\\\":\\\"CO₂-Klasse E (komb.)\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"con\\\":\\\"Neuwagen\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"EstateCar\\\",\\\"emc\\\":\\\"Euro 6e\\\",\\\"nw\\\":\\\"1.975 kg\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":72999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Audi\\\"},\\\"model\\\":{\\\"localized\\\":\\\"A5\\\"},\\\"numImages\\\":20,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Kombi\\\",\\\"isConditionNew\\\":true,\\\"customDimensions\\\":{\\\"10\\\":\\\"platinum\\\"},\\\"leasingRate\\\":{\\\"type\\\":\\\"COMMERCIAL\\\",\\\"downPayment\\\":0,\\\"termOfContract\\\":48,\\\"annualMileage\\\":10000,\\\"netRate\\\":555,\\\"leasingFactor\\\":0.81},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":44481897375264,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"07/2016\\\",\\\"pw\\\":\\\"270 kW (367 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"122.000 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Weiß\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"SportsCar\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"HIGH_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Mercedes-Benz\\\"},\\\"model\\\":{\\\"localized\\\":\\\"GLE 450\\\"},\\\"numImages\\\":15,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Sportwagen/Coupé\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":43061006993376,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"11/2017\\\",\\\"pw\\\":\\\"265 kW (360 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"119.990 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"OffRoad\\\",\\\"emc\\\":\\\"Euro6\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Porsche\\\"},\\\"model\\\":{\\\"localized\\\":\\\"Macan\\\"},\\\"numImages\\\":14,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"SUV/Geländewagen/Pickup\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null}],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n2:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-44481897375264-7\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/5a/5a5a7e0e-6324-4fe1-86f2-55bf2d5b7e35\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-8-title\\\",\\\"title\\\":\\\"Mercedes-Benz GLE 450 GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\",\\\"subTitle\\\":\\\"GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":44481897375264,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n3:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-43061006993376-0\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/52/52017e90-e6f9-45a7-8102-0dd78efbee29\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-1-title\\\",\\\"title\\\":\\\"Porsche Macan GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\",\\\"subTitle\\\":\\\"GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":43061006993376,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1400&p=38999%3A38999"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1400&p=38999%3A38999",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":0,\\\"listings\\\":[],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=38999%3A38999"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=38999%3A38999",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":0,\\\"listings\\\":[],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=17200&p=38999%3A38999"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=17200&p=38999%3A38999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -521,10 +577,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=20100&p=38999%3A38999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=20100&p=38999%3A38999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=20100&p=38999%3A38999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=20100&p=38999%3A38999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -535,10 +591,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A38999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A38999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A38999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A38999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -549,10 +605,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1400&p=38999%3A38999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1400&p=38999%3A38999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1400&p=38999%3A38999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1400&p=38999%3A38999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -563,10 +619,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=38999%3A38999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=38999%3A38999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=38999%3A38999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=38999%3A38999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -577,10 +633,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=17200&p=38999%3A38999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=17200&p=38999%3A38999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=17200&p=38999%3A38999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=17200&p=38999%3A38999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -591,10 +647,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=20100&p=38999%3A38999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=20100&p=38999%3A38999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=20100&p=38999%3A38999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=20100&p=38999%3A38999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -605,10 +661,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A38999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A38999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A38999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A38999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -619,10 +675,94 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39000%3A39000.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39061"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39000%3A39000.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39061",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":2,\\\"listings\\\":[{\\\"id\\\":454384877,\\\"type\\\":\\\"topOfPage\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"14482\\\",\\\"loc\\\":\\\"Potsdam\\\",\\\"pw\\\":\\\"150 kW (204 PS)\\\",\\\"ft\\\":\\\"Diesel\\\",\\\"ml\\\":\\\"0 km\\\",\\\"cc\\\":\\\"1.968 cm³\\\",\\\"csmpt\\\":\\\"5,7 l/100km (komb.)\\\",\\\"emiss\\\":\\\"148 g CO₂/km (komb.)\\\",\\\"co2class\\\":\\\"CO₂-Klasse E (komb.)\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"con\\\":\\\"Neuwagen\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"EstateCar\\\",\\\"emc\\\":\\\"Euro 6e\\\",\\\"nw\\\":\\\"1.975 kg\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":72999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Audi\\\"},\\\"model\\\":{\\\"localized\\\":\\\"A5\\\"},\\\"numImages\\\":20,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Kombi\\\",\\\"isConditionNew\\\":true,\\\"customDimensions\\\":{\\\"10\\\":\\\"platinum\\\"},\\\"leasingRate\\\":{\\\"type\\\":\\\"COMMERCIAL\\\",\\\"downPayment\\\":0,\\\"termOfContract\\\":48,\\\"annualMileage\\\":10000,\\\"netRate\\\":555,\\\"leasingFactor\\\":0.81},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":44481897375264,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"07/2016\\\",\\\"pw\\\":\\\"270 kW (367 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"122.000 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Weiß\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"SportsCar\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"HIGH_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Mercedes-Benz\\\"},\\\"model\\\":{\\\"localized\\\":\\\"GLE 450\\\"},\\\"numImages\\\":15,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Sportwagen/Coupé\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":43061006993376,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"11/2017\\\",\\\"pw\\\":\\\"265 kW (360 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"119.990 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"OffRoad\\\",\\\"emc\\\":\\\"Euro6\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Porsche\\\"},\\\"model\\\":{\\\"localized\\\":\\\"Macan\\\"},\\\"numImages\\\":14,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"SUV/Geländewagen/Pickup\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null}],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n2:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-44481897375264-7\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/5a/5a5a7e0e-6324-4fe1-86f2-55bf2d5b7e35\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-8-title\\\",\\\"title\\\":\\\"Mercedes-Benz GLE 450 GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\",\\\"subTitle\\\":\\\"GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":44481897375264,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n3:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-43061006993376-0\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/52/52017e90-e6f9-45a7-8102-0dd78efbee29\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-1-title\\\",\\\"title\\\":\\\"Porsche Macan GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\",\\\"subTitle\\\":\\\"GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":43061006993376,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39030"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39030",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":2,\\\"listings\\\":[{\\\"id\\\":454384877,\\\"type\\\":\\\"topOfPage\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"14482\\\",\\\"loc\\\":\\\"Potsdam\\\",\\\"pw\\\":\\\"150 kW (204 PS)\\\",\\\"ft\\\":\\\"Diesel\\\",\\\"ml\\\":\\\"0 km\\\",\\\"cc\\\":\\\"1.968 cm³\\\",\\\"csmpt\\\":\\\"5,7 l/100km (komb.)\\\",\\\"emiss\\\":\\\"148 g CO₂/km (komb.)\\\",\\\"co2class\\\":\\\"CO₂-Klasse E (komb.)\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"con\\\":\\\"Neuwagen\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"EstateCar\\\",\\\"emc\\\":\\\"Euro 6e\\\",\\\"nw\\\":\\\"1.975 kg\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":72999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Audi\\\"},\\\"model\\\":{\\\"localized\\\":\\\"A5\\\"},\\\"numImages\\\":20,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Kombi\\\",\\\"isConditionNew\\\":true,\\\"customDimensions\\\":{\\\"10\\\":\\\"platinum\\\"},\\\"leasingRate\\\":{\\\"type\\\":\\\"COMMERCIAL\\\",\\\"downPayment\\\":0,\\\"termOfContract\\\":48,\\\"annualMileage\\\":10000,\\\"netRate\\\":555,\\\"leasingFactor\\\":0.81},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":44481897375264,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"07/2016\\\",\\\"pw\\\":\\\"270 kW (367 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"122.000 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Weiß\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"SportsCar\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"HIGH_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Mercedes-Benz\\\"},\\\"model\\\":{\\\"localized\\\":\\\"GLE 450\\\"},\\\"numImages\\\":15,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Sportwagen/Coupé\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":43061006993376,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"11/2017\\\",\\\"pw\\\":\\\"265 kW (360 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"119.990 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"OffRoad\\\",\\\"emc\\\":\\\"Euro6\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Porsche\\\"},\\\"model\\\":{\\\"localized\\\":\\\"Macan\\\"},\\\"numImages\\\":14,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"SUV/Geländewagen/Pickup\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null}],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n2:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-44481897375264-7\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/5a/5a5a7e0e-6324-4fe1-86f2-55bf2d5b7e35\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-8-title\\\",\\\"title\\\":\\\"Mercedes-Benz GLE 450 GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\",\\\"subTitle\\\":\\\"GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":44481897375264,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n3:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-43061006993376-0\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/52/52017e90-e6f9-45a7-8102-0dd78efbee29\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-1-title\\\",\\\"title\\\":\\\"Porsche Macan GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\",\\\"subTitle\\\":\\\"GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":43061006993376,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39014"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39014",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":2,\\\"listings\\\":[{\\\"id\\\":454384877,\\\"type\\\":\\\"topOfPage\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"14482\\\",\\\"loc\\\":\\\"Potsdam\\\",\\\"pw\\\":\\\"150 kW (204 PS)\\\",\\\"ft\\\":\\\"Diesel\\\",\\\"ml\\\":\\\"0 km\\\",\\\"cc\\\":\\\"1.968 cm³\\\",\\\"csmpt\\\":\\\"5,7 l/100km (komb.)\\\",\\\"emiss\\\":\\\"148 g CO₂/km (komb.)\\\",\\\"co2class\\\":\\\"CO₂-Klasse E (komb.)\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"con\\\":\\\"Neuwagen\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"EstateCar\\\",\\\"emc\\\":\\\"Euro 6e\\\",\\\"nw\\\":\\\"1.975 kg\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":72999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Audi\\\"},\\\"model\\\":{\\\"localized\\\":\\\"A5\\\"},\\\"numImages\\\":20,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Kombi\\\",\\\"isConditionNew\\\":true,\\\"customDimensions\\\":{\\\"10\\\":\\\"platinum\\\"},\\\"leasingRate\\\":{\\\"type\\\":\\\"COMMERCIAL\\\",\\\"downPayment\\\":0,\\\"termOfContract\\\":48,\\\"annualMileage\\\":10000,\\\"netRate\\\":555,\\\"leasingFactor\\\":0.81},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":44481897375264,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"07/2016\\\",\\\"pw\\\":\\\"270 kW (367 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"122.000 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Weiß\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"SportsCar\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"HIGH_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Mercedes-Benz\\\"},\\\"model\\\":{\\\"localized\\\":\\\"GLE 450\\\"},\\\"numImages\\\":15,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Sportwagen/Coupé\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":43061006993376,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"11/2017\\\",\\\"pw\\\":\\\"265 kW (360 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"119.990 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"OffRoad\\\",\\\"emc\\\":\\\"Euro6\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Porsche\\\"},\\\"model\\\":{\\\"localized\\\":\\\"Macan\\\"},\\\"numImages\\\":14,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"SUV/Geländewagen/Pickup\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null}],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n2:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-44481897375264-7\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/5a/5a5a7e0e-6324-4fe1-86f2-55bf2d5b7e35\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-8-title\\\",\\\"title\\\":\\\"Mercedes-Benz GLE 450 GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\",\\\"subTitle\\\":\\\"GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":44481897375264,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n3:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-43061006993376-0\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/52/52017e90-e6f9-45a7-8102-0dd78efbee29\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-1-title\\\",\\\"title\\\":\\\"Porsche Macan GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\",\\\"subTitle\\\":\\\"GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":43061006993376,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39006"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39006",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":2,\\\"listings\\\":[{\\\"id\\\":454384877,\\\"type\\\":\\\"topOfPage\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"14482\\\",\\\"loc\\\":\\\"Potsdam\\\",\\\"pw\\\":\\\"150 kW (204 PS)\\\",\\\"ft\\\":\\\"Diesel\\\",\\\"ml\\\":\\\"0 km\\\",\\\"cc\\\":\\\"1.968 cm³\\\",\\\"csmpt\\\":\\\"5,7 l/100km (komb.)\\\",\\\"emiss\\\":\\\"148 g CO₂/km (komb.)\\\",\\\"co2class\\\":\\\"CO₂-Klasse E (komb.)\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"con\\\":\\\"Neuwagen\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"EstateCar\\\",\\\"emc\\\":\\\"Euro 6e\\\",\\\"nw\\\":\\\"1.975 kg\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":72999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Audi\\\"},\\\"model\\\":{\\\"localized\\\":\\\"A5\\\"},\\\"numImages\\\":20,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Kombi\\\",\\\"isConditionNew\\\":true,\\\"customDimensions\\\":{\\\"10\\\":\\\"platinum\\\"},\\\"leasingRate\\\":{\\\"type\\\":\\\"COMMERCIAL\\\",\\\"downPayment\\\":0,\\\"termOfContract\\\":48,\\\"annualMileage\\\":10000,\\\"netRate\\\":555,\\\"leasingFactor\\\":0.81},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":44481897375264,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"07/2016\\\",\\\"pw\\\":\\\"270 kW (367 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"122.000 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Weiß\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"SportsCar\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"HIGH_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Mercedes-Benz\\\"},\\\"model\\\":{\\\"localized\\\":\\\"GLE 450\\\"},\\\"numImages\\\":15,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Sportwagen/Coupé\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":43061006993376,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"11/2017\\\",\\\"pw\\\":\\\"265 kW (360 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"119.990 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"OffRoad\\\",\\\"emc\\\":\\\"Euro6\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Porsche\\\"},\\\"model\\\":{\\\"localized\\\":\\\"Macan\\\"},\\\"numImages\\\":14,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"SUV/Geländewagen/Pickup\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null}],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n2:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-44481897375264-7\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/5a/5a5a7e0e-6324-4fe1-86f2-55bf2d5b7e35\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-8-title\\\",\\\"title\\\":\\\"Mercedes-Benz GLE 450 GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\",\\\"subTitle\\\":\\\"GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":44481897375264,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n3:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-43061006993376-0\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/52/52017e90-e6f9-45a7-8102-0dd78efbee29\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-1-title\\\",\\\"title\\\":\\\"Porsche Macan GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\",\\\"subTitle\\\":\\\"GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":43061006993376,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39002"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39002",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":2,\\\"listings\\\":[{\\\"id\\\":454384877,\\\"type\\\":\\\"topOfPage\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"14482\\\",\\\"loc\\\":\\\"Potsdam\\\",\\\"pw\\\":\\\"150 kW (204 PS)\\\",\\\"ft\\\":\\\"Diesel\\\",\\\"ml\\\":\\\"0 km\\\",\\\"cc\\\":\\\"1.968 cm³\\\",\\\"csmpt\\\":\\\"5,7 l/100km (komb.)\\\",\\\"emiss\\\":\\\"148 g CO₂/km (komb.)\\\",\\\"co2class\\\":\\\"CO₂-Klasse E (komb.)\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"con\\\":\\\"Neuwagen\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"EstateCar\\\",\\\"emc\\\":\\\"Euro 6e\\\",\\\"nw\\\":\\\"1.975 kg\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":72999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Audi\\\"},\\\"model\\\":{\\\"localized\\\":\\\"A5\\\"},\\\"numImages\\\":20,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Kombi\\\",\\\"isConditionNew\\\":true,\\\"customDimensions\\\":{\\\"10\\\":\\\"platinum\\\"},\\\"leasingRate\\\":{\\\"type\\\":\\\"COMMERCIAL\\\",\\\"downPayment\\\":0,\\\"termOfContract\\\":48,\\\"annualMileage\\\":10000,\\\"netRate\\\":555,\\\"leasingFactor\\\":0.81},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":44481897375264,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"07/2016\\\",\\\"pw\\\":\\\"270 kW (367 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"122.000 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Weiß\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"SportsCar\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"HIGH_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Mercedes-Benz\\\"},\\\"model\\\":{\\\"localized\\\":\\\"GLE 450\\\"},\\\"numImages\\\":15,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Sportwagen/Coupé\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":43061006993376,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"11/2017\\\",\\\"pw\\\":\\\"265 kW (360 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"119.990 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"OffRoad\\\",\\\"emc\\\":\\\"Euro6\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Porsche\\\"},\\\"model\\\":{\\\"localized\\\":\\\"Macan\\\"},\\\"numImages\\\":14,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"SUV/Geländewagen/Pickup\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null}],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n2:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-44481897375264-7\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/5a/5a5a7e0e-6324-4fe1-86f2-55bf2d5b7e35\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-8-title\\\",\\\"title\\\":\\\"Mercedes-Benz GLE 450 GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\",\\\"subTitle\\\":\\\"GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":44481897375264,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n3:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-43061006993376-0\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/52/52017e90-e6f9-45a7-8102-0dd78efbee29\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-1-title\\\",\\\"title\\\":\\\"Porsche Macan GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\",\\\"subTitle\\\":\\\"GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":43061006993376,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39000"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=38999%3A39000",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":2,\\\"listings\\\":[{\\\"id\\\":454384877,\\\"type\\\":\\\"topOfPage\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"14482\\\",\\\"loc\\\":\\\"Potsdam\\\",\\\"pw\\\":\\\"150 kW (204 PS)\\\",\\\"ft\\\":\\\"Diesel\\\",\\\"ml\\\":\\\"0 km\\\",\\\"cc\\\":\\\"1.968 cm³\\\",\\\"csmpt\\\":\\\"5,7 l/100km (komb.)\\\",\\\"emiss\\\":\\\"148 g CO₂/km (komb.)\\\",\\\"co2class\\\":\\\"CO₂-Klasse E (komb.)\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"con\\\":\\\"Neuwagen\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"EstateCar\\\",\\\"emc\\\":\\\"Euro 6e\\\",\\\"nw\\\":\\\"1.975 kg\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":72999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Audi\\\"},\\\"model\\\":{\\\"localized\\\":\\\"A5\\\"},\\\"numImages\\\":20,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Kombi\\\",\\\"isConditionNew\\\":true,\\\"customDimensions\\\":{\\\"10\\\":\\\"platinum\\\"},\\\"leasingRate\\\":{\\\"type\\\":\\\"COMMERCIAL\\\",\\\"downPayment\\\":0,\\\"termOfContract\\\":48,\\\"annualMileage\\\":10000,\\\"netRate\\\":555,\\\"leasingFactor\\\":0.81},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":44481897375264,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"07/2016\\\",\\\"pw\\\":\\\"270 kW (367 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"122.000 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Weiß\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"SportsCar\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"HIGH_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Mercedes-Benz\\\"},\\\"model\\\":{\\\"localized\\\":\\\"GLE 450\\\"},\\\"numImages\\\":15,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"Sportwagen/Coupé\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null},{\\\"id\\\":43061006993376,\\\"type\\\":\\\"regular\\\",\\\"attr\\\":{\\\"cn\\\":\\\"DE\\\",\\\"z\\\":\\\"50259\\\",\\\"loc\\\":\\\"pulheim\\\",\\\"fr\\\":\\\"11/2017\\\",\\\"pw\\\":\\\"265 kW (360 PS)\\\",\\\"ft\\\":\\\"Benzin\\\",\\\"ml\\\":\\\"119.990 km\\\",\\\"tr\\\":\\\"Automatik\\\",\\\"gi\\\":\\\"Neu\\\",\\\"ecol\\\":\\\"Schwarz\\\",\\\"eu\\\":\\\"Deutsche Ausführung\\\",\\\"door\\\":\\\"4/5\\\",\\\"sc\\\":\\\"5\\\",\\\"c\\\":\\\"OffRoad\\\",\\\"emc\\\":\\\"Euro6\\\"},\\\"contact\\\":{\\\"enumType\\\":\\\"DEALER\\\"},\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999}},\\\"priceRating\\\":{\\\"rating\\\":\\\"REASONABLE_PRICE\\\"},\\\"make\\\":{\\\"localized\\\":\\\"Porsche\\\"},\\\"model\\\":{\\\"localized\\\":\\\"Macan\\\"},\\\"numImages\\\":14,\\\"vc\\\":\\\"Car\\\",\\\"category\\\":\\\"SUV/Geländewagen/Pickup\\\",\\\"customDimensions\\\":{\\\"10\\\":\\\"silver\\\"},\\\"finType\\\":\\\"automatic-offers\\\",\\\"finBank\\\":null}],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n2:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-44481897375264-7\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/5a/5a5a7e0e-6324-4fe1-86f2-55bf2d5b7e35\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-8-title\\\",\\\"title\\\":\\\"Mercedes-Benz GLE 450 GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\",\\\"subTitle\\\":\\\"GLE 450/AMG 43 4Matic PANO TV HARMAN-KAR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":44481897375264,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n3:[\\\"$\\\",\\\"$1\\\",\\\"listing-container-43061006993376-0\\\",{\\\"children\\\":[[\\\"$\\\",\\\"article\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L96\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[\\\"$\\\",\\\"$L97\\\",null,{\\\"src\\\":\\\"img.classistatic.de/api/v1/mo-prod/images/52/52017e90-e6f9-45a7-8102-0dd78efbee29\\\"}]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"$L99\\\",null,{\\\"testId\\\":\\\"base-result-listing-1-title\\\",\\\"title\\\":\\\"Porsche Macan GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\",\\\"subTitle\\\":\\\"GTS SPORT-ABGAS NAVI S-HEFT SPUR\\\"}],[\\\"$\\\",\\\"$L9a\\\",null,{\\\"adId\\\":43061006993376,\\\"price\\\":{\\\"grs\\\":{\\\"amount\\\":38999,\\\"currency\\\":\\\"EUR\\\",\\\"localized\\\":\\\"38.999 €\\\"},\\\"type\\\":\\\"FIXED\\\"}}]]}],[\\\"$\\\",\\\"div\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"section\\\",null,{\\\"children\\\":[[\\\"$\\\",\\\"div\\\",null,{\\\"data-testid\\\":\\\"online-since\\\",\\\"children\\\":[[\\\"$\\\",\\\"span\\\",null,{\\\"className\\\":\\\"_YQoRO\\\",\\\"children\\\":[\\\"Inserat online seit\\\",\\\" \\\"]}],\\\"26.10.2026, 09:47\\\"]}]]}]]}]]}]}]}]]}]}]]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39000%3A39000"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39000%3A39000",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -633,10 +773,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39001%3A39001.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39000%3A39002"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39001%3A39001.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39000%3A39002",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -647,10 +787,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39002%3A39062.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39002%3A39006"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39002%3A39062.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39002%3A39006",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -661,10 +801,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39063%3A46874.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39006%3A39014"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39063%3A46874.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39006%3A39014",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -675,10 +815,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=46875%3A62499.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39014%3A39030"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=46875%3A62499.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39014%3A39030",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -689,10 +829,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=62500%3A124999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39030%3A39061"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=62500%3A124999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39030%3A39061",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -703,10 +843,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=125000%3A249999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39061%3A46874"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=125000%3A249999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=39061%3A46874",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -717,10 +857,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=250000%3A499999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=46874%3A62499"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=250000%3A499999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=46874%3A62499",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -731,10 +871,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=500000%3A999999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=62499%3A124999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=500000%3A999999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=62499%3A124999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -745,10 +885,52 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=1000000%3A"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=124999%3A249999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=1000000%3A",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=124999%3A249999",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":0,\\\"listings\\\":[],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=249999%3A499999"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=249999%3A499999",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":0,\\\"listings\\\":[],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=499999%3A999999"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=499999%3A999999",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script>self.__next_f.push([1,\"0:[\\\"$\\\",\\\"$L0\\\",null,{\\\"searchResults\\\":{\\\"numResultsTotal\\\":0,\\\"listings\\\":[],\\\"pageNumber\\\":1}}]\\n1:[\\\"$\\\",\\\"$L0\\\",null,{\\\"makes\\\":[{\\\"i\\\":1900,\\\"n\\\":\\\"Audi\\\"},{\\\"i\\\":17200,\\\"n\\\":\\\"Mercedes-Benz\\\"},{\\\"i\\\":20100,\\\"n\\\":\\\"Porsche\\\"},{\\\"i\\\":1400,\\\"n\\\":\\\"Andere\\\"}]}]\\n\"])</script></body></html>",
+        "tier": "T2"
+      }
+    },
+    {
+      "request": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=999999%3A"
+      },
+      "response": {
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&p=999999%3A",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"

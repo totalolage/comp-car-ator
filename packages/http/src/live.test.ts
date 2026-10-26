@@ -186,14 +186,18 @@ describe.skipIf(!process.env.CCA_HTTP_T2_TEST)("T2 browser (CCA_HTTP_T2_TEST=1)"
     expect(page.body).toContain("rendered by js");
   }, 120_000);
 
-  it("takes the request's locale as Chrome's language, in headers and on the page", async () => {
+  it("takes the request's locale as Chrome's language and does not flag itself as automated", async () => {
     handler = recording((_req, res) => {
       res.writeHead(200, { "content-type": "text/html" });
-      res.end(`<body><script>document.body.append(navigator.languages.join(" "))</script></body>`);
+      res.end(
+        `<body><script>document.body.append(navigator.languages.join(" ") + " webdriver=" + navigator.webdriver)</script></body>`,
+      );
     });
     const page = await http.get({ url: `${base}/locale`, minTier: "T2", locale: "de" });
     expect(seen.get("/locale")?.["accept-language"]).toMatch(/^de-DE\b/);
     expect(page.body).toMatch(/<body>.*de-DE/);
+    // Chrome flags itself as automated when its DevTools port is 0; Akamai denies that.
+    expect(page.body).toContain("webdriver=false");
   }, 120_000);
 
   it("sends the caller's headers on the navigation, not on the page's subresources", async () => {

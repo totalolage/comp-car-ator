@@ -16,13 +16,18 @@ import {
 } from "../source.ts";
 import { mobiledeSource } from "./mobilede.ts";
 
-// The pages are real mobile.de search results captured 2026-10-26 (77 listings standing in
+// live: recorded 2026-10-26 by mobiledeSource({ makes: [31930], resultCap: 15 }) through the live
+// Http (T2, Chrome attached over CDP), bodies cut to the flight rows the adapter reads.
+const live = new URL("./fixtures/live.cassette.json", import.meta.url);
+const liveNow = new Date("2026-10-26T13:20:10Z");
+
+// The other pages are real mobile.de search results captured 2026-10-26 (77 listings standing in
 // Germany: new, used, demo, dealer and private), cut to the flight rows the adapter reads (the
-// results, the make taxonomy, one card per listing; no seller contact details). Akamai started
-// challenging the home IP before a live recording of the adapter finished, so the cassettes
+// results, the make taxonomy, one card per listing; no seller contact details). A live run
+// that splits needs dozens of pages, more than Akamai let through in one go, so these cassettes
 // were recorded by mobiledeSource itself, through recordingHttp, against a model of the site
-// serving those listings with the site's query rules (con, ms, inclusive `p` bounds to the cent,
-// doc, 20 per page newest first, a promoted listing on page 1). ADR 0014 has the details.
+// serving those listings with the site's query rules (con, ms, inclusive whole-euro `p`, doc, 20
+// per page newest first, a promoted listing on page 1). ADR 0014 has the details.
 const now = new Date("2026-10-26T10:00:00Z");
 /** Audi (1900) with a 3-result cap: its used cars split into price bands. */
 const full = new URL("./fixtures/full.cassette.json", import.meta.url);
@@ -31,7 +36,7 @@ const AUDI = 1900;
 const incremental = new URL("./fixtures/incremental.cassette.json", import.meta.url);
 /** Every make, a 1-result cap: two used cars at 38,999 € split by make. */
 const makeSplit = new URL("./fixtures/make-split.cassette.json", import.meta.url);
-const SPLIT_PRICE = "38999:38999.99";
+const SPLIT_PRICE = "38999:38999";
 
 interface Run {
   observations: Observation[];
@@ -238,16 +243,15 @@ describe("mobile-de source", () => {
           ?.slice(1)
           .map((n) => (n ? Number(n) : null)),
       );
-    // Contiguous whole-euro bands from 0 up to the open top band.
+    // Whole-euro bands from 0 up to the open top band, neighbours sharing their bound so a price
+    // with cents cannot fall between them.
     expect(bands[0]?.[0]).toBe(0);
-    expect(bands.at(-1)).toEqual([1_000_000, null]);
-    for (let i = 1; i < bands.length; i++) {
-      expect(bands[i]?.[0]).toBe((bands[i - 1]?.[1] as number) + 1);
-    }
-    // Each band reaches its upper bound's last cent.
+    expect(bands.at(-1)).toEqual([999_999, null]);
+    for (let i = 1; i < bands.length; i++) expect(bands[i]?.[0]).toBe(bands[i - 1]?.[1]);
+    // Never a decimal: the site reads "." as a thousands separator (122.99 = 12,299 €).
     for (const url of run.urls) {
       const p = params(url).get("p");
-      if (p) expect(p).toMatch(/^\d+:(\d+\.99)?$/);
+      if (p) expect(p).toMatch(/^\d+:\d*$/);
     }
   });
 
@@ -258,9 +262,9 @@ describe("mobile-de source", () => {
     });
     expect(run.error).toBeUndefined();
     expect(run.urls.some((u) => params(u).get("con") === "NEW")).toBe(false);
-    expect(run.urls.some((u) => params(u).get("p") === "0:7812.99")).toBe(false);
+    expect(run.urls.some((u) => params(u).get("p") === "0:7812")).toBe(false);
     expect(slices(run)).not.toContain("new;make=1900");
-    expect(slices(run)).toContain("used;make=1900;price=7813-15624");
+    expect(slices(run)).toContain("used;make=1900;price=7812-15624");
   });
 
   it("full: pages a short slice again, then fails the run after the others", async () => {
@@ -270,15 +274,45 @@ describe("mobile-de source", () => {
       mobiledeSource({ makes: [AUDI], resultCap: 3 }),
       "full",
       {},
-      editResults(usedBand(7813), (results) => {
+      editResults(usedBand(7812), (results) => {
         results.numResultsTotal += 1;
       }),
     );
-    expect(String(run.error)).toMatch(/not harvested whole: used;make=1900;price=7813-15624/);
-    expect(run.urls.filter((u) => params(u).get("p") === "7813:15624.99")).toHaveLength(2);
-    expect(slices(run)).not.toContain("used;make=1900;price=7813-15624");
-    expect(slices(run)).toContain("used;make=1900;price=15625-31249");
+    expect(String(run.error)).toMatch(/not harvested whole: used;make=1900;price=7812-15624/);
+    expect(run.urls.filter((u) => params(u).get("p") === "7812:15624")).toHaveLength(2);
+    expect(slices(run)).not.toContain("used;make=1900;price=7812-15624");
+    expect(slices(run)).toContain("used;make=1900;price=15624-31249");
     expect(run.warnings.some((w) => /short/.test(w))).toBe(true);
+  });
+
+  it("replays a live run: every listing of the make, each Condition reported done", async () => {
+    const replay = createReplayHttp(await loadCassette(live));
+    const run: Observation[] = [];
+    for await (const o of mobiledeSource({ makes: [31930], resultCap: 15 }).harvest({
+      http: replay,
+      mode: "full",
+      checkpoint: emptyCheckpoint,
+      now: liveNow,
+      log: { info() {}, warn() {} },
+      signal: new AbortController().signal,
+    })) {
+      run.push(o);
+    }
+    const seen = run.filter((o): o is ListingSeen => o.kind === "ListingSeen");
+    expect(new Set(seen.map((l) => l.ref)).size).toBe(8);
+    expect(run.filter((o) => o.kind === "SliceDone")).toEqual([
+      { kind: "SliceDone", slice: "new;make=31930" },
+      { kind: "SliceDone", slice: "used;make=31930" },
+    ]);
+    for (const listing of seen) {
+      expect(listing).toMatchObject({ market: "DE", vehicle: { make: "Aiways" } });
+      expect(listing.price.amount).toBeGreaterThan(10_000);
+      for (const photo of listing.photos) {
+        expect(photo).toMatch(/^https:\/\/img\.classistatic\.de\/.+\?rule=mo-1024$/);
+      }
+    }
+    // One of the eight shows no photo on its card.
+    expect(seen.filter((l) => l.photos.length > 0)).toHaveLength(7);
   });
 
   it("full: splits a single price over the cap by make and recounts the parts", async () => {

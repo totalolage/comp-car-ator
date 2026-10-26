@@ -31,10 +31,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A999999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A999999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A999999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A999999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -45,10 +45,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A499999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A499999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A499999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A499999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -59,10 +59,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A249999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A249999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A249999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A249999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -73,10 +73,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A124999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A124999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A124999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A124999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -87,10 +87,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A62499.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A62499"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A62499.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A62499",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -101,10 +101,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A31249.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A31249"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A31249.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A31249",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -115,10 +115,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A15624.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A15624"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A15624.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A15624",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -129,10 +129,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A7812.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A7812"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A7812.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=0%3A7812",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -143,10 +143,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=7813%3A15624.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=7812%3A15624"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=7813%3A15624.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=7812%3A15624",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -157,10 +157,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=15625%3A31249.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=15624%3A31249"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=15625%3A31249.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=15624%3A31249",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -171,10 +171,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=31250%3A62499.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=31249%3A62499"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=31250%3A62499.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=31249%3A62499",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -185,10 +185,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=62500%3A124999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=62499%3A124999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=62500%3A124999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=62499%3A124999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -199,10 +199,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=125000%3A249999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=124999%3A249999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=125000%3A249999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=124999%3A249999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -213,10 +213,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=250000%3A499999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=249999%3A499999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=250000%3A499999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=249999%3A499999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -227,10 +227,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=500000%3A999999.99"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=499999%3A999999"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=500000%3A999999.99",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=499999%3A999999",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"
@@ -241,10 +241,10 @@
     },
     {
       "request": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=1000000%3A"
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=999999%3A"
       },
       "response": {
-        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=1000000%3A",
+        "url": "https://suchen.mobile.de/fahrzeuge/search.html?isSearchRequest=true&s=Car&vc=Car&cn=DE&con=USED&dam=false&fr=2000%3A&sb=doc&od=down&ms=1900&p=999999%3A",
         "status": 200,
         "headers": {
           "content-type": "text/html; charset=utf-8"

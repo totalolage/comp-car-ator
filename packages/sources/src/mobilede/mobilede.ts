@@ -4,9 +4,10 @@
  *
  * Experimental: Akamai lets only a real Chrome through, so every request needs T2
  * (`CCA_HTTP_BROWSER=patchright`, headed under `xvfb-run`; docs/adr/0005-fetch-tiers.md), and a
- * page takes seconds. The registry has it; no schedule runs it. A full census of the ~1.2M
- * listings is ~62,000 pages (about a week of runs, resumable through SliceDone); narrow it with
- * `makes` (from the ingest CLI: `CCA_MOBILEDE_MAKES`, see registry.ts). Access research: docs/adr/0014-mobile-de-experimental.md.
+ * page takes seconds; documents go 15 s apart. The registry has it; no schedule runs it. A full
+ * census of the ~1.2M listings is ~62,000 pages (some 11 days of runs, resumable through
+ * SliceDone); narrow it with `makes` (from the ingest CLI: `CCA_MOBILEDE_MAKES`, see
+ * registry.ts). Access research: docs/adr/0014-mobile-de-experimental.md.
  *
  * - Search pages embed their results in the Next.js flight data (`self.__next_f.push`):
  *   `searchResults { numResultsTotal, listings[] }` with the listing facts, one card per listing
@@ -14,9 +15,9 @@
  *   taxonomy. A query serves 100 pages of 20 results (2,000); page 1 adds promoted listings that
  *   are not part of the paging and are skipped.
  * - Slices: Condition (`con`, NEW or USED; demo cars are USED listings marked Vorführfahrzeug or
- *   Tageszulassung), then price bands, bisected on whole euros with each band reaching its
- *   upper bound's last cent; with `makes`, a make per slice before the price bands. Price bands
- *   partition a slice by construction (every listing has a price), so they need no recount.
+ *   Tageszulassung), then price bands bisected on whole euros, neighbours sharing their bound
+ *   (see `split`); with `makes`, a make per slice before the price bands. Price bands cover a
+ *   slice by construction (every listing has a price), so they need no recount.
  *   Only a single price over the cap splits by make, and that split is recounted like
  *   AutoScout24's: the site's totals move by tens of listings a minute, too fast to recount a
  *   make split of a large slice. A slice's key names its filters ("used;price=0-15624",
@@ -63,8 +64,11 @@ const PRICE_TOP = 999_999;
 /** The `doc` (online since) values the site offers, in days. */
 const DOCS = [1, 3, 7, 14];
 const DAY_MS = 86_400_000;
-/** A T2 page loads its scripts and images too; space the documents out. */
-const HOST_INTERVAL_MS = 5_000;
+/**
+ * A T2 page loads its scripts and images too. Akamai blocked a run after 39 documents ~6 s
+ * apart; sessions of ~25 documents 10-15 s apart went through.
+ */
+const HOST_INTERVAL_MS = 15_000;
 
 /** The site's `con` value per slice condition; demo listings come out of `used`. */
 const CON = { new: "NEW", used: "USED" } as const;
@@ -90,7 +94,7 @@ export function mobiledeSource(options: MobileDeOptions = {}): Source {
 interface Slice {
   condition: SliceCondition;
   make?: number;
-  /** Whole-euro bounds, `to` reaching its last cent; no `to` means open above. */
+  /** Inclusive whole-euro bounds; no `to` means open above. */
   price?: { from: number; to?: number };
 }
 
@@ -125,6 +129,8 @@ class Harvest {
   private readonly doc: number | undefined;
   /** Slices this run could not harvest whole. */
   private readonly unfinished: string[] = [];
+  /** Slices this run has started: neighbouring price bands can split into the same price. */
+  private readonly started = new Set<string>();
   /** Incremental: whether each listing this run has met was known before it, as first met. */
   private readonly knownBefore = new Map<string, boolean>();
 
@@ -162,6 +168,8 @@ class Harvest {
   private async *slice(slice: Slice, retry = this.full): AsyncGenerator<Observation> {
     const key = sliceKey(slice);
     if (this.full && this.ctx.checkpoint.sliceDoneAt(key) !== null) return;
+    if (this.started.has(key)) return;
+    this.started.add(key);
     const first = await this.page(slice, 1);
     const overCap = first.total > this.cap;
     const parts = overCap ? split(slice, first, this.makes === undefined) : null;
@@ -175,6 +183,7 @@ class Harvest {
     const outcome = yield* this.pages(slice, first);
     if (outcome === "short" && retry && !overCap) {
       this.ctx.log.warn("mobile-de: slice came out short; harvesting it again", { slice: key });
+      this.started.delete(key);
       return yield* this.slice(slice, false);
     }
     // Incremental is no census: a short slice under the cap only means listings moved.
@@ -273,7 +282,7 @@ class Harvest {
     if (slice.make !== undefined) params.set("ms", String(slice.make));
     if (slice.price) {
       const { from, to } = slice.price;
-      params.set("p", `${from}:${to === undefined ? "" : `${to}.99`}`);
+      params.set("p", `${from}:${to ?? ""}`);
     }
     if (this.doc !== undefined) params.set("doc", String(this.doc));
     if (page > 1) params.set("pageNumber", String(page));
@@ -282,22 +291,32 @@ class Harvest {
 }
 
 /**
- * Sub-slices that partition `slice`: price bands, then halves of a band; a single price (or the
- * open top band) splits by the page's makes when `byMake`, else not at all.
+ * Sub-slices that cover `slice`: price bands, then halves of a band sharing their middle euro
+ * (the site compares whole euros: `p=0:122.99` reads as 0-12,299 €, "." being its thousands
+ * separator; shared bounds leave no gap for prices with cents, and a listing on a bound simply
+ * comes twice). A two-euro band splits into its two prices, the one place a price with cents
+ * between them could be missed. A single price (or the open top band) splits by the page's
+ * makes when `byMake`, else not at all.
  */
 function split(slice: Slice, page: SearchPage, byMake: boolean): Slice[] | null {
   if (!slice.price) {
     return [
       { ...slice, price: { from: 0, to: PRICE_TOP } },
-      { ...slice, price: { from: PRICE_TOP + 1 } },
+      { ...slice, price: { from: PRICE_TOP } },
     ];
   }
   const { from, to } = slice.price;
-  if (to !== undefined && from < to) {
+  if (to !== undefined && to - from >= 2) {
     const mid = Math.floor((from + to) / 2);
     return [
       { ...slice, price: { from, to: mid } },
-      { ...slice, price: { from: mid + 1, to } },
+      { ...slice, price: { from: mid, to } },
+    ];
+  }
+  if (to === from + 1) {
+    return [
+      { ...slice, price: { from, to: from } },
+      { ...slice, price: { from: to, to } },
     ];
   }
   if (byMake && slice.make === undefined && page.makes.length > 0) {
@@ -306,7 +325,7 @@ function split(slice: Slice, page: SearchPage, byMake: boolean): Slice[] | null 
   return null;
 }
 
-/** "new", "used;price=0-15624", "used;make=25200;price=10000-10000", "new;price=1000000-". */
+/** "new", "used;price=0-15624", "used;make=25200;price=10000-10000", "new;price=999999-". */
 function sliceKey(slice: Slice): string {
   const parts: string[] = [slice.condition];
   if (slice.make !== undefined) parts.push(`make=${slice.make}`);
