@@ -98,7 +98,7 @@ export function createCatalog(options: CatalogOptions) {
         const [make, model, type, body, fuel, kw] = key.split("\t") as string[];
         return { make, model, type, body, fuel, powerKw: Number(kw), c } as Row;
       });
-      const merged = mergeModels(rows);
+      const merged = mergeModels(spellModels(rows));
       const entries: CatalogEntry[] = [];
       for (const group of groupBy(merged, (r) => `${r.make}\t${r.model}`).values()) {
         entries.push(...modelEntries(group, generations, options, omitted));
@@ -116,6 +116,26 @@ interface Row {
   fuel: VariantSpec["fuel"];
   powerKw: number;
   c: Candidate;
+}
+
+/**
+ * Spellings of one model id ("UP!" and "UP", "ATOS-PRIME" and "ATOS PRIME") are one model,
+ * named by the spelling with most vehicles; else their Variants would share ids.
+ */
+function spellModels(rows: Row[]): Row[] {
+  const spelling = new Map<string, string>();
+  for (const [key, group] of groupBy(rows, (r) => `${r.make}\t${slugify(r.model)}`)) {
+    const counts = [...groupBy(group, (r) => r.model)].map(([model, modelRows]) => ({
+      model,
+      count: sum(modelRows.map((r) => r.c.count)),
+    }));
+    counts.sort((a, b) => b.count - a.count || a.model.localeCompare(b.model));
+    spelling.set(key, (counts[0] as { model: string }).model);
+  }
+  return rows.map((r) => ({
+    ...r,
+    model: spelling.get(`${r.make}\t${slugify(r.model)}`) ?? r.model,
+  }));
 }
 
 /**

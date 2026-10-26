@@ -203,7 +203,11 @@ describe("rsv source", () => {
   it("gives a type's vehicles to the name that holds most of them, not to any shorter name", async () => {
     const { header, row } = await realRow();
     const car = (make: string, name: string, type: string) =>
-      withColumns(header, row, { "Tovární značka": make, "Obchodní označení": name, "Typ kód": type });
+      withColumns(header, row, {
+        "Tovární značka": make,
+        "Obchodní označení": name,
+        "Typ kód": type,
+      });
     const rows = [
       // Range Rover LG; a few "RANGE ROVER" rows carry the Sport's type LW.
       ...Array(6).fill(car("LAND ROVER", "RANGE ROVER", "LG")),
@@ -224,6 +228,110 @@ describe("rsv source", () => {
       "Range Rover Sport": ["lw"],
       Discovery: ["lr"],
     });
+  });
+
+  it("names the make, not the company or model the register's make field holds", async () => {
+    expect(
+      await namesOf([
+        ["ŠKODA AUTO A.S.", "OCTAVIA"],
+        ["ŠKODA OCTAVIA", "OCTAVIA COMBI"],
+        ["VW GOLF", "GOLF"],
+        ["FORD-CNG-TECHNIK", "FOCUS"],
+        ["MINI COOPER", "COOPER"],
+        ["TESLA MOTORS", "MODEL S"],
+        ["AUTOMOBILI LAMBORGHINI S.P.A.", "HURACAN"],
+        ["JAGUAR LAND ROVER LIMITED", "RANGE ROVER SPORT"],
+        ["JAGUAR LAND ROVER LIMITED", "F-PACE"],
+        ["MICRO COMPACT CAR SMART", "SMART FORTWO"],
+        ["QUATTRO", "AUDI RS4"],
+        ["LADA - VAZ", "NIVA"],
+        ["MARUTI-SUZUKI", "ALTO"],
+        ["DAIMLER CHRYSLER", "A 170"],
+        ["GM DAEWOO", "KALOS"],
+        // A make followed by another make is a company of both: left as it is.
+        ["BMW ALPINA", "B3"],
+      ]),
+    ).toEqual([
+      "Škoda|Octavia",
+      "Škoda|Octavia",
+      "Volkswagen|Golf",
+      "Ford|Focus",
+      "Mini|Cooper",
+      "Tesla|Model S",
+      "Lamborghini|Huracan",
+      "Land Rover|Range Rover Sport",
+      "Jaguar|F-Pace",
+      "Smart|Fortwo",
+      "Audi|RS4",
+      "Lada|Niva",
+      "Suzuki|Alto",
+      "Mercedes-Benz|A-Class",
+      "Daewoo|Kalos",
+      "BMW Alpina|B3",
+    ]);
+  });
+
+  it("names one model one way, without engine, power and trim words", async () => {
+    const cases: [string, string, string][] = [
+      ["BMW", "3", "BMW|3 Series"],
+      ["BMW", "RADA 3", "BMW|3 Series"],
+      ["BMW", "3 ER REIHE", "BMW|3 Series"],
+      ["BMW", "M 135 I", "BMW|1 Series"],
+      ["BMW", "X 5", "BMW|X5"],
+      ["BMW", "X5 M", "BMW|X5 M"],
+      ["BMW", "X3 20D", "BMW|X3"],
+      ["BMW", "I4 EDRIVE35", "BMW|i4"],
+      ["BMW", "IX XDRIVE40", "BMW|iX"],
+      ["AUDI", "Q4 35 E-TRON", "Audi|Q4 e-tron"],
+      ["AUDI", "Q4 SPORTBACK 40 E-TRON", "Audi|Q4 Sportback e-tron"],
+      ["AUDI", "A3, S3", "Audi|A3"],
+      ["AUDI", "TT", "Audi|TT"],
+      ["CITROEN", "C 5", "Citroën|C5"],
+      ["FIAT", "500 L", "Fiat|500L"],
+      ["FIAT", "IDEA", "Fiat|Idea"],
+      ["JAECOO", "JAECOO7", "Jaecoo|7"],
+      ["MG", "MG4", "MG|MG4"],
+      ["MERCEDES-BENZ", "AMG C 43 4MATIC", "Mercedes-Benz|C-Class"],
+      ["MERCEDES-BENZ", "AMG GT 63 S", "Mercedes-Benz|AMG GT"],
+      ["LEXUS", "RX450H", "Lexus|RX"],
+      ["LEXUS", "IS 250", "Lexus|IS"],
+      ["MINI", "COUNTRYMAN COOPER S", "Mini|Countryman"],
+      ["MINI", "JCW CLUBMAN", "Mini|Clubman"],
+      ["VOLKSWAGEN", "ID. BUZZ PRO 150 KW", "Volkswagen|ID. Buzz"],
+      ["VOLKSWAGEN", "PASAT", "Volkswagen|Passat"],
+      ["HYUNDAI", "TUCSON, IX35", "Hyundai|Tucson"],
+      ["KIA", "PRO CEED", "Kia|Pro Ceed"],
+      ["VOLVO", "XC 60", "Volvo|XC60"],
+      ["MAZDA", "CX 9", "Mazda|CX-9"],
+      ["TOYOTA", "RAV 4", "Toyota|RAV4"],
+    ];
+    expect(await namesOf(cases.map(([make, name]) => [make, name]))).toEqual(
+      cases.map((c) => c[2]),
+    );
+  });
+
+  it("drops a model name without letters and joins spellings of one model id", async () => {
+    const { header, row } = await realRow();
+    const car = (name: string) =>
+      withColumns(header, row, {
+        "Tovární značka": "VOLKSWAGEN",
+        "Obchodní označení": name,
+        "Typ kód": "121",
+      });
+    const rows = [car("UP!"), car("UP!"), car("UP"), car(".")];
+    const { entries, logs } = await harvest(
+      syntheticHttp(header, rows.join("\r\n"), 1),
+      "full",
+      null,
+      {
+        minVehicles: 1,
+      },
+    );
+    expect(new Set(entries.map((e) => e.variant.model))).toEqual(new Set(["Up!"]));
+    expect(entries.map((e) => variantIdOf(e.variant))).toEqual([
+      ...new Set(entries.map((e) => variantIdOf(e.variant))),
+    ]);
+    expect(JSON.stringify(logs)).toContain("no-model");
   });
 
   it("spells makes and models the way the Resolver's aliases know them", async () => {
@@ -475,14 +583,37 @@ async function realRow(): Promise<{ header: string; row: string }> {
   return { header, row };
 }
 
-/** `row` (a plain CSV line without quotes) with the named columns set. */
+/**
+ * "Make|Model" of the catalog for each register (make, commercial name) pair: one vehicle per
+ * pair, each with a type of its own so no two pairs fold together.
+ */
+async function namesOf(pairs: [string, string][]): Promise<string[]> {
+  const { header, row } = await realRow();
+  const rows = pairs.map(([make, name], i) =>
+    withColumns(header, row, {
+      "Tovární značka": make,
+      "Obchodní označení": name,
+      "Typ kód": `T${i}`,
+    }),
+  );
+  const { entries } = await harvest(syntheticHttp(header, rows.join("\r\n"), 1), "full", null, {
+    minVehicles: 1,
+  });
+  const byType = new Map(entries.map((e) => [e.variant.generation.slug, e.variant]));
+  return pairs.map((_, i) => {
+    const v = byType.get(`t${i}`);
+    return v ? `${v.make}|${v.model}` : "(none)";
+  });
+}
+
+/** `row` (a plain CSV line without quotes) with the named columns set, quoted as CSV. */
 function withColumns(header: string, row: string, values: Record<string, string>): string {
   const columns = header.split(",").map((c) => c.trim());
   const fields = row.split(",");
   for (const [name, value] of Object.entries(values)) {
     const i = columns.indexOf(name);
     if (i < 0) throw new Error(`no column ${name}`);
-    fields[i] = value;
+    fields[i] = /[",]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
   }
   return fields.join(",");
 }

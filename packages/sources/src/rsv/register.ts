@@ -150,7 +150,8 @@ const identityOf = memo(
     text: string | undefined,
     commercialName: string | undefined,
   ): { make: string; model: string; type: string } | Rejection => {
-    const make = makeName(rawMake ?? "");
+    // "JAGUAR LAND ROVER LIMITED" sells two makes: the commercial name tells which.
+    const make = makeName(rawMake ?? "", commercialName ?? "");
     if (!make) return "no-make";
     const type = typeOf(code, text);
     if (!type) return "no-type";
