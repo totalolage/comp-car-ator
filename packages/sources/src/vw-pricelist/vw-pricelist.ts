@@ -84,7 +84,8 @@ const vw: PriceListSite = {
       if (lists.status !== 200)
         throw new Error(`vw-pricelist: ${key} price lists answered ${lists.status}`);
       const documents = documentsOf(lists.body);
-      const body = bodies.get(name) ?? UNFILED_BODIES[name];
+      // The table only fills in for a model the overview files under no body at all.
+      const body = bodies.has(name) ? bodies.get(name) : UNFILED_BODIES[name];
       models.push(
         body ? { key, name, documents, named: { [name]: { body } } } : { key, name, documents },
       );
@@ -104,15 +105,16 @@ const CATEGORY_BODIES: Record<string, Body> = {
 
 /**
  * Bodies of the models the overview lists but files under no category (no longer
- * configurable), each sold in one body. Verified against the live site 2026-10-26.
+ * configurable), each sold in one body. Touareg's page calls it "SUV prémiové třídy";
+ * Touran is offered only as the 5/7-seat compact MPV. Verified against the live site 2026-10-26.
  */
 const UNFILED_BODIES: Record<string, Body> = { Touareg: "suv", Touran: "mpv" };
 
 /**
- * Body per model name from the overview's flight data. A name filed under two bodies (two
- * generations disagreeing) gets none.
+ * Body per model name from the overview's flight data; undefined for a name filed under two
+ * bodies (two generations disagreeing). Names filed under no body are absent.
  */
-function bodiesOf(html: string): Map<string, Body> {
+function bodiesOf(html: string): Map<string, Body | undefined> {
   let flight = "";
   for (const m of html.matchAll(/self\.__next_f\.push\(\[1,("(?:[^"\\]|\\.)*")\]\)/g)) {
     flight += JSON.parse(m[1] as string) as string;
@@ -143,9 +145,7 @@ function bodiesOf(html: string): Map<string, Body> {
       filed.set(model.name, set);
     }
   }
-  const bodies = new Map<string, Body>();
-  for (const [name, set] of filed) if (set.size === 1) bodies.set(name, [...set][0] as Body);
-  return bodies;
+  return new Map([...filed].map(([name, set]) => [name, set.size === 1 ? [...set][0] : undefined]));
 }
 
 function documentsOf(html: string): string[] {

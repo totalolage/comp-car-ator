@@ -118,25 +118,53 @@ describe("vw-pricelist source", { timeout: 30_000 }, () => {
     expect(bodies("ID. Polo")).toEqual(new Set(["hatchback"]));
   });
 
-  it("leaves body out for a model the overview files under no body", async () => {
-    const warnings: string[] = [];
-    const unfiled = await edit("/modely", (r) => ({
-      ...r,
-      body: r.body.replace('6e4:[\\"Elektrické vozy\\",\\"Hatchback\\"]', "6e4:[]"),
-    }));
-    const offers = await harvest({ cassette: unfiled, warnings });
-    expect(offers.filter((o) => o.vehicle.model === "ID. Polo")).toHaveLength(7);
-    expect(offers.some((o) => o.vehicle.model === "ID. Polo" && o.vehicle.body)).toBe(false);
-    expect(offers.find((o) => o.ref === "tiguan/CT1CPT03")?.vehicle.body).toBe("suv");
-    expect(warnings).toEqual([]);
+  /** Each model's bodies in a run over the overview with `change` applied to its page. */
+  async function bodiesWith(change: (page: string) => string, warnings?: string[]) {
+    const cassette = await edit("/modely", (r) => ({ ...r, body: change(r.body) }));
+    const offers = await harvest({ cassette, warnings });
+    const models = [...new Set(offers.map((o) => o.vehicle.model))];
+    const bodiesOf = (m: string) =>
+      new Set(offers.filter((o) => o.vehicle.model === m).map((o) => o.vehicle.body));
+    return Object.fromEntries(models.map((m) => [m, bodiesOf(m)]));
+  }
 
-    // Without flight data no model has a body, and the run says so.
-    const cards = await edit("/modely", (r) => ({
-      ...r,
-      body: r.body.replace(/<script>[\s\S]*?<\/script>/g, ""),
-    }));
-    const bare = await harvest({ cassette: cards, warnings });
-    expect(bare.some((o) => o.vehicle.body)).toBe(false);
+  // The fixture files Tiguan's current generation under SUV and the previous one under none.
+  it.each([
+    ["two generations agree", (p: string) => p.replace("b29:[]", 'b29:[\\"SUV\\"]'), "suv"],
+    [
+      "two generations disagree",
+      (p: string) => p.replace("b29:[]", 'b29:[\\"Kombi\\"]'),
+      undefined,
+    ],
+    [
+      "the categories name no body",
+      (p: string) => p.replace('cf4:[\\"SUV\\"]', 'cf4:[\\"Elektrické vozy\\"]'),
+      undefined,
+    ],
+    ["a reference does not resolve", (p: string) => p.replace("cf4:[", "cf5:["), undefined],
+  ])("%s: the model's body follows", async (_, change, body) => {
+    expect(await bodiesWith(change)).toEqual({
+      Tiguan: new Set([body]),
+      "ID. Polo": new Set(["hatchback"]),
+    });
+  });
+
+  it("names the body of a model the overview files under no category from its table", async () => {
+    // The Tiguan card renamed Touran: the overview files no Touran.
+    const touran = (p: string) => p.replaceAll("Vše o modelu Tiguan", "Vše o modelu Touran");
+    expect((await bodiesWith(touran)).Touran).toEqual(new Set(["mpv"]));
+    // Filed under two bodies, the model gets none, table or not.
+    const filedTwice = (p: string) =>
+      touran(p)
+        .replaceAll('\\"name\\":\\"Tiguan\\"', '\\"name\\":\\"Touran\\"')
+        .replace("b29:[]", 'b29:[\\"Kombi\\"]');
+    expect((await bodiesWith(filedTwice)).Touran).toEqual(new Set([undefined]));
+  });
+
+  it("without the overview's flight data no model has a body, and the run says so", async () => {
+    const warnings: string[] = [];
+    const bodies = await bodiesWith((p) => p.replace(/<script>[\s\S]*?<\/script>/g, ""), warnings);
+    expect(Object.values(bodies)).toEqual([new Set([undefined]), new Set([undefined])]);
     expect(warnings).toEqual(["vw-pricelist: the model overview files no model by body"]);
   });
 
