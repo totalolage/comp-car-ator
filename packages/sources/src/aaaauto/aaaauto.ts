@@ -30,7 +30,7 @@
  *   once more; still short, it stays not done, its listings come out after the other
  *   slices, and the run fails.
  * - incremental: both lists newest first, yielding the listings not known before, each list
- *   stopping at a page that has known listings and no new one.
+ *   stopping at a page whose cars were all known before the run.
  *
  * Research notes: scrape-access.md (AAA row); lists, filters and the API record verified
  * against the live site 2026-10-25. The site has no bot protection; T0 is enough.
@@ -181,29 +181,30 @@ class Harvest {
   }
 
   /**
-   * New listings of one list, newest first, up to the first page that reaches known
-   * listings without a new one. A car first seen on an earlier page (it moved down as others
-   * were added) is not new again, so a car repeated on every page cannot keep the walk
-   * going; a page of nothing but such repeats has not reached known listings, so the walk
-   * goes on to the cars they pushed down.
+   * New listings of one list, newest first, up to the first page whose cars were all known
+   * before this run. Each ref's known status is taken when the run first meets it, so a car
+   * that came out on an earlier page (it moved down as others were added) still counts as
+   * unknown and the walk goes on to the cars it was pushed down with; it comes out once.
    */
   private async *incremental(list: List): AsyncIterable<Observation> {
     for await (const page of this.pages(list, false)) {
-      let fresh = 0;
-      let reachedKnown = false;
+      const allKnown = page.cars.map((car) => this.knewBefore(refOf(car))).every(Boolean);
       for (const car of page.cars) {
-        const ref = refOf(car);
-        const firstSighting = ref !== "" && !this.knownBefore.has(ref);
-        if (firstSighting) this.knownBefore.set(ref, this.ctx.checkpoint.isKnown(ref));
-        if (!ref) yield* this.listing(car, list);
-        else if (this.knownBefore.get(ref)) reachedKnown = true;
-        else if (firstSighting) {
-          fresh++;
-          yield* this.listing(car, list);
-        }
+        if (!this.knewBefore(refOf(car))) yield* this.listing(car, list);
       }
-      if (fresh === 0 && reachedKnown) return;
+      if (allKnown) return;
     }
+  }
+
+  /** `isKnown` as of the run's first sighting of a ref; a car without one is never known. */
+  private knewBefore(ref: string): boolean {
+    if (!ref) return false;
+    let known = this.knownBefore.get(ref);
+    if (known === undefined) {
+      known = this.ctx.checkpoint.isKnown(ref);
+      this.knownBefore.set(ref, known);
+    }
+    return known;
   }
 
   /**
@@ -229,6 +230,8 @@ class Harvest {
   }
 
   private async *listing(car: Raw, list: List): AsyncIterable<ListingSeen | ListingGone> {
+    // The lists filter from 2000 already; a car the site places earlier stays out of scope.
+    if (Number.isInteger(car.productionYear) && (car.productionYear as number) < FIRST_YEAR) return;
     const ref = refOf(car);
     if (ref && this.done.has(ref)) return;
     if (ref) this.done.add(ref);

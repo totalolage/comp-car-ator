@@ -254,6 +254,13 @@ class Harvest {
       return;
     }
     const seen = toListingSeen(card, detail);
+    const year = seen.vehicle.firstRegistration?.year;
+    if (year !== undefined && year < FIRST_YEAR) {
+      // The lists filter from 2000 already; a car the detail page dates earlier stays out of
+      // scope like a van: it counts towards its slice but yields nothing.
+      this.ctx.log.info("autoesa listing before 2000", { ref: card.ref, year });
+      return;
+    }
     if (!Number.isFinite(seen.price.amount)) {
       this.ctx.log.warn("autoesa detail without a cash price", { ref: card.ref, url: card.url });
     }

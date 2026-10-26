@@ -232,6 +232,37 @@ describe("autoesa source", () => {
     expect(seen.map((o) => o.ref)).toEqual([...FRESH.slice(0, 4), ""]);
   });
 
+  it("a car the detail page dates before 2000 yields nothing; one from 2000 comes out", async () => {
+    const dated = (year: number) =>
+      body((b) =>
+        b
+          .replace(/(<strong>Rok<\/strong>\s*<span>)\d{4}/, `$1${year}`)
+          .replace(/"manufature_year": \d{4}/, `"manufature_year": ${year}`),
+      );
+    const cassette = edit(
+      edit(await loadCassette(incremental), `/${FRESH[0]}`, dated(1999)),
+      `/${FRESH[1]}`,
+      dated(2000),
+    );
+    const seen = listings(await harvest(cassette, { mode: "incremental", known: await known() }));
+    expect(seen.map((o) => o.ref)).toEqual(FRESH.slice(1));
+    expect(seen[0]?.vehicle.firstRegistration).toEqual({ year: 2000 });
+  });
+
+  it("a pre-2000 car still counts towards its slice's total, so the slice is done", async () => {
+    const os = await harvest(await loadCassette(full), { mode: "full" });
+    const first = listings(os)[0]?.ref as string;
+    const dated = edit(
+      await loadCassette(full),
+      `/${first}`,
+      body((b) => b.replace(/(<strong>Rok<\/strong>\s*<span>)\d{4}/, "$11999")),
+    );
+    const again = await harvest(dated, { mode: "full" });
+    expect(slicesDone(again)).toEqual(FULL_SLICES);
+    expect(listings(again).map((o) => o.ref)).not.toContain(first);
+    expect(listings(again)).toHaveLength(31);
+  });
+
   it("a hybrid is a plug-in only when its title says so", async () => {
     const hybrid = (title: string) =>
       body((b) =>

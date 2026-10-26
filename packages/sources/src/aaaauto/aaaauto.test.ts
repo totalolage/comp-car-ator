@@ -252,21 +252,37 @@ describe("aaaauto source", () => {
     expect(enyaq?.vehicle.consumptionL100km).toBeUndefined();
   });
 
-  it("a new car repeated on the next page does not keep the walk going", async () => {
+  it("a new car repeated among known ones on the next page keeps the walk going and comes out once", async () => {
     // 34920375 is new on page 1; page 2 shows it again among known cars (it moved down as a
-    // car was added). Counting it as new there would request page 3, which replay misses.
+    // car was added). It was not known before the run, so page 2 is not all known: page 3 is
+    // read and its new car comes out. Page 4 is all known and ends the walk.
     const cassette = await loadCassette(incremental);
     const repeat = carsOf(at(cassette, USED_1).response.body)[0] as Car;
+    const page2 = at(cassette, USED_2);
     const moved = edit(
       cassette,
       USED_2,
       cars((c) => [repeat, ...c]),
     );
+    const page = (n: number, body: string): Interaction => ({
+      request: { url: page2.request.url.replace("page=2", `page=${n}`) },
+      response: { ...page2.response, body },
+    });
+    moved.interactions.push(
+      page(
+        3,
+        withCars(page2.response.body, (c) => [{ ...repeat, id: 99999001 }, ...c]),
+      ),
+      page(4, page2.response.body),
+    );
     for (const live of [false, true]) {
-      const os = await harvest(moved, { mode: "incremental", known: await known(), live });
+      const urls: string[] = [];
+      const os = await harvest(moved, { mode: "incremental", known: await known(), live, urls });
       const refs = listings(os).map((o) => o.ref);
       expect(refs.filter((r) => r === "34920375")).toHaveLength(1);
-      expect(refs).toHaveLength(6);
+      expect(refs).toContain("99999001");
+      expect(refs).toHaveLength(7);
+      expect(urls.some((u) => u.endsWith("page=4"))).toBe(true);
     }
   });
 
@@ -303,6 +319,44 @@ describe("aaaauto source", () => {
     const os = await harvest(shifted, { mode: "incremental", known: await known(), urls });
     expect(urls.some((u) => u.endsWith("page=3"))).toBe(true);
     expect(listings(os)).toHaveLength(6);
+  });
+
+  it("leaves out a car the site places before 2000; one from 2000 comes out", async () => {
+    const cassette = await loadCassette(incremental);
+    const [a, b] = carsOf(at(cassette, USED_1).response.body) as Car[];
+    const dated = edit(
+      cassette,
+      USED_1,
+      cars((c) =>
+        c.map((car) =>
+          car.id === a?.id
+            ? { ...car, productionYear: 1999 }
+            : car.id === b?.id
+              ? { ...car, productionYear: 2000 }
+              : car,
+        ),
+      ),
+    );
+    const refs = listings(await harvest(dated, { mode: "incremental", known: await known() })).map(
+      (o) => o.ref,
+    );
+    expect(refs).not.toContain(String(a?.id));
+    expect(refs).toContain(String(b?.id));
+    expect(refs).toHaveLength(5);
+  });
+
+  it("a pre-2000 car still counts towards its slice's total, so the slice is done", async () => {
+    const cassette = await loadCassette(full);
+    const old = carsOf(at(cassette, Y2004).response.body)[0] as Car;
+    const dated = edit(
+      cassette,
+      Y2004,
+      cars((c) => c.map((car) => (car.id === old.id ? { ...car, productionYear: 1999 } : car))),
+    );
+    const os = await harvest(dated, { mode: "full" });
+    expect(slicesDone(os)).toEqual(FULL_SLICES);
+    expect(listings(os).map((o) => o.ref)).not.toContain(String(old.id));
+    expect(listings(os)).toHaveLength(24 + 56 - 1);
   });
 
   it("full run pages every slice to its end and reports it done", async () => {
