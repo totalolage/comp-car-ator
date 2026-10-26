@@ -1,3 +1,5 @@
+import { aaaautoSource } from "./aaaauto/aaaauto.ts";
+import { autoesaSource } from "./autoesa/autoesa.ts";
 import { autoscout24Source } from "./autoscout24/autoscout24.ts";
 import { cnbSource } from "./cnb/cnb.ts";
 import { sautoSource } from "./sauto/sauto.ts";
@@ -9,6 +11,8 @@ import { tipcarsSource } from "./tipcars/tipcars.ts";
  * (see AGENTS.md "Adding a Source adapter").
  */
 export const sources: Record<SourceId, () => Source> = {
+  aaaauto: () => aaaautoSource(),
+  autoesa: () => autoesaSource(),
   cnb: () => cnbSource(),
   tipcars: () => tipcarsSource(),
   "autoscout24-de": () => autoscout24Source({ country: "DE" }),
