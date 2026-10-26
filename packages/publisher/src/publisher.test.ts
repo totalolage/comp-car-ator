@@ -430,6 +430,35 @@ describe("publish: model files", () => {
     ]);
   });
 
+  it("gives every model an id that opens its model file, whatever the names", async () => {
+    ledger = newLedger();
+    const named = (make: string, model: string, slug = "mk1"): Observation =>
+      ({
+        ...golfEntry,
+        variant: {
+          ...golfEntry.variant,
+          make,
+          model,
+          generation: { slug, name: model, from: 2020 },
+        },
+      }) as Observation;
+    await record("rsv", "2026-10-01", [
+      // The register names some models "."; they have no id and stay out.
+      named("Lada - Vaz", "."),
+      named("Lada - Vaz", "Niva (4x4)", "2121"),
+      named("Lada - Vaz", "Lada 112", "."),
+      named("Citroën", "ë-C4"),
+      named("Volkswagen", "ID.3"),
+    ]);
+    const catalog = await openCatalog(memoryLoader(publish(ledger, { now: at("2026-10-24") })));
+    const ids = catalog.query({ limit: 100 }).facets.values.model.map((m) => m.value);
+    expect(ids.sort()).toEqual(["citroen/e-c4", "lada-vaz/niva-4x4", "volkswagen/id-3"]);
+    for (const id of ids) {
+      expect(id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*\/[a-z0-9]+(-[a-z0-9]+)*$/);
+      expect((await catalog.model(id))?.model.id).toBe(id);
+    }
+  });
+
   it("keeps a weekly median per Market, including Listings long gone", async () => {
     ledger = newLedger();
     await record("cnb", "2026-08-01", [eurRate]);

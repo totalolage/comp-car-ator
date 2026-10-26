@@ -91,7 +91,8 @@ export function modelName(make: string, raw: string): string | undefined {
     .toUpperCase()
     .replace(/[„“"()]/g, " ")
     .split(/\s+/)
-    .filter(Boolean);
+    // Punctuation alone (".", "-") names nothing and would mint an empty id slug.
+    .filter((token) => slugify(token) !== "");
   const makeSlug = slugify(make);
   // Some rows repeat the make ("ŠKODA OCTAVIA", "MERCEDES-BENZ C 220").
   while (tokens.length > 1 && makeName(tokens[0] as string) === make) tokens.shift();

@@ -1,3 +1,7 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import type { CatalogEntry, ListingSeen, ListPrice, Observation } from "@cca/vocabulary";
 import { afterEach, describe, expect, it } from "vitest";
 import { type Ledger, openLedger } from "./index.ts";
@@ -142,6 +146,55 @@ describe("Ledger", () => {
       "price must be a finite amount >= 0 with an ISO currency",
       "ref is empty",
     ]);
+  });
+
+  it("rejects a CatalogEntry whose make, model or generation has no slug", async () => {
+    ledger = openLedger(":memory:");
+    const v = octavia.variant;
+    const summary = await run("rsv", "full", "2026-10-10", [
+      { ...octavia, variant: { ...v, make: "Lada - Vaz", model: "." } },
+      { ...octavia, variant: { ...v, make: "?" } },
+      { ...octavia, variant: { ...v, generation: { ...v.generation, slug: "-" } } },
+      { ...octavia, variant: { ...v, make: "Lada - Vaz", model: "Niva (4x4)" } },
+    ]);
+    expect(summary.rejected.map((r) => r.reason)).toEqual([
+      "variant make/model has no slug",
+      "variant make/model has no slug",
+      "variant generation slug/name is empty",
+    ]);
+    expect(ledger.snapshot().catalog.map((c) => c.id)).toEqual([
+      "lada-vaz/niva-4x4/mk4/wagon-diesel-110kw",
+    ]);
+  });
+
+  it("drops catalog entries recorded with an empty id part when it opens an older Ledger", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "cca-ledger-"));
+    try {
+      const file = join(dir, "ledger.sqlite");
+      openLedger(file).close();
+      // A schema v2 Ledger from before the slug check, as Data releases carry.
+      const db = new DatabaseSync(file);
+      const insert = db.prepare(
+        "INSERT INTO catalog_entries (variant_id, source, data, updated) VALUES (?, 'rsv', ?, '2026-10-01')",
+      );
+      const dot = {
+        ...octavia.variant,
+        make: "Lada - Vaz",
+        model: ".",
+        generation: { slug: "2111", name: ". 2111" },
+      };
+      insert.run("lada-vaz//2111/wagon-diesel-110kw", JSON.stringify(dot));
+      insert.run("skoda/octavia/mk4/wagon-diesel-110kw", JSON.stringify(octavia.variant));
+      db.prepare("UPDATE meta SET value = '2' WHERE key = 'schema_version'").run();
+      db.close();
+
+      ledger = openLedger(file);
+      expect(ledger.snapshot().catalog.map((c) => c.id)).toEqual([
+        "skoda/octavia/mk4/wagon-diesel-110kw",
+      ]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it("resolves listings against the current catalog at snapshot time", async () => {
