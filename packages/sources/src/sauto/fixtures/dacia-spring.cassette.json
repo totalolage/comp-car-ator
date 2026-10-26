@@ -1,0 +1,607 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":13},\"results\":[{\"additional_model_name\":\"Electric 26,8 kWh\",\"create_date\":\"2026-09-29T19:37:11\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211187061,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFCpZ9wCxpH6Jfb3/2027.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/nCR9NVflLCsdQ6USH6JfcW/7001.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFW9k4FAQH6Jfcx/34a7.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 26,8 kWh\",\"premise\":{\"id\":13894123},\"price\":220000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-24T11:22:05\",\"tachometer\":30000},{\"additional_model_name\":\"Dacia Spring elektromobil\",\"create_date\":\"2026-05-30T09:09:09\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210518621,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmCni4DBwjGwjC26/3e26.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/nO2CysqjGrDPliFCmyGwjC6Q/827a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmChFvGB5gGwjDBx/bcee.jpeg\"}],\"in_operation_date\":\"2025-01-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Dacia Spring elektromobil\",\"premise\":null,\"price\":359000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-19T06:48:27\",\"tachometer\":30800},{\"additional_model_name\":\"Elektromobil\",\"create_date\":\"2026-05-09T07:40:53\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210389525,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtCJexHGclGkPd8S/a978.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtzYqGBFqUGkPeAG/00f2.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/nCTUX1iX5CDciVBm8bGkPeBe/8171.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Elektromobil\",\"premise\":null,\"price\":249000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-14T07:37:13\",\"tachometer\":55900},{\"additional_model_name\":\"/Essential plus+ / odpočet DPH\",\"create_date\":\"2026-09-14T09:18:18\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211098051,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyC2Er4BzoHxIUtw/84d8.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyD4lWfItCHxIUuX/ec17.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRDgcHsBL5HxIUvK/7a1f.jpeg\"}],\"in_operation_date\":\"2022-04-01\",\"locality\":{\"region\":\"Zlínský kraj\",\"municipality\":\"Staré Město\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, /Essential plus+ / odpočet DPH\",\"premise\":null,\"price\":259000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-13T10:26:58\",\"tachometer\":55000}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/211187061"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/211187061",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"Electric 26,8 kWh\",\"average_electric_mileage\":13.9,\"average_gas_mileage\":0,\"capacity\":0,\"color_cb\":{\"name\":\"Bílá\",\"value\":1},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-09-29T19:37:11\",\"doors\":0,\"engine_power\":27,\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":211187061,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFCpZ9wCxpH6Jfb3/2027.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/nCR9NVflLCsdQ6USH6JfcW/7001.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFW9k4FAQH6Jfcx/34a7.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 26,8 kWh\",\"premise\":{\"id\":13894123},\"price\":220000,\"price_is_vat_deductible\":true,\"price_is_without_vat\":false,\"price_without_vat\":181818,\"sorting_date\":\"2026-10-24T11:22:05\",\"status\":\"active\",\"stk_date\":\"2028-08-01\",\"tachometer\":30000,\"vehicle_body_cb\":{\"name\":\"Hatchback\",\"seo_name\":\"hatchback\",\"value\":1}},\"status_code\":200,\"status_message\":\"OK\"}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/210518621"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/210518621",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"Dacia Spring elektromobil\",\"capacity\":4,\"color_cb\":{\"name\":\"Bílá\",\"value\":1},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-05-30T09:09:09\",\"doors\":5,\"drive_cb\":{\"name\":\"Pohon předních kol\",\"value\":9},\"engine_power\":48,\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210518621,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmCni4DBwjGwjC26/3e26.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/nO2CysqjGrDPliFCmyGwjC6Q/827a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmChFvGB5gGwjDBx/bcee.jpeg\"}],\"in_operation_date\":\"2025-01-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Dacia Spring elektromobil\",\"price\":359000,\"price_is_vat_deductible\":null,\"price_is_without_vat\":null,\"sorting_date\":\"2026-10-19T06:48:27\",\"status\":\"active\",\"stk_date\":\"2027-05-01\",\"tachometer\":30800,\"vehicle_body_cb\":{\"name\":\"Hatchback\",\"seo_name\":\"hatchback\",\"value\":1}},\"status_code\":200,\"status_message\":\"OK\"}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/210389525"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/210389525",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"Elektromobil\",\"capacity\":4,\"color_cb\":{\"name\":\"Stříbrná\",\"value\":14},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-05-09T07:40:53\",\"doors\":5,\"drive_cb\":{\"name\":\"Pohon předních kol\",\"value\":9},\"engine_power\":33,\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210389525,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtCJexHGclGkPd8S/a978.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtzYqGBFqUGkPeAG/00f2.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/nCTUX1iX5CDciVBm8bGkPeBe/8171.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Elektromobil\",\"price\":249000,\"price_is_vat_deductible\":null,\"price_is_without_vat\":null,\"sorting_date\":\"2026-10-14T07:37:13\",\"status\":\"active\",\"stk_date\":\"2028-05-01\",\"tachometer\":55900,\"vehicle_body_cb\":{\"name\":\"Hatchback\",\"seo_name\":\"hatchback\",\"value\":1}},\"status_code\":200,\"status_message\":\"OK\"}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/211098051"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/211098051",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"/Essential plus+ / odpočet DPH\",\"average_electric_mileage\":12,\"capacity\":4,\"color_cb\":{\"name\":\"Modrá\",\"value\":8},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-09-14T09:18:18\",\"doors\":5,\"drive_cb\":{\"name\":\"Pohon předních kol\",\"value\":9},\"engine_power\":33,\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":211098051,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyC2Er4BzoHxIUtw/84d8.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyD4lWfItCHxIUuX/ec17.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRDgcHsBL5HxIUvK/7a1f.jpeg\"}],\"in_operation_date\":\"2022-04-01\",\"locality\":{\"region\":\"Zlínský kraj\",\"municipality\":\"Staré Město\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, /Essential plus+ / odpočet DPH\",\"price\":259000,\"price_is_vat_deductible\":true,\"price_is_without_vat\":null,\"price_without_vat\":214050,\"sorting_date\":\"2026-10-13T10:26:58\",\"status\":\"active\",\"stk_date\":\"2028-10-01\",\"tachometer\":55000,\"vehicle_body_cb\":{\"name\":\"Hatchback\",\"seo_name\":\"hatchback\",\"value\":1}},\"status_code\":200,\"status_message\":\"OK\"}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=4&manufacturer_model_seo=dacia%3Aspring"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=4&manufacturer_model_seo=dacia%3Aspring",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":4,\"total\":13},\"results\":[{\"create_date\":\"2026-10-13T09:59:01\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":211264902,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLrfpr3ndIEGfzE/6764.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLCsdQ6HUyIEGf7f/eed3.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/kcKfrMAkFCpZ9wGCUIEGgDj/96c1.jpeg\"}],\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"Praha\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring\",\"premise\":null,\"price\":319000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-13T10:01:35\",\"tachometer\":3500},{\"additional_model_name\":\"EV Comf.Plus SOH92% NAVI KAMER\",\"create_date\":\"2026-10-05T17:23:17\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211220586,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/kcKfrMAkFCpZ9wOTmIAKLiT/5216.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLnoRVKezH9lod4/3938.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLBaEbFFsgH9lofC/9548.jpeg\"}],\"in_operation_date\":\"2022-06-23\",\"locality\":{\"region\":\"Olomoucký kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2022-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, EV Comf.Plus SOH92% NAVI KAMER\",\"premise\":{\"id\":12847028},\"price\":244000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-05T17:23:17\",\"tachometer\":87969},{\"additional_model_name\":\"Electric 65 Extreme\",\"create_date\":\"2026-04-22T09:56:56\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":210296063,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5BWLrlBHTzGd2wep/30d7.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5DwDWzBc2TGd2wgJ/6d36.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5CGpNZBH5WGd2whZ/ac0b.jpeg\"}],\"in_operation_date\":\"2025-09-30\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-09-30\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 65 Extreme\",\"premise\":{\"id\":12739727},\"price\":450000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-05T11:00:09\",\"tachometer\":155},{\"additional_model_name\":\"Extreme electric 100\",\"create_date\":\"2026-09-14T12:20:11\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211099650,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyBuWMSBpUHxMsdx/3a88.png\"}],\"in_operation_date\":\"2026-01-01\",\"locality\":{\"region\":\"Plzeňský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2026-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Extreme electric 100\",\"premise\":{\"id\":13239640},\"price\":480000,\"price_by_agreement\":false,\"sorting_date\":\"2026-09-14T12:20:11\",\"tachometer\":5}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/211264902"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/211264902",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"color_cb\":{\"name\":\"Bílá\",\"value\":1},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-10-13T09:59:01\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":211264902,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLrfpr3ndIEGfzE/6764.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLCsdQ6HUyIEGf7f/eed3.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/kcKfrMAkFCpZ9wGCUIEGgDj/96c1.jpeg\"}],\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"Praha\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring\",\"price\":319000,\"price_is_vat_deductible\":null,\"price_is_without_vat\":null,\"sorting_date\":\"2026-10-13T10:01:35\",\"status\":\"active\",\"tachometer\":3500,\"vehicle_body_cb\":{\"name\":\"Hatchback\",\"seo_name\":\"hatchback\",\"value\":1}},\"status_code\":200,\"status_message\":\"OK\"}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/211220586"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/211220586",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"EV Comf.Plus SOH92% NAVI KAMER\",\"average_electric_mileage\":11,\"average_gas_mileage\":0,\"capacity\":4,\"color_cb\":{\"name\":\"Modrá\",\"value\":8},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-10-05T17:23:17\",\"doors\":5,\"drive_cb\":{\"name\":\"Pohon předních kol\",\"value\":9},\"engine_power\":33,\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":211220586,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/kcKfrMAkFCpZ9wOTmIAKLiT/5216.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLnoRVKezH9lod4/3938.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLBaEbFFsgH9lofC/9548.jpeg\"}],\"in_operation_date\":\"2022-06-23\",\"locality\":{\"region\":\"Olomoucký kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2022-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, EV Comf.Plus SOH92% NAVI KAMER\",\"premise\":{\"id\":12847028},\"price\":244000,\"price_is_vat_deductible\":false,\"price_is_without_vat\":false,\"sorting_date\":\"2026-10-05T17:23:17\",\"status\":\"active\",\"stk_date\":\"2028-06-01\",\"tachometer\":87969,\"vehicle_body_cb\":{\"name\":\"Hatchback\",\"seo_name\":\"hatchback\",\"value\":1}},\"status_code\":200,\"status_message\":\"OK\"}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/210296063"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/210296063",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"Electric 65 Extreme\",\"capacity\":4,\"color_cb\":{\"name\":\"Modrá\",\"value\":8},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-04-22T09:56:56\",\"engine_power\":48,\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":210296063,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5BWLrlBHTzGd2wep/30d7.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5DwDWzBc2TGd2wgJ/6d36.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5CGpNZBH5WGd2whZ/ac0b.jpeg\"}],\"in_operation_date\":\"2025-09-30\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-09-30\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 65 Extreme\",\"premise\":{\"id\":12739727},\"price\":450000,\"price_is_vat_deductible\":true,\"price_is_without_vat\":false,\"price_without_vat\":371901,\"sorting_date\":\"2026-10-05T11:00:09\",\"status\":\"active\",\"stk_date\":\"2029-09-30\",\"tachometer\":155,\"vehicle_body_cb\":{\"name\":\"Hatchback\",\"seo_name\":\"hatchback\",\"value\":1}},\"status_code\":200,\"status_message\":\"OK\"}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/211099650"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/211099650",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"Extreme electric 100\",\"capacity\":4,\"color_cb\":{\"name\":\"Modrá\",\"value\":8},\"condition_cb\":{\"name\":\"Nové\",\"value\":1},\"create_date\":\"2026-09-14T12:20:11\",\"engine_power\":75,\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":211099650,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyBuWMSBpUHxMsdx/3a88.png\"}],\"in_operation_date\":\"2026-01-01\",\"locality\":{\"region\":\"Plzeňský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2026-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Extreme electric 100\",\"premise\":{\"id\":13239640},\"price\":480000,\"price_is_vat_deductible\":true,\"price_is_without_vat\":false,\"price_without_vat\":396694,\"sorting_date\":\"2026-09-14T12:20:11\",\"status\":\"active\",\"tachometer\":5,\"vehicle_body_cb\":{\"name\":\"Hatchback\",\"seo_name\":\"hatchback\",\"value\":1}},\"status_code\":200,\"status_message\":\"OK\"}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=8&manufacturer_model_seo=dacia%3Aspring"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=8&manufacturer_model_seo=dacia%3Aspring",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":8,\"total\":13},\"results\":[{\"additional_model_name\":\"Electric 65 (27 kWh), SoH 92%\",\"create_date\":\"2026-09-02T19:07:35\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211037049,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRD1Evu6WHzctJd/67ab.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_A/nOdL4BtPEyvOo9IYJHvzCir/1966.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_A/nOdL4BtPEyCly89CQCHvzCjs/f954.jpeg\"}],\"in_operation_date\":\"2023-10-30\",\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 65 (27 kWh), SoH 92%\",\"premise\":{\"id\":12973177},\"price\":340000,\"price_by_agreement\":false,\"sorting_date\":\"2026-09-02T19:07:35\",\"tachometer\":15059},{\"additional_model_name\":\"Electric 65 (27 kWh), SoH 96%\",\"create_date\":\"2026-08-26T15:43:49\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":210998559,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_B/nPYADvcUkmDj2BMFYYHmLC2e/6b57.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_B/nPYADvcUkmBcG9PJpWHmLC26/e48d.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_B/kPVqmweP7JB4z4nDicHmLC3d/6e13.jpeg\"}],\"in_operation_date\":\"2025-10-23\",\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 65 (27 kWh), SoH 96%\",\"premise\":{\"id\":12973177},\"price\":400000,\"price_by_agreement\":false,\"sorting_date\":\"2026-08-26T15:43:49\",\"tachometer\":4945},{\"additional_model_name\":\"Electric 45 (27 kWh), SoH 93%\",\"create_date\":\"2026-08-02T15:36:32\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":210867113,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_A/k0OqwCKRDbeZQC27HwLFkb/65bb.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_A/nO573v8MsN3e2PB8DHYaxNP/bf27.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_A/kO7lxrd9zlCpNXieB2HYaxOt/97dc.jpeg\"}],\"in_operation_date\":\"2024-07-31\",\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 45 (27 kWh), SoH 93%\",\"premise\":{\"id\":12973177},\"price\":310000,\"price_by_agreement\":false,\"sorting_date\":\"2026-08-02T15:36:32\",\"tachometer\":22851},{\"additional_model_name\":\"Electric 70k Expression\",\"create_date\":\"2026-03-04T11:10:31\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":210002127,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5CNPfpBd77Geg2e2/2e99.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5BWLrlBIEBGeg2fg/0c08.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5CFdAHBIzeGeg2gy/0ea2.jpeg\"}],\"in_operation_date\":\"2026-05-15\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2026-05-15\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 70k Expression\",\"premise\":{\"id\":12739727},\"price\":469000,\"price_by_agreement\":false,\"sorting_date\":\"2026-03-04T11:10:31\",\"tachometer\":9}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/211037049"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/211037049",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"Electric 65 (27 kWh), SoH 92%\",\"average_electric_mileage\":14.5,\"average_gas_mileage\":0,\"capacity\":4,\"color_cb\":{\"name\":\"Bílá\",\"value\":1},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-09-02T19:07:35\",\"doors\":5,\"engine_power\":48,\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":211037049,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRD1Evu6WHzctJd/67ab.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_A/nOdL4BtPEyvOo9IYJHvzCir/1966.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_A/nOdL4BtPEyCly89CQCHvzCjs/f954.jpeg\"}],\"in_operation_date\":\"2023-10-30\",\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 65 (27 kWh), SoH 92%\",\"premise\":{\"id\":12973177},\"price\":340000,\"price_is_vat_deductible\":false,\"price_is_without_vat\":false,\"sorting_date\":\"2026-09-02T19:07:35\",\"status\":\"active\",\"stk_date\":\"2027-10-30\",\"tachometer\":15059,\"vehicle_body_cb\":{\"name\":\"Hatchback\",\"seo_name\":\"hatchback\",\"value\":1}},\"status_code\":200,\"status_message\":\"OK\"}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/210998559"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/210998559",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"Electric 65 (27 kWh), SoH 96%\",\"average_electric_mileage\":14.5,\"average_gas_mileage\":0,\"capacity\":4,\"color_cb\":{\"name\":\"Červená\",\"value\":4},\"condition_cb\":{\"name\":\"Předváděcí\",\"value\":4},\"create_date\":\"2026-08-26T15:43:49\",\"doors\":5,\"engine_power\":48,\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":210998559,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_B/nPYADvcUkmDj2BMFYYHmLC2e/6b57.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_B/nPYADvcUkmBcG9PJpWHmLC26/e48d.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_B/kPVqmweP7JB4z4nDicHmLC3d/6e13.jpeg\"}],\"in_operation_date\":\"2025-10-23\",\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 65 (27 kWh), SoH 96%\",\"premise\":{\"id\":12973177},\"price\":400000,\"price_is_vat_deductible\":true,\"price_is_without_vat\":false,\"price_without_vat\":330579,\"sorting_date\":\"2026-08-26T15:43:49\",\"status\":\"active\",\"stk_date\":\"2029-10-23\",\"tachometer\":4945,\"vehicle_body_cb\":{\"name\":\"Hatchback\",\"seo_name\":\"hatchback\",\"value\":1}},\"status_code\":200,\"status_message\":\"OK\"}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/210867113"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/210867113",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"Electric 45 (27 kWh), SoH 93%\",\"average_electric_mileage\":13.8999996185303,\"average_gas_mileage\":0,\"capacity\":4,\"color_cb\":{\"name\":\"Šedá\",\"value\":11},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-08-02T15:36:32\",\"doors\":5,\"engine_power\":33,\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":210867113,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_A/k0OqwCKRDbeZQC27HwLFkb/65bb.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_A/nO573v8MsN3e2PB8DHYaxNP/bf27.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_A/kO7lxrd9zlCpNXieB2HYaxOt/97dc.jpeg\"}],\"in_operation_date\":\"2024-07-31\",\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 45 (27 kWh), SoH 93%\",\"premise\":{\"id\":12973177},\"price\":310000,\"price_is_vat_deductible\":true,\"price_is_without_vat\":false,\"price_without_vat\":256198,\"sorting_date\":\"2026-08-02T15:36:32\",\"status\":\"active\",\"stk_date\":\"2028-07-31\",\"tachometer\":22851,\"vehicle_body_cb\":{\"name\":\"Hatchback\",\"seo_name\":\"hatchback\",\"value\":1}},\"status_code\":200,\"status_message\":\"OK\"}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/210002127"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/210002127",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"Electric 70k Expression\",\"capacity\":4,\"color_cb\":{\"name\":\"Zelená\",\"value\":9},\"condition_cb\":{\"name\":\"Předváděcí\",\"value\":4},\"create_date\":\"2026-03-04T11:10:31\",\"engine_power\":52,\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":210002127,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5CNPfpBd77Geg2e2/2e99.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5BWLrlBIEBGeg2fg/0c08.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5CFdAHBIzeGeg2gy/0ea2.jpeg\"}],\"in_operation_date\":\"2026-05-15\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2026-05-15\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 70k Expression\",\"premise\":{\"id\":12739727},\"price\":469000,\"price_is_vat_deductible\":true,\"price_is_without_vat\":false,\"price_without_vat\":387603,\"sorting_date\":\"2026-03-04T11:10:31\",\"status\":\"active\",\"tachometer\":9,\"vehicle_body_cb\":{\"name\":\"Hatchback\",\"seo_name\":\"hatchback\",\"value\":1}},\"status_code\":200,\"status_message\":\"OK\"}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=12&manufacturer_model_seo=dacia%3Aspring"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=12&manufacturer_model_seo=dacia%3Aspring",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":12,\"total\":13},\"results\":[{\"additional_model_name\":\"Electric Extreme 65\",\"create_date\":\"2025-09-16T01:30:24\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":209155305,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_od_B/nPXN5fAIwLCD5MPBjCEWqqIp/6bab.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_od_B/kOy0N9usHcDoCA1BODEWqqJT/bfb4.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_od_B/kOy0N9usHcDfjuvBNZEWqqKB/ae3b.jpeg\"}],\"in_operation_date\":\"2025-12-31\",\"locality\":{\"region\":\"Jihočeský kraj\",\"municipality\":\"Písek\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2024-06-20\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric Extreme 65\",\"premise\":{\"id\":437585},\"price\":534400,\"price_by_agreement\":false,\"sorting_date\":\"2025-09-16T01:30:24\",\"tachometer\":400}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/209155305"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/209155305",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"Electric Extreme 65\",\"average_electric_mileage\":0,\"average_gas_mileage\":0,\"capacity\":4,\"color_cb\":{\"name\":\"Žlutá\",\"value\":2},\"condition_cb\":{\"name\":\"Předváděcí\",\"value\":4},\"create_date\":\"2025-09-16T01:30:24\",\"doors\":5,\"drive_cb\":{\"name\":\"Pohon předních kol\",\"value\":9},\"engine_power\":48,\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":209155305,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_od_B/nPXN5fAIwLCD5MPBjCEWqqIp/6bab.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_od_B/kOy0N9usHcDoCA1BODEWqqJT/bfb4.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_od_B/kOy0N9usHcDfjuvBNZEWqqKB/ae3b.jpeg\"}],\"in_operation_date\":\"2025-12-31\",\"locality\":{\"region\":\"Jihočeský kraj\",\"municipality\":\"Písek\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2024-06-20\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric Extreme 65\",\"premise\":{\"id\":437585},\"price\":534400,\"price_is_vat_deductible\":true,\"price_is_without_vat\":false,\"price_without_vat\":441653,\"sorting_date\":\"2025-09-16T01:30:24\",\"status\":\"active\",\"tachometer\":400,\"vehicle_body_cb\":{\"name\":\"Hatchback\",\"seo_name\":\"hatchback\",\"value\":1}},\"status_code\":200,\"status_message\":\"OK\"}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":1},\"results\":[{\"additional_model_name\":\"Extreme electric 100\",\"create_date\":\"2026-09-14T12:20:11\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211099650,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyBuWMSBpUHxMsdx/3a88.png\"}],\"in_operation_date\":\"2026-01-01\",\"locality\":{\"region\":\"Plzeňský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2026-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Extreme electric 100\",\"premise\":{\"id\":13239640},\"price\":480000,\"price_by_agreement\":false,\"sorting_date\":\"2026-09-14T12:20:11\",\"tachometer\":5}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":0},\"results\":[],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=predvadeci&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=predvadeci&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":3},\"results\":[{\"additional_model_name\":\"Electric 65 (27 kWh), SoH 96%\",\"create_date\":\"2026-08-26T15:43:49\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":210998559,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_B/nPYADvcUkmDj2BMFYYHmLC2e/6b57.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_B/nPYADvcUkmBcG9PJpWHmLC26/e48d.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_B/kPVqmweP7JB4z4nDicHmLC3d/6e13.jpeg\"}],\"in_operation_date\":\"2025-10-23\",\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 65 (27 kWh), SoH 96%\",\"premise\":{\"id\":12973177},\"price\":400000,\"price_by_agreement\":false,\"sorting_date\":\"2026-08-26T15:43:49\",\"tachometer\":4945},{\"additional_model_name\":\"Electric 70k Expression\",\"create_date\":\"2026-03-04T11:10:31\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":210002127,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5CNPfpBd77Geg2e2/2e99.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5BWLrlBIEBGeg2fg/0c08.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5CFdAHBIzeGeg2gy/0ea2.jpeg\"}],\"in_operation_date\":\"2026-05-15\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2026-05-15\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 70k Expression\",\"premise\":{\"id\":12739727},\"price\":469000,\"price_by_agreement\":false,\"sorting_date\":\"2026-03-04T11:10:31\",\"tachometer\":9},{\"additional_model_name\":\"Electric Extreme 65\",\"create_date\":\"2025-09-16T01:30:24\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":209155305,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_od_B/nPXN5fAIwLCD5MPBjCEWqqIp/6bab.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_od_B/kOy0N9usHcDoCA1BODEWqqJT/bfb4.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_od_B/kOy0N9usHcDfjuvBNZEWqqKB/ae3b.jpeg\"}],\"in_operation_date\":\"2025-12-31\",\"locality\":{\"region\":\"Jihočeský kraj\",\"municipality\":\"Písek\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2024-06-20\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric Extreme 65\",\"premise\":{\"id\":437585},\"price\":534400,\"price_by_agreement\":false,\"sorting_date\":\"2025-09-16T01:30:24\",\"tachometer\":400}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=predvadeci&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=predvadeci&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":0},\"results\":[],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=134217727",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":9},\"results\":[{\"additional_model_name\":\"Electric 26,8 kWh\",\"create_date\":\"2026-09-29T19:37:11\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211187061,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFCpZ9wCxpH6Jfb3/2027.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/nCR9NVflLCsdQ6USH6JfcW/7001.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFW9k4FAQH6Jfcx/34a7.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 26,8 kWh\",\"premise\":{\"id\":13894123},\"price\":220000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-24T11:22:05\",\"tachometer\":30000},{\"additional_model_name\":\"Dacia Spring elektromobil\",\"create_date\":\"2026-05-30T09:09:09\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210518621,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmCni4DBwjGwjC26/3e26.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/nO2CysqjGrDPliFCmyGwjC6Q/827a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmChFvGB5gGwjDBx/bcee.jpeg\"}],\"in_operation_date\":\"2025-01-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Dacia Spring elektromobil\",\"premise\":null,\"price\":359000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-19T06:48:27\",\"tachometer\":30800},{\"additional_model_name\":\"Elektromobil\",\"create_date\":\"2026-05-09T07:40:53\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210389525,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtCJexHGclGkPd8S/a978.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtzYqGBFqUGkPeAG/00f2.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/nCTUX1iX5CDciVBm8bGkPeBe/8171.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Elektromobil\",\"premise\":null,\"price\":249000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-14T07:37:13\",\"tachometer\":55900},{\"additional_model_name\":\"/Essential plus+ / odpočet DPH\",\"create_date\":\"2026-09-14T09:18:18\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211098051,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyC2Er4BzoHxIUtw/84d8.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyD4lWfItCHxIUuX/ec17.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRDgcHsBL5HxIUvK/7a1f.jpeg\"}],\"in_operation_date\":\"2022-04-01\",\"locality\":{\"region\":\"Zlínský kraj\",\"municipality\":\"Staré Město\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, /Essential plus+ / odpočet DPH\",\"premise\":null,\"price\":259000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-13T10:26:58\",\"tachometer\":55000}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=67108863"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=67108863",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":9},\"results\":[{\"additional_model_name\":\"Electric 26,8 kWh\",\"create_date\":\"2026-09-29T19:37:11\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211187061,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFCpZ9wCxpH6Jfb3/2027.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/nCR9NVflLCsdQ6USH6JfcW/7001.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFW9k4FAQH6Jfcx/34a7.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 26,8 kWh\",\"premise\":{\"id\":13894123},\"price\":220000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-24T11:22:05\",\"tachometer\":30000},{\"additional_model_name\":\"Dacia Spring elektromobil\",\"create_date\":\"2026-05-30T09:09:09\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210518621,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmCni4DBwjGwjC26/3e26.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/nO2CysqjGrDPliFCmyGwjC6Q/827a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmChFvGB5gGwjDBx/bcee.jpeg\"}],\"in_operation_date\":\"2025-01-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Dacia Spring elektromobil\",\"premise\":null,\"price\":359000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-19T06:48:27\",\"tachometer\":30800},{\"additional_model_name\":\"Elektromobil\",\"create_date\":\"2026-05-09T07:40:53\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210389525,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtCJexHGclGkPd8S/a978.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtzYqGBFqUGkPeAG/00f2.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/nCTUX1iX5CDciVBm8bGkPeBe/8171.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Elektromobil\",\"premise\":null,\"price\":249000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-14T07:37:13\",\"tachometer\":55900},{\"additional_model_name\":\"/Essential plus+ / odpočet DPH\",\"create_date\":\"2026-09-14T09:18:18\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211098051,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyC2Er4BzoHxIUtw/84d8.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyD4lWfItCHxIUuX/ec17.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRDgcHsBL5HxIUvK/7a1f.jpeg\"}],\"in_operation_date\":\"2022-04-01\",\"locality\":{\"region\":\"Zlínský kraj\",\"municipality\":\"Staré Město\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, /Essential plus+ / odpočet DPH\",\"premise\":null,\"price\":259000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-13T10:26:58\",\"tachometer\":55000}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=33554431"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=33554431",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":9},\"results\":[{\"additional_model_name\":\"Electric 26,8 kWh\",\"create_date\":\"2026-09-29T19:37:11\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211187061,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFCpZ9wCxpH6Jfb3/2027.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/nCR9NVflLCsdQ6USH6JfcW/7001.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFW9k4FAQH6Jfcx/34a7.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 26,8 kWh\",\"premise\":{\"id\":13894123},\"price\":220000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-24T11:22:05\",\"tachometer\":30000},{\"additional_model_name\":\"Dacia Spring elektromobil\",\"create_date\":\"2026-05-30T09:09:09\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210518621,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmCni4DBwjGwjC26/3e26.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/nO2CysqjGrDPliFCmyGwjC6Q/827a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmChFvGB5gGwjDBx/bcee.jpeg\"}],\"in_operation_date\":\"2025-01-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Dacia Spring elektromobil\",\"premise\":null,\"price\":359000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-19T06:48:27\",\"tachometer\":30800},{\"additional_model_name\":\"Elektromobil\",\"create_date\":\"2026-05-09T07:40:53\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210389525,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtCJexHGclGkPd8S/a978.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtzYqGBFqUGkPeAG/00f2.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/nCTUX1iX5CDciVBm8bGkPeBe/8171.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Elektromobil\",\"premise\":null,\"price\":249000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-14T07:37:13\",\"tachometer\":55900},{\"additional_model_name\":\"/Essential plus+ / odpočet DPH\",\"create_date\":\"2026-09-14T09:18:18\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211098051,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyC2Er4BzoHxIUtw/84d8.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyD4lWfItCHxIUuX/ec17.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRDgcHsBL5HxIUvK/7a1f.jpeg\"}],\"in_operation_date\":\"2022-04-01\",\"locality\":{\"region\":\"Zlínský kraj\",\"municipality\":\"Staré Město\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, /Essential plus+ / odpočet DPH\",\"premise\":null,\"price\":259000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-13T10:26:58\",\"tachometer\":55000}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=16777215"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=16777215",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":9},\"results\":[{\"additional_model_name\":\"Electric 26,8 kWh\",\"create_date\":\"2026-09-29T19:37:11\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211187061,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFCpZ9wCxpH6Jfb3/2027.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/nCR9NVflLCsdQ6USH6JfcW/7001.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFW9k4FAQH6Jfcx/34a7.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 26,8 kWh\",\"premise\":{\"id\":13894123},\"price\":220000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-24T11:22:05\",\"tachometer\":30000},{\"additional_model_name\":\"Dacia Spring elektromobil\",\"create_date\":\"2026-05-30T09:09:09\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210518621,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmCni4DBwjGwjC26/3e26.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/nO2CysqjGrDPliFCmyGwjC6Q/827a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmChFvGB5gGwjDBx/bcee.jpeg\"}],\"in_operation_date\":\"2025-01-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Dacia Spring elektromobil\",\"premise\":null,\"price\":359000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-19T06:48:27\",\"tachometer\":30800},{\"additional_model_name\":\"Elektromobil\",\"create_date\":\"2026-05-09T07:40:53\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210389525,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtCJexHGclGkPd8S/a978.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtzYqGBFqUGkPeAG/00f2.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/nCTUX1iX5CDciVBm8bGkPeBe/8171.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Elektromobil\",\"premise\":null,\"price\":249000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-14T07:37:13\",\"tachometer\":55900},{\"additional_model_name\":\"/Essential plus+ / odpočet DPH\",\"create_date\":\"2026-09-14T09:18:18\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211098051,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyC2Er4BzoHxIUtw/84d8.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyD4lWfItCHxIUuX/ec17.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRDgcHsBL5HxIUvK/7a1f.jpeg\"}],\"in_operation_date\":\"2022-04-01\",\"locality\":{\"region\":\"Zlínský kraj\",\"municipality\":\"Staré Město\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, /Essential plus+ / odpočet DPH\",\"premise\":null,\"price\":259000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-13T10:26:58\",\"tachometer\":55000}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=8388607"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=8388607",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":9},\"results\":[{\"additional_model_name\":\"Electric 26,8 kWh\",\"create_date\":\"2026-09-29T19:37:11\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211187061,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFCpZ9wCxpH6Jfb3/2027.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/nCR9NVflLCsdQ6USH6JfcW/7001.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFW9k4FAQH6Jfcx/34a7.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 26,8 kWh\",\"premise\":{\"id\":13894123},\"price\":220000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-24T11:22:05\",\"tachometer\":30000},{\"additional_model_name\":\"Dacia Spring elektromobil\",\"create_date\":\"2026-05-30T09:09:09\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210518621,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmCni4DBwjGwjC26/3e26.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/nO2CysqjGrDPliFCmyGwjC6Q/827a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmChFvGB5gGwjDBx/bcee.jpeg\"}],\"in_operation_date\":\"2025-01-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Dacia Spring elektromobil\",\"premise\":null,\"price\":359000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-19T06:48:27\",\"tachometer\":30800},{\"additional_model_name\":\"Elektromobil\",\"create_date\":\"2026-05-09T07:40:53\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210389525,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtCJexHGclGkPd8S/a978.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtzYqGBFqUGkPeAG/00f2.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/nCTUX1iX5CDciVBm8bGkPeBe/8171.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Elektromobil\",\"premise\":null,\"price\":249000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-14T07:37:13\",\"tachometer\":55900},{\"additional_model_name\":\"/Essential plus+ / odpočet DPH\",\"create_date\":\"2026-09-14T09:18:18\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211098051,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyC2Er4BzoHxIUtw/84d8.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyD4lWfItCHxIUuX/ec17.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRDgcHsBL5HxIUvK/7a1f.jpeg\"}],\"in_operation_date\":\"2022-04-01\",\"locality\":{\"region\":\"Zlínský kraj\",\"municipality\":\"Staré Město\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, /Essential plus+ / odpočet DPH\",\"premise\":null,\"price\":259000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-13T10:26:58\",\"tachometer\":55000}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=4194303"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=4194303",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":9},\"results\":[{\"additional_model_name\":\"Electric 26,8 kWh\",\"create_date\":\"2026-09-29T19:37:11\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211187061,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFCpZ9wCxpH6Jfb3/2027.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/nCR9NVflLCsdQ6USH6JfcW/7001.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFW9k4FAQH6Jfcx/34a7.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 26,8 kWh\",\"premise\":{\"id\":13894123},\"price\":220000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-24T11:22:05\",\"tachometer\":30000},{\"additional_model_name\":\"Dacia Spring elektromobil\",\"create_date\":\"2026-05-30T09:09:09\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210518621,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmCni4DBwjGwjC26/3e26.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/nO2CysqjGrDPliFCmyGwjC6Q/827a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmChFvGB5gGwjDBx/bcee.jpeg\"}],\"in_operation_date\":\"2025-01-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Dacia Spring elektromobil\",\"premise\":null,\"price\":359000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-19T06:48:27\",\"tachometer\":30800},{\"additional_model_name\":\"Elektromobil\",\"create_date\":\"2026-05-09T07:40:53\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210389525,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtCJexHGclGkPd8S/a978.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtzYqGBFqUGkPeAG/00f2.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/nCTUX1iX5CDciVBm8bGkPeBe/8171.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Elektromobil\",\"premise\":null,\"price\":249000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-14T07:37:13\",\"tachometer\":55900},{\"additional_model_name\":\"/Essential plus+ / odpočet DPH\",\"create_date\":\"2026-09-14T09:18:18\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211098051,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyC2Er4BzoHxIUtw/84d8.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyD4lWfItCHxIUuX/ec17.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRDgcHsBL5HxIUvK/7a1f.jpeg\"}],\"in_operation_date\":\"2022-04-01\",\"locality\":{\"region\":\"Zlínský kraj\",\"municipality\":\"Staré Město\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, /Essential plus+ / odpočet DPH\",\"premise\":null,\"price\":259000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-13T10:26:58\",\"tachometer\":55000}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=2097151"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=2097151",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":9},\"results\":[{\"additional_model_name\":\"Electric 26,8 kWh\",\"create_date\":\"2026-09-29T19:37:11\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211187061,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFCpZ9wCxpH6Jfb3/2027.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/nCR9NVflLCsdQ6USH6JfcW/7001.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFW9k4FAQH6Jfcx/34a7.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 26,8 kWh\",\"premise\":{\"id\":13894123},\"price\":220000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-24T11:22:05\",\"tachometer\":30000},{\"additional_model_name\":\"Dacia Spring elektromobil\",\"create_date\":\"2026-05-30T09:09:09\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210518621,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmCni4DBwjGwjC26/3e26.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/nO2CysqjGrDPliFCmyGwjC6Q/827a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmChFvGB5gGwjDBx/bcee.jpeg\"}],\"in_operation_date\":\"2025-01-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Dacia Spring elektromobil\",\"premise\":null,\"price\":359000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-19T06:48:27\",\"tachometer\":30800},{\"additional_model_name\":\"Elektromobil\",\"create_date\":\"2026-05-09T07:40:53\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210389525,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtCJexHGclGkPd8S/a978.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtzYqGBFqUGkPeAG/00f2.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/nCTUX1iX5CDciVBm8bGkPeBe/8171.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Elektromobil\",\"premise\":null,\"price\":249000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-14T07:37:13\",\"tachometer\":55900},{\"additional_model_name\":\"/Essential plus+ / odpočet DPH\",\"create_date\":\"2026-09-14T09:18:18\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211098051,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyC2Er4BzoHxIUtw/84d8.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyD4lWfItCHxIUuX/ec17.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRDgcHsBL5HxIUvK/7a1f.jpeg\"}],\"in_operation_date\":\"2022-04-01\",\"locality\":{\"region\":\"Zlínský kraj\",\"municipality\":\"Staré Město\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, /Essential plus+ / odpočet DPH\",\"premise\":null,\"price\":259000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-13T10:26:58\",\"tachometer\":55000}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=1048575"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=1048575",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":9},\"results\":[{\"additional_model_name\":\"Electric 26,8 kWh\",\"create_date\":\"2026-09-29T19:37:11\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211187061,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFCpZ9wCxpH6Jfb3/2027.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/nCR9NVflLCsdQ6USH6JfcW/7001.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFW9k4FAQH6Jfcx/34a7.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 26,8 kWh\",\"premise\":{\"id\":13894123},\"price\":220000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-24T11:22:05\",\"tachometer\":30000},{\"additional_model_name\":\"Dacia Spring elektromobil\",\"create_date\":\"2026-05-30T09:09:09\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210518621,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmCni4DBwjGwjC26/3e26.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/nO2CysqjGrDPliFCmyGwjC6Q/827a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmChFvGB5gGwjDBx/bcee.jpeg\"}],\"in_operation_date\":\"2025-01-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Dacia Spring elektromobil\",\"premise\":null,\"price\":359000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-19T06:48:27\",\"tachometer\":30800},{\"additional_model_name\":\"Elektromobil\",\"create_date\":\"2026-05-09T07:40:53\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210389525,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtCJexHGclGkPd8S/a978.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtzYqGBFqUGkPeAG/00f2.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/nCTUX1iX5CDciVBm8bGkPeBe/8171.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Elektromobil\",\"premise\":null,\"price\":249000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-14T07:37:13\",\"tachometer\":55900},{\"additional_model_name\":\"/Essential plus+ / odpočet DPH\",\"create_date\":\"2026-09-14T09:18:18\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211098051,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyC2Er4BzoHxIUtw/84d8.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyD4lWfItCHxIUuX/ec17.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRDgcHsBL5HxIUvK/7a1f.jpeg\"}],\"in_operation_date\":\"2022-04-01\",\"locality\":{\"region\":\"Zlínský kraj\",\"municipality\":\"Staré Město\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, /Essential plus+ / odpočet DPH\",\"premise\":null,\"price\":259000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-13T10:26:58\",\"tachometer\":55000}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=524287"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=524287",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":9},\"results\":[{\"additional_model_name\":\"Electric 26,8 kWh\",\"create_date\":\"2026-09-29T19:37:11\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211187061,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFCpZ9wCxpH6Jfb3/2027.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/nCR9NVflLCsdQ6USH6JfcW/7001.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFW9k4FAQH6Jfcx/34a7.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 26,8 kWh\",\"premise\":{\"id\":13894123},\"price\":220000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-24T11:22:05\",\"tachometer\":30000},{\"additional_model_name\":\"Dacia Spring elektromobil\",\"create_date\":\"2026-05-30T09:09:09\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210518621,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmCni4DBwjGwjC26/3e26.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/nO2CysqjGrDPliFCmyGwjC6Q/827a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmChFvGB5gGwjDBx/bcee.jpeg\"}],\"in_operation_date\":\"2025-01-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Dacia Spring elektromobil\",\"premise\":null,\"price\":359000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-19T06:48:27\",\"tachometer\":30800},{\"additional_model_name\":\"Elektromobil\",\"create_date\":\"2026-05-09T07:40:53\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210389525,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtCJexHGclGkPd8S/a978.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtzYqGBFqUGkPeAG/00f2.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/nCTUX1iX5CDciVBm8bGkPeBe/8171.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Elektromobil\",\"premise\":null,\"price\":249000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-14T07:37:13\",\"tachometer\":55900},{\"additional_model_name\":\"/Essential plus+ / odpočet DPH\",\"create_date\":\"2026-09-14T09:18:18\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211098051,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyC2Er4BzoHxIUtw/84d8.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyD4lWfItCHxIUuX/ec17.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRDgcHsBL5HxIUvK/7a1f.jpeg\"}],\"in_operation_date\":\"2022-04-01\",\"locality\":{\"region\":\"Zlínský kraj\",\"municipality\":\"Staré Město\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, /Essential plus+ / odpočet DPH\",\"premise\":null,\"price\":259000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-13T10:26:58\",\"tachometer\":55000}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=262143"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=262143",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":4},\"results\":[{\"additional_model_name\":\"Electric 26,8 kWh\",\"create_date\":\"2026-09-29T19:37:11\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211187061,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFCpZ9wCxpH6Jfb3/2027.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/nCR9NVflLCsdQ6USH6JfcW/7001.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_C/kcKfrMAkFW9k4FAQH6Jfcx/34a7.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 26,8 kWh\",\"premise\":{\"id\":13894123},\"price\":220000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-24T11:22:05\",\"tachometer\":30000},{\"additional_model_name\":\"Elektromobil\",\"create_date\":\"2026-05-09T07:40:53\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210389525,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtCJexHGclGkPd8S/a978.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/kcHp2YdDtzYqGBFqUGkPeAG/00f2.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_A/nCTUX1iX5CDciVBm8bGkPeBe/8171.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Elektromobil\",\"premise\":null,\"price\":249000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-14T07:37:13\",\"tachometer\":55900},{\"additional_model_name\":\"/Essential plus+ / odpočet DPH\",\"create_date\":\"2026-09-14T09:18:18\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211098051,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyC2Er4BzoHxIUtw/84d8.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyD4lWfItCHxIUuX/ec17.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRDgcHsBL5HxIUvK/7a1f.jpeg\"}],\"in_operation_date\":\"2022-04-01\",\"locality\":{\"region\":\"Zlínský kraj\",\"municipality\":\"Staré Město\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, /Essential plus+ / odpočet DPH\",\"premise\":null,\"price\":259000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-13T10:26:58\",\"tachometer\":55000},{\"additional_model_name\":\"EV Comf.Plus SOH92% NAVI KAMER\",\"create_date\":\"2026-10-05T17:23:17\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211220586,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/kcKfrMAkFCpZ9wOTmIAKLiT/5216.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLnoRVKezH9lod4/3938.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLBaEbFFsgH9lofC/9548.jpeg\"}],\"in_operation_date\":\"2022-06-23\",\"locality\":{\"region\":\"Olomoucký kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2022-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, EV Comf.Plus SOH92% NAVI KAMER\",\"premise\":{\"id\":12847028},\"price\":244000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-05T17:23:17\",\"tachometer\":87969}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=3&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=262143"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=3&manufacturer_model_seo=dacia%3Aspring&price_from=0&price_to=262143",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":3,\"total\":4},\"results\":[{\"additional_model_name\":\"EV Comf.Plus SOH92% NAVI KAMER\",\"create_date\":\"2026-10-05T17:23:17\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211220586,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/kcKfrMAkFCpZ9wOTmIAKLiT/5216.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLnoRVKezH9lod4/3938.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLBaEbFFsgH9lofC/9548.jpeg\"}],\"in_operation_date\":\"2022-06-23\",\"locality\":{\"region\":\"Olomoucký kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2022-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, EV Comf.Plus SOH92% NAVI KAMER\",\"premise\":{\"id\":12847028},\"price\":244000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-05T17:23:17\",\"tachometer\":87969}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=262144&price_to=524287"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=262144&price_to=524287",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":5},\"results\":[{\"additional_model_name\":\"Dacia Spring elektromobil\",\"create_date\":\"2026-05-30T09:09:09\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":210518621,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmCni4DBwjGwjC26/3e26.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/nO2CysqjGrDPliFCmyGwjC6Q/827a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qB_C/kQMlcCt5zmChFvGB5gGwjDBx/bcee.jpeg\"}],\"in_operation_date\":\"2025-01-01\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"Příbram\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Dacia Spring elektromobil\",\"premise\":null,\"price\":359000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-19T06:48:27\",\"tachometer\":30800},{\"create_date\":\"2026-10-13T09:59:01\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"id\":211264902,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLrfpr3ndIEGfzE/6764.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLCsdQ6HUyIEGf7f/eed3.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/kcKfrMAkFCpZ9wGCUIEGgDj/96c1.jpeg\"}],\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"Praha\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring\",\"premise\":null,\"price\":319000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-13T10:01:35\",\"tachometer\":3500},{\"additional_model_name\":\"Electric 65 Extreme\",\"create_date\":\"2026-04-22T09:56:56\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":210296063,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5BWLrlBHTzGd2wep/30d7.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5DwDWzBc2TGd2wgJ/6d36.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_C/nCTUX1iX5CGpNZBH5WGd2whZ/ac0b.jpeg\"}],\"in_operation_date\":\"2025-09-30\",\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"manufacturing_date\":\"2025-09-30\",\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 65 Extreme\",\"premise\":{\"id\":12739727},\"price\":450000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-05T11:00:09\",\"tachometer\":155},{\"additional_model_name\":\"Electric 65 (27 kWh), SoH 92%\",\"create_date\":\"2026-09-02T19:07:35\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211037049,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRD1Evu6WHzctJd/67ab.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_A/nOdL4BtPEyvOo9IYJHvzCir/1966.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_A/nOdL4BtPEyCly89CQCHvzCjs/f954.jpeg\"}],\"in_operation_date\":\"2023-10-30\",\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 65 (27 kWh), SoH 92%\",\"premise\":{\"id\":12973177},\"price\":340000,\"price_by_agreement\":false,\"sorting_date\":\"2026-09-02T19:07:35\",\"tachometer\":15059}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=3&manufacturer_model_seo=dacia%3Aspring&price_from=262144&price_to=524287"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=3&manufacturer_model_seo=dacia%3Aspring&price_from=262144&price_to=524287",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":3,\"total\":5},\"results\":[{\"additional_model_name\":\"Electric 65 (27 kWh), SoH 92%\",\"create_date\":\"2026-09-02T19:07:35\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211037049,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRD1Evu6WHzctJd/67ab.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_A/nOdL4BtPEyvOo9IYJHvzCir/1966.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_A/nOdL4BtPEyCly89CQCHvzCjs/f954.jpeg\"}],\"in_operation_date\":\"2023-10-30\",\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 65 (27 kWh), SoH 92%\",\"premise\":{\"id\":12973177},\"price\":340000,\"price_by_agreement\":false,\"sorting_date\":\"2026-09-02T19:07:35\",\"tachometer\":15059},{\"additional_model_name\":\"Electric 45 (27 kWh), SoH 93%\",\"create_date\":\"2026-08-02T15:36:32\",\"fuel_cb\":{\"name\":\"Elektro\",\"seo_name\":\"elektro\",\"value\":4},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":210867113,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_A/k0OqwCKRDbeZQC27HwLFkb/65bb.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_A/nO573v8MsN3e2PB8DHYaxNP/bf27.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_A/kO7lxrd9zlCpNXieB2HYaxOt/97dc.jpeg\"}],\"in_operation_date\":\"2024-07-31\",\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Dacia\",\"seo_name\":\"dacia\",\"value\":15},\"model_cb\":{\"name\":\"Spring\",\"seo_name\":\"spring\",\"value\":9057},\"name\":\"Dacia Spring, Electric 45 (27 kWh), SoH 93%\",\"premise\":{\"id\":12973177},\"price\":310000,\"price_by_agreement\":false,\"sorting_date\":\"2026-08-02T15:36:32\",\"tachometer\":22851}],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=524288&price_to=1048575"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=524288&price_to=1048575",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":0},\"results\":[],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=1048576&price_to=2097151"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=1048576&price_to=2097151",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":0},\"results\":[],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=2097152&price_to=4194303"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=2097152&price_to=4194303",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":0},\"results\":[],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=4194304&price_to=8388607"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=4194304&price_to=8388607",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":0},\"results\":[],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=8388608&price_to=16777215"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=8388608&price_to=16777215",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":0},\"results\":[],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=16777216&price_to=33554431"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=16777216&price_to=33554431",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":0},\"results\":[],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=33554432&price_to=67108863"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=33554432&price_to=67108863",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":0},\"results\":[],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=67108864&price_to=134217727"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=67108864&price_to=134217727",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":0},\"results\":[],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=ojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=dacia%3Aspring&price_from=134217728",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":0},\"results\":[],\"status_code\":200,\"status_message\":\"OK\",\"warnings\":{}}",
+        "tier": "T0"
+      }
+    }
+  ]
+}
