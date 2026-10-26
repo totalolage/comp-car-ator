@@ -124,6 +124,7 @@ const listings = (os: Observation[]) =>
   os.filter((o): o is ListingSeen => o.kind === "ListingSeen");
 const slicesDone = (os: Observation[]) =>
   os.flatMap((o) => (o.kind === "SliceDone" ? [o.slice] : []));
+const refsOf = (os: Observation[]) => os.flatMap((o) => ("ref" in o ? [o.ref] : []));
 const lists = (urls: string[]) => urls.filter((u) => !u.endsWith(BRANCHES));
 
 describe("aaaauto source", () => {
@@ -321,28 +322,31 @@ describe("aaaauto source", () => {
     expect(listings(os)).toHaveLength(6);
   });
 
-  it("leaves out a car the site places before 2000; one from 2000 comes out", async () => {
+  it("leaves out a car the site places before 2000; one from 2000 or with no year comes out", async () => {
     const cassette = await loadCassette(incremental);
-    const [a, b] = carsOf(at(cassette, USED_1).response.body) as Car[];
+    const [a, b, c] = carsOf(at(cassette, USED_1).response.body) as Car[];
     const dated = edit(
       cassette,
       USED_1,
-      cars((c) =>
-        c.map((car) =>
-          car.id === a?.id
-            ? { ...car, productionYear: 1999 }
-            : car.id === b?.id
-              ? { ...car, productionYear: 2000 }
-              : car,
-        ),
+      cars((all) =>
+        all.map((car) => {
+          if (car.id === a?.id) return { ...car, productionYear: 1999 };
+          if (car.id === b?.id) return { ...car, productionYear: 2000 };
+          if (car.id !== c?.id) return car;
+          const { productionYear: _, ...undated } = car;
+          return undated as Car;
+        }),
       ),
     );
-    const refs = listings(await harvest(dated, { mode: "incremental", known: await known() })).map(
-      (o) => o.ref,
-    );
-    expect(refs).not.toContain(String(a?.id));
-    expect(refs).toContain(String(b?.id));
-    expect(refs).toHaveLength(5);
+    const os = await harvest(dated, { mode: "incremental", known: await known() });
+    // Nothing at all comes out for the 1999 car: no ListingGone, no rejected ListingSeen.
+    expect(os.map((o) => ("ref" in o ? o.ref : o.kind))).toEqual(listings(os).map((o) => o.ref));
+    expect(refsOf(os)).not.toContain(String(a?.id));
+    expect(refsOf(os)).not.toContain("");
+    expect(os).toHaveLength(5);
+    const byRef = new Map(listings(os).map((o) => [o.ref, o]));
+    expect(byRef.get(String(b?.id))?.vehicle.firstRegistration).toEqual({ year: 2000 });
+    expect(byRef.get(String(c?.id))?.vehicle.firstRegistration).toBeUndefined();
   });
 
   it("a pre-2000 car still counts towards its slice's total, so the slice is done", async () => {
@@ -355,7 +359,8 @@ describe("aaaauto source", () => {
     );
     const os = await harvest(dated, { mode: "full" });
     expect(slicesDone(os)).toEqual(FULL_SLICES);
-    expect(listings(os).map((o) => o.ref)).not.toContain(String(old.id));
+    expect(refsOf(os)).not.toContain(String(old.id));
+    expect(refsOf(os)).not.toContain("");
     expect(listings(os)).toHaveLength(24 + 56 - 1);
   });
 

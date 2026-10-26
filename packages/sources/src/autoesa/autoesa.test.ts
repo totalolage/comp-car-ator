@@ -232,21 +232,28 @@ describe("autoesa source", () => {
     expect(seen.map((o) => o.ref)).toEqual([...FRESH.slice(0, 4), ""]);
   });
 
-  it("a car the detail page dates before 2000 yields nothing; one from 2000 comes out", async () => {
-    const dated = (year: number) =>
+  it("a car the detail page dates before 2000 yields nothing; one from 2000 or with no year comes out", async () => {
+    const dated = (year: string) =>
       body((b) =>
         b
           .replace(/(<strong>Rok<\/strong>\s*<span>)\d{4}/, `$1${year}`)
-          .replace(/"manufature_year": \d{4}/, `"manufature_year": ${year}`),
+          .replace(/"manufature_year": \d{4}/, `"manufature_year": ${year || "null"}`),
       );
     const cassette = edit(
-      edit(await loadCassette(incremental), `/${FRESH[0]}`, dated(1999)),
-      `/${FRESH[1]}`,
-      dated(2000),
+      edit(
+        edit(await loadCassette(incremental), `/${FRESH[0]}`, dated("1999")),
+        `/${FRESH[1]}`,
+        dated("2000"),
+      ),
+      `/${FRESH[2]}`,
+      dated(""),
     );
-    const seen = listings(await harvest(cassette, { mode: "incremental", known: await known() }));
-    expect(seen.map((o) => o.ref)).toEqual(FRESH.slice(1));
+    const os = await harvest(cassette, { mode: "incremental", known: await known() });
+    // Nothing at all comes out for the 1999 car: no ListingGone, no rejected ListingSeen.
+    expect(os.map((o) => ("ref" in o ? o.ref : o.kind))).toEqual(FRESH.slice(1));
+    const seen = listings(os);
     expect(seen[0]?.vehicle.firstRegistration).toEqual({ year: 2000 });
+    expect(seen[1]?.vehicle.firstRegistration).toBeUndefined();
   });
 
   it("a pre-2000 car still counts towards its slice's total, so the slice is done", async () => {
@@ -259,7 +266,9 @@ describe("autoesa source", () => {
     );
     const again = await harvest(dated, { mode: "full" });
     expect(slicesDone(again)).toEqual(FULL_SLICES);
-    expect(listings(again).map((o) => o.ref)).not.toContain(first);
+    const refs = again.flatMap((o) => ("ref" in o ? [o.ref] : []));
+    expect(refs).not.toContain(first);
+    expect(refs).not.toContain("");
     expect(listings(again)).toHaveLength(31);
   });
 
