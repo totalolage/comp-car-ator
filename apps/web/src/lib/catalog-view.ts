@@ -16,7 +16,7 @@ import type {
   VariantSortKey,
 } from "@cca/catalog";
 import { BODIES, FUELS, MARKETS, TRANSMISSIONS } from "@cca/vocabulary";
-import type { I18n } from "../i18n/i18n.ts";
+import { type I18n, MISSING } from "../i18n/i18n.ts";
 import type { MessageKey } from "../i18n/messages.ts";
 import { type CatalogState, readCatalogState, writeCatalogState } from "./url-state.ts";
 
@@ -224,7 +224,8 @@ export const COLUMNS: Column[] = [
   {
     id: "transmission",
     label: "col.transmission",
-    cell: (v, t) => t.label("transmission", v.transmission),
+    cell: (v, t) =>
+      (v.transmissions ?? []).map((g) => t.label("transmission", g)).join(", ") || MISSING,
   },
   {
     id: "consumption",

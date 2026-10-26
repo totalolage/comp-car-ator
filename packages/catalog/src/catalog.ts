@@ -87,7 +87,7 @@ function variantFacetDefs(
       model: (r) => [r.variant.modelId],
       body: (r) => [r.variant.body],
       fuel: (r) => [r.variant.fuel],
-      transmission: (r) => [r.variant.transmission],
+      transmission: (r) => r.variant.transmissions ?? [],
       market: (r) => (r.group ? [r.group.market] : []),
       source: (r) => (r.group ? [r.group.source] : []),
     },

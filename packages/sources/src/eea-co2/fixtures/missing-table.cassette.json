@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "url": "https://discodata.eea.europa.eu/sql?query=SELECT+%5BMk%5D%2C+%5BCn%5D%2C+%5BFt%5D%2C+%5BFm%5D%2C+%5BEp+%28KW%29%5D+AS+kw%2C+%5BEc+%28cm3%29%5D+AS+cc%2C+AVG%28%5BM+%28kg%29%5D%29+AS+mass%2C+AVG%28%5BEwltp+%28g%2Fkm%29%5D%29+AS+co2%2C+AVG%28%5BFc%5D%29+AS+fc%2C+AVG%28%5BZ+%28Wh%2Fkm%29%5D%29+AS+z%2C+SUM%28%5BR%5D%29+AS+r+FROM+%5BCO2Emission%5D.%5Blatest%5D.%5Bco2cars_2099Fv99%5D+WHERE+%5BYear%5D+%3D+2099+AND+%5BStatus%5D+%3D+%27F%27+AND+%5BMS%5D+IN+%28%27CZ%27%2C+%27DE%27%2C+%27AT%27%29+AND+%5BMk%5D+IN+%28%27SKODA%27%29+GROUP+BY+%5BMk%5D%2C+%5BCn%5D%2C+%5BFt%5D%2C+%5BFm%5D%2C+%5BEp+%28KW%29%5D%2C+%5BEc+%28cm3%29%5D+HAVING+SUM%28%5BR%5D%29+%3E%3D+10+ORDER+BY+%5BMk%5D%2C+%5BCn%5D%2C+%5BFt%5D%2C+%5BFm%5D%2C+kw%2C+cc&p=1&nrOfHits=10000"
+      },
+      "response": {
+        "url": "https://discodata.eea.europa.eu/sql?query=SELECT+%5BMk%5D%2C+%5BCn%5D%2C+%5BFt%5D%2C+%5BFm%5D%2C+%5BEp+%28KW%29%5D+AS+kw%2C+%5BEc+%28cm3%29%5D+AS+cc%2C+AVG%28%5BM+%28kg%29%5D%29+AS+mass%2C+AVG%28%5BEwltp+%28g%2Fkm%29%5D%29+AS+co2%2C+AVG%28%5BFc%5D%29+AS+fc%2C+AVG%28%5BZ+%28Wh%2Fkm%29%5D%29+AS+z%2C+SUM%28%5BR%5D%29+AS+r+FROM+%5BCO2Emission%5D.%5Blatest%5D.%5Bco2cars_2099Fv99%5D+WHERE+%5BYear%5D+%3D+2099+AND+%5BStatus%5D+%3D+%27F%27+AND+%5BMS%5D+IN+%28%27CZ%27%2C+%27DE%27%2C+%27AT%27%29+AND+%5BMk%5D+IN+%28%27SKODA%27%29+GROUP+BY+%5BMk%5D%2C+%5BCn%5D%2C+%5BFt%5D%2C+%5BFm%5D%2C+%5BEp+%28KW%29%5D%2C+%5BEc+%28cm3%29%5D+HAVING+SUM%28%5BR%5D%29+%3E%3D+10+ORDER+BY+%5BMk%5D%2C+%5BCn%5D%2C+%5BFt%5D%2C+%5BFm%5D%2C+kw%2C+cc&p=1&nrOfHits=10000",
+        "status": 200,
+        "headers": {
+          "access-control-allow-credentials": "true",
+          "access-control-allow-headers": "content-type,soapaction,Origin,X-Auth-Token,Authorization",
+          "access-control-allow-methods": "GET,POST,OPTIONS",
+          "cache-control": "private",
+          "connection": "keep-alive",
+          "content-length": "101",
+          "content-type": "application/json; charset=utf-8",
+          "date": "Sun, 25 Oct 2026 18:03:33 GMT",
+          "server": "nginx",
+          "strict-transport-security": "max-age=31536000;includeSubDomains, max-age=15780000; includeSubDomains",
+          "x-aspnet-version": "4.0.30319",
+          "x-content-type-options": "nosniff",
+          "x-frame-options": "SAMEORIGIN",
+          "x-powered-by": "EEA",
+          "x-xss-protection": "1;mode=block"
+        },
+        "body": "{\"errors\":[{\"error\":\"Invalid object name 'CO2Emission.latest.co2cars_2099Fv99'.\",\"errorcode\":10003}]}",
+        "tier": "T0"
+      }
+    }
+  ]
+}

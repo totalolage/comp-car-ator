@@ -49,7 +49,16 @@ export function invalidReason(o: Observation): string | null {
       }
       if (!oneOf(BODIES, v.body)) return `unknown body ${v.body}`;
       if (!oneOf(FUELS, v.fuel)) return `unknown fuel ${v.fuel}`;
-      if (!oneOf(TRANSMISSIONS, v.transmission)) return `unknown transmission ${v.transmission}`;
+      if (
+        v.transmissions !== undefined &&
+        !(
+          Array.isArray(v.transmissions) &&
+          v.transmissions.length > 0 &&
+          v.transmissions.every((t) => oneOf(TRANSMISSIONS, t))
+        )
+      ) {
+        return "transmissions must be a non-empty list of known transmissions";
+      }
       if (!isPositive(v.powerKw)) return "powerKw must be > 0";
       if (!v.years || !Number.isInteger(v.years.from)) return "years.from must be a year";
       return null;

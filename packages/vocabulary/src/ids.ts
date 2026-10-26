@@ -28,9 +28,9 @@ export function generationIdOf(
 
 /**
  * The Variant identity (docs/adr/0002-variant-definition.md), e.g.
- * `skoda/octavia/mk4/wagon-diesel-110kw-automatic`. Path-shaped so it works as a URL.
+ * `skoda/octavia/mk4/wagon-diesel-110kw`. Path-shaped so it works as a URL.
  */
 export function variantIdOf(spec: VariantSpec): VariantId {
-  const tail = [spec.body, spec.fuel, `${Math.round(spec.powerKw)}kw`, spec.transmission].join("-");
+  const tail = [spec.body, spec.fuel, `${Math.round(spec.powerKw)}kw`].join("-");
   return `${generationIdOf(spec)}/${tail}`;
 }

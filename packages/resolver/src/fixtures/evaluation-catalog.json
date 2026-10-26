@@ -1,5 +1,5 @@
 {
-  "about": "Hand-built evaluation catalog: realistic Variants (public spec sheets, CZ/DE market) for the models in listings.json, including neighbours that make listings ambiguous. Each variant line is 'bodies fuel kW transmissions [years]'; comma lists expand to every combination; years default to the generation's.",
+  "about": "Hand-built evaluation catalog: realistic Variants (public spec sheets, CZ/DE market) for the models in listings.json, including neighbours that make listings ambiguous. Each variant line is 'bodies fuel kW transmissions [years]'; comma lists of bodies and kW expand to every combination, transmissions are the Variant's stated gearboxes; years default to the generation's.",
   "makes": {
     "Škoda": {
       "Octavia": [

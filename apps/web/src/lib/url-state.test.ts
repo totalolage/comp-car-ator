@@ -26,10 +26,7 @@ describe("catalog URL state", () => {
       odometerKm: { max: 150000 },
     },
     sort: { key: "usedPriceCzk", dir: "desc" },
-    compare: [
-      "skoda/octavia/nx/wagon-diesel-85kw-manual",
-      "volkswagen/golf/mk8/hatchback-petrol-81kw-manual",
-    ],
+    compare: ["skoda/octavia/nx/wagon-diesel-85kw", "volkswagen/golf/mk8/hatchback-petrol-81kw"],
   };
 
   it("survives a round trip through the URL", () => {
@@ -42,7 +39,7 @@ describe("catalog URL state", () => {
         "&gearbox=automatic&market=CZ,DE&source=sauto&year=2015-2020&power=-110&seats=7-" +
         "&consumption=-5.5&newPrice=500000-&usedPrice=200000-400000&km=-150000" +
         "&sort=-usedPrice" +
-        "&cmp=skoda/octavia/nx/wagon-diesel-85kw-manual,volkswagen/golf/mk8/hatchback-petrol-81kw-manual",
+        "&cmp=skoda/octavia/nx/wagon-diesel-85kw,volkswagen/golf/mk8/hatchback-petrol-81kw",
     );
   });
 
@@ -133,7 +130,7 @@ describe("listing URL state", () => {
   it("survives a round trip, including the gone-listings flag", () => {
     const state = {
       filters: {
-        variant: ["skoda/octavia/nx/wagon-diesel-85kw-manual"],
+        variant: ["skoda/octavia/nx/wagon-diesel-85kw"],
         condition: ["used" as const],
         market: ["DE" as const],
         landedCzk: { max: 450000 },
@@ -144,7 +141,7 @@ describe("listing URL state", () => {
     };
     const url = writeListingState(state);
     expect(url).toBe(
-      "?variant=skoda/octavia/nx/wagon-diesel-85kw-manual&condition=used&market=DE" +
+      "?variant=skoda/octavia/nx/wagon-diesel-85kw&condition=used&market=DE" +
         "&landed=-450000&km=10000-90000&gone=1&sort=landed",
     );
     expect(readListingState(url)).toEqual(state);

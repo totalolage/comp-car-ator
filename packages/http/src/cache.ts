@@ -26,7 +26,8 @@ interface CacheEntry {
  * The raw response cache: serves a stored Page for a request it has seen, without pacing or
  * network. A request is identified by its URL (query order ignored), `binary`, locale, headers
  * and `minTier` (a T2 request wants the rendered page, not a cached T0 one).
- * Final Pages are stored except 429 and 5xx; errors are never stored.
+ * Final Pages are stored except 429 and 5xx; errors and `stream` requests are never stored, and
+ * a `stream` request never reads the cache either.
  */
 export function createCachedHttp(
   inner: Http,
@@ -64,6 +65,7 @@ export function createCachedHttp(
   return {
     async get(input) {
       const request = normalizeRequest(input);
+      if (request.stream) return inner.get(request);
       request.signal?.throwIfAborted();
       const key = cacheKey(request);
       const file = join(options.dir, `${createHash("sha256").update(key).digest("hex")}.json`);

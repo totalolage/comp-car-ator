@@ -70,9 +70,11 @@ const ENGINE_LAYOUT = /^[vw]\d{1,2}$/i;
  *    Hybrid or electric wording ("Plug-in Hybrid", "mHEV", and the make's own badges in
  *    aliases.ts: Volkswagen "GTE", Škoda "iV") limits the fuel to what it allows, stated or
  *    not, and an engine code next to it ("TSI") says nothing about fuel.
- * 3. A Variant fits when every known field agrees: fuel, transmission and body equal, power
- *    within 3 kW, year inside the Variant's production years (manufacture year exactly,
- *    registration or model year ±1), and generation equal when the text names one.
+ * 3. A Variant fits when every known field agrees: fuel and body equal, power within 3 kW,
+ *    transmission among the Variant's stated `transmissions` (a filter, not identity: a
+ *    Variant that states none fits any gearbox), year inside the Variant's production years
+ *    (manufacture year exactly, registration or model year ±1), and generation equal when
+ *    the text names one.
  * 4. One fitting Variant is a match only if fuel and power are known and the text names at
  *    most one generation, all of them known to the catalog ("Octavia III" when the catalog
  *    has only the IV is not evidence for the IV). A word claims a generation when it is a
@@ -153,7 +155,9 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
           fitsYear(v, vehicle) &&
           (fuel === undefined || v.fuel === fuel) &&
           (hints.fuels === undefined || hints.fuels.includes(v.fuel)) &&
-          (transmission === undefined || v.transmission === transmission) &&
+          (transmission === undefined ||
+            v.transmissions === undefined ||
+            v.transmissions.includes(transmission)) &&
           (body === undefined || v.body === body) &&
           (powerKw === undefined || Math.abs(v.powerKw - powerKw) <= POWER_TOLERANCE_KW) &&
           (named.length === 0 || named.includes(v.generationId)),

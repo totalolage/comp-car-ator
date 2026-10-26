@@ -128,7 +128,7 @@ function observation(listing: Listing, amount: number | null): Observation {
       body: listing.variant.body,
       fuel: listing.variant.fuel,
       powerKw: listing.variant.powerKw + (listing.resolution === 1 ? 40 : 0),
-      transmission: listing.variant.transmission,
+      transmission: listing.variant.transmissions?.[0],
       trim: "Style",
     },
     odometerKm: listing.odometerKm,
@@ -166,7 +166,7 @@ function catalog(count: number, endYear: number): VariantSpec[] {
       fuel: FUELS[Math.floor(k / 2) % FUELS.length] as Fuel,
       // 20 kW apart, so ±3 kW Resolution never confuses neighbours.
       powerKw: 60 + 20 * k,
-      transmission: TRANSMISSIONS[k % 2] as Transmission,
+      transmissions: [TRANSMISSIONS[k % 2] as Transmission],
       years: newer ? { from } : { from, to: endYear - 6 },
       // Full specs, as register + EEA data give, so the catalog's size is realistic.
       drive: k % 5 === 4 ? "awd" : "fwd",

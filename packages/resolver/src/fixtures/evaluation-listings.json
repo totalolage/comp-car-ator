@@ -3,7 +3,7 @@
   "listings": [
     {
       "ref": "autoscout24-de:7efca06a-ca09-4cb1-8120-5c54d977b1b9",
-      "expect": "skoda/octavia/mk3/hatchback-petrol-110kw-manual",
+      "expect": "skoda/octavia/mk3/hatchback-petrol-110kw",
       "note": "\"Lim.\" on an Octavia is the liftback",
       "vehicle": {
         "make": "Skoda",
@@ -121,7 +121,7 @@
     },
     {
       "ref": "sauto:210001455",
-      "expect": "skoda/kodiaq/mk1/suv-diesel-140kw-automatic",
+      "expect": "skoda/kodiaq/mk1/suv-diesel-140kw",
       "vehicle": {
         "make": "Škoda",
         "model": "Kodiaq",
@@ -162,7 +162,7 @@
     },
     {
       "ref": "sauto:210054245",
-      "expect": "skoda/kodiaq/mk1/suv-diesel-147kw-automatic",
+      "expect": "skoda/kodiaq/mk1/suv-diesel-147kw",
       "vehicle": {
         "make": "Škoda",
         "model": "Kodiaq",
@@ -220,7 +220,7 @@
     },
     {
       "ref": "sauto:210127133",
-      "expect": "skoda/kodiaq/mk1/suv-diesel-147kw-automatic",
+      "expect": "skoda/kodiaq/mk1/suv-diesel-147kw",
       "vehicle": {
         "make": "Škoda",
         "model": "Kodiaq",
@@ -240,7 +240,7 @@
     },
     {
       "ref": "sauto:210145946",
-      "expect": "skoda/kodiaq/mk1/suv-petrol-110kw-automatic",
+      "expect": "skoda/kodiaq/mk1/suv-petrol-110kw",
       "note": "built 2023, before Kodiaq II",
       "vehicle": {
         "make": "Škoda",
@@ -261,7 +261,7 @@
     },
     {
       "ref": "sauto:210148409",
-      "expect": "skoda/kodiaq/mk1/suv-diesel-147kw-automatic",
+      "expect": "skoda/kodiaq/mk1/suv-diesel-147kw",
       "vehicle": {
         "make": "Škoda",
         "model": "Kodiaq",
@@ -428,7 +428,7 @@
     },
     {
       "ref": "sauto:211263414",
-      "expect": "skoda/fabia/mk3/hatchback-petrol-81kw-manual",
+      "expect": "skoda/fabia/mk3/hatchback-petrol-81kw",
       "note": "Monte Carlo is hatchback only",
       "vehicle": {
         "make": "Škoda",
@@ -449,7 +449,7 @@
     },
     {
       "ref": "sauto:210085895",
-      "expect": "skoda/kamiq/mk1/suv-petrol-110kw-automatic",
+      "expect": "skoda/kamiq/mk1/suv-petrol-110kw",
       "vehicle": {
         "make": "Škoda",
         "model": "Kamiq",
@@ -490,7 +490,7 @@
     },
     {
       "ref": "sauto:210048408",
-      "expect": "skoda/scala/mk1/hatchback-petrol-110kw-manual",
+      "expect": "skoda/scala/mk1/hatchback-petrol-110kw",
       "vehicle": {
         "make": "Škoda",
         "model": "Scala",
@@ -510,7 +510,7 @@
     },
     {
       "ref": "autoscout24-de:b3866913-9ee0-4e35-8a34-1d4b81f8af13",
-      "expect": "skoda/yeti/mk1/suv-diesel-81kw-manual",
+      "expect": "skoda/yeti/mk1/suv-diesel-81kw",
       "vehicle": {
         "make": "Skoda",
         "model": "Yeti",
@@ -547,7 +547,7 @@
     },
     {
       "ref": "autoscout24-de:50998a33-933d-456e-891a-71b53d954cc5",
-      "expect": "volkswagen/golf/mk8/wagon-diesel-85kw-manual",
+      "expect": "volkswagen/golf/mk8/wagon-diesel-85kw",
       "vehicle": {
         "make": "Volkswagen",
         "model": "Golf",
@@ -689,7 +689,7 @@
     },
     {
       "ref": "autoscout24-de:96472848-769c-41aa-9150-c12de786f970",
-      "expect": "volkswagen/tiguan-allspace/mk1/suv-petrol-140kw-automatic",
+      "expect": "volkswagen/tiguan-allspace/mk1/suv-petrol-140kw",
       "vehicle": {
         "make": "Volkswagen",
         "model": "Tiguan Allspace",
@@ -709,7 +709,7 @@
     },
     {
       "ref": "sauto:210089624",
-      "expect": "volkswagen/tiguan-allspace/mk1/suv-petrol-140kw-automatic",
+      "expect": "volkswagen/tiguan-allspace/mk1/suv-petrol-140kw",
       "vehicle": {
         "make": "Volkswagen",
         "model": "Tiguan Allspace",
@@ -725,7 +725,7 @@
     },
     {
       "ref": "autoscout24-de:f3724907-d37d-4974-95dd-8b9a0fa3147c",
-      "expect": "volkswagen/t-roc/mk2/suv-petrol-110kw-automatic",
+      "expect": "volkswagen/t-roc/mk2/suv-petrol-110kw",
       "note": "eTSI in late 2026 is the new T-Roc",
       "vehicle": {
         "make": "Volkswagen",
@@ -763,7 +763,7 @@
     },
     {
       "ref": "autoscout24-de:f1bd224d-92de-48bd-a80f-df3695ef3326",
-      "expect": "volkswagen/taigo/mk1/suv-petrol-110kw-automatic",
+      "expect": "volkswagen/taigo/mk1/suv-petrol-110kw",
       "vehicle": {
         "make": "Volkswagen",
         "model": "Taigo",
@@ -783,7 +783,7 @@
     },
     {
       "ref": "autoscout24-de:42370b02-3571-4910-9326-3d34c74008f3",
-      "expect": "volkswagen/polo/mk6/hatchback-petrol-70kw-manual",
+      "expect": "volkswagen/polo/mk6/hatchback-petrol-70kw",
       "vehicle": {
         "make": "Volkswagen",
         "model": "Polo",
@@ -803,7 +803,7 @@
     },
     {
       "ref": "autoscout24-de:4c38afef-fdb9-4093-82cb-2bff295067a5",
-      "expect": "volkswagen/polo/mk5/hatchback-petrol-44kw-manual",
+      "expect": "volkswagen/polo/mk5/hatchback-petrol-44kw",
       "vehicle": {
         "make": "Volkswagen",
         "model": "Polo",
@@ -823,7 +823,7 @@
     },
     {
       "ref": "autoscout24-de:73b81542-32f9-4eac-a28a-0b139ccf11ca",
-      "expect": "volkswagen/polo/mk4/hatchback-petrol-40kw-manual",
+      "expect": "volkswagen/polo/mk4/hatchback-petrol-40kw",
       "vehicle": {
         "make": "Volkswagen",
         "model": "Polo",
@@ -843,7 +843,7 @@
     },
     {
       "ref": "autoscout24-de:e19d5b55-2d18-4548-b120-924af5af4cb1",
-      "expect": "volkswagen/polo/mk6/hatchback-petrol-59kw-manual",
+      "expect": "volkswagen/polo/mk6/hatchback-petrol-59kw",
       "vehicle": {
         "make": "Volkswagen",
         "model": "Polo",
@@ -863,7 +863,7 @@
     },
     {
       "ref": "autoscout24-de:a40f8c1e-ab5b-4e59-bff2-7927a64dbaf7",
-      "expect": "volkswagen/id-3/mk1/hatchback-bev-150kw-automatic",
+      "expect": "volkswagen/id-3/mk1/hatchback-bev-150kw",
       "vehicle": {
         "make": "Volkswagen",
         "model": "ID.3",
@@ -883,7 +883,7 @@
     },
     {
       "ref": "autoscout24-de:e88a4994-fa99-4349-b18c-0285c4dfa6c4",
-      "expect": "volkswagen/id-4/mk1/suv-bev-150kw-automatic",
+      "expect": "volkswagen/id-4/mk1/suv-bev-150kw",
       "vehicle": {
         "make": "Volkswagen",
         "model": "ID.4",
@@ -903,7 +903,7 @@
     },
     {
       "ref": "autoscout24-de:34632d9f-0727-4352-9b65-d68e1002b3ad",
-      "expect": "volkswagen/arteon/mk1/wagon-petrol-140kw-automatic",
+      "expect": "volkswagen/arteon/mk1/wagon-petrol-140kw",
       "vehicle": {
         "make": "Volkswagen",
         "model": "Arteon",
@@ -923,7 +923,7 @@
     },
     {
       "ref": "sauto:210019707",
-      "expect": "volkswagen/touareg/mk3/suv-diesel-170kw-automatic",
+      "expect": "volkswagen/touareg/mk3/suv-diesel-170kw",
       "vehicle": {
         "make": "Volkswagen",
         "model": "Touareg",
@@ -964,7 +964,7 @@
     },
     {
       "ref": "autoscout24-de:a7beeedf-b3ea-45a1-8d75-a9a3aef3f3c5",
-      "expect": "audi/a4/b9/wagon-petrol-110kw-automatic",
+      "expect": "audi/a4/b9/wagon-petrol-110kw",
       "vehicle": {
         "make": "Audi",
         "model": "A4",
@@ -984,7 +984,7 @@
     },
     {
       "ref": "autoscout24-de:cce6b5bd-103e-40cd-a73d-f322b7598b91",
-      "expect": "audi/a4/b7/wagon-diesel-103kw-manual",
+      "expect": "audi/a4/b7/wagon-diesel-103kw",
       "note": "2.0 TDI 140 PS in 2007 is the B7",
       "vehicle": {
         "make": "Audi",
@@ -1026,7 +1026,7 @@
     },
     {
       "ref": "autoscout24-de:0771512e-fffd-455c-bc82-43aa00ecdac8",
-      "expect": "audi/q3/f3/suv-diesel-110kw-automatic",
+      "expect": "audi/q3/f3/suv-diesel-110kw",
       "vehicle": {
         "make": "Audi",
         "model": "Q3",
@@ -1046,7 +1046,7 @@
     },
     {
       "ref": "autoscout24-de:9f75ce1c-afa7-4049-8255-14179afc64d7",
-      "expect": "audi/q3/f3/suv-diesel-110kw-automatic",
+      "expect": "audi/q3/f3/suv-diesel-110kw",
       "vehicle": {
         "make": "Audi",
         "model": "Q3",
@@ -1066,7 +1066,7 @@
     },
     {
       "ref": "autoscout24-de:cef7c0ed-7945-4836-8bf0-5cbd8047ab88",
-      "expect": "bmw/1-series/f40/hatchback-petrol-103kw-automatic",
+      "expect": "bmw/1-series/f40/hatchback-petrol-103kw",
       "note": "103 kW 118i is the F40",
       "vehicle": {
         "make": "BMW",
@@ -1087,7 +1087,7 @@
     },
     {
       "ref": "sauto:211338891",
-      "expect": "bmw/1-series/e87/hatchback-petrol-90kw-manual",
+      "expect": "bmw/1-series/e87/hatchback-petrol-90kw",
       "vehicle": {
         "make": "BMW",
         "model": "Řada 1",
@@ -1149,7 +1149,7 @@
     },
     {
       "ref": "autoscout24-de:1c4d95e8-a8ea-4a75-9d28-42599580bbc4",
-      "expect": "bmw/x3/f25/suv-diesel-140kw-automatic",
+      "expect": "bmw/x3/f25/suv-diesel-140kw",
       "note": "registered before the G01 launch",
       "vehicle": {
         "make": "BMW",
@@ -1170,7 +1170,7 @@
     },
     {
       "ref": "autoscout24-de:6407db8b-3d92-48e8-b8f4-1603841dae03",
-      "expect": "bmw/x3/g45/suv-diesel-145kw-automatic",
+      "expect": "bmw/x3/g45/suv-diesel-145kw",
       "vehicle": {
         "make": "BMW",
         "model": "X3",
@@ -1232,7 +1232,7 @@
     },
     {
       "ref": "autoscout24-de:9ebbda55-e791-48fe-8d28-ba5a4b4784c9",
-      "expect": "mercedes-benz/a-class/w176/hatchback-petrol-90kw-manual",
+      "expect": "mercedes-benz/a-class/w176/hatchback-petrol-90kw",
       "vehicle": {
         "make": "Mercedes-Benz",
         "model": "A 180",
@@ -1373,7 +1373,7 @@
     },
     {
       "ref": "sauto:210035475",
-      "expect": "mercedes-benz/cla/c117/wagon-petrol-160kw-automatic",
+      "expect": "mercedes-benz/cla/c117/wagon-petrol-160kw",
       "note": "SB = Shooting Brake",
       "vehicle": {
         "make": "Mercedes-Benz",
@@ -1411,7 +1411,7 @@
     },
     {
       "ref": "autoscout24-de:31a2084d-c6b2-410a-9d14-54d004131ac3",
-      "expect": "mercedes-benz/t-class/w420/mpv-diesel-85kw-automatic",
+      "expect": "mercedes-benz/t-class/w420/mpv-diesel-85kw",
       "vehicle": {
         "make": "Mercedes-Benz",
         "model": "T-Klasse",
@@ -1431,7 +1431,7 @@
     },
     {
       "ref": "autoscout24-de:35d071e9-ef3c-4fad-989b-19c74063fb2d",
-      "expect": "mercedes-benz/glb/x247/suv-petrol-120kw-automatic",
+      "expect": "mercedes-benz/glb/x247/suv-petrol-120kw",
       "vehicle": {
         "make": "Mercedes-Benz",
         "model": "GLB 200",
@@ -1451,7 +1451,7 @@
     },
     {
       "ref": "autoscout24-de:0cc57c47-385d-4a9e-81fa-19e933df3f82",
-      "expect": "mercedes-benz/glb/x247/suv-petrol-165kw-automatic",
+      "expect": "mercedes-benz/glb/x247/suv-petrol-165kw",
       "vehicle": {
         "make": "Mercedes-Benz",
         "model": "GLB 250",
@@ -1534,7 +1534,7 @@
     },
     {
       "ref": "sauto:209979249",
-      "expect": "hyundai/tucson/nx4/suv-petrol-110kw-manual",
+      "expect": "hyundai/tucson/nx4/suv-petrol-110kw",
       "vehicle": {
         "make": "Hyundai",
         "model": "Tucson",
@@ -1575,7 +1575,7 @@
     },
     {
       "ref": "autoscout24-de:17f07b39-0612-44b8-abf7-5dacafa326ae",
-      "expect": "hyundai/tucson/tl/suv-petrol-130kw-automatic",
+      "expect": "hyundai/tucson/tl/suv-petrol-130kw",
       "vehicle": {
         "make": "Hyundai",
         "model": "TUCSON",
@@ -1595,7 +1595,7 @@
     },
     {
       "ref": "autoscout24-de:3ef51c04-834a-4655-b995-5cf853699b46",
-      "expect": "hyundai/tucson/nx4/suv-petrol-110kw-automatic",
+      "expect": "hyundai/tucson/nx4/suv-petrol-110kw",
       "vehicle": {
         "make": "Hyundai",
         "model": "TUCSON",
@@ -1657,7 +1657,7 @@
     },
     {
       "ref": "autoscout24-de:f244fd0d-dd58-4615-b626-8990ba72614a",
-      "expect": "tesla/model-3/mk1/sedan-bev-350kw-automatic",
+      "expect": "tesla/model-3/mk1/sedan-bev-350kw",
       "vehicle": {
         "make": "Tesla",
         "model": "Model 3",
@@ -1677,7 +1677,7 @@
     },
     {
       "ref": "autoscout24-de:c62159b7-3de4-4000-b54b-f5f0c73718f8",
-      "expect": "peugeot/5008/mk2/suv-diesel-96kw-automatic",
+      "expect": "peugeot/5008/mk2/suv-diesel-96kw",
       "vehicle": {
         "make": "Peugeot",
         "model": "5008",
@@ -1697,7 +1697,7 @@
     },
     {
       "ref": "sauto:210151394",
-      "expect": "peugeot/5008/mk2/suv-diesel-96kw-manual",
+      "expect": "peugeot/5008/mk2/suv-diesel-96kw",
       "vehicle": {
         "make": "Peugeot",
         "model": "5008",
@@ -1759,7 +1759,7 @@
     },
     {
       "ref": "sauto:210130190",
-      "expect": "seat/leon/mk3/wagon-petrol-221kw-automatic",
+      "expect": "seat/leon/mk3/wagon-petrol-221kw",
       "note": "4Drive Cupra 300 is the ST only",
       "vehicle": {
         "make": "Seat",
@@ -1776,7 +1776,7 @@
     },
     {
       "ref": "sauto:210763700",
-      "expect": "cupra/formentor/mk1/suv-diesel-110kw-automatic",
+      "expect": "cupra/formentor/mk1/suv-diesel-110kw",
       "vehicle": {
         "make": "Cupra",
         "model": "Formentor",
@@ -1796,7 +1796,7 @@
     },
     {
       "ref": "autoscout24-de:ed2133f2-4e1b-4204-8ad7-6d6c5dc543bf",
-      "expect": "cupra/formentor/mk1/suv-petrol-228kw-automatic",
+      "expect": "cupra/formentor/mk1/suv-petrol-228kw",
       "vehicle": {
         "make": "CUPRA",
         "model": "Formentor",

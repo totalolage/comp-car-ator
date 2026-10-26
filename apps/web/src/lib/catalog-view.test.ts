@@ -74,7 +74,7 @@ function variants(): VariantRow[] {
       body: pick(BODIES.slice(0, 5)),
       fuel: pick(FUELS.slice(0, 4)),
       powerKw: 50 + Math.floor(next() * 150),
-      transmission: pick(TRANSMISSIONS),
+      transmissions: [pick(TRANSMISSIONS)],
       ...(next() < 0.8 ? { seats: pick([4, 5, 7]) } : {}),
       ...(next() < 0.7 ? { consumptionL100km: Math.round(40 + next() * 60) / 10 } : {}),
       ...(next() < 0.4

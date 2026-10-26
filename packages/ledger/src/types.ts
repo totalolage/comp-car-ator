@@ -37,6 +37,8 @@ export interface RunSummary {
   priceChanges: number;
   /** Listings marked gone by this run (explicit ListingGone, or missing from a full census). */
   gone: number;
+  /** Catalog entries of this Source retired by this run's census (stated by none of its runs). */
+  retired: number;
   /**
    * Whether this run counted as a census: only complete full runs without rejected
    * Observations do, since rejections may mean the parser broke on part of the site.
@@ -59,7 +61,10 @@ export interface Ledger {
    * census. If it had no rejected Observations, this Source's active listings in the run's
    * scope that no full run since the scope's previous complete full run saw are counted as
    * missed (at most once per day), and a listing missed on 2 days of censuses is gone as of
-   * the first miss. Failed full runs in between belong to the census, so the slices they
+   * the first miss, and this Source's catalog entries in the scope that no run of the census
+   * stated are retired (a Variant re-keyed or withdrawn; a
+   * later run that states it again restores it). Failed full runs in between belong to the
+   * census, so the slices they
    * reported done (SliceDone) may be skipped. When the iterable throws, what was recorded
    * stays (each SliceDone is durable once recorded), the run is marked failed, nothing is
    * inferred, and `record` rejects with that error. A SliceDone after a rejected Observation

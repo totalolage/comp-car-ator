@@ -42,27 +42,25 @@ function expand(): CatalogVariant[] {
           ];
           const [yearFrom, yearTo] = (years ?? `${from}-${to ?? ""}`).split("-");
           return bodies.split(",").flatMap((body) =>
-            powers.split(",").flatMap((power) =>
-              transmissions.split(",").map((transmission) => {
-                const spec: VariantSpec = {
-                  make,
-                  model,
-                  generation: { slug, name, from, ...(to === null ? {} : { to }) },
-                  body: body as Body,
-                  fuel,
-                  powerKw: Number(power),
-                  transmission: transmission as Transmission,
-                  years: { from: Number(yearFrom), ...(yearTo ? { to: Number(yearTo) } : {}) },
-                };
-                return {
-                  ...spec,
-                  id: variantIdOf(spec),
-                  makeId: makeIdOf(make),
-                  modelId: modelIdOf(make, model),
-                  generationId: generationIdOf(spec),
-                };
-              }),
-            ),
+            powers.split(",").map((power) => {
+              const spec: VariantSpec = {
+                make,
+                model,
+                generation: { slug, name, from, ...(to === null ? {} : { to }) },
+                body: body as Body,
+                fuel,
+                powerKw: Number(power),
+                transmissions: transmissions.split(",") as Transmission[],
+                years: { from: Number(yearFrom), ...(yearTo ? { to: Number(yearTo) } : {}) },
+              };
+              return {
+                ...spec,
+                id: variantIdOf(spec),
+                makeId: makeIdOf(make),
+                modelId: modelIdOf(make, model),
+                generationId: generationIdOf(spec),
+              };
+            }),
           );
         }),
       ),
@@ -112,6 +110,15 @@ describe("Resolver evaluation set", () => {
     expect((matched.length - wrong.length) / matched.length).toBeGreaterThanOrEqual(
       PRECISION_FLOOR,
     );
+  });
+
+  it("stays precise when the catalog states no gearboxes, as the register's does not", () => {
+    const bare = createResolver(catalog.map(({ transmissions: _, ...variant }) => variant));
+    const wrong = listings.filter((listing) => {
+      const resolution = bare.resolve(listing.vehicle, listing.ref.split(":")[0]);
+      return resolution.status === "matched" && !agrees(listing.expect, resolution);
+    });
+    expect(wrong.map((listing) => listing.ref)).toEqual([]);
   });
 
   it("matches enough labelled Variants", () => {

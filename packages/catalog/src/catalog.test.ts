@@ -48,7 +48,7 @@ function variant(id: string, fields: Partial<VariantRow>): VariantRow {
     body: "hatchback",
     fuel: "petrol",
     powerKw: 100,
-    transmission: "manual",
+    transmissions: ["manual"],
     used: null,
     ...fields,
   };

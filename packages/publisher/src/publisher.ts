@@ -275,7 +275,7 @@ function variantRow(
     body: variant.body,
     fuel: variant.fuel,
     powerKw: variant.powerKw,
-    transmission: variant.transmission,
+    transmissions: variant.transmissions,
     drive: variant.drive,
     engineCc: variant.engineCc,
     seats: variant.seats,

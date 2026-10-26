@@ -5,6 +5,7 @@
  * tests reach it.
  */
 import { detectChallenge } from "./challenge.ts";
+import { cancelChunks, chunksOf, relayChunks, streams } from "./chunks.ts";
 import {
   type Http,
   HttpBlockedError,
@@ -22,6 +23,13 @@ export interface RawResponse {
   headers: Record<string, string>;
   body: string;
   bytes?: Uint8Array;
+  /**
+   * Unread body of a streamed response. A fetcher asked to `stream` may return it only for a
+   * 2xx response that is not HTML; it reads anything else in full (as for `binary`), so
+   * challenge pages and errors are detected and retried as usual. A fetcher that cannot stream
+   * reads every response in full; the policy then serves the bytes as chunks.
+   */
+  chunks?: AsyncIterable<Uint8Array>;
 }
 
 /**
@@ -33,6 +41,7 @@ export type TierFetcher = (request: {
   url: string;
   headers: Record<string, string>;
   binary: boolean;
+  stream: boolean;
   signal?: AbortSignal;
 }) => Promise<RawResponse>;
 
@@ -167,7 +176,13 @@ export function createTieredHttp(
       let response: RawResponse;
       try {
         response = await spaced(host, request, () =>
-          fetcher({ url, headers, binary: request.binary ?? false, signal }),
+          fetcher({
+            url,
+            headers,
+            binary: request.binary ?? false,
+            stream: request.stream ?? false,
+            signal,
+          }),
         );
       } catch (error) {
         signal?.throwIfAborted();
@@ -196,13 +211,24 @@ export function createTieredHttp(
       const response = await fetchWithRetry(tier, request, host, headers);
       const marker = detectChallenge(response);
       if (marker) {
+        await cancelChunks(response.chunks);
         blocked = { tier, marker };
         continue;
       }
       // A 403 without a known marker may be an unrecognized bot rule: try the next tier, and
       // return the 403 as a Page if no tier is left.
       if (response.status === 403 && index < tiers.length - 1) continue;
-      return { ...response, tier };
+      if (!request.stream) return { ...response, tier };
+      // A tier that cannot stream read the body in full; serve it as chunks all the same.
+      const { bytes, chunks: streamed, ...rest } = response;
+      const chunks = streamed ?? chunksOf(bytes ?? new TextEncoder().encode(rest.body));
+      return {
+        ...rest,
+        ...(streams(rest.status, rest.headers["content-type"]) ? { body: "" } : {}),
+        ...(request.binary && bytes ? { bytes } : {}),
+        chunks: relayChunks(chunks, request.signal),
+        tier,
+      };
     }
     const { tier, marker } = blocked as { tier: Tier; marker: string };
     throw new HttpBlockedError(request.url, tier, marker);

@@ -7,7 +7,7 @@ export type VariantId = string;
 
 /**
  * The technical definition of one catalog Variant, as a catalog Source states it.
- * Identity is make + model + generation + body + fuel + power + transmission
+ * Identity is make + model + generation + body + fuel + power
  * (docs/adr/0002-variant-definition.md); every other field is a spec.
  */
 export interface VariantSpec {
@@ -27,7 +27,11 @@ export interface VariantSpec {
   body: Body;
   fuel: Fuel;
   powerKw: number;
-  transmission: Transmission;
+  /**
+   * Gearboxes the Source states this Variant is offered with, when it states them (price
+   * lists do; the register and EEA do not). Not part of the identity.
+   */
+  transmissions?: Transmission[];
   /** Production years of this Variant (within the generation). */
   years: { from: number; to?: number };
   drive?: Drive;

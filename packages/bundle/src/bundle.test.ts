@@ -85,7 +85,7 @@ describe("Bundle", () => {
 
   it("stores Variants, Listings and price cells column-wise and reads them back unchanged", async () => {
     const variant = (i: number): VariantRow => ({
-      id: `skoda/octavia/mk4/wagon-diesel-${85 + i}kw-automatic`,
+      id: `skoda/octavia/mk4/wagon-diesel-${85 + i}kw`,
       makeId: "skoda",
       modelId: "skoda/octavia",
       generationId: "skoda/octavia/mk4",
@@ -96,7 +96,7 @@ describe("Bundle", () => {
       body: "wagon",
       fuel: "diesel",
       powerKw: 85 + i,
-      transmission: "automatic",
+      transmissions: ["automatic"],
       ...(i % 3 ? { seats: 5, consumptionL100km: 4.6 } : {}),
       ...(i % 4 === 0
         ? { newPriceCzk: { min: 800_000, max: 900_000, source: "list", count: 2 } }
