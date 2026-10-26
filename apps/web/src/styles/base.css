@@ -312,9 +312,9 @@ main:focus {
  * its grid area and sticks by its bottom edge above the tray: taller than the viewport, it
  * scrolls with the page until its end is in view and then stays; shorter, min-height
  * stretches it to the viewport below the masthead, so its content stays pinned under the
- * masthead. The far-negative top keeps the sticky view rectangle taller than any column;
+ * masthead. The far-negative top keeps the sticky view rectangle taller than the column;
  * otherwise a column taller than the viewport has its bottom inset cut to fit and never
- * sticks by its end.
+ * sticks by its end. It holds for columns up to 100000px; raise it if one ever gets taller.
  */
 .rail,
 .results {
@@ -501,7 +501,7 @@ main:focus {
 
 /* Beside the rail the page is the only vertical scroller (see .split), so the box only
    scrolls sideways and its header row scrolls away with the rows. */
-@media (min-width: 48rem) {
+@media (width >= 48rem) {
   .split .table-scroll {
     max-height: none;
   }
@@ -1086,7 +1086,7 @@ body {
 
 /* Narrow screens ---------------------------------------------------------------------- */
 
-@media (max-width: 47.99rem) {
+@media (width < 48rem) {
   :root {
     --gutter: var(--s3);
   }
