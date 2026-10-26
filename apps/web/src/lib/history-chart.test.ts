@@ -49,6 +49,17 @@ describe("history chart", () => {
     expect(chart?.xTicks.length).toBeLessThanOrEqual(6);
   });
 
+  it("joins the publish day to the last Monday but not across a missing Monday", () => {
+    const joined = historyChart([
+      { market: "CZ", points: [point("2026-10-19", 1), point("2026-10-24", 2)] },
+    ]);
+    expect(joined?.lines[0]?.d.match(/M/g)).toHaveLength(1);
+    const skipped = historyChart([
+      { market: "CZ", points: [point("2026-10-12", 1), point("2026-10-20", 2)] },
+    ]);
+    expect(skipped?.lines[0]?.d.match(/M/g)).toHaveLength(2);
+  });
+
   it("centres a single point and labels months on long spans", () => {
     const single = historyChart([{ market: "AT", points: [point("2026-10-24", 600_000)] }]);
     expect(single?.lines[0]?.points[0]?.x).toBe(50);

@@ -30,8 +30,8 @@ export interface HistoryChart {
 }
 
 const DAY = 86_400_000;
-/** Points are weekly; anything further apart skipped a week. */
-const MAX_STEP_DAYS = 8;
+/** Points are Mondays plus the publish day, so anything over a week apart skipped a Monday. */
+const MAX_STEP_DAYS = 7;
 const MAX_X_TICKS = 6;
 const MONTHS_FROM = 60 * DAY;
 

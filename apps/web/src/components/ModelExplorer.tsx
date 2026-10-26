@@ -84,17 +84,22 @@ export default function ModelExplorer(props: Props) {
   const [railOpen, setRailOpen] = useState(false);
   const [resets, setResets] = useState(0);
 
-  // A compare list the URL carries (`cmp`) stays in it and follows the store, as on the
-  // catalog page, so replacing the URL never drops it and the tray never reads a stale one.
+  // The compare list in the URL (`cmp`), kept when the URL is replaced and updated when the
+  // store changes (the compare buttons, the tray), exactly as the catalog island does.
   const [compare, setCompare] = useState<VariantId[] | undefined>(undefined);
 
   useEffect(() => {
     setState(readListingState(location.search));
-    const carried = readCatalogState(location.search).compare;
-    setCompare(carried);
+    setCompare(readCatalogState(location.search).compare);
     const store = siteStore();
-    const unsubscribe = carried ? store.subscribe(() => setCompare(store.compare())) : () => {};
-    // TODO(w1-16): the catalog interface loads catalog.json before any model file; a model page
+    let remembered = store.compare().join();
+    const unsubscribe = store.subscribe(() => {
+      const next = store.compare();
+      if (next.join() === remembered) return;
+      remembered = next.join();
+      setCompare(next);
+    });
+    // TODO(wave1-stream15): the catalog interface loads catalog.json before any model file; a model page
     // needs only its own file (reported to the orchestrator as a catalog interface follow-up).
     openCatalog(fetchLoader(new URL("/bundle/", location.href)))
       .then((c) => c.model(modelId))

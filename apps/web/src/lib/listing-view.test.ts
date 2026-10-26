@@ -301,9 +301,8 @@ describe("price statistics", () => {
 
   it("gives each Variant its used median per Market from the cells", async () => {
     const view = await sampleModel("skoda/octavia");
-    expect(variantMedians(view)).toEqual({
-      "skoda/octavia/mk4/wagon-diesel-110kw-automatic": { CZ: 497_000 },
-    });
+    const cell = view.stats.find((c) => c.variantId && !c.year && !c.band);
+    expect(variantMedians(view)).toEqual({ [cell?.variantId as string]: { CZ: 497_000 } });
   });
 });
 
