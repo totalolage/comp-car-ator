@@ -3,8 +3,10 @@ import { autoesaSource } from "./autoesa/autoesa.ts";
 import { autoscout24Source } from "./autoscout24/autoscout24.ts";
 import { cnbSource } from "./cnb/cnb.ts";
 import { sautoSource } from "./sauto/sauto.ts";
+import { skodaPricelistSource } from "./skoda-pricelist/skoda-pricelist.ts";
 import type { Source, SourceId } from "./source.ts";
 import { tipcarsSource } from "./tipcars/tipcars.ts";
+import { vwPricelistSource } from "./vw-pricelist/vw-pricelist.ts";
 
 /**
  * Every Source adapter the ingest runner can run, by id. Adding an adapter = one line here
@@ -18,4 +20,6 @@ export const sources: Record<SourceId, () => Source> = {
   "autoscout24-de": () => autoscout24Source({ country: "DE" }),
   "autoscout24-at": () => autoscout24Source({ country: "AT" }),
   sauto: () => sautoSource(),
+  "skoda-pricelist": () => skodaPricelistSource(),
+  "vw-pricelist": () => vwPricelistSource(),
 };

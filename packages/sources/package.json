@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@cca/http": "workspace:*",
-    "@cca/vocabulary": "workspace:*"
+    "@cca/vocabulary": "workspace:*",
+    "unpdf": "1.9.1"
   }
 }
