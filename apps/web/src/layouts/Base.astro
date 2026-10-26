@@ -47,7 +47,12 @@ const trail: Crumb[] | undefined = crumbs && [
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <meta name="description" content={t.t("site.tagline")} />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#00664a" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c5240" media="(prefers-color-scheme: dark)" />
     <link rel="alternate" hreflang="cs" href={new URL(path, Astro.site)} />
     <link rel="alternate" hreflang="en" href={new URL(`/en${path}`, Astro.site)} />
     <title>{title ? `${title} – ${site}` : `${site} – ${t.t("site.tagline")}`}</title>
@@ -56,7 +61,12 @@ const trail: Crumb[] | undefined = crumbs && [
     <a class="skip" href="#main">{t.t("nav.skip")}</a>
     <header class="masthead">
       <div class="masthead-bar">
-        <a class="wordmark" href={t.path("/")}>{site}</a>
+        <a class="wordmark" href={t.path("/")}>
+          <svg viewBox="0 0 480 299" width="26" height="16" fill="currentColor" aria-hidden="true">
+            <path d="M0 197V129A53 53 0 0 1 53 76L116 76L154 10A21 21 0 0 1 172 0H284A21 21 0 0 1 299 6L369 76H427A53 53 0 0 1 480 129V197H438V129A11 11 0 0 0 427 118H360A21 21 0 0 1 345 112L275 42L184 42L146 108A21 21 0 0 1 128 118H53A11 11 0 0 0 42 129V197ZM194 216H270V258H194ZM174 196A62 62 0 1 0 174 278L143 250A20 20 0 1 1 143 224ZM398 196A62 62 0 1 0 398 278L367 250A20 20 0 1 1 367 224Z" />
+          </svg>
+          <span class="wordmark-name">{site}</span>
+        </a>
         <CategoryMenu lang={lang} tree={tree} />
         <span class="masthead-fill"></span>
         <a class="masthead-link" href={t.path("/compare/")} data-compare-link hidden>
