@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "url": "https://auto.bazos.cz/kia/"
+      },
+      "response": {
+        "url": "https://auto.bazos.cz/kia/",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=UTF-8"
+        },
+        "body": "<html><body><h1>Bazoš.cz</h1><p>Probíhá údržba serveru, zkuste to prosím později.</p></body></html>",
+        "tier": "T0"
+      }
+    }
+  ]
+}

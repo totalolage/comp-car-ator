@@ -1,6 +1,7 @@
 import { aaaautoSource } from "./aaaauto/aaaauto.ts";
 import { autoesaSource } from "./autoesa/autoesa.ts";
 import { autoscout24Source } from "./autoscout24/autoscout24.ts";
+import { bazosSource } from "./bazos/bazos.ts";
 import { cnbSource } from "./cnb/cnb.ts";
 import { eeaCo2Source } from "./eea-co2/eea-co2.ts";
 import { rsvSource } from "./rsv/rsv.ts";
@@ -26,4 +27,5 @@ export const sources: Record<SourceId, () => Source> = {
   sauto: () => sautoSource(),
   "skoda-pricelist": () => skodaPricelistSource(),
   "vw-pricelist": () => vwPricelistSource(),
+  bazos: () => bazosSource(),
 };
