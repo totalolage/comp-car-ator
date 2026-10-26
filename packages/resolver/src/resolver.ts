@@ -1,4 +1,5 @@
 import {
+  type Body,
   type CatalogVariant,
   type GenerationId,
   type MakeId,
@@ -41,6 +42,22 @@ export interface Resolver {
   resolve(vehicle: VehicleDescriptor, source?: string): Resolution;
 }
 
+/**
+ * Register bodies that can be the car a listing's body names, tried when no Variant fits the
+ * body itself. The register files cars by their EU type-approval body code, listing sites
+ * by shape: an SUV without the off-road category is a wagon, MPV or hatchback there, a
+ * liftback a sedan (or a hatchback), and one MPV is filed under either MPV or wagon.
+ * Coupés, convertibles, vans and pickups have no stand-in: when none fits, the catalog
+ * lacks the car.
+ */
+const REGISTER_BODIES: Partial<Record<Body, readonly Body[]>> = {
+  suv: ["wagon", "mpv", "hatchback"],
+  hatchback: ["sedan"],
+  sedan: ["hatchback"],
+  mpv: ["wagon"],
+  wagon: ["mpv"],
+};
+
 /** Power within this many kW counts as the same Variant (kW/PS rounding, ADR 0002). */
 const POWER_TOLERANCE_KW = 3;
 
@@ -74,7 +91,9 @@ const ENGINE_LAYOUT = /^[vw]\d{1,2}$/i;
  *    transmission among the Variant's stated `transmissions` (a filter, not identity: a
  *    Variant that states none fits any gearbox), year inside the Variant's production years
  *    (manufacture year exactly, registration or model year ±1), and generation equal when
- *    the text names one.
+ *    the text names one. When no Variant fits a stated body, the register bodies that can
+ *    be that car stand in for it (REGISTER_BODIES: an SUV filed as a wagon, a liftback as a
+ *    sedan); a body is never dropped.
  * 4. One fitting Variant is a match only if fuel and power are known and the text names at
  *    most one generation, all of them known to the catalog ("Octavia III" when the catalog
  *    has only the IV is not evidence for the IV). A word claims a generation when it is a
@@ -150,18 +169,23 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
       };
       const unknownGeneration = words.some((w) => claims(w) && !known.has(w));
 
-      const fits = model.variants.filter(
-        (v) =>
-          fitsYear(v, vehicle) &&
-          (fuel === undefined || v.fuel === fuel) &&
-          (hints.fuels === undefined || hints.fuels.includes(v.fuel)) &&
-          (transmission === undefined ||
-            v.transmissions === undefined ||
-            v.transmissions.includes(transmission)) &&
-          (body === undefined || v.body === body) &&
-          (powerKw === undefined || Math.abs(v.powerKw - powerKw) <= POWER_TOLERANCE_KW) &&
-          (named.length === 0 || named.includes(v.generationId)),
-      );
+      const fitting = (fitsBody: (v: CatalogVariant) => boolean) =>
+        model.variants.filter(
+          (v) =>
+            fitsYear(v, vehicle) &&
+            (fuel === undefined || v.fuel === fuel) &&
+            (hints.fuels === undefined || hints.fuels.includes(v.fuel)) &&
+            (transmission === undefined ||
+              v.transmissions === undefined ||
+              v.transmissions.includes(transmission)) &&
+            fitsBody(v) &&
+            (powerKw === undefined || Math.abs(v.powerKw - powerKw) <= POWER_TOLERANCE_KW) &&
+            (named.length === 0 || named.includes(v.generationId)),
+        );
+      let fits = fitting((v) => body === undefined || v.body === body);
+      if (fits.length === 0 && body !== undefined) {
+        fits = fitting((v) => REGISTER_BODIES[body]?.includes(v.body) === true);
+      }
       const only = fits.length === 1 ? fits[0] : undefined;
       const evidence =
         fuel !== undefined &&

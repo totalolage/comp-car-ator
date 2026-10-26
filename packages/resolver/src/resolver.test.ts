@@ -227,6 +227,82 @@ describe("Resolver", () => {
     });
   });
 
+  describe("register bodies standing in for the stated body", () => {
+    // The register files by EU body code: SUVs outside the off-road category as wagons or
+    // MPVs, liftbacks as sedans, every Golf VIII as a wagon.
+    const nx = { slug: "nx", name: "Octavia NX", from: 2020 };
+    const register = createResolver([
+      ...variants("Škoda", "Karoq", { slug: "nu", name: "Karoq NU", from: 2017 }, [
+        { body: "wagon", fuel: "diesel", powerKw: 110 },
+      ]),
+      ...variants("Škoda", "Kodiaq", { slug: "ns", name: "Kodiaq NS", from: 2016, to: 2024 }, [
+        { body: "suv", fuel: "diesel", powerKw: 140 },
+        { body: "wagon", fuel: "diesel", powerKw: 140 },
+        { body: "wagon", fuel: "diesel", powerKw: 110 },
+      ]),
+      ...variants("Škoda", "Octavia", nx, [
+        { body: "sedan", fuel: "petrol", powerKw: 110 },
+        { body: "wagon", fuel: "petrol", powerKw: 110 },
+        { body: "wagon", fuel: "diesel", powerKw: 147 },
+      ]),
+      ...variants("Volkswagen", "Golf", golf8, [{ body: "wagon", fuel: "petrol", powerKw: 110 }]),
+      ...variants("Hyundai", "Tucson", { slug: "tl", name: "Tucson TL", from: 2015, to: 2020 }, [
+        { body: "mpv", fuel: "diesel", powerKw: 104 },
+        { body: "wagon", fuel: "diesel", powerKw: 104 },
+      ]),
+    ]);
+    const at = (vehicle: VehicleDescriptor) => {
+      const r = register.resolve({ firstRegistration: { year: 2022 }, ...vehicle });
+      return r.status === "matched" ? r.variantId : r;
+    };
+    const diesel = { fuel: "diesel", body: "suv" } as const;
+
+    it("matches an SUV the register files as a wagon, preferring the stated body", () => {
+      expect(at({ make: "Škoda", model: "Karoq", powerKw: 110, ...diesel })).toBe(
+        "skoda/karoq/nu/wagon-diesel-110kw",
+      );
+      expect(at({ make: "Škoda", model: "Kodiaq", powerKw: 140, ...diesel })).toBe(
+        "skoda/kodiaq/ns/suv-diesel-140kw",
+      );
+      expect(at({ make: "Škoda", model: "Kodiaq", powerKw: 110, ...diesel })).toBe(
+        "skoda/kodiaq/ns/wagon-diesel-110kw",
+      );
+    });
+
+    it("matches a liftback as the register's sedan, never as its Combi", () => {
+      const octavia = { make: "Škoda", model: "Octavia", body: "hatchback" } as const;
+      expect(at({ ...octavia, fuel: "petrol", powerKw: 110 })).toBe(
+        "skoda/octavia/nx/sedan-petrol-110kw",
+      );
+      expect(at({ ...octavia, fuel: "diesel", powerKw: 147 })).toMatchObject({
+        reason: "no-variant",
+      });
+    });
+
+    it("never takes a wagon for a hatchback, nor anything for a convertible", () => {
+      // Golf VIII hatchbacks the register files as wagons stay on the Model: a Golf VI
+      // hatchback missing from the catalog would otherwise land on a real Golf Variant.
+      const golf = { make: "VW", model: "Golf", fuel: "petrol", powerKw: 110 } as const;
+      expect(at({ ...golf, body: "hatchback" })).toMatchObject({ reason: "no-variant" });
+      expect(at({ ...golf, body: "convertible" })).toMatchObject({ reason: "no-variant" });
+    });
+
+    it("stays ambiguous when several register bodies fit", () => {
+      expect(
+        at({
+          make: "Hyundai",
+          model: "Tucson",
+          powerKw: 104,
+          ...diesel,
+          firstRegistration: { year: 2017 },
+        }),
+      ).toMatchObject({
+        status: "model",
+        reason: "ambiguous",
+      });
+    });
+  });
+
   it("needs fuel and power before matching, even when one Variant is left", () => {
     // Only one Tiguan in the catalog, but the listing does not say which engine it has.
     expect(resolve({ make: "VW", model: "Tiguan", fuel: "petrol" })).toMatchObject({
