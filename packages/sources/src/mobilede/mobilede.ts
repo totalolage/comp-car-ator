@@ -7,7 +7,7 @@
  * page takes seconds; documents go 15 s apart. The registry has it; no schedule runs it. A full
  * census of the ~1.2M listings is ~62,000 pages (some 11 days of runs, resumable through
  * SliceDone); narrow it with `makes` (from the ingest CLI: `CCA_MOBILEDE_MAKES`, see
- * registry.ts). Access research: docs/adr/0014-mobile-de-experimental.md.
+ * registry.ts). Access research: docs/adr/0015-mobile-de-experimental.md.
  *
  * - Search pages embed their results in the Next.js flight data (`self.__next_f.push`):
  *   `searchResults { numResultsTotal, listings[] }` with the listing facts, one card per listing

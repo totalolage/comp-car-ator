@@ -27,7 +27,7 @@ export const sources: Record<SourceId, () => Source> = {
   "autoscout24-at": () => autoscout24Source({ country: "AT" }),
   /**
    * Experimental: T2 only, not scheduled; `CCA_MOBILEDE_MAKES=25200,3500` scopes it to those
-   * makes (docs/adr/0014-mobile-de-experimental.md).
+   * makes (docs/adr/0015-mobile-de-experimental.md).
    */
   "mobile-de": () =>
     mobiledeSource({ makes: process.env.CCA_MOBILEDE_MAKES?.split(",").map(Number) }),
