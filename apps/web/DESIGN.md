@@ -2,8 +2,8 @@
 
 cars.f8y.dev reads like a printed parts catalog for cars, after McMaster-Carr: the page is
 the table, navigation is a text index, filters narrow the table in place, and every view is
-a URL. No product cards, no hero, no imagery in the shell. Tokens live in
-`src/styles/tokens.css`, shared components in `src/styles/base.css`.
+a URL. No product cards, no hero, no imagery in the shell apart from the logo mark. Tokens
+live in `src/styles/tokens.css`, shared components in `src/styles/base.css`.
 
 ## World
 
@@ -11,6 +11,12 @@ a URL. No product cards, no hero, no imagery in the shell. Tokens live in
   mode is the same sheet inverted (`light-dark()` tokens follow the OS setting).
 - **Motorway-sign green** (`--sign`) is the masthead band and nothing else; it marks "site
   chrome" the way the green D-road signs mark the motorway.
+- **The c-c mark** sits before "comp-car-ator" in the masthead: a car drawn as one line whose
+  wheels are two lowercase c's with a hyphen between them. It is the one image in the chrome,
+  an inline SVG in `currentColor` (white on the green), 26px wide (1.75 × `--text-lg`) at
+  every width, its bottom on the text baseline. The name stays live text and does not wrap; below
+  30rem only the mark shows and the name is visually hidden link text. Masters,
+  favicons and usage rules: `assets/logo/README.md`.
 - **Highlighter yellow** (`--mark`) marks what the person chose or what differs: checked
   facets, the compare count, table row and facet hover (McMaster's pale `#FFFFB5`), and the
   compare page's differing values. Never decoration.
@@ -33,7 +39,7 @@ Sentence case everywhere; no uppercase labels.
 │ Katalog › Škoda › Octavia                                                   (breadcrumb)  │
 │ Page title                                                                                │
 │ ┌ rail 15rem ──┐ ┌ results ─────────────────────────────────────────────────────────────┐ │
-│ │ facet groups │ │ count · dense table in .table-scroll, sticky header row              │ │
+│ │ facet groups │ │ count · dense table in .table-scroll                                 │ │
 │ └──────────────┘ └──────────────────────────────────────────────────────────────────────┘ │
 │ footer: data date, counts, note                                                            │
 └ compare tray (fixed bar while the list has Variants): Porovnání 2 ze 4 · names × · Porovnat ┘
@@ -44,9 +50,22 @@ Sentence case everywhere; no uppercase labels.
   models. It is `<details>`, so it needs no script; the shell script only closes it on Escape
   or an outside click.
 - `.split` = rail + results. Below 48rem it stacks and the rail becomes a grid of facet groups.
-- Tables sit in `.table-scroll`, a box at most one viewport tall (below the masthead) that
-  scrolls both ways: a table wider than its column never widens the page, and the header row
-  sticks to the top of the box at every width.
+- Scrolling: the masthead sticks to the top. From 48rem both `.split` columns are sticky and
+  neither scrolls on its own: the longer one scrolls with the page; the shorter one stays
+  pinned under the masthead if it fits the viewport, or scrolls until its end is in view and
+  then stays, so the split scrolls only while the longer column has more to show (the footer
+  follows it). Both stop above the compare tray.
+- The page is the only vertical scroller on the catalog, model and compare pages: no table,
+  list or panel scrolls vertically on its own. The one exception is the Kategorie menu panel,
+  which overlays the page and scrolls itself when it is taller than the viewport.
+- Tables sit in `.table-scroll`, a box as tall as its table that only scrolls sideways: a
+  table wider than its column never widens the page. The header row stays under the masthead
+  while its table's rows pass and leaves with the last rows (a header row taller than the
+  table's `--table-head` allowance is clipped as it leaves). A sideways scroll box would
+  catch a sticky header, so a CSS view timeline moves the header cells instead; where view
+  timelines are missing (Firefox) the header row scrolls away with the rows.
+- Viewport heights use `dvh`, so they follow mobile browser chrome as it slides in and out
+  instead of assuming the tallest viewport.
 - Content is fluid up to `--page-max` (100rem), with a 16px gutter (12px narrow).
 
 ## Catalog page
@@ -67,7 +86,7 @@ Sentence case everywhere; no uppercase labels.
   and source counts overlap, so they stay plain. A footnote under the rail says this, and
   each checkbox's accessible name carries the count's meaning (ADR 0009). Enum options keep a fixed
   order (vocabulary order, or by name), and a chosen value with no matches stays listed so it
-  can be unchosen. Lists over 12 values scroll inside their group.
+  can be unchosen. Long lists (makes, models) show in full; the page scrolls them.
 - Range fields narrow on every keystroke that parses (Czech `1,5` is fine); the placeholder
   shows the bound the other filters leave.
 - Table: make and model link to the model page, then generation, years, body, fuel, power,
@@ -97,15 +116,57 @@ Sentence case everywhere; no uppercase labels.
   "only differences" hides the rest. A Variant the catalog no longer has keeps its column
   ("no longer in the catalog") and stays out of the comparison.
 
+## Model page
+
+- `/model/<make>/<model>/` (and `/en/…`), one per model in the Bundle, breadcrumb Katalog ›
+  make (`/make/<make>/`) › model. Top to bottom: the model's Variants (generation, body, fuel,
+  power; years, consumption, new price from, used median per Market from the published cells,
+  active listing count linking to `?variant=<id>`, a "Porovnat" toggle that edits the compare
+  list through `siteStore().toggleCompare(id, label)` with the Variant's tray name in both
+  languages), then the listings island
+  (`ModelExplorer`). EEA attribution shows under the Variants only once the Bundle has run
+  the `eea-co2` Source and a Variant carries CO₂ data.
+- `ModelExplorer` mirrors the catalog island over `model(id).listings()`: listing rail
+  (Variant, condition, country, registration year, odometer with one quick pick per published
+  band, landed price, asking price, power, fuel, gearbox, body, source; an enum facet with a
+  single value is hidden; "include sold (last 30 days)"), price statistics, the price history
+  chart, and the listings table. It owns only the listing URL state (`readListingState` /
+  `writeListingState`); model pages have no `cmp` (ADR 0009).
+  What it shows is `lib/listing-view.ts`, the one place in the UI that reads model-file shapes.
+- Listings table: title (links to the source; condition, sold and "not in statistics" tags;
+  its Variant on a second line), year, odometer, gearbox (from the listing), asking price in
+  its own currency with the move since first seen (▼/▲ %), landed price in CZ, country,
+  source, days listed. Default order is landed price ascending, so Czech and imported cars
+  compare directly; year, odometer, price, landed and days sort. Listings the outlier rule
+  left out of statistics (placeholder prices) always come last, tagged. The landed price is a
+  button (hover shows the breakdown as a tooltip): it expands the row to the landed-price
+  lines from Pricing with their notes, the original price and ČNB rate, the price history,
+  first/last seen, seller and location, and up to three photos (lazy, secondary).
+- Price statistics: p10, median, p90 of asking prices (CZK) and median days listed, one row
+  per country × condition (never pooled), for the current filters. A selection the Publisher
+  precomputed (at most one Variant, one year, one band pick) reads its cell; any other is
+  recomputed from the Listings by the same rules (ADR 0012); fewer than 3 Listings show no
+  quantiles.
+- Price history: the published weekly median per country as lines (inline SVG stretched to
+  the box, HTML labels so text stays 11px at any width; colours = categorical slots 1-3,
+  validated in both schemes, plus legend, end labels and a data table under the chart).
+  Hovering or touching the plot shows a crosshair at the nearest week with each country's
+  value; the data table is built when opened, so long histories add no first-paint HTML.
+  It is always the whole model's used
+  Listings: only the country filter applies, since a model file no longer has the Listings
+  that past weeks were computed from.
+
 ## Components (classes in base.css)
 
-`masthead`, `menu` / `menu-panel` / `tree`, `crumbs`, `page-title`, `page-summary`,
-`section-title`, `split` / `rail` / `results`, `facet` / `facet-option` / `facet-note`, `button-quiet`,
-`facet-scroll`, `range`, `bands` / `band`, `rail-toggle`, `data` (table; `.num` right-aligns;
+`masthead`, `wordmark` (mark + site name), `menu` / `menu-panel` / `tree`, `crumbs`,
+`page-title`, `page-summary`, `section-title`, `split` / `rail` / `results`, `facet` / `facet-option` / `facet-note`, `button-quiet`,
+`range`, `bands` / `band`, `rail-toggle`, `data` (table; `.num` right-aligns;
 `.sort` header buttons), `table-scroll`, `results-more`, `subcategories`, `count`, `badge`,
 `empty`, `colophon`, `pick`, `tray` / `tray-items` / `tray-item` / `tray-remove`,
-`compare-tools`, `compare-table` / `compare-group` / `compare-detail` / `compare-gone`,
-`visually-hidden`.
+`compare-tools`, `compare-table` / `compare-group` / `compare-detail` / `compare-gone`; model page: `variants`, `stats`, `data-auto`, `tag` / `tag-quiet`, `sub`, `change`,
+`disclose`, `detail` / `detail-grid`, `breakdown`, `note`, `facts`, `photos`, `facet-flag`,
+`chart` (`chart-legend`, `chart-key`, `chart-box`, `chart-plot`, `chart-line`, `chart-point`,
+`chart-dot`, `chart-label`, `chart-x`, `chart-y`, `chart-data`), `visually-hidden`.
 Rows are ~19px (2px vertical cell padding at 12px text), hairline rules, no zebra striping. A table's first cell is a row
 header (`<th scope="row">`) holding the link.
 
@@ -120,17 +181,23 @@ real `<input>`s inside `<label>`s with `<fieldset>`/`<legend>` groups; result co
 
 Enforced on every build by `scripts/check-budget.mjs` (fails the build), gzipped, per page:
 
-|                                | budget | catalog page | compare page | model page |
-| ------------------------------ | ------ | ------------ | ------------ | ---------- |
-| HTML                           | 30 kB  | 7.7 kB       | 3.4 kB       | 2.4 kB     |
-| CSS                            | 8 kB   | 3.1 kB       | 3.1 kB       | 3.1 kB     |
-| JS (all chunks the page loads) | 30 kB  | 23.7 kB      | 20.7 kB      | 5.0 kB     |
-| Total                          | 60 kB  | 34.4 kB      | 27.2 kB      | 10.4 kB    |
+|                                | budget | catalog page | compare page | model page | large model page |
+| ------------------------------ | ------ | ------------ | ------------ | ---------- | ---------------- |
+| HTML                           | 30 kB  | 8.1 kB       | 3.8 kB       | 9.7 kB     | 18.9 kB          |
+| CSS                            | 8 kB   | 4.0 kB       | 4.0 kB       | 4.0 kB     | 4.0 kB           |
+| JS (all chunks the page loads) | 30 kB  | 27.0 kB      | 23.5 kB      | 29.8 kB    | 29.8 kB          |
+| Total                          | 60 kB  | 39.1 kB      | 31.4 kB      | 43.5 kB    | 52.8 kB          |
 
-Measured on the sample Bundle (2026-10-26). The catalog page's JS is Preact, its hooks, the
-island (with the catalog query engine) and the shared url-state/i18n chunk; category pages
-are the same page, and the compare page is the same stack with its own island. A model page
-loads only the shell and tray scripts and Astro's prefetch.
+Measured on the sample Bundle (2026-10-26); "large model page" is the Octavia page built from
+`node apps/web/scripts/large-model-bundle.ts <dir>` (a 2.06 MB raw model file of 6,000
+Listings with two years of weekly history, about the most popular model at scale) with
+`BUNDLE_DIR=<dir>`. The catalog page's JS is Preact, its hooks, the island (with the catalog
+query engine), the shared url-state/i18n chunk, which carries both languages' messages, and
+the tray script; category pages are the same page, and the compare page is the same stack
+with its own island. A model page adds its island (listing view, chart) and is the page
+closest to the JS budget: new messages or island code land on it first. Its HTML grows with
+the first 50 listing rows, the weekly history it serializes for hydration and each
+Variant's tray name; the chart's data table is built only when opened.
 
 Query time is measured by `node apps/web/scripts/bench-catalog.ts` on a synthetic Bundle of
 50k Variants (about 110k Variant × listing-group rows). On devbox (2026-10-25, under load):
@@ -139,6 +206,7 @@ engine reads the rows into columns once), parsing `catalog.json` 0.4 s.
 
 Bundle data (`/bundle/*.json`) is reported, not budgeted: its size follows the catalog and
 is owned by the Bundle format and the catalog page. Rules that keep the shell inside the
-budget: no web fonts, no images in chrome, one shared CSS file, Preact islands only where
-state changes in place, the shell script stays framework-free and does not import the
-message catalogs (`i18n/locale.ts` holds what it needs).
+budget: no web fonts, no images in chrome except the inline mark (one path, under 0.4 kB),
+one shared CSS file, Preact islands only where state changes in place, the shell script
+stays framework-free and does not import the message catalogs (`i18n/locale.ts` holds what
+it needs).

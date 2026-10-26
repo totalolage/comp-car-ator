@@ -17,7 +17,7 @@ import {
   type VariantResult,
 } from "@cca/catalog";
 import type { VariantId } from "@cca/vocabulary";
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import { type I18n, i18n } from "../i18n/i18n.ts";
 import type { Lang } from "../i18n/messages.ts";
 import {
@@ -33,7 +33,6 @@ import {
   PAGE,
   RAIL,
   type RangeFacet,
-  rangeFromText,
   toggleValue,
   withoutScope,
 } from "../lib/catalog-view.ts";
@@ -45,6 +44,7 @@ import {
   readCatalogState,
   writeCatalogState,
 } from "../lib/url-state.ts";
+import RangeFilter from "./RangeFilter.tsx";
 
 interface Props {
   lang: Lang;
@@ -156,10 +156,14 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
               <RangeFilter
                 key={`${facet.key}-${resets}`}
                 facet={facet.key}
+                legend={t.t(`facet.${facet.key}`)}
                 value={filters[facet.key]}
                 bounds={result.facets.ranges[facet.key]}
                 disabled={!catalog}
                 t={t}
+                digits={facet.key === "consumptionL100km" ? 1 : 0}
+                bare={facet.key === "year"}
+                picks={facet.key === "odometerKm" ? odometerBands() : undefined}
                 onChange={(r) => setRange(facet.key, r)}
               />
             );
@@ -170,28 +174,26 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
           return (
             <fieldset key={facet.key} class="facet" data-facet={facet.key}>
               <legend>{t.t(`facet.${facet.key}`)}</legend>
-              <div class={options.length > 12 ? "facet-scroll" : undefined}>
-                {options.map(({ value, label, count, checked, adds }) => {
-                  const meaning = t.count(adds ? "count.facetAdds" : "count.variants", count);
-                  return (
-                    <label key={value} class="facet-option">
-                      <input
-                        type="checkbox"
-                        name={facet.key}
-                        value={value}
-                        checked={checked}
-                        disabled={!catalog}
-                        aria-label={`${label}, ${meaning}`}
-                        onChange={() => toggle(facet.key, value)}
-                      />
-                      <span class="facet-label">{label}</span>
-                      <span class="count" title={meaning} aria-hidden="true">
-                        {adds ? `+${count}` : count}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
+              {options.map(({ value, label, count, checked, adds }) => {
+                const meaning = t.count(adds ? "count.facetAdds" : "count.variants", count);
+                return (
+                  <label key={value} class="facet-option">
+                    <input
+                      type="checkbox"
+                      name={facet.key}
+                      value={value}
+                      checked={checked}
+                      disabled={!catalog}
+                      aria-label={`${label}, ${meaning}`}
+                      onChange={() => toggle(facet.key, value)}
+                    />
+                    <span class="facet-label">{label}</span>
+                    <span class="count" title={meaning} aria-hidden="true">
+                      {adds ? `+${count}` : count}
+                    </span>
+                  </label>
+                );
+              })}
             </fieldset>
           );
         })}
@@ -345,91 +347,4 @@ function SortHeader(props: {
       </button>
     </th>
   );
-}
-
-/**
- * Two number fields, from and to. Each keystroke that makes a range narrows the table at once;
- * the typed text is kept as typed ("1," while writing 1,5, or a "from" above the "to") and is
- * reset when the filter changes from elsewhere (a band pick) or the rail is cleared.
- */
-function RangeFilter(props: {
-  facet: RangeFacet;
-  value: Range | undefined;
-  bounds: { min: number; max: number } | null;
-  disabled: boolean;
-  t: I18n;
-  onChange(range: Range | undefined): void;
-}) {
-  const { facet, value, bounds, disabled, t, onChange } = props;
-  const [draft, setDraft] = useState({ min: text(value?.min), max: text(value?.max) });
-  const typed = useRef(draft);
-  typed.current = draft;
-  useEffect(() => {
-    const current = rangeFromText(typed.current.min, typed.current.max);
-    if (current === null || current?.min !== value?.min || current?.max !== value?.max)
-      setDraft({ min: text(value?.min), max: text(value?.max) });
-  }, [value?.min, value?.max]);
-  if (!bounds && !value) return null;
-
-  const range = rangeFromText(draft.min, draft.max);
-  const edit = (end: "min" | "max", input: string) => {
-    const next = { ...draft, [end]: input };
-    setDraft(next);
-    const parsed = rangeFromText(next.min, next.max);
-    if (parsed !== null) onChange(parsed); // else keep the text until it makes a range
-  };
-  const legend = t.t(`facet.${facet}`);
-  const digits = facet === "consumptionL100km" ? 1 : 0;
-  // Years print bare (2020, not 2 020); other bounds in the page's number format.
-  const bound = (n: number | undefined) =>
-    n === undefined
-      ? ""
-      : facet === "year"
-        ? String(n)
-        : t.number(digits ? n : Math.round(n), digits);
-
-  return (
-    <fieldset class="facet" data-facet={facet}>
-      <legend>{legend}</legend>
-      <div class="range">
-        {(["min", "max"] as const).map((end) => (
-          <input
-            key={end}
-            type="text"
-            inputMode={digits ? "decimal" : "numeric"}
-            autoComplete="off"
-            aria-label={`${legend}: ${t.t(end === "min" ? "range.min" : "range.max")}`}
-            placeholder={`${t.t(end === "min" ? "range.min" : "range.max")} ${bound(bounds?.[end])}`}
-            value={draft[end]}
-            aria-invalid={range === null}
-            disabled={disabled}
-            onInput={(e) => edit(end, (e.target as HTMLInputElement).value)}
-          />
-        ))}
-      </div>
-      {facet === "odometerKm" && (
-        <div class="bands">
-          {odometerBands().map((band) => {
-            const pressed = value?.min === band.range.min && value?.max === band.range.max;
-            return (
-              <button
-                key={band.label}
-                type="button"
-                class="band"
-                aria-pressed={pressed}
-                disabled={disabled}
-                onClick={() => onChange(pressed ? undefined : band.range)}
-              >
-                {band.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </fieldset>
-  );
-}
-
-function text(n: number | undefined): string {
-  return n === undefined ? "" : String(n);
 }

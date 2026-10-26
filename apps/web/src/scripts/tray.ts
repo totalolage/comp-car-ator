@@ -93,7 +93,7 @@ function mount(tray: HTMLElement) {
   // under it (labels can wrap, so the height is measured, not assumed).
   function reserve() {
     const height = tray.hidden ? 0 : tray.offsetHeight;
-    document.body.style.setProperty("--tray-space", `${height}px`);
+    document.documentElement.style.setProperty("--tray-space", `${height}px`);
   }
 
   $<HTMLButtonElement>("[data-tray-clear]").addEventListener("click", () => store.setCompare([]));

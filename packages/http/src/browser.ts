@@ -3,7 +3,9 @@
  * it needs a local browser and, headed, a display (run under `xvfb-run`). Nothing here loads
  * until the first T2 fetch.
  */
-import { mkdtemp, rm } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { APIRequestContext, BrowserContext, Cookie, Page, Response } from "patchright";
@@ -12,7 +14,8 @@ import type { RawResponse, TierFetcher } from "./tiered.ts";
 
 export interface BrowserOptions {
   /**
-   * `patchright` (default): patched Playwright driving the system Chrome (`channel: "chrome"`).
+   * `patchright` (default): the system Chrome (`google-chrome` on PATH), started as a plain
+   * process and driven by Patchright over CDP.
    * `camoufox` (experimental): the Camoufox Firefox build; needs `camoufox-js` and
    * `playwright-core` installed and its browser fetched (`npx camoufox-js fetch`, ~1.3 GB).
    */
@@ -32,20 +35,26 @@ export interface BrowserOptions {
 
 interface Profile {
   context: BrowserContext;
+  /** Shuts the browser down. */
+  close(): Promise<void>;
   tempDir?: string;
   /** The browser's User-Agent, read on the first binary fetch. */
   userAgent?: Promise<string>;
 }
 
+/** How long Chrome may take to start and attach, ms (at least the fetch timeout). */
+const LAUNCH_TIMEOUT_MS = 120_000;
+
 /**
- * Navigates a browser tab to the URL and returns the rendered document. A page that still shows
- * a challenge is polled until it clears or `challengeWaitMs` passes, then returned as it is so
- * the policy can escalate or report the block. Accept-Language becomes the browser's locale;
- * the other request headers go on the page's main-frame navigations only (and their redirects),
- * over the browser's own, so subresources keep the browser's fingerprint. Binary
- * requests go through a request API context of their own that carries the browser's User-Agent
- * and cookies (and hands the cookies it changed back), so an abort or close() can dispose it
- * and close the connection.
+ * Navigates a browser tab to the URL and returns the rendered document. A document that is a
+ * challenge (judged from its network response, so the page is never read while the challenge's
+ * script runs) is waited out until the page navigates past it or `challengeWaitMs` passes, then
+ * returned as it is so the policy can escalate or report the block. Accept-Language becomes the
+ * browser's locale; the other request headers go on the page's main-frame navigations only (and
+ * their redirects), over the browser's own, so subresources keep the browser's fingerprint.
+ * Binary requests go through a request API context of their own that carries the browser's
+ * User-Agent and cookies (and hands the cookies it changed back), so an abort or close() can
+ * dispose it and close the connection.
  */
 export function createBrowserFetcher(
   options: BrowserOptions,
@@ -83,18 +92,74 @@ export function createBrowserFetcher(
     const tempDir = options.profileDir ? undefined : await mkdtemp(join(tmpdir(), "cca-browser-"));
     const dir = tempDir ?? join(options.profileDir as string, locale);
     try {
-      if (engine === "camoufox") return { context: await launchCamoufox(dir, locale), tempDir };
-      const { chromium } = await import("patchright");
-      const context = await chromium.launchPersistentContext(dir, {
-        channel: "chrome",
-        headless,
-        viewport: null,
-        locale,
-        timeout: timeoutMs,
-      });
-      return { context, tempDir };
+      if (engine === "camoufox") {
+        const context = await launchCamoufox(dir, locale);
+        return { context, close: () => context.close(), tempDir };
+      }
+      return { ...(await launchChrome(dir, locale)), tempDir };
     } catch (error) {
-      if (tempDir) await rm(tempDir, { recursive: true, force: true });
+      if (tempDir) await rm(tempDir, { recursive: true, force: true, maxRetries: 5 });
+      throw error;
+    }
+  }
+
+  /**
+   * Starts Chrome as a plain process and attaches Patchright over CDP once it runs. Akamai
+   * (mobile.de) denies a Chrome that Patchright launches itself, whatever its switches or locale
+   * emulation, but lets this one through (docs/adr/0005-fetch-tiers.md). The locale is the
+   * profile's language preference, so Accept-Language and `navigator.languages` agree.
+   */
+  async function launchChrome(dir: string, locale: string): Promise<Omit<Profile, "tempDir">> {
+    // An explicit port: with port 0 Chrome reports `navigator.webdriver` true, and Akamai denies it.
+    const port = await freePort();
+    const args = [
+      `--user-data-dir=${dir}`,
+      `--remote-debugging-port=${port}`,
+      "--no-first-run",
+      "--no-default-browser-check",
+      `--lang=${locale}`,
+      ...(headless ? ["--headless=new"] : []),
+      "about:blank",
+    ];
+    await acceptLanguages(dir, locale);
+    const chrome = spawn("google-chrome", args, { stdio: "ignore" });
+    // "close" follows both an exit and a failed spawn.
+    const closed = new Promise<void>((resolve) => chrome.once("close", () => resolve()));
+    const failed = new Promise<never>((_, reject) => {
+      chrome.once("error", reject);
+      // A Chrome already running on this profile takes the request over and exits at once.
+      chrome.once("exit", (code) =>
+        reject(new Error(`Chrome exited (${code}) before DevTools started`)),
+      );
+    });
+    failed.catch(() => {});
+    const stop = async () => {
+      if (chrome.exitCode !== null || chrome.signalCode !== null) return await closed;
+      chrome.kill();
+      const killer = setTimeout(() => chrome.kill("SIGKILL"), 5_000);
+      await closed;
+      clearTimeout(killer);
+    };
+    try {
+      const gone = () =>
+        chrome.pid === undefined || chrome.exitCode !== null || !!chrome.signalCode;
+      const endpoint = `http://127.0.0.1:${port}`;
+      // Starting Chrome is a one-off that a loaded machine can stretch past a page's timeout.
+      const startMs = Math.max(timeoutMs, LAUNCH_TIMEOUT_MS);
+      await Promise.race([devToolsReady(endpoint, startMs, gone), failed]);
+      const { chromium } = await import("patchright");
+      const browser = await chromium.connectOverCDP(endpoint, { timeout: startMs });
+      const context = browser.contexts()[0];
+      if (!context) throw new Error("Chrome has no default browser context");
+      return {
+        context,
+        close: async () => {
+          await browser.close().catch(() => {});
+          await stop();
+        },
+      };
+    } catch (error) {
+      await stop();
       throw error;
     }
   }
@@ -119,11 +184,11 @@ export function createBrowserFetcher(
       await Promise.all(inFlight);
       await Promise.allSettled(
         all.map(async (pending) => {
-          const { context, tempDir } = await pending;
+          const { close, tempDir } = await pending;
           try {
-            await context.close();
+            await close();
           } finally {
-            if (tempDir) await rm(tempDir, { recursive: true, force: true });
+            if (tempDir) await rm(tempDir, { recursive: true, force: true, maxRetries: 5 });
           }
         }),
       );
@@ -151,6 +216,10 @@ export function createBrowserFetcher(
       try {
         await sendHeaders(page, url, headers);
         return await navigate(page, url, headers.referer, timeoutMs, challengeWaitMs);
+      } catch (error) {
+        // An abort closes the page; report the abort rather than the closed page.
+        signal?.throwIfAborted();
+        throw error;
       } finally {
         signal?.removeEventListener("abort", onAbort);
         await page.close().catch(() => {});
@@ -205,13 +274,53 @@ async function navigate(
     (await page.goto(url, { referer, waitUntil: "domcontentloaded", timeout: timeoutMs })) ?? null;
   const deadline = Date.now() + challengeWaitMs;
   for (;;) {
-    const snapshot = await snapshotOf(page, document);
-    if (snapshot && !detectChallenge(snapshot)) return snapshot;
-    if (Date.now() >= deadline) {
+    // Judge the document from its network response first: reading the page while a challenge's
+    // script runs (Akamai's sensor) can fail the challenge.
+    const served = document && (await responseOf(document, timeoutMs));
+    if (served && !detectChallenge(served)) {
+      const snapshot = await snapshotOf(page, document);
+      if (snapshot && !detectChallenge(snapshot)) return snapshot;
+    }
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      const snapshot = (await snapshotOf(page, document)) ?? served;
       if (snapshot) return snapshot;
       throw new Error(`Page kept navigating for ${challengeWaitMs} ms: ${url}`);
     }
-    await page.waitForTimeout(1000);
+    // A challenge that passes navigates to the page; wait for that without touching the page.
+    // Only a timeout goes round again: a closed page (an abort, close()) ends the fetch now.
+    if (page.isClosed()) throw new Error(`Page closed while waiting out a challenge: ${url}`);
+    await page
+      .waitForEvent("framenavigated", {
+        predicate: (frame) => frame === page.mainFrame(),
+        timeout: remaining,
+      })
+      .then(() => page.waitForLoadState("domcontentloaded", { timeout: timeoutMs }))
+      .catch((error: unknown) => {
+        if (page.isClosed() || !(error instanceof Error) || error.name !== "TimeoutError") {
+          throw error;
+        }
+      });
+  }
+}
+
+/** A document response as the network delivered it, or null when its body is gone. */
+async function responseOf(response: Response, timeoutMs: number): Promise<RawResponse | null> {
+  let timer: NodeJS.Timeout | undefined;
+  // A body that never ends must not hold the page past the timeout.
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), timeoutMs);
+  });
+  const read = (async () => ({
+    url: response.url(),
+    status: response.status(),
+    headers: await response.allHeaders(),
+    body: await response.text(),
+  }))().catch(() => null);
+  try {
+    return await Promise.race([read, timeout]);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -284,6 +393,56 @@ async function fetchBinary(
     signal?.removeEventListener("abort", onAbort);
     requests.delete(created);
     await dispose();
+  }
+}
+
+/**
+ * Sets the profile's languages (Accept-Language, `navigator.languages`) to `locale` and its
+ * language: Chrome on Linux ignores `--lang` for them.
+ */
+async function acceptLanguages(dir: string, locale: string) {
+  const file = join(dir, "Default", "Preferences");
+  // biome-ignore lint/suspicious/noExplicitAny: Chrome's own preferences file.
+  let prefs: Record<string, any> = {};
+  try {
+    prefs = JSON.parse(await readFile(file, "utf8"));
+  } catch (error) {
+    // Only a new profile has none; anything else would lose the profile's other preferences.
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  const language = locale.split("-")[0] as string;
+  const languages = language === locale ? locale : `${locale},${language}`;
+  prefs.intl = { ...prefs.intl, accept_languages: languages, selected_languages: languages };
+  await mkdir(join(dir, "Default"), { recursive: true });
+  await writeFile(`${file}.cca`, JSON.stringify(prefs));
+  await rename(`${file}.cca`, file);
+}
+
+/** A TCP port free on the loopback interface right now. */
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const { port } = server.address() as { port: number };
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+/** Waits until Chrome answers on its DevTools endpoint. */
+async function devToolsReady(endpoint: string, timeoutMs: number, gone: () => boolean) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    try {
+      const response = await fetch(`${endpoint}/json/version`);
+      if (response.ok) return;
+    } catch {
+      // Not listening yet.
+    }
+    if (gone()) throw new Error("Chrome exited before DevTools started");
+    if (Date.now() >= deadline) throw new Error(`Chrome did not open DevTools in ${timeoutMs} ms`);
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }
 

@@ -26,6 +26,9 @@ export function detectChallenge(
     return "akamai";
   }
 
+  // Akamai's interstitial: it runs the sensor, then reloads into the page (mobile.de, 200).
+  if (body.includes('id="sec-if-cpt-container"')) return "akamai";
+
   if (body.includes("EO_Bot_Ssid")) return "edgeone";
 
   if (refused && (headers["x-datadome"] !== undefined || body.includes("captcha-delivery.com"))) {
