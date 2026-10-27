@@ -168,9 +168,14 @@ switch (command) {
     let failed = false;
     // Each mode is its own Run with its own start; the full one runs even when the
     // incremental one failed, since its Census progress does not depend on it.
-    for (const mode of modes === "incremental,full" ? (["incremental", "full"] as const) : [modes]) {
+    for (const mode of modes === "incremental,full"
+      ? (["incremental", "full"] as const)
+      : [modes]) {
       const catchUp = modes !== mode && mode === "incremental";
-      const signals = [deadline, catchUp ? AbortSignal.timeout(CATCH_UP_MINUTES * 60_000) : undefined];
+      const signals = [
+        deadline,
+        catchUp ? AbortSignal.timeout(CATCH_UP_MINUTES * 60_000) : undefined,
+      ];
       const report = await harvestToLog({
         ledger,
         source,
