@@ -8,7 +8,7 @@
  *   listings of the same query (6 of 50), so it reaches fewer: about 3,500.
  * - The adapter slices its scope until every query is under that cap: by Condition (the
  *   site's `offer` filter, the only place demo cars are told apart), then price band,
- *   bisected with inclusive bounds, dearest first, then (one price still over the cap, as
+ *   halved at whole euros, dearest first, then (one price still over the cap, as
  *   19,990 is for used cars in DE) first-registration year. Not by make: on 2026-10-27 the
  *   301 makes of the site's taxonomy added up to fewer listings than the Condition (AT new
  *   12,634 of 12,642, DE demo 110,642 of 111,044), while price bands, and years within a
@@ -29,8 +29,14 @@
  *   whole days up to 14; no window after a longer gap), newest first, each stopping at a
  *   page of known listings.
  *
- * Research notes: scrape-access.md (AutoScout24 rows); filters verified against the live
- * site 2026-10-25 (offer types partition the results, price bounds are inclusive).
+ * Research notes: scrape-access.md (AutoScout24 rows). Filters checked against the live site
+ * on 2026-10-25 (offer types partition the results) and 2026-10-27 (price, recorded in
+ * fixtures/price-filter.cassette.json): the price filter takes whole euros, both bounds
+ * inclusive, and a fractional bound matches nothing; prices are whole euros, none is 0, and
+ * each Condition counts as many listings as its two top bands do (DE used 633,456 = 633,404 +
+ * 52), so a listing without a price is in no count. Bands [from, mid] and [mid + 1, to] thus
+ * take every price once. A listing no band takes (a price between two whole euros, or none)
+ * would still show up as a recount deficit and fail the census.
  */
 import type {
   Condition,
@@ -111,7 +117,7 @@ interface Settings {
 interface Slice {
   condition: Condition;
   make?: number;
-  /** Inclusive EUR bounds; no `to` means open above. */
+  /** Whole-euro bounds, both inclusive, as the site filters; no `to` means open above. */
   price?: { from: number; to?: number };
   /**
    * First-registration year; the current year is open above. In a new year that slice keeps
@@ -314,8 +320,9 @@ class Harvest {
 }
 
 /**
- * Sub-slices that partition `slice`, dearest first: price bands, then halves of a band, then
- * (a single price, or the open top band, still over the cap) first-registration years.
+ * Sub-slices that partition `slice`, dearest first: price bands, then halves of a band (whole
+ * euros, so [mid + 1, to] starts where [from, mid] ends), then (a single price, or the open
+ * top band, still over the cap) first-registration years.
  */
 function split(slice: Slice, thisYear: number): Slice[] | null {
   if (!slice.price) {

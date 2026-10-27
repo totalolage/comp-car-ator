@@ -45,10 +45,11 @@ export interface Harvest {
  * The harvests due on `date` for these Sources, in registry order. A census is due when the
  * Source has had none (`lastCensus`, by Source id) since its latest scheduled census day, so a
  * failed or skipped census runs again the next day instead of waiting a week or a month. A
- * daily Source that has had a census runs incrementally first on its census days: a census
- * longer than a day skips the slices it already read, and the incremental run sees the
- * listings posted in them since. Before its first census the Ledger knows too little for an
- * incremental run to stop early, so that census runs alone. Days are Prague calendar days.
+ * daily Source runs incrementally first on its census days: a census longer than a day skips
+ * the slices it already read, and the incremental run sees the listings posted in them since.
+ * That holds for its first census too, which resumes like any other; only on a Source's very
+ * first day, when the Ledger knows none of its listings, can the incremental run take its
+ * whole hour. Days are Prague calendar days.
  */
 export function plan(
   sourceIds: readonly SourceId[],
@@ -62,7 +63,7 @@ export function plan(
     const census = lastCensus[source];
     const scheduled = full === "never" ? null : lastScheduledDay(today, full);
     if (scheduled && (!census || pragueDate(new Date(census)) < scheduled))
-      due.push({ source, mode: daily && census ? "incremental,full" : "full" });
+      due.push({ source, mode: daily ? "incremental,full" : "full" });
     else if (daily) due.push({ source, mode: "incremental" });
   }
   return due;

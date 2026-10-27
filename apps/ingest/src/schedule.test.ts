@@ -37,10 +37,15 @@ describe("schedule", () => {
     ]);
   });
 
-  it("runs a Source's first census alone: without one the Ledger cannot stop an incremental run early", () => {
-    expect(plan(["sauto"], new Date("2026-10-26T01:00:00Z"))).toEqual([
-      { source: "sauto", mode: "full" },
-    ]);
+  it("runs incrementally before the first census too, every day until it completes", () => {
+    // The first census resumes from its finished slices; the incremental run sees what was
+    // posted in them since.
+    for (const day of ["2026-10-25", "2026-10-26", "2026-10-27"]) {
+      expect(plan(ids, new Date(`${day}T01:00:00Z`))).toEqual([
+        { source: "cnb", mode: "incremental" },
+        { source: "sauto", mode: "incremental,full" },
+      ]);
+    }
   });
 
   it("takes the register's catalog Census on the 1st and otherwise leaves it alone", () => {

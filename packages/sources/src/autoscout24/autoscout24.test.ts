@@ -28,6 +28,11 @@ const now = new Date("2026-10-25T14:26:00Z");
 const deFull = new URL("./fixtures/de-full.cassette.json", import.meta.url);
 const atFull = new URL("./fixtures/at-full.cassette.json", import.meta.url);
 const deIncremental = new URL("./fixtures/de-incremental.cassette.json", import.meta.url);
+/**
+ * Recorded 2026-10-27 by a one-off script around recordingHttp (one request a second): first
+ * pages of price-filtered queries, trimmed to counts, plus id and price of Aiways' listings.
+ */
+const priceFilter = new URL("./fixtures/price-filter.cassette.json", import.meta.url);
 /** Zeekr (51964) and Aiways (51872) have few listings, so a 4-result cap forces splits. */
 const DE: AutoScout24Options = { country: "DE", makes: [51964, 51872], pageSize: 2, resultCap: 4 };
 const AT: AutoScout24Options = { country: "AT", makes: [51964] };
@@ -159,6 +164,13 @@ const usedEverywhere = (query: URLSearchParams) =>
 // biome-ignore lint/suspicious/noExplicitAny: recorded site JSON.
 type RawListing = any;
 const priceOf = (listing: RawListing): number => listing.price.priceRaw;
+/** The site's price filter (price-filter.cassette.json): whole-euro bounds, both inclusive. */
+const takes = (price: unknown, from: number, to: number | undefined) =>
+  typeof price === "number" && price >= from && (to === undefined || price <= to);
+/** `__NEXT_DATA__` pageProps of a recorded page. */
+const pagePropsOf = (body: string) =>
+  JSON.parse(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/.exec(body)?.[1] ?? "").props
+    .pageProps;
 const makeOf = (listing: RawListing) =>
   Number(/make_id:(\d+)/.exec(listing.tracking.modelTaxonomy)?.[1]);
 /** First-registration year, "07-2011" → 2011; new cars have none. */
@@ -177,8 +189,6 @@ function bandsFromMakes(
 ) {
   const { pageSize = 2, resultCap = 4 } = DE;
   return (cassette: Cassette) => {
-    const bodyOf = (body: string) =>
-      JSON.parse(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/.exec(body)?.[1] ?? "");
     for (const offer of ["N", "D,S", "U,J,O"]) {
       const top = cassette.interactions.find(({ request }) => {
         const query = new URL(request.url).searchParams;
@@ -189,7 +199,7 @@ function bandsFromMakes(
       for (const { request, response } of cassette.interactions) {
         const query = new URL(request.url).searchParams;
         if (query.get("offer") !== offer || !query.has("mmmv")) continue;
-        for (const listing of bodyOf(response.body).props.pageProps.listings) {
+        for (const listing of pagePropsOf(response.body).listings) {
           byRef.set(listing.id, listing);
         }
       }
@@ -197,8 +207,7 @@ function bandsFromMakes(
       const add = (from: number, to: number | undefined, year?: number) => {
         const held = listings.filter(
           (l) =>
-            priceOf(l) >= from &&
-            (to === undefined || priceOf(l) <= to) &&
+            takes(priceOf(l), from, to) &&
             (year === undefined ||
               yearOf(l) === year ||
               (year === now.getUTCFullYear() && yearOf(l) > year)),
@@ -460,6 +469,89 @@ describe("autoscout24 source", () => {
     expect(all.urls.some((url) => params(url).has("mmmv"))).toBe(false);
   });
 
+  it("replays price bands as the live site filters them: whole euros, both bounds inclusive", async () => {
+    const pages = (await loadCassette(priceFilter)).interactions.map(({ request, response }) => ({
+      host: new URL(request.url).host,
+      query: params(request.url),
+      props: pagePropsOf(response.body),
+    }));
+    // Aiways' 4 used cars in DE, then bands with a bound at a listing's price or next to it.
+    const aiways = pages.filter((page) => page.query.get("mmmv") === "51872|||");
+    const all = aiways.find((page) => !page.query.has("pricefrom"));
+    const prices: number[] = all?.props.listings.map(priceOf).sort();
+    expect(prices).toEqual([12000, 12500, 14000, 19990]);
+    const bands = aiways.filter((page) => page.query.has("pricefrom"));
+    expect(bands).toHaveLength(6);
+    for (const { query, props } of bands) {
+      const from = Number(query.get("pricefrom"));
+      const to = Number(query.get("priceto"));
+      // A fractional bound matches nothing, not even the 19,990 car inside it.
+      const expected = Number.isInteger(from) && Number.isInteger(to);
+      const held = expected ? prices.filter((price) => takes(price, from, to)).length : 0;
+      expect([query.toString(), props.numberOfResults]).toEqual([query.toString(), held]);
+    }
+    // Each Condition counts as many listings as its two top bands: none has no price.
+    const roots = pages.filter((page) => !page.query.has("mmmv") && !page.query.has("pricefrom"));
+    expect(roots).toHaveLength(4);
+    for (const root of roots) {
+      const band = (from: string, to: string | null) =>
+        pages.find(
+          (page) =>
+            page.host === root.host &&
+            page.query.get("offer") === root.query.get("offer") &&
+            page.query.get("pricefrom") === from &&
+            page.query.get("priceto") === to,
+        )?.props.numberOfResults;
+      expect(band("0", "999999") + band("1000000", null)).toBe(root.props.numberOfResults);
+      // And none is free.
+      if (root.host.endsWith(".de")) expect(band("0", "0")).toBe(0);
+    }
+  });
+
+  it("without makes, a listing at a band's bound is harvested once, from the band that takes it", async () => {
+    let low = "";
+    let high = "";
+    const atBounds = (offer: string, listings: RawListing[]) => {
+      if (offer !== "U,J,O") return listings;
+      const aiways = listings.find((l) => makeOf(l) === 51872);
+      const zeekr = listings.find((l) => priceOf(l) > 31_250 && priceOf(l) <= 62_499);
+      aiways.price.priceRaw = 31_249;
+      zeekr.price.priceRaw = 31_250;
+      low = aiways.id;
+      high = zeekr.id;
+      return listings;
+    };
+    const source = autoscout24Source({ ...DE, makes: undefined });
+    const run = await harvest(deFull, source, "full", {}, bandsFromMakes(atBounds));
+    // Its counts add up, so the census completes.
+    expect(run.error).toBeUndefined();
+    const at = (ref: string) =>
+      run.observations.flatMap((o, i) => (o.kind === "ListingSeen" && o.ref === ref ? [i] : []));
+    const done = (key: string) =>
+      run.observations.findIndex((o) => o.kind === "SliceDone" && o.slice === key);
+    expect([at(low).length, at(high).length]).toEqual([1, 1]);
+    const [lowAt = -1, highAt = -1] = [at(low)[0], at(high)[0]];
+    expect(highAt).toBeGreaterThan(done("used;price=62500-124999"));
+    expect(highAt).toBeLessThan(done("used;price=31250-62499"));
+    expect(lowAt).toBeGreaterThan(done("used;price=31250-62499"));
+    expect(lowAt).toBeLessThan(done("used;price=0-31249"));
+  });
+
+  it("without makes, a listing priced between two bands' whole euros fails the census", async () => {
+    // None was seen live and the filter takes no fractional bound, but if one turned up, the
+    // bands either side miss it, and the recount of the band they split finds it short.
+    const fractional = (offer: string, listings: RawListing[]) => {
+      if (offer !== "U,J,O") return listings;
+      const aiways = listings.find((l) => makeOf(l) === 51872);
+      aiways.price.priceRaw = 31_249.5;
+      return listings;
+    };
+    const source = autoscout24Source({ ...DE, makes: undefined });
+    const run = await harvest(deFull, source, "full", {}, bandsFromMakes(fractional));
+    expect(String(run.error)).toMatch(/not harvested whole: used;price=0-62499$/);
+    expect(slices(run)).toEqual(expect.arrayContaining(["used;price=31250-62499", "used;price=0-31249"]));
+  });
+
   it("without makes, harvests a listing that no make filter returns", async () => {
     // The make filters miss a few listings the Condition counts; the price bands do not.
     let stray = "";
@@ -561,9 +653,18 @@ describe("autoscout24 source", () => {
   });
 
   it("a full run fails when a split slice's parts miss even one of its results", async () => {
+    // A listing without a price: the Condition counts it, no price band takes it. (Live, every
+    // listing a Condition counts has a price; see the price-filter test.)
     const counted = countsInTurn(usedEverywhere, [COUNTS.used + 1]);
+    const noPrice = (offer: string, listings: RawListing[]) => {
+      if (offer !== "U,J,O") return listings;
+      const listing = structuredClone(listings[0]);
+      listing.id = "00000000-0000-4000-8000-000000000003";
+      listing.price = { priceFormatted: "Preis auf Anfrage", isConditionalPrice: false };
+      return [listing, ...listings];
+    };
     const gap = (cassette: Cassette) => {
-      bandsFromMakes()(cassette);
+      bandsFromMakes(noPrice)(cassette);
       counted(cassette);
     };
     const source = autoscout24Source({ ...DE, makes: undefined });

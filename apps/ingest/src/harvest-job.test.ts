@@ -8,7 +8,8 @@ import type { HarvestMode, Source } from "@cca/sources";
 import type { ListingSeen } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
 import { harvestJob } from "./harvest-job.ts";
-import type { HarvestModes } from "./schedule.ts";
+import { recordLog } from "./run-log.ts";
+import { type HarvestModes, plan } from "./schedule.ts";
 
 const noHttp = createReplayHttp({ version: 1, interactions: [] });
 
@@ -104,5 +105,65 @@ describe("harvest job", () => {
     expect(reports[0]?.error).toMatch(/abort|timeout/i);
     expect(reports[1]?.error).toBeNull();
     expect(logs["sauto.full.ndjson"]?.at(-1)).toBe('{"end":"complete"}');
+  });
+
+  it("a first census that failed after a finished slice: the next day's incremental Run sees a listing posted in that slice", async () => {
+    // Listings by slice, in posting order. The full Run skips finished slices and times out
+    // when it reaches `cutOff`; the incremental Run reads newest first up to a known listing.
+    const posted = [
+      { ref: "a1", slice: "A" },
+      { ref: "b1", slice: "B" },
+    ];
+    let cutOff: string | null = "B";
+    const site: Source = {
+      id: "sauto",
+      async *harvest(ctx) {
+        if (ctx.mode === "incremental") {
+          for (const { ref } of [...posted].reverse()) {
+            if (ctx.checkpoint.isKnown(ref)) return;
+            yield seen(ref);
+          }
+          return;
+        }
+        for (const slice of ["A", "B"]) {
+          if (ctx.checkpoint.sliceDoneAt(slice)) continue;
+          if (slice === cutOff) throw new Error("The operation was aborted due to timeout");
+          for (const listing of posted) if (listing.slice === slice) yield seen(listing.ref);
+          yield { kind: "SliceDone", slice };
+        }
+      },
+    };
+    const ledger = openLedger(":memory:");
+    // One day of the pipeline: plan (no census yet), the harvest job, its logs recorded in order.
+    const day = async (date: string) => {
+      const [due] = plan(["sauto"], new Date(`${date}T01:00:00Z`));
+      expect(due).toEqual({ source: "sauto", mode: "incremental,full" });
+      const dir = await mkdtemp(join(tmpdir(), "cca-job-"));
+      const starts = [new Date(`${date}T03:00:00Z`), new Date(`${date}T03:40:00Z`)];
+      const reports = await harvestJob({
+        ledger,
+        source: site,
+        http: noHttp,
+        modes: due?.mode ?? "full",
+        out: join(dir, "sauto.ndjson"),
+        clock: () => starts.shift() ?? new Date(),
+      });
+      for (const { mode } of reports)
+        await recordLog(ledger, join(dir, `sauto.${mode}.ndjson`)).catch(() => {});
+      return reports;
+    };
+
+    const first = await day("2026-10-26");
+    expect(first.map((r) => r.error)).toEqual([null, "Error: The operation was aborted due to timeout"]);
+    posted.push({ ref: "a2", slice: "A" });
+    cutOff = null;
+    const second = await day("2026-10-27");
+    // The full Run skips slice A (b1 and SliceDone B), so only the incremental Run sees a2.
+    expect(second.map((r) => [r.mode, r.observations, r.error])).toEqual([
+      ["incremental", 1, null],
+      ["full", 2, null],
+    ]);
+    expect(ledger.checkpoint("sauto").isKnown("a2")).toBe(true);
+    ledger.close();
   });
 });
