@@ -494,6 +494,12 @@ describe("rsv source", () => {
       ["VOLVO", "XC 60", "Volvo|XC60"],
       ["MAZDA", "CX 9", "Mazda|CX-9"],
       ["TOYOTA", "RAV 4", "Toyota|RAV4"],
+      // Punctuation inside a name stays; at its ends it goes.
+      ["CHRYSLER", "TOWN & COUNTRY", "Chrysler|Town & Country"],
+      ["FORD", "TRANSIT - EUROLINE", "Ford|Transit - Euroline"],
+      ["FORD", "- TRANSIT - 2.0 TDCI", "Ford|Transit"],
+      ["LYNK & CO", "LYNK & CO 01", "Lynk & Co|01"],
+      ["DAIMLER CHRYSLER", "& VOYAGER", "Chrysler|Voyager"],
     ];
     expect(await namesOf(cases.map(([make, name]) => [make, name]))).toEqual(
       cases.map((c) => c[2]),

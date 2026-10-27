@@ -98,7 +98,8 @@ const ENGINE_LAYOUT = /^[vw]\d{1,2}$/i;
 /**
  * Matching rule (docs/adr/0002-variant-definition.md):
  * 1. Make and model through slugs and the alias groups in aliases.ts; the longest model
- *    name that prefixes the listing's model wins ("Golf Variant" is a Golf).
+ *    name that prefixes the listing's model wins ("Golf Variant" is a Golf). Package words
+ *    ("M Sport") are no part of a model name: "X5 M Sport" is an X5, never the X5 M.
  * 2. Fields the descriptor leaves undefined are read from its model and trim text when the
  *    text states them once: power ("110kW", "150 PS"), transmission ("DSG"), body ("Combi"),
  *    fuel ("TDI"), and a generation name ("VIII", "Mk8"). Stated fields win over text.
@@ -287,7 +288,11 @@ function findModel(
   models: Map<string, Model>,
   text: string,
 ): { model: Model; name: string } | undefined {
-  const folded = fold(text);
+  // Package words are blanked, not removed, so the name keeps its place in `text`.
+  const packages = MODEL_ALIASES[makeKey]?.packages;
+  const folded = packages
+    ? fold(text).replace(packages, (words) => " ".repeat(words.length))
+    : fold(text);
   const spans = [...folded.matchAll(/[A-Za-z0-9]+/g)];
   const tokens = spans.map(([token]) => token.toLowerCase());
   for (let length = tokens.length; length > 0; length--) {

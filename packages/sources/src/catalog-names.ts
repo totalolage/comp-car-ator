@@ -253,24 +253,25 @@ function modelTokens(raw: string, keepList = false): string[] {
   // "TUCSON, IX35", "KONA, KAUAI", "TRANSIT/TOURNEO": one car under its market names, so the
   // first name ("1,6" and "S/T" stay).
   const first = keepList ? raw : (raw.split(/(?<!\d),|,(?!\d)|;|\/(?=[^\s/]{2})/)[0] ?? "");
-  return (
-    first
-      // "CEE'D", "CEE´D": the apostrophe goes ("Ceed", as Kia now spells it).
-      .replace(/['´`’]/g, "")
-      // Hyundai/Kia "I 30" is the i30.
-      .replace(/\b(I[XO]?) (\d{2})/gi, "$1$2")
-      // ... and "I30CW" its wagon.
-      .replace(/\b(I[XO]?\d{2})(?:CW|SW)\b/gi, "$1")
-      // Volkswagen "ID.BUZZ", "ID BUZZ": "ID." and the model word.
-      .replace(/\bID(?:\.|\.? )(?=[A-Z]{2})/gi, "ID. ")
-      .normalize("NFKD")
-      .replace(/[̀-ͯ]/g, "")
-      .toUpperCase()
-      .replace(/[„“"()]/g, " ")
-      .split(/\s+/)
-      // Punctuation alone (".", "-") names nothing and would mint an empty id slug.
-      .filter((token) => slugify(token) !== "")
-  );
+  const tokens = first
+    // "CEE'D", "CEE´D": the apostrophe goes ("Ceed", as Kia now spells it).
+    .replace(/['´`’]/g, "")
+    // Hyundai/Kia "I 30" is the i30.
+    .replace(/\b(I[XO]?) (\d{2})/gi, "$1$2")
+    // ... and "I30CW" its wagon.
+    .replace(/\b(I[XO]?\d{2})(?:CW|SW)\b/gi, "$1")
+    // Volkswagen "ID.BUZZ", "ID BUZZ": "ID." and the model word.
+    .replace(/\bID(?:\.|\.? )(?=[A-Z]{2})/gi, "ID. ")
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toUpperCase()
+    .replace(/[„“"()]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  // Punctuation alone (".", "- FIESTA") names nothing and would mint an empty id slug; inside
+  // a name it stays ("TOWN & COUNTRY").
+  const named = (token: string) => slugify(token) !== "";
+  return tokens.slice(tokens.findIndex(named), tokens.findLastIndex(named) + 1);
 }
 
 /**
@@ -339,6 +340,8 @@ function named(
     if (i > 0 && (LATER_NOISE.has(token) || later?.(token))) break;
     kept.push(token);
   }
+  // "TRANSIT - 2.0 TDCI": punctuation before a noise word ends nothing.
+  while (kept.length > 0 && slugify(kept.at(-1) as string) === "") kept.pop();
   if (!kept.some((t) => /[A-Z0-9]/i.test(t))) return undefined;
   return kept.map((t) => displayToken(make, t)).join(" ");
 }

@@ -65,6 +65,11 @@ export interface ModelAliases {
    * (DS "DS7"): the capture group plus `suffix` gives the model's slug or one in `groups`.
    */
   badge?: { pattern: RegExp; suffix: string };
+  /**
+   * Equipment packages written into the model field ("X5 M Sport", "1 M-Paket"): their words
+   * name no Model, so the model name is read without them.
+   */
+  packages?: RegExp;
 }
 
 export const MODEL_ALIASES: Readonly<Record<string, ModelAliases>> = {
@@ -91,6 +96,8 @@ export const MODEL_ALIASES: Readonly<Record<string, ModelAliases>> = {
     // "M135i", "M550d": M Performance trims of their series. The M cars ("1 M", "M3", "X5 M")
     // are their own Models: a listing naming one never falls back to the series.
     badge: { pattern: /^m?([1-8])\d\d[a-z]{0,2}$/, suffix: "-series" },
+    // The M Sport package is no M car: "X5 M Sport" is an X5, "1 M Sport" a 1 Series.
+    packages: /(?<![a-z])m[ -]?(?:sport|sportpaket|paket|package|packet|pack|performance)\b/gi,
     submodels: {
       "1-series": ["m"],
       ...Object.fromEntries(["2", "3", "4", "5", "6", "8"].map((n) => [`${n}-series`, [`m${n}`]])),

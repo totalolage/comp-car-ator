@@ -1088,6 +1088,46 @@ describe("Resolver", () => {
       });
     });
 
+    it("reads the M Sport package as a trim of the series, never as the M car", () => {
+      const gen = { slug: "t1", name: "T1", from: 2015 };
+      const withM = createResolver([
+        ...variants("BMW", "1 Series", gen, [{ body: "coupe", fuel: "petrol", powerKw: 250 }]),
+        ...variants("BMW", "1 M", gen, [{ body: "coupe", fuel: "petrol", powerKw: 250 }]),
+        ...variants("BMW", "3 Series", gen, [{ body: "sedan", fuel: "petrol", powerKw: 353 }]),
+        ...variants("BMW", "M3", gen, [{ body: "sedan", fuel: "petrol", powerKw: 353 }]),
+        ...variants("BMW", "X5", gen, [{ body: "suv", fuel: "petrol", powerKw: 460 }]),
+        ...variants("BMW", "X5 M", gen, [{ body: "suv", fuel: "petrol", powerKw: 460 }]),
+      ]);
+      for (const [model, powerKw, variantId] of [
+        ["1 M Sport", 250, "bmw/1-series/t1/coupe-petrol-250kw"],
+        ["1 M-Sport", 250, "bmw/1-series/t1/coupe-petrol-250kw"],
+        ["1er M Paket", 250, "bmw/1-series/t1/coupe-petrol-250kw"],
+        ["3 M Sport", 353, "bmw/3-series/t1/sedan-petrol-353kw"],
+        ["3 M Package", 353, "bmw/3-series/t1/sedan-petrol-353kw"],
+        ["X5 M Sport", 460, "bmw/x5/t1/suv-petrol-460kw"],
+        ["X5 M Performance", 460, "bmw/x5/t1/suv-petrol-460kw"],
+      ] as const) {
+        expect(withM.resolve({ make: "BMW", model, fuel: "petrol", powerKw })).toEqual({
+          status: "matched",
+          makeId: "bmw",
+          modelId: variantId.split("/").slice(0, 2).join("/"),
+          variantId,
+        });
+      }
+      // Without fuel and power it stays on the series Model.
+      expect(withM.resolve({ make: "BMW", model: "X5 M Sport" })).toMatchObject({
+        status: "model",
+        modelId: "bmw/x5",
+      });
+      // The package alone names no series, and the M cars stay M cars.
+      expect(withM.resolve({ make: "BMW", model: "M Sport" })).toMatchObject({
+        status: "unmatched",
+      });
+      expect(
+        withM.resolve({ make: "BMW", model: "X5 M Competition", fuel: "petrol", powerKw: 460 }),
+      ).toMatchObject({ status: "matched", modelId: "bmw/x5-m" });
+    });
+
     it("places a Porsche 911 type code in its own generation", () => {
       const at = (gens: readonly { slug: string; name: string; from: number; to?: number }[]) =>
         createResolver(
