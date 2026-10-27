@@ -97,7 +97,8 @@ export const MODEL_ALIASES: Readonly<Record<string, ModelAliases>> = {
     // are their own Models: a listing naming one never falls back to the series.
     badge: { pattern: /^m?([1-8])\d\d[a-z]{0,2}$/, suffix: "-series" },
     // The M Sport package is no M car: "X5 M Sport" is an X5, "1 M Sport" a 1 Series.
-    packages: /(?<![a-z])m[ -]?(?:sport|sportpaket|paket|package|packet|pack|performance)\b/gi,
+    packages:
+      /(?<![a-z])m[\s\p{Pd}]*(?:sport|sportpaket|paket|package|packet|pack|performance)\b/giu,
     submodels: {
       "1-series": ["m"],
       ...Object.fromEntries(["2", "3", "4", "5", "6", "8"].map((n) => [`${n}-series`, [`m${n}`]])),

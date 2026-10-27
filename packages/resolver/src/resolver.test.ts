@@ -1104,6 +1104,8 @@ describe("Resolver", () => {
         ["1er M Paket", 250, "bmw/1-series/t1/coupe-petrol-250kw"],
         ["3 M Sport", 353, "bmw/3-series/t1/sedan-petrol-353kw"],
         ["3 M Package", 353, "bmw/3-series/t1/sedan-petrol-353kw"],
+        ["M340i M Sport", 353, "bmw/3-series/t1/sedan-petrol-353kw"],
+        ["X5 M – Sport", 460, "bmw/x5/t1/suv-petrol-460kw"],
         ["X5 M Sport", 460, "bmw/x5/t1/suv-petrol-460kw"],
         ["X5 M Performance", 460, "bmw/x5/t1/suv-petrol-460kw"],
       ] as const) {
