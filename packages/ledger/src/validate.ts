@@ -7,6 +7,7 @@ import {
   type Observation,
   PRICE_BASES,
   SELLERS,
+  slugify,
   TRANSMISSIONS,
 } from "@cca/vocabulary";
 
@@ -43,8 +44,9 @@ export function invalidReason(o: Observation): string | null {
       return nonEmpty(o.ref) ? null : "ref is empty";
     case "CatalogEntry": {
       const v = o.variant;
-      if (!v || !nonEmpty(v.make) || !nonEmpty(v.model)) return "variant make/model is empty";
-      if (!v.generation || !nonEmpty(v.generation.slug) || !nonEmpty(v.generation.name)) {
+      // Each part of the Variant id must be a non-empty slug (docs/adr/0002-variant-definition.md).
+      if (!v || !hasSlug(v.make) || !hasSlug(v.model)) return "variant make/model has no slug";
+      if (!v.generation || !hasSlug(v.generation.slug) || !nonEmpty(v.generation.name)) {
         return "variant generation slug/name is empty";
       }
       if (!oneOf(BODIES, v.body)) return `unknown body ${v.body}`;
@@ -115,6 +117,10 @@ function vehicleReason(v: { make?: unknown; model?: unknown } | undefined): stri
 
 function nonEmpty(value: unknown): boolean {
   return typeof value === "string" && value.trim() !== "";
+}
+
+function hasSlug(value: unknown): boolean {
+  return typeof value === "string" && slugify(value) !== "";
 }
 
 function oneOf(values: readonly string[], value: unknown): boolean {

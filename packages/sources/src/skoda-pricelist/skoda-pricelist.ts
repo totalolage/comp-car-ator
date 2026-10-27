@@ -14,8 +14,8 @@
  *   read on a page of grids or engines, and a grid header that does not read, reject the
  *   list's withdrawals (the rows would look dropped).
  * - Model year and body come from the public configurator (CC3) the site links to: its model
- *   tiles state the model year and group models by body. Missing CC3 data only leaves those
- *   two fields out.
+ *   tiles state the model year and group models by body (Hatchback, Liftback, Kombi, SUV).
+ *   Missing CC3 data only leaves those two fields out.
  *
  * Research notes: /home/dev/.t3/scratch/comp-car-ator/w1-10/ (skoda findings, pdfs/README).
  * Verified against the live site 2026-10-25.
@@ -80,7 +80,13 @@ const skoda: PriceListSite = {
   read,
 };
 
-const CC3_BODIES: Record<string, Body> = { Hatchback: "hatchback", Kombi: "wagon", SUV: "suv" };
+/** The configurator's body groups. A liftback (Octavia, Superb) is a hatchback by shape. */
+const CC3_BODIES: Record<string, Body> = {
+  Hatchback: "hatchback",
+  Liftback: "hatchback",
+  Kombi: "wagon",
+  SUV: "suv",
+};
 
 /** Model year and body per model name from the configurator's model tiles. */
 async function configuratorModels(

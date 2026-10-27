@@ -87,6 +87,10 @@ const MIGRATIONS: string[] = [
   ALTER TABLE catalog_entries ADD COLUMN last_seen_run INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE catalog_entries ADD COLUMN retired TEXT;
   `,
+  // Entries recorded before CatalogEntry required a slug per id part ("lada-vaz//2111/...").
+  `
+  DELETE FROM catalog_entries WHERE variant_id LIKE '/%' OR variant_id LIKE '%//%';
+  `,
 ];
 
 export function migrate(db: DatabaseSync): void {

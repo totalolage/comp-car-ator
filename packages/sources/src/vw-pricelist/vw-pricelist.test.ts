@@ -9,7 +9,9 @@ import { vwPricelistSource } from "./vw-pricelist.ts";
 // Ceníky pages and their four lists: Tiguan, Tiguan Family, Tiguan People, ID. Polo) and
 // recorded through the real adapter in a full run, then trimmed: the overview keeps those two
 // model cards, each Ceníky page its download links, and each PDF its "Platnost od" page and
-// the pages with table headers (Ghostscript pdfwrite, -dFILTERIMAGE -dFILTERVECTOR).
+// the pages with table headers (Ghostscript pdfwrite, -dFILTERIMAGE -dFILTERVECTOR). The
+// overview's flight data, taken from the live page 2026-10-26, keeps the two models' rows
+// (Tiguan's current and previous generation, ID. Polo) and their categories, in two pushes.
 // tiguan-uncoded-row.pdf is that Tiguan list with a price "1 234 000" set in the "Cena s DPH"
 // column below the last row; tiguan-split-table.pdf is that Tiguan list with its table split
 // over two pages (PyMuPDF), the second under a header whose "Cena s DPH" reads "Cena celkem";
@@ -85,6 +87,7 @@ describe("vw-pricelist source", { timeout: 30_000 }, () => {
         model: "Tiguan",
         trim: "2,0 TSI 4MOTION / 150 kW Life",
         modelYear: 2027,
+        body: "suv",
         fuel: "petrol",
         powerKw: 150,
         transmission: "automatic",
@@ -104,6 +107,65 @@ describe("vw-pricelist source", { timeout: 30_000 }, () => {
       price: { amount: 999_000 },
       validFrom: "2026-10-08",
     });
+  });
+
+  it("states the body the model overview files each model under", async () => {
+    const offers = await harvest();
+    const bodies = (model: string) =>
+      new Set(offers.filter((o) => o.vehicle.model === model).map((o) => o.vehicle.body));
+    // "SUV"; "Elektrické vozy" and "Hatchback": only the latter names a body.
+    expect(bodies("Tiguan")).toEqual(new Set(["suv"]));
+    expect(bodies("ID. Polo")).toEqual(new Set(["hatchback"]));
+  });
+
+  /** Each model's bodies in a run over the overview with `change` applied to its page. */
+  async function bodiesWith(change: (page: string) => string, warnings?: string[]) {
+    const cassette = await edit("/modely", (r) => ({ ...r, body: change(r.body) }));
+    const offers = await harvest({ cassette, warnings });
+    const models = [...new Set(offers.map((o) => o.vehicle.model))];
+    const bodiesOf = (m: string) =>
+      new Set(offers.filter((o) => o.vehicle.model === m).map((o) => o.vehicle.body));
+    return Object.fromEntries(models.map((m) => [m, bodiesOf(m)]));
+  }
+
+  // The fixture files Tiguan's current generation under SUV and the previous one under none.
+  it.each([
+    ["two generations agree", (p: string) => p.replace("b29:[]", 'b29:[\\"SUV\\"]'), "suv"],
+    [
+      "two generations disagree",
+      (p: string) => p.replace("b29:[]", 'b29:[\\"Kombi\\"]'),
+      undefined,
+    ],
+    [
+      "the categories name no body",
+      (p: string) => p.replace('cf4:[\\"SUV\\"]', 'cf4:[\\"Elektrické vozy\\"]'),
+      undefined,
+    ],
+    ["a reference does not resolve", (p: string) => p.replace("cf4:[", "cf5:["), undefined],
+  ])("%s: the model's body follows", async (_, change, body) => {
+    expect(await bodiesWith(change)).toEqual({
+      Tiguan: new Set([body]),
+      "ID. Polo": new Set(["hatchback"]),
+    });
+  });
+
+  it("names the body of a model the overview files under no category from its table", async () => {
+    // The Tiguan card renamed Touran: the overview files no Touran.
+    const touran = (p: string) => p.replaceAll("Vše o modelu Tiguan", "Vše o modelu Touran");
+    expect((await bodiesWith(touran)).Touran).toEqual(new Set(["mpv"]));
+    // Filed under two bodies, the model gets none, table or not.
+    const filedTwice = (p: string) =>
+      touran(p)
+        .replaceAll('\\"name\\":\\"Tiguan\\"', '\\"name\\":\\"Touran\\"')
+        .replace("b29:[]", 'b29:[\\"Kombi\\"]');
+    expect((await bodiesWith(filedTwice)).Touran).toEqual(new Set([undefined]));
+  });
+
+  it("without the overview's flight data no model has a body, and the run says so", async () => {
+    const warnings: string[] = [];
+    const bodies = await bodiesWith((p) => p.replace(/<script>[\s\S]*?<\/script>/g, ""), warnings);
+    expect(Object.values(bodies)).toEqual([new Set([undefined]), new Set([undefined])]);
+    expect(warnings).toEqual(["vw-pricelist: the model overview files no model by body"]);
   });
 
   it("full runs withdraw codes the lists dropped, incremental runs never", async () => {

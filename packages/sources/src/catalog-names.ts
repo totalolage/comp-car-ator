@@ -268,7 +268,8 @@ function modelTokens(raw: string, keepList = false): string[] {
       .toUpperCase()
       .replace(/[„“"()]/g, " ")
       .split(/\s+/)
-      .filter(Boolean)
+      // Punctuation alone (".", "-") names nothing and would mint an empty id slug.
+      .filter((token) => slugify(token) !== "")
   );
 }
 

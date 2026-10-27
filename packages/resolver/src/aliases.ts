@@ -166,6 +166,21 @@ export const LIFTBACKS: Readonly<Record<string, readonly string[]>> = {
 };
 
 /**
+ * Generations whose hatchbacks the register files under the wagon code, so a listing's
+ * "hatchback" may be the catalog's wagon. Every Golf VIII (CD), hatchback or estate, is an
+ * "AC KOMBI": its wagon Variants run 4286-4292 mm long (the hatchback) beside 4635 mm (the
+ * Variant estate), and it has no hatchback Variant. The ID.3 has no estate, yet all but one of
+ * its E1 Variants are wagons, 4261-4265 mm long. Keyed by make group key, model key as the
+ * Resolver compacts it, and generation slug; elsewhere a generation's wagons can be real
+ * estates whose hatchbacks the catalog lacks (Golf VI 5K), so absence is no evidence.
+ */
+export const HATCHBACK_WAGONS: Readonly<
+  Record<string, Readonly<Record<string, readonly string[]>>>
+> = {
+  volkswagen: { golf: ["mk8"], id3: ["e1"] },
+};
+
+/**
  * Generation names listings use that the catalog's generations lack: the register keys a
  * type Wikidata does not date by its code ("Octavia 5E"), while listings write "Octavia III".
  * A type the register keeps across two generations names both (Fabia 5J: II and III), so

@@ -146,6 +146,16 @@ describe("skoda-pricelist source", { timeout: 30_000 }, () => {
       price: { amount: 989_900 },
       validFrom: "2026-10-23",
     });
+    // Every model names one body: the configurator files the Octavia liftback as a hatchback.
+    const bodies = (model: string) =>
+      new Set(offers.filter((o) => o.vehicle.model === model).map((o) => o.vehicle.body));
+    expect(Object.fromEntries(Object.keys(byModel).map((m) => [m, bodies(m)]))).toEqual({
+      Kodiaq: new Set(["suv"]),
+      Enyaq: new Set(["suv"]),
+      "Enyaq Coupé": new Set(["suv"]),
+      Octavia: new Set(["hatchback"]),
+      "Octavia Combi": new Set(["wagon"]),
+    });
     // "–": the trim line does not offer that engine.
     expect(
       offers.some((o) => o.ref === "kodiaq/kodiaq.1-5-tsi-200-kw-iv.phev.a.fwd.selection"),
