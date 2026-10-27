@@ -1,0 +1,67 @@
+---
+/**
+ * The category tree: every make (with its models when `models` is set), then body types.
+ * Makes and body types open their category pages, models their model pages. The categories
+ * page renders it whole; the header menu renders makes only, with a link to that page, and
+ * scripts/shell.ts swaps in the page's makes section (the `data-makes` section) once the menu
+ * is about to open, so a page does not carry 1,600 model links in its HTML.
+ */
+import { i18n } from "../i18n/i18n.ts";
+import type { Lang } from "../i18n/messages.ts";
+import type { CategoryTree } from "../lib/catalog.ts";
+
+interface Props {
+  lang: Lang;
+  tree: CategoryTree;
+  models?: boolean;
+}
+const { lang, tree, models = false } = Astro.props;
+const t = i18n(lang);
+---
+<section class="categories-makes" data-makes>
+  <h2>{t.t("nav.makes")}</h2>
+  <ul class="tree">
+    {
+      tree.makes.map((make) => (
+        <li>
+          <a class="tree-make" href={t.path(`/make/${make.id}/`)}>
+            {make.name}
+          </a>{" "}
+          <span class="count">{make.count}</span>
+          {models && (
+            <ul>
+              {make.models.map((model) => (
+                <li>
+                  <a href={t.path(`/model/${model.id}/`)}>{model.name}</a>{" "}
+                  <span class="count">{model.count}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </li>
+      ))
+    }
+  </ul>
+  {
+    !models && (
+      <p class="categories-all">
+        <a href={t.path("/categories/")} data-tree-src>
+          {t.t("nav.allModels")}
+        </a>
+      </p>
+    )
+  }
+</section>
+<section class="categories-bodies">
+  <h2>{t.t("nav.bodies")}</h2>
+  <ul>
+    {
+      tree.bodies.map(({ value, count }) => (
+        <li>
+          <a href={t.path(`/body/${value}/`)}>{t.label("body", value)}</a>{" "}
+          <span class="count">{count}</span>
+        </li>
+      ))
+    }
+  </ul>
+</section>

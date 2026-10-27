@@ -45,10 +45,15 @@ Sentence case everywhere; no uppercase labels.
 └ compare tray (fixed bar while the list has Variants): Porovnání 2 ze 4 · names × · Porovnat ┘
 ```
 
-- Category tree: the "Kategorie" disclosure in the masthead opens a full-width index of makes
-  with their models (CSS columns) and body types, with Variant counts, plus recently viewed
-  models. It is `<details>`, so it needs no script; the shell script only closes it on Escape
-  or an outside click.
+- Category tree: the categories page (`/categories/`) lists every make with its models (CSS
+  columns) and the body types, with Variant counts. The "Kategorie" disclosure in the
+  masthead opens the same index as a full-width panel, plus recently viewed models. Its HTML
+  holds makes and body types only, with a "Všechny modely" link to the categories page: 1,600
+  model links on every page would be 19 kB gzip of each page's 30 kB. The shell script
+  fetches the categories page when the pointer or focus reaches the menu (or it opens) and
+  swaps its makes-with-models section in, keeping focus on the same link; it also closes the
+  menu on Escape or an outside click. The menu is `<details>` and plain links, so without
+  script it still opens, and the link leads to the full tree.
 - `.split` = rail + results. Below 48rem it stacks and the rail becomes a grid of facet groups.
 - Scrolling: the masthead sticks to the top. From 48rem both `.split` columns stick to the top
   under the masthead (plain `position: sticky`) and neither scrolls on its own: the taller one
@@ -126,7 +131,10 @@ Sentence case everywhere; no uppercase labels.
   active listing count linking to `?variant=<id>`, a "Porovnat" toggle that edits the compare
   list through `siteStore().toggleCompare(id, label)` with the Variant's tray name in both
   languages), then the listings island
-  (`ModelExplorer`). EEA attribution shows under the Variants only once the Bundle has run
+  (`ModelExplorer`). The Variants table lists every Variant with Listings (sold ones too) or a
+  used median, and fills up to 30 rows with the others in order (`listedVariants`); a popular
+  model has hundreds of Variants from price lists and the register, most never on sale, so a
+  note counts the rest and links to the catalog filtered to the model, which lists them all. EEA attribution shows under the Variants only once the Bundle has run
   the `eea-co2` Source and a Variant carries CO₂ data.
 - `ModelExplorer` mirrors the catalog island over `model(id).listings()`: listing rail
   (Variant, condition, country, registration year, odometer with one quick pick per published
@@ -138,8 +146,8 @@ Sentence case everywhere; no uppercase labels.
 - Listings table: title (links to the source; condition, sold and "not in statistics" tags;
   its Variant on a second line), year, odometer, gearbox (from the listing), asking price in
   its own currency with the move since first seen (▼/▲ %), landed price in CZ, country,
-  source, days listed. Default order is landed price ascending, so Czech and imported cars
-  compare directly; year, odometer, price, landed and days sort. Listings the outlier rule
+  source, days listed. 25 rows, then "show 50 more" from the model file the island loaded.
+  Default order is landed price ascending, so Czech and imported cars compare directly; year, odometer, price, landed and days sort. Listings the outlier rule
   left out of statistics (placeholder prices) always come last, tagged. The landed price is a
   button (hover shows the breakdown as a tooltip): it expands the row to the landed-price
   lines from Pricing with their notes, the original price and ČNB rate, the price history,
@@ -160,7 +168,8 @@ Sentence case everywhere; no uppercase labels.
 
 ## Components (classes in base.css)
 
-`masthead`, `wordmark` (mark + site name), `menu` / `menu-panel` / `tree`, `crumbs`,
+`masthead`, `wordmark` (mark + site name), `menu` / `menu-panel`, `categories` /
+`categories-makes` / `categories-bodies` / `categories-all` / `tree`, `crumbs`,
 `page-title`, `page-summary`, `section-title`, `split` / `rail` / `results`, `facet` / `facet-option` / `facet-note`, `button-quiet`,
 `range`, `bands` / `band`, `rail-toggle`, `data` (table; `.num` right-aligns;
 `.sort` header buttons), `table-scroll`, `results-more`, `subcategories`, `count`, `badge`,
@@ -185,21 +194,27 @@ Enforced on every build by `scripts/check-budget.mjs` (fails the build), gzipped
 
 |                                | budget | catalog page | compare page | model page | large model page |
 | ------------------------------ | ------ | ------------ | ------------ | ---------- | ---------------- |
-| HTML                           | 30 kB  | 8.1 kB       | 3.8 kB       | 9.7 kB     | 18.9 kB          |
-| CSS                            | 8 kB   | 4.0 kB       | 4.0 kB       | 4.0 kB     | 4.0 kB           |
-| JS (all chunks the page loads) | 30 kB  | 27.0 kB      | 23.5 kB      | 29.8 kB    | 29.8 kB          |
-| Total                          | 60 kB  | 39.1 kB      | 31.4 kB      | 43.5 kB    | 52.8 kB          |
+| HTML                           | 30 kB  | 8.0 kB       | 3.8 kB       | 9.6 kB     | 16.1 kB          |
+| CSS                            | 8 kB   | 4.3 kB       | 4.3 kB       | 4.3 kB     | 4.3 kB           |
+| JS (all chunks the page loads) | 30 kB  | 27.0 kB      | 24.4 kB      | 29.8 kB    | 29.8 kB          |
+| Total                          | 60 kB  | 39.3 kB      | 32.5 kB      | 43.7 kB    | 50.3 kB          |
 
-Measured on the sample Bundle (2026-10-26); "large model page" is the Octavia page built from
+Measured on the sample Bundle (2026-10-27); "large model page" is the Octavia page built from
 `node apps/web/scripts/large-model-bundle.ts <dir>` (a 2.06 MB raw model file of 6,000
 Listings with two years of weekly history, about the most popular model at scale) with
 `BUNDLE_DIR=<dir>`. The catalog page's JS is Preact, its hooks, the island (with the catalog
 query engine), the shared url-state/i18n chunk, which carries both languages' messages, and
-the tray script; category pages are the same page, and the compare page is the same stack
-with its own island. A model page adds its island (listing view, chart) and is the page
-closest to the JS budget: new messages or island code land on it first. Its HTML grows with
-the first 50 listing rows, the weekly history it serializes for hydration and each
-Variant's tray name; the chart's data table is built only when opened.
+the shell script (with the tray); category pages are the same page, and the compare page is
+the same stack with its own island. A model page adds its island (listing view, chart) and is
+the page closest to the JS budget: new messages or island code land on it first. Its HTML
+grows with the listed Variants (each with its tray name), the first 25 listing rows, the
+names of the Variants its Listings belong to and the weekly history it serializes for
+hydration; the chart's data table is built only when opened.
+
+On the real Bundle of 2026-10-26 (1,601 models, 20k Variants, 106k Listings; 3,506 pages)
+the largest page is a model page at 21.6 kB HTML and 55.7 kB in all, and the categories page,
+the one page with every model link, is 22.5 kB HTML. Rendering the category tree into every
+page had made that build take 22 minutes on devbox; without it, it takes 17 seconds.
 
 Query time is measured by `node apps/web/scripts/bench-catalog.ts` on a synthetic Bundle of
 50k Variants (about 110k Variant × listing-group rows). On devbox (2026-10-25, under load):

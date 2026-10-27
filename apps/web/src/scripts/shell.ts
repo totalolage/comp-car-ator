@@ -1,12 +1,14 @@
 /**
  * Shell behaviour on every page, without a framework: the language switch carries the
  * current URL state along, the header compare link and the recents list follow the store,
- * and the category menu closes on Escape or an outside click. Hover prefetch is Astro's
- * built-in `prefetch` (astro.config.mjs).
+ * the category menu loads its models and closes on Escape or an outside click, and the
+ * compare tray (tray.ts, one chunk with this script) follows the store. Hover prefetch is
+ * Astro's built-in `prefetch` (astro.config.mjs).
  */
 import { type Lang, localePath } from "../i18n/locale.ts";
 import { siteStore } from "../lib/store.ts";
 import { writeCatalogState } from "../lib/url-state.ts";
+import "./tray.ts";
 
 const store = siteStore();
 const lang = (document.body.dataset.lang ?? "cs") as Lang;
@@ -54,8 +56,40 @@ function render() {
 render();
 store.subscribe(render);
 
-// Category menu: close on Escape (focus back on its summary) and on a click outside it.
+// Category menu: the header has the makes only; the categories page has their models. Its
+// makes section replaces the menu's once the menu is about to open (hover, focus or open),
+// keeping focus on the same link. Close on Escape (focus back on its summary) and on a click
+// outside it.
 for (const menu of document.querySelectorAll<HTMLDetailsElement>("details[data-menu]")) {
+  const own = menu.querySelector("[data-makes]");
+  const src = own?.querySelector<HTMLAnchorElement>("a[data-tree-src]")?.href;
+  let loading = false;
+  const load = () => {
+    if (loading || !own || !src) return;
+    loading = true;
+    fetch(src)
+      .then((r) => (r.ok ? r.text() : Promise.reject()))
+      .then((html) => {
+        const full = new DOMParser()
+          .parseFromString(html, "text/html")
+          .querySelector("[data-makes]");
+        if (!full) return;
+        const focused = own.contains(document.activeElement)
+          ? (document.activeElement as HTMLAnchorElement).href
+          : undefined;
+        own.replaceWith(full);
+        if (focused)
+          (
+            full.querySelector<HTMLElement>(`a[href="${new URL(focused).pathname}"]`) ??
+            full.querySelector<HTMLElement>("a")
+          )?.focus();
+      })
+      .catch(() => {
+        loading = false;
+      });
+  };
+  for (const event of ["pointerenter", "focusin", "toggle"]) menu.addEventListener(event, load);
+
   menu.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && menu.open) {
       menu.open = false;

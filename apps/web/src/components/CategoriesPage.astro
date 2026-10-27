@@ -1,0 +1,25 @@
+---
+/**
+ * The categories page (`/categories/`): the whole category tree, every make with its models
+ * and the body types. The header menu links here and loads its models from it.
+ */
+import { i18n } from "../i18n/i18n.ts";
+import type { Lang } from "../i18n/messages.ts";
+import Base from "../layouts/Base.astro";
+import { categoryTree } from "../lib/catalog.ts";
+import CategoryIndex from "./CategoryIndex.astro";
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = i18n(lang);
+const title = t.t("nav.categories");
+const tree = await categoryTree();
+---
+<Base lang={lang} path="/categories/" title={title} crumbs={[{ label: title }]}>
+  <h1 class="page-title">{title}</h1>
+  <div class="categories">
+    <CategoryIndex lang={lang} tree={tree} models />
+  </div>
+</Base>
