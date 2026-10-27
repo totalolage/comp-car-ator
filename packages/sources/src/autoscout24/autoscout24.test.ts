@@ -174,7 +174,7 @@ const noPrice = (offer: string, listings: RawListing[]) => {
   return [listing, ...listings];
 };
 const unpriced =
-  /not harvested whole: used \(1 listing outside every whole-euro price band, possibly unpriced or fractional\)$/;
+  /not harvested whole: used \(1 listing outside every whole-euro price band, possibly unpriced or fractional, or counts that moved\)$/;
 /** The site's price filter (price-filter.cassette.json): whole-euro bounds, both inclusive. */
 const takes = (price: unknown, from: number, to: number | undefined) =>
   typeof price === "number" && price >= from && (to === undefined || price <= to);
@@ -563,7 +563,7 @@ describe("autoscout24 source", () => {
     const source = autoscout24Source({ ...DE, makes: undefined });
     const run = await harvest(deFull, source, "full", {}, bandsFromMakes(fractional));
     const short =
-      /not harvested whole: used;price=0-62499 \(1 listing outside every whole-euro price band, possibly fractional\)$/;
+      /not harvested whole: used;price=0-62499 \(1 listing outside every whole-euro price band, possibly fractional, or counts that moved\)$/;
     expect(String(run.error)).toMatch(short);
     expect(refs(run)).not.toContain(fractionalRef);
     expect(slices(run)).toEqual(
@@ -647,7 +647,7 @@ describe("autoscout24 source", () => {
       countsInTurn(usedEverywhere, [COUNTS.used + 1])(cassette);
     });
     expect(String(failed.error)).toMatch(
-      /not harvested whole: used;price=12000-12000 \(1 listing outside every registration year\)$/,
+      /not harvested whole: used;price=12000-12000 \(1 listing outside every registration year, or counts that moved\)$/,
     );
     expect(slices(failed)).toContain("used;price=12000-12000;year=2026");
   });

@@ -20,8 +20,8 @@
  * - full: every slice's pages newest first, a SliceDone after each slice that yielded as
  *   many distinct listings as it reports (paged a second time if it came out short); slices
  *   done earlier in the census are skipped. A split slice is recounted after its parts and
- *   must not have more results than they do (a listing that moves once between parts while
- *   they are counted counts in one at most). A slice still short, still over the cap at a
+ *   must not have more results than they do (counted so that one listing moving between
+ *   parts meanwhile counts in one at most). A slice still short, still over the cap at a
  *   single price, or split into parts that miss results fails the run at the end (after
  *   every other slice), so it is no census; its finished parts stay done, and the next full
  *   run recounts it. Recounts and second pagings need the site's answer, not a response
@@ -36,9 +36,10 @@
  * matches nothing, every price seen was in whole euros and none was 0, and each Condition
  * counted as many listings as its two top bands (DE used 633,456 = 633,404 + 52), so no
  * listing without a price showed up in a count. Bands [from, mid] and [mid + 1, to] then take
- * every whole-euro price once. A listing no band takes (a fractional price or none, should
- * one appear) shows up as a recount deficit and fails the census, naming the deficit,
- * instead of going unseen (ADR 0003 has the evidence and the remedy).
+ * every whole-euro price once. A listing no band takes (none, or a fractional price between
+ * mid and mid + 1 of a band halved there, should one appear) shows up as a recount deficit
+ * and fails the census, naming the deficit, instead of going unseen (ADR 0003 has the
+ * evidence, the remedy and what counts taken one after another cannot rule out).
  */
 import type {
   Condition,
@@ -208,17 +209,18 @@ class Harvest {
 
   /**
    * How many results of `slice` its parts miss, as their counts show: 0 when they reach
-   * every one. A listing no part's filter matches (no price, a fractional one, no year in
-   * range) shows up as a deficit; the census cannot see it, so the slice fails the run.
+   * every one. A listing no part's filter matches (no price, a fractional one between two
+   * bands, no year in range) shows up as a deficit; the census cannot see it, so the slice fails the run.
    * Counted after the parts are harvested, the parts between two counts of the slice, and
    * they must reach the higher of the two: a listing that went before the second count could
    * otherwise stand in for a missed one. The site gives no per-part counts, so the parts'
    * counts are never taken at one instant, and a listing that moves from one part to another
    * between their counts could count in both and stand in for a missed one. So the parts are
    * counted there and back (first to last, then back to the first) and each keeps its lower
-   * count: a part's two counts bracket every later part's, so a listing that moves once
-   * while they are counted counts in one part at most. Moving there and back within those
-   * few requests can still hide a missed listing. Counted three times before giving up.
+   * count: a part's two counts bracket every later part's, so one listing that moves once
+   * while they are counted counts in one part at most. Two listings moving opposite ways
+   * across those few requests, or one moving there and back, can still count once too many
+   * and hide a missed listing. Counted three times before giving up.
    */
   private async missed(slice: Slice, parts: readonly Slice[]): Promise<number> {
     let missed = 0;
@@ -357,12 +359,16 @@ function split(slice: Slice, thisYear: number): Slice[] | null {
   return years.map((year) => ({ ...slice, year }));
 }
 
-/** "3 listings outside every whole-euro price band, possibly unpriced or fractional". */
+/**
+ * "3 listings outside every whole-euro price band, possibly unpriced or fractional, or counts
+ * that moved": a deficit that held over every recount, most likely listings no part takes.
+ */
 function missedNote(slice: Slice, parts: readonly Slice[], missed: number): string {
   const listings = `${missed} listing${missed === 1 ? "" : "s"}`;
-  if (parts[0]?.year !== undefined) return `${listings} outside every registration year`;
+  const moved = "or counts that moved";
+  if (parts[0]?.year !== undefined) return `${listings} outside every registration year, ${moved}`;
   const kinds = slice.price ? "fractional" : "unpriced or fractional";
-  return `${listings} outside every whole-euro price band, possibly ${kinds}`;
+  return `${listings} outside every whole-euro price band, possibly ${kinds}, ${moved}`;
 }
 
 /** "used", "used;price=1000000-", "new;make=29;price=19990-19990;year=2018". */
