@@ -156,6 +156,7 @@ const BADGES = new Set(
     "ambiente limited dynamic r-dynamic r-sport trendy easy fun speed evo quadrifoglio trofeo " +
     "verde abarth bullitt rubicon hellcat scat pack widebody aero racing glx lx ex xs junior " +
     "eco sdi tddi tfsie quatro carrera drive drive-e twin engine e-hybrid hybrid plug-in " +
+    "aut edition anniversary lwb ii iii iv " +
     "bifuel bi-fuel g-tron e-tech electric cng lpg blue motion bluemotion syncro mt at " +
     "kwh convertible coup wagon sportwagon caravan van turnier weekend s-w stw grandtour volante lim"
   ).split(" "),
