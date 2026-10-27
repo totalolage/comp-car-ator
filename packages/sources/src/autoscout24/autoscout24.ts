@@ -8,23 +8,23 @@
  *   listings of the same query (6 of 50), so it reaches fewer: about 3,500.
  * - The adapter slices its scope until every query is under that cap: by Condition (the
  *   site's `offer` filter, the only place demo cars are told apart), then price band,
- *   halved at whole euros, dearest first, then (one price still over the cap, as
- *   19,990 is for used cars in DE) first-registration year. Not by make: on 2026-10-27 the
+ *   halved dearest first, then (a band of one or two prices still over the cap, as 19,990
+ *   is for used cars in DE) first-registration year. Not by make: on 2026-10-27 the
  *   301 makes of the site's taxonomy added up to fewer listings than the Condition (AT new
  *   12,634 of 12,642, DE demo 110,642 of 111,044), while price bands, and years within a
  *   price, added up to all of them. Make narrows only a scope given makes. Dearest first
  *   because prices mostly drop, and a listing that drops into a band yet to be harvested is
- *   still seen. A slice's key names its filters ("used;price=0-15624",
- *   "used;make=29;price=19990-19990;year=2018"), so a slice keeps its key across runs and a
+ *   still seen. A slice's key names its filters ("used;price=0-15625",
+ *   "used;make=29;price=19989-19990;year=2018"), so a slice keeps its key across runs and a
  *   failed census resumes where it stopped.
  * - full: every slice's pages newest first, a SliceDone after each slice that yielded as
  *   many distinct listings as it reports (paged a second time if it came out short); slices
  *   done earlier in the census are skipped. A split slice is recounted after its parts and
- *   must not have more results than they do. A slice still short, still over the cap at a
- *   single price, or split into parts that miss results fails the run at the end (after
- *   every other slice), so it is no census; its finished parts stay done, and the next full
- *   run recounts it. Recounts and second pagings need the site's answer, not a response
- *   cache's: a cache replays the first one.
+ *   must not have more results than they do (a listing two parts take counts once). A slice
+ *   still short, still over the cap in one year, or split into parts that miss results fails
+ *   the run at the end (after every other slice), so it is no census; its finished parts
+ *   stay done, and the next full run recounts it. Recounts and second pagings need the
+ *   site's answer, not a response cache's: a cache replays the first one.
  * - incremental: the same slices, narrowed to listings online since the last run (`adage`,
  *   whole days up to 14; no window after a longer gap), newest first, each stopping at a
  *   page of known listings.
@@ -34,9 +34,12 @@
  * fixtures/price-filter.cassette.json): both price bounds are inclusive, a fractional bound
  * matches nothing, every price seen was in whole euros and none was 0, and each Condition
  * counted as many listings as its two top bands (DE used 633,456 = 633,404 + 52), so no
- * listing without a price showed up in a count. Bands [from, mid] and [mid + 1, to] then take
- * every whole-euro price once. A listing no band takes (a fractional price or none, should
- * one appear) shows up as a recount deficit and fails the census instead of going unseen.
+ * listing without a price showed up in a count. Halves [from, mid] and [mid, to] share their
+ * middle price, so a price between two whole euros (none seen, but the site does not rule
+ * it out) is in one of them; a listing at the shared price is in both and yielded once. No
+ * band takes a listing without a price: should one appear, its Condition's recount comes out
+ * short and the census fails, naming the deficit, instead of missing it (ADR 0003 has the
+ * evidence and the remedy).
  */
 import type {
   Condition,
@@ -77,8 +80,8 @@ const CONDITIONS = Object.keys(OFFERS) as Condition[];
 
 const MAX_PAGE_SIZE = 50;
 const RESULT_CAP = 4_000;
-/** First price split; the open band above it is split only by year. */
-const PRICE_TOP = 999_999;
+/** First price split: [0, 1,000,000] and the open band from it; that is split only by year. */
+const PRICE_TOP = 1_000_000;
 /** First-registration year the scope starts at. */
 const FIRST_YEAR = 2000;
 /** The `adage` values the site offers, in days. */
@@ -142,8 +145,10 @@ class Harvest {
   private readonly full: boolean;
   /** Incremental `adage` filter; undefined in full runs and after a gap longer than offered. */
   private readonly adage: number | undefined;
-  /** Slices this run could not harvest whole. */
+  /** Slices this run could not harvest whole, a split one with the results its parts miss. */
   private readonly unfinished: string[] = [];
+  /** Listings yielded at a price a band shares with the next one, which takes them too. */
+  private readonly yieldedAtBound = new Set<string>();
   /** Incremental: whether each listing this run has met was known before it, as first met. */
   private readonly knownBefore = new Map<string, boolean>();
 
@@ -166,7 +171,7 @@ class Harvest {
       }
     }
     if (this.unfinished.length > 0) {
-      const message = `autoscout24: slices not harvested whole: ${this.unfinished.join(" ")}`;
+      const message = `autoscout24: slices not harvested whole: ${this.unfinished.join(", ")}`;
       if (this.full) throw new Error(message);
       this.ctx.log.warn(message);
     }
@@ -186,9 +191,10 @@ class Harvest {
     const overCap = this.overCap(first);
     const parts = overCap ? split(slice, this.ctx.now.getUTCFullYear()) : null;
     if (parts) {
-      for (const part of parts) yield* this.slice(part);
+      for (const part of parts.slices) yield* this.slice(part);
       // Incremental is no census, so it skips the recount.
-      if (this.full && !(await this.covered(slice, parts))) this.unfinished.push(key);
+      const missed = this.full ? await this.missed(slice, parts) : 0;
+      if (missed > 0) this.unfinished.push(`${key} (${missedNote(slice, parts, missed)})`);
       return;
     }
     const outcome = yield* this.pages(slice, first);
@@ -204,22 +210,26 @@ class Harvest {
   }
 
   /**
-   * Whether `parts` reach every result of `slice`, as their counts show. A listing no part's
-   * filter matches (a price outside every band, a year outside every year) shows up as a
-   * deficit; the census cannot see it, so the slice fails the run. Counted after the parts
-   * are harvested, the parts between two counts of the slice, and they must reach the higher
-   * of the two: a listing that went before the second count could otherwise stand in for a
+   * How many results of `slice` its parts miss, as their counts show: 0 when they reach
+   * every one. A listing no part's filter matches (no price, no year in range) shows up as a
+   * deficit; the census cannot see it, so the slice fails the run. Two price halves both
+   * take their shared price, so its count comes off their sum. Counted after the parts are
+   * harvested, the parts between two counts of the slice, and they must reach the higher of
+   * the two: a listing that went before the second count could otherwise stand in for a
    * missed one. The site gives no per-part counts, so the parts' counts are never taken at
    * one instant: a part that gained a listing before its count and lost one after can still
    * hide a missed one. Counted three times before giving up.
    */
-  private async covered(slice: Slice, parts: readonly Slice[]): Promise<boolean> {
+  private async missed(slice: Slice, parts: Split): Promise<number> {
+    let missed = 0;
     for (let attempt = 1; attempt <= 3; attempt++) {
       const before = (await this.page(slice, 1)).total;
       let inParts = 0;
-      for (const part of parts) inParts += (await this.page(part, 1)).total;
+      for (const part of parts.slices) inParts += (await this.page(part, 1)).total;
+      if (parts.shared) inParts -= (await this.page(parts.shared, 1)).total;
       const after = (await this.page(slice, 1)).total;
-      if (inParts >= Math.max(before, after)) return true;
+      missed = Math.max(before, after) - inParts;
+      if (missed <= 0) return 0;
       this.ctx.log.warn("autoscout24: sub-slices miss results", {
         slice: sliceKey(slice),
         results: [before, after],
@@ -227,7 +237,7 @@ class Harvest {
         attempt,
       });
     }
-    return false;
+    return missed;
   }
 
   /**
@@ -252,7 +262,12 @@ class Harvest {
       // listing's status is taken when the run first meets it, before any is yielded.
       const known = !this.full && page.listings.map((raw) => this.knewBefore(raw)).every(Boolean);
       for (const raw of page.listings) {
-        seen.add(refOf(raw));
+        const ref = refOf(raw);
+        seen.add(ref);
+        if (ref && atBound(slice, raw)) {
+          if (this.yieldedAtBound.has(ref)) continue;
+          this.yieldedAtBound.add(ref);
+        }
         yield toListingSeen(raw, slice.condition, country);
       }
       if (known) return "stopped";
@@ -319,32 +334,59 @@ class Harvest {
   }
 }
 
+/** Sub-slices that together take every listing of a slice. */
+interface Split {
+  /** Dearest or latest first. */
+  slices: Slice[];
+  /** Price bands only: the one price both take, so both their counts hold its listings. */
+  shared?: Slice;
+}
+
 /**
- * Sub-slices that partition `slice`, dearest first: price bands, then halves of a band (whole
- * euros, so [mid + 1, to] starts where [from, mid] ends), then (a single price, or the open
- * top band, still over the cap) first-registration years.
+ * Splits `slice` dearest first: into price bands, then halves of a band, then (a band of one
+ * or two prices, or the open top band, still over the cap) first-registration years. Bounds
+ * are inclusive, so bands sharing a bound take every price between them, fractional ones
+ * too. A band of two or more euros halves into two narrower ones ([from, mid], [mid, to],
+ * from < mid < to); narrower than that it can only split by year, and a year never splits.
  */
-function split(slice: Slice, thisYear: number): Slice[] | null {
+function split(slice: Slice, thisYear: number): Split | null {
   if (!slice.price) {
-    return [
-      { ...slice, price: { from: PRICE_TOP + 1 } },
-      { ...slice, price: { from: 0, to: PRICE_TOP } },
-    ];
+    return bands(slice, { from: PRICE_TOP }, { from: 0, to: PRICE_TOP }, PRICE_TOP);
   }
   const { from, to } = slice.price;
-  if (to !== undefined && from < to) {
+  if (to !== undefined && to - from >= 2) {
     const mid = Math.floor((from + to) / 2);
-    return [
-      { ...slice, price: { from: mid + 1, to } },
-      { ...slice, price: { from, to: mid } },
-    ];
+    return bands(slice, { from: mid, to }, { from, to: mid }, mid);
   }
   if (slice.year !== undefined) return null;
   const years = Array.from({ length: thisYear - FIRST_YEAR + 1 }, (_, i) => thisYear - i);
-  return years.map((year) => ({ ...slice, year }));
+  return { slices: years.map((year) => ({ ...slice, year })) };
 }
 
-/** "used", "used;price=1000000-", "new;make=29;price=19990-19990;year=2018". */
+function bands(slice: Slice, upper: Slice["price"], lower: Slice["price"], shared: number): Split {
+  return {
+    slices: [
+      { ...slice, price: upper },
+      { ...slice, price: lower },
+    ],
+    shared: { ...slice, price: { from: shared, to: shared } },
+  };
+}
+
+/** Whether a listing is priced at a bound of the slice's band, which a band next to it shares. */
+function atBound(slice: Slice, raw: Raw): boolean {
+  const price = raw?.price?.priceRaw;
+  return slice.price !== undefined && (price === slice.price.from || price === slice.price.to);
+}
+
+/** "3 listings outside every price band, possibly unpriced". */
+function missedNote(slice: Slice, parts: Split, missed: number): string {
+  const listings = `${missed} listing${missed === 1 ? "" : "s"}`;
+  if (!parts.shared) return `${listings} outside every registration year`;
+  return `${listings} outside every price band${slice.price ? "" : ", possibly unpriced"}`;
+}
+
+/** "used", "used;price=1000000-", "new;make=29;price=19989-19990;year=2018". */
 function sliceKey(slice: Slice): string {
   const parts: string[] = [slice.condition];
   if (slice.make !== undefined) parts.push(`make=${slice.make}`);
