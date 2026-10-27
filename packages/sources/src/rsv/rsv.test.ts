@@ -279,6 +279,12 @@ describe("rsv source", () => {
           // "Golf R" is a Golf; "R" after a model that does not list it stays.
           ...cars(more, "VOLKSWAGEN", "POLO", "AW"),
           ...cars(fewer, "VOLKSWAGEN", "POLO R", "AW"),
+          // Letters before digits can name a model ("Monza SP1"), a lone digit too ("Model 3").
+          ...cars(more, "FERRARI", "MONZA", "F176"),
+          ...cars(fewer, "FERRARI", "MONZA SP1", "F176"),
+          ...cars(fewer, "FERRARI", "MONZA SP2", "F176"),
+          ...cars(more, "PORSCHE", "911", "991"),
+          ...cars(fewer, "PORSCHE", "911 GT3", "991"),
           // "500X", "500L" are one word, so not "500" with a badge.
           ...cars(more, "FIAT", "500", "312"),
           ...cars(fewer, "FIAT", "500X", "312"),
@@ -306,6 +312,11 @@ describe("rsv source", () => {
         "Megane E-Tech": ["b9"],
         Polo: ["aw"],
         "Polo R": ["aw"],
+        Monza: ["f176"],
+        "Monza SP1": ["f176"],
+        "Monza SP2": ["f176"],
+        "911": ["991"],
+        "911 GT3": ["991"],
         "500": ["312"],
         "500X": ["312"],
         "500L": ["312"],
@@ -315,6 +326,8 @@ describe("rsv source", () => {
         await modelsOf([
           ...cars(more, "VOLVO", "XC90", "L"),
           ...cars(fewer, "VOLVO", "XC90 D4", "L"),
+          ...cars(more, "PORSCHE", "CAYENNE", "9YA"),
+          ...cars(fewer, "PORSCHE", "CAYENNE 4S", "9YA"),
           ...cars(more, "LAND ROVER", "RANGE ROVER VELAR", "LY"),
           ...cars(fewer, "LAND ROVER", "RANGE ROVER VELAR P380", "LY"),
           ...cars(more, "VOLKSWAGEN", "GOLF", "1J"),
@@ -329,6 +342,7 @@ describe("rsv source", () => {
         ]),
       ).toEqual({
         XC90: ["l"],
+        Cayenne: ["9ya"],
         "Range Rover Velar": ["ly"],
         Golf: ["1j"],
         "500": ["312"],

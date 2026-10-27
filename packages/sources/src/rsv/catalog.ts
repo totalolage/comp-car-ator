@@ -196,11 +196,15 @@ const TRIMS: Record<string, Record<string, string[]>> = {
 };
 
 /**
- * A word that marks a version: a badge, or an engine, power or code token ("D4", "P380", "1J",
- * "130"). A lone digit ("Ioniq 5", "Model 3", "Qashqai +2") can number a model, so it is no badge.
+ * A word that marks a version: a badge, or an engine, power or code token: digits with at most
+ * one letter before them and a letter or another digit ("D4", "P380", "1J", "4S", "130"). A
+ * lone digit ("Ioniq 5", "Model 3", "Qashqai +2") and letters before digits ("Monza SP1", "911
+ * GT3") can name a model, so they are no badge.
  */
 const isBadge = (word: string) =>
-  /[A-Z]\d|\d[A-Z]|\d\d/i.test(word) || BADGES.has(slugify(word)) || !slugify(word);
+  (/^[A-Z]?\d+[A-Z]*$/i.test(word) && /[A-Z]\d|\d[A-Z]|\d\d/i.test(word)) ||
+  BADGES.has(slugify(word)) ||
+  !slugify(word);
 
 /**
  * Folds "XC90 D4" into "XC90": a name that extends a shorter one by badges or that model's
