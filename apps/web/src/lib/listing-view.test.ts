@@ -15,6 +15,7 @@ import { i18n } from "../i18n/i18n.ts";
 import {
   historySeries,
   landedBreakdown,
+  listedVariants,
   listingBands,
   listingFacetOptions,
   listingPage,
@@ -381,6 +382,30 @@ describe("one listing", () => {
       priceCzk: 475_000,
     };
     expect(priceChange(cheaper)).toEqual({ amount: -25_000, percent: -5 });
+  });
+});
+
+describe("variants table", () => {
+  it("lists Variants with listings or a used median, then others in order up to the row count", () => {
+    const [a, b] = synthetic.variants as [VariantRow, VariantRow];
+    const bare = (id: string): VariantRow => ({ ...a, id });
+    const priced = {
+      variantId: "mk/m/d",
+      market: "DE",
+      condition: "used",
+      year: null,
+      band: null,
+      median: 300_000,
+    } as unknown as ModelView["stats"][number];
+    const view = {
+      variants: [bare("mk/m/c"), a, bare("mk/m/d"), bare("mk/m/e"), b, bare("mk/m/f")],
+      stats: [priced],
+      listings: (q: Parameters<ModelView["listings"]>[0]) => synthetic.listings(q),
+    };
+    const ids = (rows: number) => listedVariants(view, rows).map((v) => v.id);
+    expect(ids(4)).toEqual(["mk/m/c", "mk/m/a", "mk/m/d", "mk/m/b"]);
+    expect(ids(2)).toEqual(["mk/m/a", "mk/m/d", "mk/m/b"]);
+    expect(ids(30)).toHaveLength(6);
   });
 });
 

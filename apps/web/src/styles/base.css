@@ -151,7 +151,16 @@ a:hover {
   text-align: center;
 }
 
-/* Category menu: <details> disclosure with a full-width panel ------------------------- */
+/* Category tree (categories page and menu panel); the menu is a <details> disclosure
+   with a full-width panel ------------------------------------------------------------- */
+
+.categories {
+  display: grid;
+  grid-template-columns: 1fr 12rem;
+  grid-template-areas: "makes bodies";
+  gap: var(--s4) var(--s8);
+  font-size: var(--text-sm);
+}
 
 .menu > summary {
   height: var(--masthead);
@@ -184,10 +193,7 @@ a:hover {
   top: var(--masthead);
   max-height: calc(100dvh - var(--masthead) - var(--tray-space, 0px));
   overflow: auto;
-  display: grid;
-  grid-template-columns: 1fr 12rem;
   grid-template-areas: "recents recents" "makes bodies";
-  gap: var(--s4) var(--s8);
   padding: var(--s4) max(var(--gutter), calc((100% - var(--page-max)) / 2 + var(--gutter)));
   background: var(--paper);
   color: var(--ink);
@@ -195,10 +201,9 @@ a:hover {
   --focus: var(--focus-paper);
   border-bottom: 1px solid var(--rule-strong);
   box-shadow: 0 6px 16px -6px rgb(0 0 0 / 0.25);
-  font-size: var(--text-sm);
 }
 
-.menu-panel h2 {
+.categories h2 {
   margin-bottom: var(--s2);
   padding-bottom: var(--s1);
   border-bottom: 1px solid var(--rule);
@@ -216,11 +221,11 @@ a:hover {
   gap: var(--s1) var(--s4);
 }
 
-.menu-makes {
+.categories-makes {
   grid-area: makes;
 }
 
-.menu-bodies {
+.categories-bodies {
   grid-area: bodies;
 }
 
@@ -242,7 +247,7 @@ a:hover {
   padding-left: var(--s3);
 }
 
-.menu-panel li {
+.categories li {
   padding: 1px 0;
 }
 
@@ -1143,8 +1148,12 @@ body {
     padding: 0 var(--s2);
   }
 
-  .menu-panel {
+  .categories {
     grid-template-columns: 1fr;
+    grid-template-areas: "makes" "bodies";
+  }
+
+  .menu-panel {
     grid-template-areas: "recents" "makes" "bodies";
   }
 

@@ -14,12 +14,13 @@ import { buildCatalog } from "../lib/catalog.ts";
 import { variantLabels } from "../lib/compare-view.ts";
 import {
   firstPaintListing,
+  listedVariants,
   listingPage,
   priceStats,
   variantMedians,
   variantNames,
 } from "../lib/listing-view.ts";
-import { COMPARE_MAX, writeListingState } from "../lib/url-state.ts";
+import { COMPARE_MAX, writeCatalogState, writeListingState } from "../lib/url-state.ts";
 import ModelExplorer from "./ModelExplorer.tsx";
 
 interface Props {
@@ -38,10 +39,16 @@ const result = listingPage(view, { filters: {} });
 const initial = { ...result, rows: result.rows.map(firstPaintListing) };
 const all = view.listings({ filters: { includeGone: true }, limit: Number.MAX_SAFE_INTEGER });
 const fx: FxTable = {};
+// The island names only the Variants its Listings (sold ones too) belong to.
+const listingNames: Record<string, string> = {};
 for (const l of all.rows) {
   const rate = catalog.manifest.fx[l.price.currency];
   if (rate) fx[l.price.currency] = rate;
+  const name = l.variantId ? names[l.variantId] : undefined;
+  if (l.variantId && name) listingNames[l.variantId] = name;
 }
+const listed = listedVariants(view);
+const unlisted = view.variants.length - listed.length;
 const counts = view.listings({ limit: 0 }).facets.values.variant;
 const count = (variant: string) => counts.find((c) => c.value === variant)?.count ?? 0;
 // EEA asks for attribution where its CO₂ data is shown.
@@ -88,7 +95,7 @@ const eea =
               </tr>
             </thead>
             <tbody>
-              {view.variants.map((v) => (
+              {listed.map((v) => (
                 <tr data-variant={v.id}>
                   <th scope="row">{names[v.id]}</th>
                   <td class="num">{`${v.years.from}–${v.years.to ?? ""}`}</td>
@@ -123,6 +130,20 @@ const eea =
             </tbody>
           </table>
         </div>
+        {
+          unlisted > 0 && (
+            <p class="facet-note">
+              <a
+                href={
+                  t.path(`/make/${view.model.makeId}/`) +
+                  writeCatalogState({ filters: { model: [id] } })
+                }
+              >
+                {t.t("model.unlisted", { variants: t.count("count.variants", unlisted) })}
+              </a>
+            </p>
+          )
+        }
         {eea && <p class="facet-note">{t.t("model.eea")}</p>}
       </section>
     )
@@ -134,7 +155,7 @@ const eea =
       modelId={id}
       initial={initial}
       initialStats={priceStats(view, { filters: {} })}
-      names={names}
+      names={listingNames}
       fx={fx}
       history={view.history}
     />

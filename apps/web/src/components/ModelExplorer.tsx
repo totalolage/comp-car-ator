@@ -24,6 +24,7 @@ import type { Lang, MessageKey } from "../i18n/messages.ts";
 import {
   DEFAULT_LISTING_SORT,
   historySeries,
+  LISTING_FIRST,
   LISTING_PAGE,
   LISTING_RAIL,
   type ListingEnumFacet,
@@ -72,7 +73,7 @@ export default function ModelExplorer(props: Props) {
   const t = i18n(lang);
   const [view, setView] = useState<ModelView | null>(null);
   const [state, setState] = useState<ListingState>({ filters: {} });
-  const [limit, setLimit] = useState(LISTING_PAGE);
+  const [limit, setLimit] = useState(LISTING_FIRST);
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const [railOpen, setRailOpen] = useState(false);
   const [resets, setResets] = useState(0);
@@ -103,7 +104,7 @@ export default function ModelExplorer(props: Props) {
   }, [view, state]);
 
   function update(change: (s: ListingState) => ListingState) {
-    setLimit(LISTING_PAGE);
+    setLimit(LISTING_FIRST);
     setState(change);
   }
   const filters = state.filters;

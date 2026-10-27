@@ -55,6 +55,8 @@ export const LISTING_RAIL: (
 
 /** Landed CZK makes Czech and imported cars comparable, so it is the default order. */
 export const DEFAULT_LISTING_SORT: Sort<ListingSortKey> = { key: "landedCzk", dir: "asc" };
+/** Listing rows a model page renders in its HTML, and how many each "show more" adds. */
+export const LISTING_FIRST = 25;
 export const LISTING_PAGE = 50;
 
 export function listingQuery(state: ListingState, limit = LISTING_PAGE): ListingQuery {
@@ -69,7 +71,7 @@ export function listingQuery(state: ListingState, limit = LISTING_PAGE): Listing
 export function listingPage(
   view: Pick<ModelView, "listings">,
   state: ListingState,
-  limit = LISTING_PAGE,
+  limit = LISTING_FIRST,
 ): ListingResult {
   const all = view.listings({ ...listingQuery(state), limit: Number.MAX_SAFE_INTEGER });
   const kept = all.rows.filter((l) => !l.excluded);
@@ -334,7 +336,30 @@ function quantile(sorted: Float64Array, p: number): number {
  * Asking price (CZK) per Variant and Market over its active used Listings, from the
  * published cells; a missing entry had fewer than 3 Listings.
  */
-export function variantMedians(view: ModelView): Record<string, Partial<Record<Market, number>>> {
+/** Rows of a model page's Variants table when fewer Variants have listings or prices. */
+export const VARIANT_ROWS = 30;
+
+/**
+ * The Variants a model page's table lists, in the model's order: every Variant with Listings
+ * (sold ones included) or a used median, then others while the table has fewer than `rows`.
+ * A popular model has hundreds of Variants from price lists and the register, most never on
+ * sale; the catalog lists them all.
+ */
+export function listedVariants(
+  view: Pick<ModelView, "variants" | "stats" | "listings">,
+  rows = VARIANT_ROWS,
+): VariantRow[] {
+  const listed = new Set<string>(Object.keys(variantMedians(view)));
+  for (const l of view.listings({ filters: { includeGone: true }, limit: Number.MAX_SAFE_INTEGER })
+    .rows)
+    if (l.variantId) listed.add(l.variantId);
+  let room = rows - view.variants.filter((v) => listed.has(v.id)).length;
+  return view.variants.filter((v) => listed.has(v.id) || room-- > 0);
+}
+
+export function variantMedians(
+  view: Pick<ModelView, "stats">,
+): Record<string, Partial<Record<Market, number>>> {
   const out: Record<string, Partial<Record<Market, number>>> = {};
   for (const c of view.stats) {
     if (c.variantId === null || c.condition !== "used" || c.year !== null || c.band !== null)
