@@ -9,7 +9,7 @@ import type { FuelWording } from "./hints.ts";
  * entry is the group's key; it does not have to be the catalog's spelling, because catalog
  * names are looked up through the same groups. Slugs not in any group stand for themselves.
  */
-export const ALIASES_VERSION = 6;
+export const ALIASES_VERSION = 7;
 
 export const MAKE_GROUPS: readonly (readonly string[])[] = [
   ["volkswagen", "vw"],
@@ -148,6 +148,21 @@ export const FUEL_BADGES: Readonly<Record<string, readonly FuelWording[]>> = {
 export const LIFTBACKS: Readonly<Record<string, readonly string[]>> = {
   skoda: ["octavia", "superb"],
   audi: ["a5", "a7", "s5", "s7", "rs5", "rs7"],
+};
+
+/**
+ * Generations whose hatchbacks the register files under the wagon code, so a listing's
+ * "hatchback" may be the catalog's wagon. Every Golf VIII (CD), hatchback or estate, is an
+ * "AC KOMBI": its wagon Variants run 4286-4292 mm long (the hatchback) beside 4635 mm (the
+ * Variant estate), and it has no hatchback Variant. The ID.3 has no estate, yet all but one of
+ * its E1 Variants are wagons, 4261-4265 mm long. Keyed by make group key, model key as the
+ * Resolver compacts it, and generation slug; elsewhere a generation's wagons can be real
+ * estates whose hatchbacks the catalog lacks (Golf VI 5K), so absence is no evidence.
+ */
+export const HATCHBACK_WAGONS: Readonly<
+  Record<string, Readonly<Record<string, readonly string[]>>>
+> = {
+  volkswagen: { golf: ["mk8"], id3: ["e1"] },
 };
 
 /**
