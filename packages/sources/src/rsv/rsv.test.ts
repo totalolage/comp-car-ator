@@ -237,13 +237,16 @@ describe("rsv source", () => {
         ...Array(2).fill(car("LAND ROVER", "RANGE ROVER", "LW")),
         ...Array(5).fill(car("LAND ROVER", "RANGE ROVER SPORT", "LW")),
         ...Array(4).fill(car("LAND ROVER", "RANGE ROVER VELAR", "LY")),
+        ...Array(3).fill(car("LAND ROVER", "RANGE ROVER EVOQUE", "LV")),
+        car("LAND ROVER", "RANGE ROVER", "LV"),
         ...Array(3).fill(car("ŠKODA", "OCTAVIA", "NX")),
         ...Array(2).fill(car("ŠKODA", "OCTAVIA SCOUT", "NX")),
       ]),
     ).toEqual({
-      "Range Rover": ["lg", "lw"],
+      "Range Rover": ["lg", "lv", "lw"],
       "Range Rover Sport": ["lw"],
       "Range Rover Velar": ["ly"],
+      "Range Rover Evoque": ["lv"],
       Octavia: ["nx"],
     });
   });
