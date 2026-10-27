@@ -94,7 +94,8 @@ export interface UsedStats {
   /**
    * Asking price in CZK over the Listings the outlier rule keeps; null when it keeps fewer
    * than 3, as for model-file cells (ADR 0012). Every statistic below counts only kept
-   * Listings, and each is null (or left out) under 3 values of its own.
+   * Listings; the landed, odometer and per-Market quantiles are each null (or left out)
+   * under 3 values of their own.
    */
   priceCzk: Quantiles | null;
   /** Landed CZK (docs: CONTEXT.md "Landed price"); only listings with an estimate count. */

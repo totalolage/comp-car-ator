@@ -18,9 +18,8 @@ const FENCE_MIN_COUNT = 8;
 const FENCE_IQR_FACTOR = 3;
 
 /**
- * Fewer values give no quantiles (ADR 0012): no cell in `ModelFile.stats`, no statistic in a
- * catalog row. One or two prices are no median, and a single mispriced Listing would become
- * its Variant's.
+ * Fewer values give no quantiles (ADR 0012): no cell in `ModelFile.stats`, no quantiles in a
+ * catalog row. Otherwise a single mispriced Listing would be its Variant's median.
  */
 const MIN_SAMPLE = 3;
 
