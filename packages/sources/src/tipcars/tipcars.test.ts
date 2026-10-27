@@ -13,8 +13,16 @@ import { type TipcarsOptions, tipcarsSource } from "./tipcars.ts";
 const incremental = new URL("./fixtures/incremental.cassette.json", import.meta.url);
 const full = new URL("./fixtures/full.cassette.json", import.meta.url);
 const knownRefs = new URL("./fixtures/incremental.known.json", import.meta.url);
+// /ojete?2015-2015=&262000-266000kc=, recorded 2026-10-27 (T1) and trimmed the same way, filed
+// under the URL of the slice used:2015: 14 listings in CZK and a Dubai dealer's in EUR.
+const foreign = new URL("./fixtures/foreign-currency.cassette.json", import.meta.url);
 const now = new Date("2026-10-25T17:36:00Z");
 const FULL_SLICES = ["used:2000", "used:2001"];
+const FOREIGN_RUN = {
+  mode: "full",
+  options: { slices: ["used:2015"] },
+  now: new Date("2026-10-27T21:40:00Z"),
+} as const;
 
 interface Run {
   mode: HarvestMode;
@@ -25,6 +33,8 @@ interface Run {
   known?: ReadonlySet<string>;
   done?: readonly string[];
   options?: TipcarsOptions;
+  /** The cassette's recording time; default `now`. */
+  now?: Date;
 }
 
 /** Collects into `out`, so a run that fails still shows what it yielded. */
@@ -34,6 +44,7 @@ async function harvest(
   out: Observation[] = [],
 ): Promise<Observation[]> {
   const replay = createReplayHttp(cassette);
+  const at = run.now ?? now;
   const source = tipcarsSource(run.options ?? (run.mode === "full" ? { slices: FULL_SLICES } : {}));
   for await (const o of source.harvest({
     http: {
@@ -46,9 +57,9 @@ async function harvest(
     checkpoint: {
       ...emptyCheckpoint,
       isKnown: (ref) => run.known?.has(ref) ?? false,
-      sliceDoneAt: (slice) => (run.done?.includes(slice) ? now : null),
+      sliceDoneAt: (slice) => (run.done?.includes(slice) ? at : null),
     },
-    now,
+    now: at,
     log: silentLogger,
     signal: new AbortController().signal,
   })) {
@@ -352,6 +363,34 @@ describe("tipcars source", () => {
     );
     const seen = listings(await harvest(cassette, { mode: "full" }));
     expect(seen.filter((o) => !Number.isFinite(o.price.amount))).toHaveLength(1);
+  });
+
+  it("prices a listing in the seller's currency, not the card's conversion to Kč", async () => {
+    const os = await harvest(await loadCassette(foreign), FOREIGN_RUN);
+    expect(slicesDone(os)).toEqual(["used:2015"]);
+    const seen = listings(os);
+    expect(seen).toHaveLength(15);
+    // The card shows 264 673 Kč and 218 739 Kč bez DPH; its record and detail page say EUR.
+    expect(seen.find((o) => o.ref === "56607021")).toMatchObject({
+      vehicle: { make: "Jeep", model: "Wrangler", manufactureYear: 2015 },
+      odometerKm: 199000,
+      price: { amount: 10830, currency: "EUR" },
+      priceBasis: "gross",
+      location: { city: "Dubai" },
+    });
+    expect(seen.filter((o) => o.price.currency === "CZK")).toHaveLength(14);
+  });
+
+  it("a price in an unknown currency gives a ListingSeen the Ledger rejects", async () => {
+    const cassette = edit(
+      await loadCassette(foreign),
+      "/ojete?2015-2015=",
+      body((b) =>
+        b.replace("price_currency&quot;:&quot;L&quot;", "price_currency&quot;:&quot;X&quot;"),
+      ),
+    );
+    const seen = listings(await harvest(cassette, FOREIGN_RUN));
+    expect(seen.find((o) => o.ref === "56607021")?.price).toEqual({ amount: 10830, currency: "" });
   });
 
   it("a changed list page fails the run", async () => {

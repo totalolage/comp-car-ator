@@ -8,9 +8,11 @@
  *   předváděcí"). Filters are bare query keys: `2015-2015=` (year), `500000-599999kc=`
  *   (price, inclusive bounds).
  * - Each list card carries the site's own record as JSON (`data-measure-data-value`: id,
- *   category, make/model codes, year, kW, cc, km, price, doors, seats) next to the title,
- *   trim, shown price, the "bez DPH" line of VAT-deductible cars, seller and city; a page's
- *   ld+json ItemList adds the total and cover photos. Used listings come from the card alone.
+ *   category, make/model codes, year, kW, cc, km, price and its currency, doors, seats) next
+ *   to the title, trim, shown price, the "bez DPH" line of VAT-deductible cars, seller and
+ *   city; a page's ld+json ItemList adds the total and cover photos. Used listings come from
+ *   the card alone. The price is the record's, in the seller's currency: the shown one is
+ *   converted to Kč (a Dubai dealer's 10 830 EUR shows as 264 673 Kč).
  * - Only the detail page tells a demo car from a new one ("Stav: předváděcí vozidlo") and
  *   states gearbox, first registration, Euro class, colour, inspection and every photo. New
  *   and demo listings (a quarter of the scope) are therefore always read from their detail
@@ -222,6 +224,12 @@ class Harvest {
       this.ctx.log.info("tipcars listing without a price", { ref: card.ref });
       return;
     }
+    if (!card.currency) {
+      this.ctx.log.warn("tipcars price in an unknown currency", {
+        ref: card.ref,
+        code: card.record.price_currency,
+      });
+    }
     if (card.category !== "N") {
       yield toListingSeen(card);
       return;
@@ -311,7 +319,7 @@ function parseListPage(html: string, url: string): ListPage {
       trim: clean(between(chunk, '<p class="text-M">', "</p>")) || undefined,
       record: data ?? {},
       price: whole(data?.price),
-      currency: currencyOf(clean(priceBlock)),
+      currency: CURRENCIES.get(text(data?.price_currency)),
       priceOnRequest: data?.price === 0 && /Dohodou/i.test(priceBlock),
       vatDeductible: /bez(?:&nbsp;|\s)+DPH/.test(priceBlock),
       sellerText: text(seller?.description) || undefined,
@@ -321,12 +329,14 @@ function parseListPage(html: string, url: string): ListPage {
   return { total: itemList.numberOfItems as number, cards };
 }
 
-/** The currency of a shown price ("45 000 Kč", "12 900 €"). */
-function currencyOf(price: string): string | undefined {
-  if (/\d\s*Kč/.test(price)) return "CZK";
-  if (/\d\s*(€|EUR)/.test(price)) return "EUR";
-  return undefined;
-}
+/**
+ * The record's `price_currency` codes, as the detail page names them. Any other code leaves
+ * the currency undefined, so the listing comes out as one the Ledger rejects.
+ */
+const CURRENCIES = new Map([
+  ["A", "CZK"],
+  ["L", "EUR"],
+]);
 
 // ---------------------------------------------------------------------------------------
 // Detail pages (new and demo listings)
