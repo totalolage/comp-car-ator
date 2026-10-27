@@ -9,7 +9,7 @@ import type { FuelWording } from "./hints.ts";
  * entry is the group's key; it does not have to be the catalog's spelling, because catalog
  * names are looked up through the same groups. Slugs not in any group stand for themselves.
  */
-export const ALIASES_VERSION = 4;
+export const ALIASES_VERSION = 5;
 
 export const MAKE_GROUPS: readonly (readonly string[])[] = [
   ["volkswagen", "vw"],
@@ -116,4 +116,14 @@ export const FUEL_BADGES: Readonly<Record<string, readonly FuelWording[]>> = {
   skoda: [[["phev", "bev"], /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/]],
   audi: [[["hev", "phev", "bev", "reev"], badge("e-?tron")]],
   renault: [[["hev", "phev", "bev", "reev"], badge("e-?tech")]],
+};
+
+/**
+ * Liftbacks the register files under either sedan (AA) or hatchback (AB) within one
+ * generation, so a listing's "hatchback" may be the catalog's sedan and the other way round.
+ * Keyed by make group key; model keys as the Resolver compacts them ("a5").
+ */
+export const LIFTBACKS: Readonly<Record<string, readonly string[]>> = {
+  skoda: ["octavia", "superb"],
+  audi: ["a5", "a7", "s5", "s7", "rs5", "rs7"],
 };
