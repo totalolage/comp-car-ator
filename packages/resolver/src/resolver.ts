@@ -202,8 +202,7 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
       let fits = fitting((v) => body === undefined || v.body === body);
       if (fits.length === 0 && body !== undefined) {
         // Wording that names another body ("A6 Avant" listed as a hatchback) rules a stand-in out.
-        const worded = (v: CatalogVariant) =>
-          hints.body === undefined || hints.body === body || hints.body === v.body;
+        const worded = (v: CatalogVariant) => hints.bodies.every((b) => b === body || b === v.body);
         fits = fitting((v) => standsIn(model, body, v) && worded(v));
       }
       const only = fits.length === 1 ? fits[0] : undefined;

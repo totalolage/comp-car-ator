@@ -3,6 +3,8 @@ import type { Body, Fuel, Transmission } from "@cca/vocabulary";
 /** What a listing's free text (model and trim) says about the car, when it says it once. */
 export interface Hints {
   body?: Body;
+  /** Every body the wording names, even when they conflict ("Sportwagon Cabrio"). */
+  bodies: readonly Body[];
   fuel?: Fuel;
   /**
    * The fuels the text's hybrid or electric wording leaves open ("Plug-in Hybrid" → phev,
@@ -100,6 +102,7 @@ export function readHints(text: string, badges: readonly FuelWording[] = []): Hi
     );
   return {
     body: only(BODY, lower),
+    bodies: BODY.filter(([, pattern]) => pattern.test(lower)).map(([body]) => body),
     fuel: fuels ? (fuels.length === 1 ? fuels[0] : undefined) : only(FUEL, lower),
     fuels,
     transmission: only(TRANSMISSION, lower),

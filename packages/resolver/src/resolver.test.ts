@@ -275,6 +275,9 @@ describe("Resolver", () => {
         { body: "sedan", fuel: "diesel", powerKw: 110 },
         { body: "wagon", fuel: "petrol", powerKw: 120 },
       ]),
+      ...variants("Ford", "Transit Custom", { slug: "nxn", name: "Transit Custom", from: 2024 }, [
+        { body: "mpv", fuel: "diesel", powerKw: 100 },
+      ]),
       ...variants("Alfa Romeo", "159", { slug: "939", name: "159", from: 2005, to: 2011 }, [
         { body: "sedan", fuel: "diesel", powerKw: 147 },
       ]),
@@ -382,6 +385,18 @@ describe("Resolver", () => {
           firstRegistration: { year: 2009 },
         }),
       ).toMatchObject({ status: "model", reason: "no-variant" });
+      // Two bodies named ("Sportwagon", "Cabrio") still name one the stand-in is not.
+      expect(
+        at({
+          make: "Alfa Romeo",
+          model: "159",
+          trim: "Sportwagon Cabrio",
+          body: "hatchback",
+          fuel: "diesel",
+          powerKw: 147,
+          firstRegistration: { year: 2009 },
+        }),
+      ).toMatchObject({ status: "model", reason: "no-variant" });
       // An Octavia Combi listed as a hatchback is neither the liftback nor, on that word alone,
       // the Combi.
       expect(
@@ -405,6 +420,17 @@ describe("Resolver", () => {
           powerKw: 147,
         }),
       ).toBe("skoda/octavia/nx/wagon-diesel-147kw");
+      // Without a stated body the wording is the body: a passenger Transit "Kombi" is filed as
+      // an MPV.
+      expect(
+        at({
+          make: "Ford",
+          model: "Transit Custom Kombi",
+          fuel: "diesel",
+          powerKw: 100,
+          firstRegistration: { year: 2025 },
+        }),
+      ).toBe("ford/transit-custom/nxn/mpv-diesel-100kw");
     });
 
     it("stays ambiguous when several register bodies fit", () => {
