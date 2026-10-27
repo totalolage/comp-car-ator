@@ -98,7 +98,8 @@ const ENGINE_LAYOUT = /^[vw]\d{1,2}$/i;
 /**
  * Matching rule (docs/adr/0002-variant-definition.md):
  * 1. Make and model through slugs and the alias groups in aliases.ts; the longest model
- *    name that prefixes the listing's model wins ("Golf Variant" is a Golf).
+ *    name that prefixes the listing's model wins ("Golf Variant" is a Golf). Package words
+ *    ("M Sport") are no part of a model name: "X5 M Sport" is an X5, never the X5 M.
  * 2. Fields the descriptor leaves undefined are read from its model and trim text when the
  *    text states them once: power ("110kW", "150 PS"), transmission ("DSG"), body ("Combi"),
  *    fuel ("TDI"), and a generation name ("VIII", "Mk8"). Stated fields win over text.
@@ -149,7 +150,8 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
     model.generationBodies.set(variant.generationId, bodies.add(variant.body));
     if (!model.generationWords.has(variant.generationId)) {
       const named = GENERATION_NAMES[makeKey]?.[modelKey]?.[variant.generation.slug] ?? [];
-      model.generationWords.set(variant.generationId, [...generationWords(variant), ...named]);
+      const words = generationWords(variant, CHASSIS_CODES[makeKey]);
+      model.generationWords.set(variant.generationId, [...words, ...named]);
     }
   }
 
@@ -287,7 +289,11 @@ function findModel(
   text: string,
 ): { model: Model; name: string } | undefined {
   const folded = fold(text);
-  const spans = [...folded.matchAll(/[A-Za-z0-9]+/g)];
+  // Package words are blanked, not removed, so offsets stay those of `text` and the name
+  // returned keeps them ("M Sport X5" is three words before the trim).
+  const packages = MODEL_ALIASES[makeKey]?.packages;
+  const read = packages ? folded.replace(packages, (words) => " ".repeat(words.length)) : folded;
+  const spans = [...read.matchAll(/[A-Za-z0-9]+/g)];
   const tokens = spans.map(([token]) => token.toLowerCase());
   for (let length = tokens.length; length > 0; length--) {
     const key = modelKeyOf(makeKey, tokens.slice(0, length).join("-"));
@@ -306,12 +312,13 @@ function findModel(
 /**
  * Words that name a generation: its slug and the words of its name that are not the model's
  * name ("Octavia IV" → "IV"). Roman numerals and single letters must match in upper case
- * ("iV" is Škoda's plug-in badge, not generation IV); bare numbers never name a generation.
+ * ("iV" is Škoda's plug-in badge, not generation IV); bare numbers name a generation only
+ * when they are one of the make's chassis codes (the Porsche 911's "991").
  */
-function generationWords(variant: CatalogVariant): string[] {
+function generationWords(variant: CatalogVariant, chassis: RegExp | undefined): string[] {
   const modelWords = new Set(split(variant.model).map((w) => w.toLowerCase()));
   const words = [variant.generation.slug, ...split(variant.generation.name)].filter(
-    (w) => !/^\d+$/.test(w) && !modelWords.has(w.toLowerCase()),
+    (w) => (!/^\d+$/.test(w) || chassis?.test(w) === true) && !modelWords.has(w.toLowerCase()),
   );
   return [
     ...new Set(

@@ -3,7 +3,7 @@
  * https://download.dataovozidlech.cz/schema/vypisvozidel) mapped onto the vocabulary's value
  * sets. A row is one vehicle ever registered in CZ, including scrapped and exported ones.
  */
-import type { Body, Drive, Fuel } from "@cca/vocabulary";
+import { type Body, type Drive, type Fuel, slugify } from "@cca/vocabulary";
 import { makeName, modelName } from "../catalog-names.ts";
 
 /** The columns this adapter reads; a missing one means the export changed. */
@@ -150,7 +150,8 @@ const identityOf = memo(
     text: string | undefined,
     commercialName: string | undefined,
   ): { make: string; model: string; type: string } | Rejection => {
-    const make = makeName(rawMake ?? "");
+    // "JAGUAR LAND ROVER LIMITED" sells two makes: the commercial name tells which.
+    const make = makeName(rawMake ?? "", commercialName ?? "");
     if (!make) return "no-make";
     const type = typeOf(code, text);
     if (!type) return "no-type";
@@ -158,7 +159,10 @@ const identityOf = memo(
     const named = modelName(make, commercialName ?? "");
     const words = named?.split(" ") ?? [];
     const cut = words.findIndex((w, i) => i > 0 && w.toUpperCase() === type);
-    const model = cut > 0 ? words.slice(0, cut).join(" ") : named;
+    // ... and punctuation before the type with it ("CORVETTE - Z06").
+    const kept = words.slice(0, cut);
+    while (kept.length > 1 && slugify(kept.at(-1) as string) === "") kept.pop();
+    const model = cut > 0 ? kept.join(" ") : named;
     return model ? { make, model, type } : "no-model";
   },
 );

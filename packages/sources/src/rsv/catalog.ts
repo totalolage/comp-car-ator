@@ -3,10 +3,13 @@
  * vehicles with the same make, model, type-approval type, body, fuel and power are one
  * candidate; candidates become Variants once enough vehicles back them.
  *
- * - Models: commercial names are cut to their model part per row (catalog-names.ts). A longer
- *   name whose vehicles share the shorter name's type-approval types is the same model with a
- *   trim word ("Octavia Scout" → Octavia); one with types of its own is a model of its own
- *   ("Tiguan Allspace", "Golf Plus").
+ * - Models: commercial names are cut to their model part per row (catalog-names.ts drops engine,
+ *   body and trim words: "Octavia Combi 2.0 TDI" → Octavia). Spellings of one model id merge
+ *   ("UP!", "UP"). A longer name folds into the shorter one it extends only on the shorter
+ *   name's types, and only when its extra words are badges ("XC90 D4", "Evoque HSE Dynamic") or
+ *   trims listed for that model ("Golf GTI", "Octavia RS"). Other names stay apart even on one
+ *   type-approval type: models share types ("Tiguan Allspace" approved as a Tiguan, "Golf Plus"
+ *   on the Golf's), and neither the type nor counts tell a badge from a model ("e-tron GT").
  * - Generations: the type-approval type ("5E", "NX") changes with most design cycles, so a
  *   type Wikidata does not date is one Generation, keyed by its code. A type that starts as a
  *   dated Wikidata generation is that generation, keyed by Wikidata's word for it (mk7, b6),
@@ -14,8 +17,11 @@
  *   (Golf 1K: V and VI) is split by production year; years the dates do not settle (an overlap,
  *   past the last dated generation) are left out rather than guessed.
  * - Noise: a candidate with fewer than `minVehicles` vehicles is dropped (single imports,
- *   typos). Rare but real neighbours stay: an extra Variant makes a listing ambiguous (it
- *   resolves to the Model), a missing one could make it match the wrong Variant.
+ *   typos). Vehicles of the longer names kept apart on a shorter name's type count towards it
+ *   without joining it ("Continental GT" for "Continental"), so a short name the register
+ *   writes for those cars stays a Model. Rare but real neighbours stay: an extra Variant makes
+ *   a listing ambiguous (it resolves to the Model), a missing one could make it match the wrong
+ *   Variant.
  *
  * Memory: one fixed-size record per candidate (counts by year, two-slot majority trackers per
  * Spec), so peak memory grows with distinct candidates, not vehicles.
@@ -94,13 +100,25 @@ export function createCatalog(options: CatalogOptions) {
     entries(generations: readonly WikidataGeneration[]): CatalogEntry[] {
       omitted.vehicles = 0;
       const rows = [...candidates].map(([key, c]) => {
-        const [make, model, type, body, fuel, kw] = key.split("\t") as string[];
-        return { make, model, type, body, fuel, powerKw: Number(kw), c } as Row;
+        const [make, spelled, type, body, fuel, kw] = key.split("\t") as string[];
+        const model = wordsOf(spelled as string);
+        return { make, model, spelled, type, body, fuel, powerKw: Number(kw), c } as Row;
       });
-      const merged = mergeModels(rows);
+      const merged = foldBadges(spellModels(rows));
+      const backing = new Map<string, Row[]>();
+      for (const r of merged) {
+        for (const model of r.backs ?? []) {
+          const key = `${r.make}\t${model}`;
+          const rows = backing.get(key);
+          if (rows) rows.push(r);
+          else backing.set(key, [r]);
+        }
+      }
       const entries: CatalogEntry[] = [];
-      for (const group of groupBy(merged, (r) => `${r.make}\t${r.model}`).values()) {
-        entries.push(...modelEntries(group, generations, options, omitted));
+      for (const [key, group] of groupBy(merged, (r) => `${r.make}\t${r.model}`)) {
+        const model = shownName(group);
+        const shown = group.map((r) => ({ ...r, model }));
+        entries.push(...modelEntries(shown, backing.get(key) ?? [], generations, options, omitted));
       }
       return entries.sort((a, b) => idOf(a).localeCompare(idOf(b)));
     },
@@ -115,34 +133,195 @@ interface Row {
   fuel: VariantSpec["fuel"];
   powerKw: number;
   c: Candidate;
+  /** Shorter models whose Variants these vehicles back without joining them (foldBadges). */
+  backs?: readonly string[];
+  /** The model as the register spells it, punctuation words included ("Town & Country"). */
+  spelled: string;
 }
 
 /**
- * Folds "Octavia Scout" into "Octavia": vehicles of a longer name whose type the nearest
- * shorter name (a word prefix) also has belong to that model; the rest keep their name.
+ * A name without its punctuation words ("Town & Country" → "Town Country"): models are told
+ * apart and folded by words only, so punctuation never splits or joins a model.
  */
-function mergeModels(rows: Row[]): Row[] {
+function wordsOf(model: string): string {
+  return model
+    .split(" ")
+    .filter((w) => slugify(w) !== "")
+    .join(" ");
+}
+
+/**
+ * The name a model shows: its own rows' spelling with most vehicles, one with punctuation
+ * first ("Town & Country" over a more frequent "Town Country"): its words are the same, and
+ * the punctuation says more.
+ */
+function shownName(rows: Row[]): string {
+  const model = (rows[0] as Row).model;
+  const own = rows.filter((r) => wordsOf(r.spelled) === model);
+  const counts = [...groupBy(own, (r) => r.spelled)].map(([spelled, spelledRows]) => ({
+    spelled,
+    punctuated: spelled !== model,
+    count: sum(spelledRows.map((r) => r.c.count)),
+  }));
+  counts.sort(
+    (a, b) =>
+      Number(b.punctuated) - Number(a.punctuated) ||
+      b.count - a.count ||
+      a.spelled.localeCompare(b.spelled),
+  );
+  return counts[0]?.spelled ?? model;
+}
+
+/**
+ * Spellings of one model id on one type ("UP!" and "UP", "ATOS-PRIME" and "ATOS PRIME") are
+ * one model, named by the spelling with most vehicles; else their Variants would share ids.
+ * Names of one id on types of their own ("Ka", "Ka+") keep their spelling.
+ */
+function spellModels(rows: Row[]): Row[] {
+  const keyOf = (r: Row) => `${r.make}\t${slugify(r.model)}\t${r.type}`;
+  const spelling = new Map<string, string>();
+  for (const [key, group] of groupBy(rows, keyOf)) {
+    const counts = [...groupBy(group, (r) => r.model)].map(([model, modelRows]) => ({
+      model,
+      count: sum(modelRows.map((r) => r.c.count)),
+    }));
+    counts.sort((a, b) => b.count - a.count || a.model.localeCompare(b.model));
+    spelling.set(key, (counts[0] as { model: string }).model);
+  }
+  return rows.map((r) => ({
+    ...r,
+    model: spelling.get(keyOf(r)) ?? r.model,
+  }));
+}
+
+/**
+ * Words that, after any model name, mark a version of it rather than a model of its own: trim,
+ * performance, fuel and body words the register writes after the model ("XC90 DRIVE-E",
+ * "911 CARRERA GTS", "ASTRA CARAVAN"). Curated, not proven. A word that also ends a model name
+ * in some make is not here ("Model S", "e-tron GT", "X5 M", "i30 N", "Astra GTC", "Megane
+ * E-Tech"; "Sport", "Plus", "Cross"); where it is only a trim for a model, that
+ * model lists it in `TRIMS`. Fuel and body words may fold models the Variant still keeps apart
+ * by its fuel or body ("Kona Electric", "Golf Variant").
+ */
+const BADGES = new Set(
+  (
+    "gts st se hse sp cs csl svr srt r-t ss sxt sti gsr mps " +
+    "competition performance e-performance prestige premium executive life pure titanium " +
+    "ambiente limited dynamic r-dynamic r-sport trendy easy fun speed quadrifoglio trofeo " +
+    "verde abarth bullitt rubicon hellcat scat pack widebody aero racing glx lx ex xs junior " +
+    "eco sdi tddi tfsie quatro carrera drive drive-e twin engine e-hybrid hybrid plug-in " +
+    "aut edition anniversary lwb ii iii iv " +
+    "bifuel bi-fuel g-tron electric cng lpg blue motion bluemotion syncro mt at " +
+    "kwh convertible coup wagon sportwagon caravan van turnier weekend s-w stw grandtour volante " +
+    "lim td4 td5 td6 sd4 si4 ed4 tdv6 tdv8 sdv6 sdv8"
+  ).split(" "),
+);
+
+/**
+ * Trims that end a model name only as versions of the models listed, by make and model slug:
+ * "Golf GTI" is a Golf, while "GT" or "S" after another model can name one of its own.
+ */
+const TRIMS: Record<string, Record<string, string[]>> = {
+  volkswagen: {
+    golf: ["gti", "gtd", "gte", "r"],
+    polo: ["gti"],
+    up: ["gti"],
+    passat: ["gte"],
+    scirocco: ["r"],
+    "t-roc": ["r"],
+    tiguan: ["r"],
+    arteon: ["r"],
+    touareg: ["r"],
+  },
+  skoda: {
+    octavia: ["rs", "vrs", "scout"],
+    fabia: ["rs", "vrs"],
+    kodiaq: ["rs", "scout"],
+    karoq: ["scout"],
+    superb: ["scout"],
+    roomster: ["scout"],
+    enyaq: ["rs"],
+    elroq: ["rs"],
+  },
+  ford: { focus: ["rs"] },
+  renault: { megane: ["rs"], clio: ["rs", "e-tech"], captur: ["e-tech"], arkana: ["e-tech"] },
+  peugeot: { "208": ["gti"], "308": ["gti"] },
+  audi: { tt: ["rs"], "e-tron": ["s"] },
+  porsche: Object.fromEntries(
+    ["911", "macan", "cayenne", "panamera", "cayman", "boxster", "718-cayman", "718-boxster"].map(
+      (model) => [model, ["s"]],
+    ),
+  ),
+  maserati: {
+    ghibli: ["s"],
+    levante: ["s", "gt"],
+    quattroporte: ["s"],
+    granturismo: ["s"],
+    grecale: ["gt"],
+  },
+};
+
+/**
+ * A word that marks a version: a badge, or an engine, power or code token. Code tokens start
+ * with a digit or one letter and a digit ("D4", "P380", "1J", "4S", "130", "2.0D-S"), carry a
+ * power number after letters ("EV400", "LP640"), or are long model codes ("CW8WXJSFZL6"). A lone
+ * digit ("Ioniq 5", "Model 3", "Qashqai +2") and short letters with digits ("Monza SP1", "911
+ * GT3") can name a model, so they are no badge.
+ */
+function isBadge(word: string): boolean {
+  const slug = slugify(word);
+  // A badge word with a number ("SRT-10", "E-HYBRID150"); not a two-letter one ("SP1").
+  const numbered = /^([a-z-]{3,}?)-?\d+$/.exec(slug)?.[1];
+  if (!slug || BADGES.has(slug) || (numbered && BADGES.has(numbered))) return true;
+  const code = word.replace(/[.-]/g, "");
+  if (!/[A-Z]\d|\d[A-Z]|\d\d/i.test(code)) return false;
+  return /^[A-Z]?\d/i.test(code) || /^[A-Z]+\d{3,}[A-Z]*$/i.test(code) || code.length >= 6;
+}
+
+/**
+ * Folds "XC90 D4" into "XC90": a name that extends a shorter one by badges or that model's
+ * trims only is that model, on the types the shorter name has. A name with any other word
+ * ("Tiguan Allspace", "Range Rover Sport", "e-tron GT") stays a model of its own whatever it
+ * shares; so do a badge name's rows on types the shorter name lacks ("Ioniq 5").
+ *
+ * A name kept apart still backs the shorter names it extends on their types: a few
+ * "CONTINENTAL" rows of a Continental GT's type and power are such cars written short, not
+ * noise, so they make a Variant of "Continental" together with the GT's, which stays the GT's.
+ */
+function foldBadges(rows: Row[]): Row[] {
   const out: Row[] = [];
   for (const makeRows of groupBy(rows, (r) => r.make).values()) {
+    const trims = TRIMS[slugify(makeRows[0]?.make ?? "")] ?? {};
     const types = new Map<string, Set<string>>();
-    for (const r of makeRows) {
-      const set = types.get(r.model) ?? new Set<string>();
-      set.add(r.type);
-      types.set(r.model, set);
-    }
-    const parentOf = (model: string): string | undefined => {
+    for (const r of makeRows) types.set(r.model, (types.get(r.model) ?? new Set()).add(r.type));
+    const home = (model: string, type: string): string => {
+      const words = model.split(" ");
+      for (let n = words.length - 1; n >= 1; n--) {
+        const shorter = words.slice(0, n).join(" ");
+        if (!types.has(shorter)) continue;
+        const trim = (word: string) => trims[slugify(shorter)]?.includes(slugify(word)) ?? false;
+        if (!words.slice(n).every((w) => isBadge(w) || trim(w))) return model;
+        return types.get(shorter)?.has(type) ? home(shorter, type) : model;
+      }
+      return model;
+    };
+    // The shorter names a name extends on this type, nearest first.
+    const shorter = (model: string, type: string): string[] => {
       const words = model.split(" ");
       for (let n = words.length - 1; n >= 1; n--) {
         const prefix = words.slice(0, n).join(" ");
-        if (types.has(prefix)) return prefix;
+        if (!types.has(prefix)) continue;
+        return types.get(prefix)?.has(type) ? [prefix, ...shorter(prefix, type)] : [];
       }
-      return undefined;
+      return [];
     };
-    const home = (model: string, type: string): string => {
-      const parent = parentOf(model);
-      return parent && types.get(parent)?.has(type) ? home(parent, type) : model;
-    };
-    for (const r of makeRows) out.push({ ...r, model: home(r.model, r.type) });
+    for (const r of makeRows) {
+      const model = home(r.model, r.type);
+      const backs = [...new Set(shorter(r.model, r.type).map((s) => home(s, r.type)))].filter(
+        (m) => m !== model,
+      );
+      out.push({ ...r, model, ...(backs.length > 0 ? { backs } : {}) });
+    }
   }
   return out;
 }
@@ -164,6 +343,7 @@ interface Span {
 
 function modelEntries(
   modelRows: Row[],
+  backing: readonly Row[],
   wikidata: readonly WikidataGeneration[],
   options: CatalogOptions,
   omitted: { vehicles: number },
@@ -182,14 +362,16 @@ function modelEntries(
   // and type codes with variant codes glued on ("BWYD6BA", "211U016F0") belong to the type
   // they start with ("BWY", "211"): the shortest such type of the model, whatever the counts,
   // so the folding does not change as vehicles register.
-  let rows = modelRows.map((r) => ({
+  const bodyLetter = (r: Row) => ({
     ...r,
     type: r.type.replace(/^([A-Z0-9]*\d[A-Z0-9]*?\d)[A-Z]$/, "$1"),
-  }));
+  });
+  let rows = modelRows.map(bodyLetter);
   const types = [...new Set(rows.map((r) => r.type))].sort((a, b) => a.length - b.length);
   const fold = (type: string) =>
     types.find((t) => t.length >= 2 && t.length < type.length && type.startsWith(t)) ?? type;
   rows = rows.map((r) => ({ ...r, type: fold(r.type) }));
+  const backers = backing.map(bodyLetter).map((r) => ({ ...r, type: fold(r.type) }));
 
   // Types → Generations by production year.
   const byType = [...groupBy(rows, (r) => r.type)].map(([type, typeRows]) => {
@@ -242,6 +424,17 @@ function modelEntries(
     }
   }
 
+  // Vehicles that back a Variant without joining it (foldBadges), by Generation and Variant.
+  const variantKey = (slug: string, r: Row) => `${slug}\t${r.body}\t${r.fuel}\t${r.powerKw}`;
+  const backed = new Map<string, number>();
+  for (const r of backers) {
+    const of = generationOf.get(r.type);
+    r.c.years.forEach((n, i) => {
+      const gen = n > 0 ? of?.(options.minYear + i) : undefined;
+      if (gen) backed.set(variantKey(gen.slug, r), (backed.get(variantKey(gen.slug, r)) ?? 0) + n);
+    });
+  }
+
   const entries: CatalogEntry[] = [];
   for (const genRows of groupBy(placed, (r) => r.gen.slug).values()) {
     const gen = (genRows[0] as (typeof genRows)[number]).gen;
@@ -269,7 +462,9 @@ function modelEntries(
     const variants = [
       ...groupBy(genRows, (r) => `${r.body}\t${r.fuel}\t${r.powerKw}`).values(),
     ].map((vRows) => ({ ...(vRows[0] as Row), c: combine(vRows.map((r) => r.c)) }));
-    const kept = variants.filter((v) => v.c.count >= options.minVehicles);
+    const kept = variants.filter(
+      (v) => v.c.count + (backed.get(variantKey(gen.slug, v)) ?? 0) >= options.minVehicles,
+    );
     if (kept.length === 0) continue;
 
     const genYears = yearsOf(addYears(kept.map((v) => v.c.years)), options);

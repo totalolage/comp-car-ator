@@ -200,6 +200,369 @@ describe("rsv source", () => {
     expect(openYears("mk3")).toEqual([{ from: 2009, to: 2011 }]);
   });
 
+  it("keeps models apart that share a type, whichever has more vehicles", async () => {
+    // A Tiguan Allspace approved as a Tiguan: the type cannot tell them apart, nor can counts.
+    for (const [tiguans, allspaces] of [
+      [6, 4],
+      [4, 6],
+    ] as const) {
+      expect(
+        await modelsOf([
+          ...cars(tiguans, "VOLKSWAGEN", "TIGUAN", "5N"),
+          ...cars(allspaces, "VOLKSWAGEN", "TIGUAN ALLSPACE", "5N"),
+        ]),
+      ).toEqual({ Tiguan: ["5n"], "Tiguan Allspace": ["5n"] });
+    }
+    // A few "RANGE ROVER" rows of the Sport's type stay what the register says; neither name
+    // takes the other's vehicles. Badges fold into the model on its types ("EVOQUE HSE
+    // DYNAMIC", "XC90 D4"), not on a type of their own ("IONIQ 5"), and a lone digit is no badge
+    // ("QASHQAI +2"); trim words go per row.
+    expect(
+      await modelsOf([
+        ...cars(6, "LAND ROVER", "RANGE ROVER", "LG"),
+        ...cars(2, "LAND ROVER", "RANGE ROVER", "LW"),
+        ...cars(5, "LAND ROVER", "RANGE ROVER SPORT", "LW"),
+        ...cars(4, "LAND ROVER", "RANGE ROVER VELAR", "LY"),
+        ...cars(3, "LAND ROVER", "RANGE ROVER EVOQUE", "LV"),
+        ...cars(1, "LAND ROVER", "RANGE ROVER", "LV"),
+        ...cars(1, "LAND ROVER", "RANGE ROVER EVOQUE HSE DYNAMIC", "LV"),
+        ...cars(3, "VOLVO", "XC90", "L"),
+        ...cars(2, "VOLVO", "XC90 D4", "L"),
+        ...cars(3, "HYUNDAI", "IONIQ", "AE"),
+        ...cars(2, "HYUNDAI", "IONIQ 5", "NE"),
+        ...cars(3, "NISSAN", "QASHQAI", "J10"),
+        ...cars(2, "NISSAN", "QASHQAI +2", "J10"),
+        ...cars(3, "ŠKODA", "OCTAVIA", "NX"),
+        ...cars(2, "ŠKODA", "OCTAVIA COMBI 2.0 TDI", "NX"),
+      ]),
+    ).toEqual({
+      "Range Rover": ["lg", "lv", "lw"],
+      "Range Rover Sport": ["lw"],
+      "Range Rover Velar": ["ly"],
+      "Range Rover Evoque": ["lv"],
+      XC90: ["l"],
+      Ioniq: ["ae"],
+      "Ioniq 5": ["ne"],
+      Qashqai: ["j10"],
+      "Qashqai +2": ["j10"],
+      Octavia: ["nx"],
+    });
+  });
+
+  it("keeps a short name its longer names back on its type, without merging them", async () => {
+    // Few "CONTINENTAL" rows of the GT's and GTC's type: cars written short, real as the
+    // GT's and GTC's together, so the Continental stays a Model; the GT and GTC stay apart, and
+    // one too rare on its own (the GT) is dropped rather than folded in.
+    for (const [gts, gtcs] of [
+      [4, 5],
+      [5, 4],
+    ] as const) {
+      expect(
+        await modelsOf(
+          [
+            ...cars(2, "BENTLEY", "CONTINENTAL", "3W"),
+            ...cars(gts, "BENTLEY", "CONTINENTAL GT", "3W"),
+            ...cars(gtcs, "BENTLEY", "CONTINENTAL GTC", "3W"),
+          ],
+          5,
+        ),
+      ).toEqual({
+        Continental: ["3w"],
+        ...(gts >= 5 ? { "Continental GT": ["3w"] } : { "Continental GTC": ["3w"] }),
+      });
+    }
+    // Names that only back each other on a shared type: an Exige of its own type, and a
+    // longer name's rows when the shorter one is on another type, stay rare.
+    expect(
+      await modelsOf(
+        [
+          ...cars(1, "LOTUS", "EXIGE", "111"),
+          ...cars(4, "LOTUS", "EXIGE SPORT 410", "111"),
+          ...cars(2, "LOTUS", "ELISE", "112"),
+          ...cars(6, "LOTUS", "ELISE CUP 250", "113"),
+        ],
+        5,
+      ),
+    ).toEqual({ Exige: ["111"], "Elise Cup 250": ["113"] });
+    // Backing counts per Variant: GTs of another power do not make a Continental of 300 kW.
+    expect(
+      await modelsOf(
+        [
+          ...cars(2, "BENTLEY", "CONTINENTAL", "3W", 300),
+          ...cars(6, "BENTLEY", "CONTINENTAL GT", "3W", 412),
+        ],
+        5,
+      ),
+    ).toEqual({ "Continental GT": ["3w"] });
+  });
+
+  it("keeps a word some makes use as a badge, unless it is a trim of that very model", async () => {
+    for (const [more, fewer] of [
+      [6, 4],
+      [4, 6],
+    ] as const) {
+      // "GT", "S", "M", "N", "R", "GTC", "E-Tech" end models in some makes: never a badge.
+      expect(
+        await modelsOf([
+          ...cars(more, "AUDI", "E-TRON", "GE"),
+          ...cars(fewer, "AUDI", "E-TRON GT", "GE"),
+          ...cars(more, "TESLA", "MODEL", "SR"),
+          ...cars(fewer, "TESLA", "MODEL S", "SR"),
+          ...cars(fewer, "TESLA", "MODEL 3", "SR"),
+          ...cars(more, "BMW", "3", "3L"),
+          ...cars(fewer, "BMW", "M3", "3L"),
+          ...cars(more, "BMW", "X5", "5X"),
+          ...cars(fewer, "BMW", "X5 M", "5X"),
+          ...cars(more, "MERCEDES-BENZ", "GT", "190"),
+          ...cars(fewer, "MERCEDES-BENZ", "AMG GT", "190"),
+          ...cars(more, "HYUNDAI", "KONA", "OS"),
+          ...cars(fewer, "HYUNDAI", "KONA N", "OS"),
+          ...cars(more, "HONDA", "CIVIC", "FK"),
+          ...cars(fewer, "HONDA", "CIVIC TYPE R", "FK"),
+          ...cars(more, "OPEL", "ASTRA", "AH"),
+          ...cars(fewer, "OPEL", "ASTRA GTC", "AH"),
+          ...cars(more, "RENAULT", "MEGANE", "B9"),
+          ...cars(fewer, "RENAULT", "MEGANE E-TECH", "B9"),
+          // "Golf R" is a Golf; "R" after a model that does not list it stays.
+          ...cars(more, "VOLKSWAGEN", "POLO", "AW"),
+          ...cars(fewer, "VOLKSWAGEN", "POLO R", "AW"),
+          // Letters before digits can name a model ("Monza SP1"), a lone digit too ("Model 3").
+          ...cars(more, "FERRARI", "MONZA", "F176"),
+          ...cars(fewer, "FERRARI", "MONZA SP1", "F176"),
+          ...cars(fewer, "FERRARI", "MONZA SP2", "F176"),
+          ...cars(more, "PORSCHE", "911", "991"),
+          ...cars(fewer, "PORSCHE", "911 GT3", "991"),
+          // "500X", "500L" are one word, so not "500" with a badge.
+          ...cars(more, "FIAT", "500", "312"),
+          ...cars(fewer, "FIAT", "500X", "312"),
+          ...cars(fewer, "FIAT", "500L", "312"),
+        ]),
+      ).toEqual({
+        "e-tron": ["ge"],
+        "e-tron GT": ["ge"],
+        Model: ["sr"],
+        "Model S": ["sr"],
+        "Model 3": ["sr"],
+        "3 Series": ["3l"],
+        M3: ["3l"],
+        X5: ["5x"],
+        "X5 M": ["5x"],
+        GT: ["190"],
+        "AMG GT": ["190"],
+        Kona: ["os"],
+        "Kona N": ["os"],
+        Civic: ["fk"],
+        "Civic Type R": ["fk"],
+        Astra: ["ah"],
+        "Astra GTC": ["ah"],
+        Megane: ["b9"],
+        "Megane E-Tech": ["b9"],
+        Polo: ["aw"],
+        "Polo R": ["aw"],
+        Monza: ["f176"],
+        "Monza SP1": ["f176"],
+        "Monza SP2": ["f176"],
+        "911": ["991"],
+        "911 GT3": ["991"],
+        "500": ["312"],
+        "500X": ["312"],
+        "500L": ["312"],
+      });
+      // Engine, power and code tokens fold; so do trims listed for the model.
+      expect(
+        await modelsOf([
+          ...cars(more, "VOLVO", "XC90", "L"),
+          ...cars(fewer, "VOLVO", "XC90 D4", "L"),
+          ...cars(more, "PORSCHE", "CAYENNE", "9YA"),
+          ...cars(fewer, "PORSCHE", "CAYENNE 4S", "9YA"),
+          ...cars(fewer, "PORSCHE", "CAYENNE S", "9YA"),
+          ...cars(more, "MITSUBISHI", "LANCER", "CS"),
+          ...cars(fewer, "MITSUBISHI", "LANCER CS3WLNHEL6", "CS"),
+          ...cars(more, "LAND ROVER", "RANGE ROVER EVOQUE", "LV"),
+          ...cars(fewer, "LAND ROVER", "RANGE ROVER EVOQUE TD4", "LV"),
+          ...cars(more, "DODGE", "VIPER", "ZB"),
+          ...cars(fewer, "DODGE", "VIPER SRT-10", "ZB"),
+          ...cars(more, "JAGUAR", "I-PACE", "X590"),
+          ...cars(fewer, "JAGUAR", "I-PACE EV400", "X590"),
+          ...cars(more, "LAND ROVER", "RANGE ROVER VELAR", "LY"),
+          ...cars(fewer, "LAND ROVER", "RANGE ROVER VELAR P380", "LY"),
+          ...cars(more, "VOLKSWAGEN", "GOLF", "1J"),
+          ...cars(fewer, "VOLKSWAGEN", "GOLF 1J", "1J"),
+          ...cars(fewer, "VOLKSWAGEN", "GOLF GTI", "1J"),
+          ...cars(fewer, "VOLKSWAGEN", "GOLF R", "1J"),
+          ...cars(more, "FIAT", "500", "312"),
+          ...cars(fewer, "FIAT", "500 130", "312"),
+          ...cars(more, "ŠKODA", "OCTAVIA", "NX"),
+          ...cars(fewer, "ŠKODA", "OCTAVIA RS", "NX"),
+          ...cars(fewer, "ŠKODA", "OCTAVIA SCOUT", "NX"),
+        ]),
+      ).toEqual({
+        XC90: ["l"],
+        Cayenne: ["9ya"],
+        Lancer: ["cs"],
+        "Range Rover Evoque": ["lv"],
+        Viper: ["zb"],
+        "I-Pace": ["x590"],
+        "Range Rover Velar": ["ly"],
+        Golf: ["1j"],
+        "500": ["312"],
+        Octavia: ["nx"],
+      });
+    }
+  });
+
+  it("names the make, not the company or model the register's make field holds", async () => {
+    expect(
+      await namesOf([
+        ["ŠKODA AUTO A.S.", "OCTAVIA"],
+        ["ŠKODA OCTAVIA", "OCTAVIA COMBI"],
+        ["VW GOLF", "GOLF"],
+        ["FORD-CNG-TECHNIK", "FOCUS"],
+        ["MINI COOPER", "COOPER"],
+        ["TESLA MOTORS", "MODEL S"],
+        ["AUTOMOBILI LAMBORGHINI S.P.A.", "HURACAN"],
+        ["JAGUAR LAND ROVER LIMITED", "RANGE ROVER SPORT"],
+        ["JAGUAR LAND ROVER LIMITED", "F-PACE"],
+        ["MICRO COMPACT CAR SMART", "SMART FORTWO"],
+        ["QUATTRO", "AUDI RS4"],
+        ["LADA - VAZ", "NIVA"],
+        ["MARUTI-SUZUKI", "ALTO"],
+        ["DAIMLER CHRYSLER", "A 170"],
+        ["GM DAEWOO", "KALOS"],
+        // A make followed by another make is a company of both: left as it is.
+        ["BMW ALPINA", "B3"],
+        ["HONDA ACURA", "MDX"],
+        // A company of several makes whose model word decides none.
+        ["DAIMLER CHRYSLER", "GRAND CHEROKEE"],
+      ]),
+    ).toEqual([
+      "Škoda|Octavia",
+      "Škoda|Octavia",
+      "Volkswagen|Golf",
+      "Ford|Focus",
+      "Mini|Cooper",
+      "Tesla|Model S",
+      "Lamborghini|Huracan",
+      "Land Rover|Range Rover Sport",
+      "Jaguar|F-Pace",
+      "Smart|Fortwo",
+      "Audi|RS4",
+      "Lada|Niva",
+      "Suzuki|Alto",
+      "Mercedes-Benz|A-Class",
+      "Daewoo|Kalos",
+      "BMW Alpina|B3",
+      "Honda Acura|MDX",
+      "Daimler Chrysler|Grand Cherokee",
+    ]);
+  });
+
+  it("names one model one way, without engine, power and trim words", async () => {
+    const cases: [string, string, string][] = [
+      ["BMW", "3", "BMW|3 Series"],
+      ["BMW", "RADA 3", "BMW|3 Series"],
+      ["BMW", "3 ER REIHE", "BMW|3 Series"],
+      ["BMW", "M 135 I", "BMW|1 Series"],
+      // The 1 M is its own model; "M SPORT" is a 1 Series package.
+      ["BMW", "1 M COUPE", "BMW|1 M"],
+      ["BMW", "1 M SPORT", "BMW|1 Series"],
+      ["BMW", "X 5", "BMW|X5"],
+      ["BMW", "X5 M", "BMW|X5 M"],
+      ["BMW", "X3 20D", "BMW|X3"],
+      ["BMW", "I4 EDRIVE35", "BMW|i4"],
+      ["BMW", "IX XDRIVE40", "BMW|iX"],
+      ["AUDI", "Q4 35 E-TRON", "Audi|Q4 e-tron"],
+      ["AUDI", "Q4 SPORTBACK 40 E-TRON", "Audi|Q4 Sportback e-tron"],
+      // Audi lists the S model next to the base model: which one a vehicle is stays open.
+      ["AUDI", "A3, S3", "Audi|A3, S3"],
+      ["AUDI", "TT", "Audi|TT"],
+      ["CITROEN", "C 5", "Citroën|C5"],
+      ["FIAT", "500 L", "Fiat|500L"],
+      ["FIAT", "IDEA", "Fiat|Idea"],
+      ["JAECOO", "JAECOO7", "Jaecoo|7"],
+      ["MG", "MG4", "MG|MG4"],
+      ["MERCEDES-BENZ", "AMG C 43 4MATIC", "Mercedes-Benz|C-Class"],
+      ["MERCEDES-BENZ", "AMG GT 63 S", "Mercedes-Benz|AMG GT"],
+      ["LEXUS", "RX450H", "Lexus|RX"],
+      ["LEXUS", "IS 250", "Lexus|IS"],
+      ["MINI", "COUNTRYMAN COOPER S", "Mini|Countryman"],
+      ["MINI", "JCW CLUBMAN", "Mini|Clubman"],
+      ["VOLKSWAGEN", "ID. BUZZ PRO 150 KW", "Volkswagen|ID. Buzz"],
+      ["VOLKSWAGEN", "PASAT", "Volkswagen|Passat"],
+      ["HYUNDAI", "TUCSON, IX35", "Hyundai|Tucson"],
+      ["KIA", "PRO CEED", "Kia|Pro Ceed"],
+      ["VOLVO", "XC 60", "Volvo|XC60"],
+      ["MAZDA", "CX 9", "Mazda|CX-9"],
+      ["TOYOTA", "RAV 4", "Toyota|RAV4"],
+      // Punctuation between two words of the name stays, elsewhere it goes, and it counts
+      // as no word where positions decide.
+      ["CHRYSLER", "TOWN & COUNTRY", "Chrysler|Town & Country"],
+      ["FORD", "TRANSIT - EUROLINE", "Ford|Transit - Euroline"],
+      ["FORD", "- TRANSIT - 2.0 TDCI", "Ford|Transit"],
+      ["LYNK & CO", "LYNK & CO 01", "Lynk & Co|01"],
+      ["DAIMLER CHRYSLER", "& VOYAGER", "Chrysler|Voyager"],
+      ["BMW", "BMW - 320D", "BMW|3 Series"],
+      ["VOLVO", "XC - 60", "Volvo|XC60"],
+      ["BMW", "1 M - SPORT", "BMW|1 Series"],
+      ["LAND ROVER", "RAGNE ROVER - SPORT", "Land Rover|Range Rover - Sport"],
+      ["FORD", "GALAXY ? PLUS", "Ford|Galaxy Plus"],
+    ];
+    expect(await namesOf(cases.map(([make, name]) => [make, name]))).toEqual(
+      cases.map((c) => c[2]),
+    );
+  });
+
+  it("drops a model name without letters and joins spellings of one model id", async () => {
+    const { header, row } = await realRow();
+    const car = (make: string, name: string, type: string) =>
+      withColumns(header, row, {
+        "Tovární značka": make,
+        "Obchodní označení": name,
+        "Typ kód": type,
+      });
+    const rows = [
+      car("VOLKSWAGEN", "UP!", "121"),
+      car("VOLKSWAGEN", "UP!", "121"),
+      car("VOLKSWAGEN", "UP", "121"),
+      car("VOLKSWAGEN", ".", "121"),
+      // One id, but a type each: both spellings stay.
+      car("FORD", "KA", "RU8"),
+      car("FORD", "KA+", "UK2"),
+    ];
+    const { entries, logs } = await harvest(
+      syntheticHttp(header, rows.join("\r\n"), 1),
+      "full",
+      null,
+      {
+        minVehicles: 1,
+      },
+    );
+    expect(new Set(entries.map((e) => e.variant.model))).toEqual(new Set(["Up!", "Ka", "Ka+"]));
+    expect(entries.map((e) => variantIdOf(e.variant))).toEqual([
+      ...new Set(entries.map((e) => variantIdOf(e.variant))),
+    ]);
+    expect(JSON.stringify(logs)).toContain("no-model");
+  });
+
+  it("tells models apart by their words, and shows the spelling that keeps punctuation", async () => {
+    expect(
+      await modelsOf([
+        ...cars(3, "CHRYSLER", "TOWN COUNTRY", "RT"),
+        ...cars(2, "CHRYSLER", "TOWN & COUNTRY", "RT"),
+        ...cars(1, "CHRYSLER", "TOWN - COUNTRY", "RS"),
+        ...cars(2, "FORD", "TRANSIT - EUROLINE", "FA"),
+        ...cars(1, "FORD", "TRANSIT", "FA"),
+        // A name that repeats the type ends before it, and before punctuation in front of it.
+        ...cars(1, "CHEVROLET", "CORVETTE - C6", "C6"),
+      ]),
+    ).toEqual({
+      "Town & Country": ["rs", "rt"],
+      "Transit - Euroline": ["fa"],
+      Transit: ["fa"],
+      Corvette: ["c6"],
+    });
+  });
+
   it("spells makes and models the way the Resolver's aliases know them", async () => {
     const { entries } = await harvest(await replay());
     const makes = new Set(entries.map((e) => e.variant.make));
@@ -447,6 +810,70 @@ async function realRow(): Promise<{ header: string; row: string }> {
   const row = rows.find((r) => !r.includes('"') && r.includes("OCTAVIA") && r.includes(",1Z,"));
   if (!header || !row) throw new Error("fixture has no plain Octavia II row");
   return { header, row };
+}
+
+/**
+ * "Make|Model" of the catalog for each register (make, commercial name) pair: one vehicle per
+ * pair, each with a type of its own so no two pairs fold together.
+ */
+async function namesOf(pairs: [string, string][]): Promise<string[]> {
+  const { header, row } = await realRow();
+  const rows = pairs.map(([make, name], i) =>
+    withColumns(header, row, {
+      "Tovární značka": make,
+      "Obchodní označení": name,
+      "Typ kód": `T${i}`,
+    }),
+  );
+  const { entries } = await harvest(syntheticHttp(header, rows.join("\r\n"), 1), "full", null, {
+    minVehicles: 1,
+  });
+  const byType = new Map(entries.map((e) => [e.variant.generation.slug, e.variant]));
+  return pairs.map((_, i) => {
+    const v = byType.get(`t${i}`);
+    return v ? `${v.make}|${v.model}` : "(none)";
+  });
+}
+
+/** `n` register vehicles of one make, commercial name and type. */
+function cars(n: number, make: string, name: string, type: string, kw?: number): Vehicle[] {
+  return Array.from({ length: n }, () => [make, name, type, kw]);
+}
+
+/** A register vehicle: make, commercial name, type and, unless the fixture row's, power. */
+type Vehicle = [string, string, string, number?];
+
+/** The catalog's models of `vehicles`, with their Generations. */
+async function modelsOf(vehicles: Vehicle[], minVehicles = 1): Promise<Record<string, string[]>> {
+  const { header, row } = await realRow();
+  const rows = vehicles.map(([make, name, type, kw]) =>
+    withColumns(header, row, {
+      "Tovární značka": make,
+      "Obchodní označení": name,
+      "Typ kód": type,
+      ...(kw ? { "Max. výkon [kW] / [min⁻¹]": `${kw}/6000` } : {}),
+    }),
+  );
+  const { entries } = await harvest(syntheticHttp(header, rows.join("\r\n"), 1), "full", null, {
+    minVehicles,
+  });
+  const models = new Map<string, Set<string>>();
+  for (const { variant: v } of entries) {
+    models.set(v.model, (models.get(v.model) ?? new Set()).add(v.generation.slug));
+  }
+  return Object.fromEntries([...models].map(([m, s]) => [m, [...s].sort()]));
+}
+
+/** `row` (a plain CSV line without quotes) with the named columns set, quoted as CSV. */
+function withColumns(header: string, row: string, values: Record<string, string>): string {
+  const columns = header.split(",").map((c) => c.trim());
+  const fields = row.split(",");
+  for (const [name, value] of Object.entries(values)) {
+    const i = columns.indexOf(name);
+    if (i < 0) throw new Error(`no column ${name}`);
+    fields[i] = /[",]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  }
+  return fields.join(",");
 }
 
 async function unzipText(zip: Buffer): Promise<string> {

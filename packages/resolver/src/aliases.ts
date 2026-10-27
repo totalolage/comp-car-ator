@@ -28,9 +28,9 @@ const MERCEDES_CLASSES =
   );
 
 /**
- * BMW series: "Řada 3", "3er", "3 Series", "Serie 3", engine badges "320", "320d", and the
- * chassis codes some sites put in the model field ("E46", "F31"). A chassis code still
- * claims its generation.
+ * BMW series: "Řada 3", "3er", "3 Series", "Serie 3", a bare "3", engine badges "320", "320d",
+ * "M340i", and the chassis codes some sites put in the model field ("E46", "F31"). A chassis
+ * code still claims its generation.
  */
 const BMW_SERIES: Readonly<Record<string, readonly string[]>> = {
   "1": ["e81", "e82", "e87", "e88", "f20", "f21", "f40"],
@@ -61,10 +61,15 @@ export interface ModelAliases {
    */
   submodels?: Readonly<Record<string, readonly string[]>>;
   /**
-   * Engine-badge model names (BMW "118", "530"; checked on the first model token): the
-   * capture group plus `suffix` gives a slug in `groups`.
+   * Model names written as an engine badge (BMW "118", "M550d") or with the make glued on
+   * (DS "DS7"): the capture group plus `suffix` gives the model's slug or one in `groups`.
    */
   badge?: { pattern: RegExp; suffix: string };
+  /**
+   * Equipment packages written into the model field ("X5 M Sport", "1 M-Paket"): their words
+   * name no Model, so the model name is read without them.
+   */
+  packages?: RegExp;
 }
 
 export const MODEL_ALIASES: Readonly<Record<string, ModelAliases>> = {
@@ -80,6 +85,7 @@ export const MODEL_ALIASES: Readonly<Record<string, ModelAliases>> = {
   bmw: {
     groups: Object.entries(BMW_SERIES).map(([n, chassis]) => [
       `${n}-series`,
+      n,
       `${n}er`,
       `rada-${n}`,
       `serie-${n}`,
@@ -87,8 +93,23 @@ export const MODEL_ALIASES: Readonly<Record<string, ModelAliases>> = {
       `${n}-reihe`,
       ...chassis,
     ]),
-    badge: { pattern: /^([1-8])\d\d[a-z]{0,2}$/, suffix: "-series" },
+    // "M135i", "M550d": M Performance trims of their series. The M cars ("1 M", "M3", "X5 M")
+    // are their own Models: a listing naming one never falls back to the series.
+    badge: { pattern: /^m?([1-8])\d\d[a-z]{0,2}$/, suffix: "-series" },
+    // The M Sport package is no M car: "X5 M Sport" is an X5, "1 M Sport" a 1 Series.
+    packages:
+      /(?<![a-z])m[\s\p{Pd}]*(?:sport|sportpaket|paket|package|packet|pack|performance)\b/giu,
+    submodels: {
+      "1-series": ["m"],
+      ...Object.fromEntries(["2", "3", "4", "5", "6", "8"].map((n) => [`${n}-series`, [`m${n}`]])),
+      ...Object.fromEntries(["x3", "x4", "x5", "x6", "z3", "z4"].map((x) => [x, ["m"]])),
+    },
   },
+  // The catalog names DS models by number ("DS 7 Crossback" → 7 Crossback).
+  ds: { badge: { pattern: /^ds-?(\d.*)$/, suffix: "" } },
+  // Porsche's type codes stand for the 911 they approve ("991" is a 911 of the 991 type), and
+  // each claims its generation (CHASSIS_CODES): the register keys the 911's generations by them.
+  porsche: { groups: [["911", "996", "997", "991", "992"]] },
   "land-rover": {
     submodels: { "range-rover": ["sport", "velar", "evoque"], discovery: ["sport"] },
   },
@@ -120,6 +141,8 @@ export const CHASSIS_CODES: Readonly<Record<string, RegExp>> = {
   cupra: VW_GROUP_CODE,
   audi: new RegExp(`^(?:${VW_GROUP}|[b-d]\\d)$`, "i"),
   bmw: /^[efgu]\d\d$/i,
+  // The 911's type codes, the register's generation slugs for it.
+  porsche: /^(?:964|99[1-367])$/,
   "mercedes-benz": /^[acrsvwx]\d{3}$/i,
   "land-rover": /^l\d{3}$/i,
   hyundai: /^[a-z]{2}\d$/i,
