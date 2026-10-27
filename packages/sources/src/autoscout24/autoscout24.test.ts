@@ -199,7 +199,9 @@ function bandsFromMakes(
           (l) =>
             priceOf(l) >= from &&
             (to === undefined || priceOf(l) <= to) &&
-            (year === undefined || yearOf(l) === year),
+            (year === undefined ||
+              yearOf(l) === year ||
+              (year === now.getUTCFullYear() && yearOf(l) > year)),
         );
         const pages = Math.max(1, Math.ceil(held.length / pageSize));
         for (let n = 1; n <= pages; n++) {
@@ -489,6 +491,8 @@ describe("autoscout24 source", () => {
       if (offer !== "U,J,O") return listings;
       const zeekr = listings.find((l) => makeOf(l) === 51964);
       for (const l of listings) if (makeOf(l) === 51872 || l === zeekr) l.price.priceRaw = 12000;
+      // Registered after the current year (a typo on the site): the open current year has it.
+      zeekr.tracking.firstRegistration = "01-2027";
       return listings;
     };
     const source = autoscout24Source({ ...DE, makes: undefined });

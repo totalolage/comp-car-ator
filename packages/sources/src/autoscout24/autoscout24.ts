@@ -113,7 +113,10 @@ interface Slice {
   make?: number;
   /** Inclusive EUR bounds; no `to` means open above. */
   price?: { from: number; to?: number };
-  /** First-registration year; the current year is open above. */
+  /**
+   * First-registration year; the current year is open above. In a new year that slice keeps
+   * its key and narrows to its year, which its earlier harvest covered too.
+   */
   year?: number;
 }
 
