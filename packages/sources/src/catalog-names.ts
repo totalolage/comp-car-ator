@@ -134,13 +134,17 @@ export function makeName(raw: string, commercialName = ""): string | undefined {
   return titleCase(text);
 }
 
-/** Words that end the model part of a commercial name: body, engine, drive and trim words. */
+/**
+ * Words that end the model part of a commercial name: body, engine, drive and trim words.
+ * Performance trims ("GTI", "RS", "Scout") stay: some also name models, so the register
+ * Source folds them only into models it lists them for.
+ */
 const NOISE = new Set(
   (
     "COMBI KOMBI VARIANT AVANT TOURING ESTATE SW BREAK SPORTSWAGON SPORTSTOURER TOURER " +
     "LIMOUSINE LIMUZINA SEDAN SALOON LIFTBACK HATCHBACK HB CABRIO CABRIOLET KABRIOLET COUPE " +
     "KUPE ROADSTER SPIDER SPYDER TARGA FASTBACK SHOOTING " +
-    "TDI TSI TFSI FSI TGI ETSI MPI GTI GTD GTE RS VRS SCOUT CDI CRDI TDCI HDI BLUEHDI DCI TCE " +
+    "TDI TSI TFSI FSI TGI ETSI MPI CDI CRDI TDCI HDI BLUEHDI DCI TCE " +
     "PURETECH ECOBOOST CDTI JTD JTDM MULTIJET TURBO DIESEL BENZIN HYBRID PHEV HEV MHEV EV " +
     "4X4 4X2 AWD FWD RWD 4MOTION QUATTRO 4MATIC XDRIVE SDRIVE ALL4 4WD AUTOMAT DSG CVT " +
     "AMBITION STYLE ACTIVE COMFORT ELEGANCE CLASSIC TREND TRENDLINE COMFORTLINE HIGHLINE"
@@ -183,9 +187,9 @@ const TYPOS: Record<string, Record<string, string>> = {
 /**
  * The model part of a commercial name, before engine, body and trim words, in the catalog's
  * spelling ("OCTAVIA COMBI 2.0 TDI" → "Octavia", "C 220 CDI" → "C-Class", "320D" →
- * "3 Series", "Q4 40 E-TRON" → "Q4 e-tron"). Undefined when nothing is left. Variants of one
- * model that this cannot tell from separate models ("Octavia Scout" vs "Tiguan Allspace") are
- * merged by the caller.
+ * "3 Series", "Q4 40 E-TRON" → "Q4 e-tron"). Undefined when nothing is left. Words this
+ * cannot tell from part of a model name stay ("Golf GTI", "Tiguan Allspace", "e-tron GT"); the
+ * caller folds only those it knows to be versions of a shorter model, and keeps the rest apart.
  */
 export function modelName(make: string, raw: string): string | undefined {
   const makeSlug = slugify(make);
@@ -353,7 +357,7 @@ function displayToken(make: string, token: string): string {
     return token.toLowerCase();
   }
   if (token === "E-TRON") return "e-tron";
-  if (token === "AMG") return token;
+  if (token === "AMG" || token === "GTI" || token === "GTE") return token;
   if (/^i/.test(token) || /\d/.test(token) || /^[A-Z]{1,3}\.$/.test(token)) return token;
   return token
     .split(/(?=[-'])|(?<=[-'])/)

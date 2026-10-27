@@ -201,22 +201,6 @@ describe("rsv source", () => {
   });
 
   it("keeps models apart that share a type, whichever has more vehicles", async () => {
-    const { header, row } = await realRow();
-    const car = (make: string, name: string, type: string) =>
-      withColumns(header, row, {
-        "Tovární značka": make,
-        "Obchodní označení": name,
-        "Typ kód": type,
-      });
-    const modelsOf = async (rows: string[]) => {
-      const http = syntheticHttp(header, rows.join("\r\n"), 1);
-      const { entries } = await harvest(http, "full", null, { minVehicles: 1 });
-      const models = new Map<string, Set<string>>();
-      for (const { variant: v } of entries) {
-        models.set(v.model, (models.get(v.model) ?? new Set()).add(v.generation.slug));
-      }
-      return Object.fromEntries([...models].map(([m, s]) => [m, [...s].sort()]));
-    };
     // A Tiguan Allspace approved as a Tiguan: the type cannot tell them apart, nor can counts.
     for (const [tiguans, allspaces] of [
       [6, 4],
@@ -224,8 +208,8 @@ describe("rsv source", () => {
     ] as const) {
       expect(
         await modelsOf([
-          ...Array(tiguans).fill(car("VOLKSWAGEN", "TIGUAN", "5N")),
-          ...Array(allspaces).fill(car("VOLKSWAGEN", "TIGUAN ALLSPACE", "5N")),
+          ...cars(tiguans, "VOLKSWAGEN", "TIGUAN", "5N"),
+          ...cars(allspaces, "VOLKSWAGEN", "TIGUAN ALLSPACE", "5N"),
         ]),
       ).toEqual({ Tiguan: ["5n"], "Tiguan Allspace": ["5n"] });
     }
@@ -235,21 +219,21 @@ describe("rsv source", () => {
     // ("QASHQAI +2"); trim words go per row.
     expect(
       await modelsOf([
-        ...Array(6).fill(car("LAND ROVER", "RANGE ROVER", "LG")),
-        ...Array(2).fill(car("LAND ROVER", "RANGE ROVER", "LW")),
-        ...Array(5).fill(car("LAND ROVER", "RANGE ROVER SPORT", "LW")),
-        ...Array(4).fill(car("LAND ROVER", "RANGE ROVER VELAR", "LY")),
-        ...Array(3).fill(car("LAND ROVER", "RANGE ROVER EVOQUE", "LV")),
-        car("LAND ROVER", "RANGE ROVER", "LV"),
-        car("LAND ROVER", "RANGE ROVER EVOQUE HSE DYNAMIC", "LV"),
-        ...Array(3).fill(car("VOLVO", "XC90", "L")),
-        ...Array(2).fill(car("VOLVO", "XC90 D4", "L")),
-        ...Array(3).fill(car("HYUNDAI", "IONIQ", "AE")),
-        ...Array(2).fill(car("HYUNDAI", "IONIQ 5", "NE")),
-        ...Array(3).fill(car("NISSAN", "QASHQAI", "J10")),
-        ...Array(2).fill(car("NISSAN", "QASHQAI +2", "J10")),
-        ...Array(3).fill(car("ŠKODA", "OCTAVIA", "NX")),
-        ...Array(2).fill(car("ŠKODA", "OCTAVIA SCOUT", "NX")),
+        ...cars(6, "LAND ROVER", "RANGE ROVER", "LG"),
+        ...cars(2, "LAND ROVER", "RANGE ROVER", "LW"),
+        ...cars(5, "LAND ROVER", "RANGE ROVER SPORT", "LW"),
+        ...cars(4, "LAND ROVER", "RANGE ROVER VELAR", "LY"),
+        ...cars(3, "LAND ROVER", "RANGE ROVER EVOQUE", "LV"),
+        ...cars(1, "LAND ROVER", "RANGE ROVER", "LV"),
+        ...cars(1, "LAND ROVER", "RANGE ROVER EVOQUE HSE DYNAMIC", "LV"),
+        ...cars(3, "VOLVO", "XC90", "L"),
+        ...cars(2, "VOLVO", "XC90 D4", "L"),
+        ...cars(3, "HYUNDAI", "IONIQ", "AE"),
+        ...cars(2, "HYUNDAI", "IONIQ 5", "NE"),
+        ...cars(3, "NISSAN", "QASHQAI", "J10"),
+        ...cars(2, "NISSAN", "QASHQAI +2", "J10"),
+        ...cars(3, "ŠKODA", "OCTAVIA", "NX"),
+        ...cars(2, "ŠKODA", "OCTAVIA COMBI 2.0 TDI", "NX"),
       ]),
     ).toEqual({
       "Range Rover": ["lg", "lv", "lw"],
@@ -263,6 +247,94 @@ describe("rsv source", () => {
       "Qashqai +2": ["j10"],
       Octavia: ["nx"],
     });
+  });
+
+  it("keeps a word some makes use as a badge, unless it is a trim of that very model", async () => {
+    for (const [more, fewer] of [
+      [6, 4],
+      [4, 6],
+    ] as const) {
+      // "GT", "S", "M", "N", "R", "GTC", "E-Tech" end models in some makes: never a badge.
+      expect(
+        await modelsOf([
+          ...cars(more, "AUDI", "E-TRON", "GE"),
+          ...cars(fewer, "AUDI", "E-TRON GT", "GE"),
+          ...cars(more, "TESLA", "MODEL", "SR"),
+          ...cars(fewer, "TESLA", "MODEL S", "SR"),
+          ...cars(fewer, "TESLA", "MODEL 3", "SR"),
+          ...cars(more, "BMW", "3", "3L"),
+          ...cars(fewer, "BMW", "M3", "3L"),
+          ...cars(more, "BMW", "X5", "5X"),
+          ...cars(fewer, "BMW", "X5 M", "5X"),
+          ...cars(more, "MERCEDES-BENZ", "GT", "190"),
+          ...cars(fewer, "MERCEDES-BENZ", "AMG GT", "190"),
+          ...cars(more, "HYUNDAI", "KONA", "OS"),
+          ...cars(fewer, "HYUNDAI", "KONA N", "OS"),
+          ...cars(more, "HONDA", "CIVIC", "FK"),
+          ...cars(fewer, "HONDA", "CIVIC TYPE R", "FK"),
+          ...cars(more, "OPEL", "ASTRA", "AH"),
+          ...cars(fewer, "OPEL", "ASTRA GTC", "AH"),
+          ...cars(more, "RENAULT", "MEGANE", "B9"),
+          ...cars(fewer, "RENAULT", "MEGANE E-TECH", "B9"),
+          // "Golf R" is a Golf; "R" after a model that does not list it stays.
+          ...cars(more, "VOLKSWAGEN", "POLO", "AW"),
+          ...cars(fewer, "VOLKSWAGEN", "POLO R", "AW"),
+          // "500X", "500L" are one word, so not "500" with a badge.
+          ...cars(more, "FIAT", "500", "312"),
+          ...cars(fewer, "FIAT", "500X", "312"),
+          ...cars(fewer, "FIAT", "500L", "312"),
+        ]),
+      ).toEqual({
+        "e-tron": ["ge"],
+        "e-tron GT": ["ge"],
+        Model: ["sr"],
+        "Model S": ["sr"],
+        "Model 3": ["sr"],
+        "3 Series": ["3l"],
+        M3: ["3l"],
+        X5: ["5x"],
+        "X5 M": ["5x"],
+        GT: ["190"],
+        "AMG GT": ["190"],
+        Kona: ["os"],
+        "Kona N": ["os"],
+        Civic: ["fk"],
+        "Civic Type R": ["fk"],
+        Astra: ["ah"],
+        "Astra GTC": ["ah"],
+        Megane: ["b9"],
+        "Megane E-Tech": ["b9"],
+        Polo: ["aw"],
+        "Polo R": ["aw"],
+        "500": ["312"],
+        "500X": ["312"],
+        "500L": ["312"],
+      });
+      // Engine, power and code tokens fold; so do trims listed for the model.
+      expect(
+        await modelsOf([
+          ...cars(more, "VOLVO", "XC90", "L"),
+          ...cars(fewer, "VOLVO", "XC90 D4", "L"),
+          ...cars(more, "LAND ROVER", "RANGE ROVER VELAR", "LY"),
+          ...cars(fewer, "LAND ROVER", "RANGE ROVER VELAR P380", "LY"),
+          ...cars(more, "VOLKSWAGEN", "GOLF", "1J"),
+          ...cars(fewer, "VOLKSWAGEN", "GOLF 1J", "1J"),
+          ...cars(fewer, "VOLKSWAGEN", "GOLF GTI", "1J"),
+          ...cars(fewer, "VOLKSWAGEN", "GOLF R", "1J"),
+          ...cars(more, "FIAT", "500", "312"),
+          ...cars(fewer, "FIAT", "500 130", "312"),
+          ...cars(more, "ŠKODA", "OCTAVIA", "NX"),
+          ...cars(fewer, "ŠKODA", "OCTAVIA RS", "NX"),
+          ...cars(fewer, "ŠKODA", "OCTAVIA SCOUT", "NX"),
+        ]),
+      ).toEqual({
+        XC90: ["l"],
+        "Range Rover Velar": ["ly"],
+        Golf: ["1j"],
+        "500": ["312"],
+        Octavia: ["nx"],
+      });
+    }
   });
 
   it("names the make, not the company or model the register's make field holds", async () => {
@@ -653,6 +725,31 @@ async function namesOf(pairs: [string, string][]): Promise<string[]> {
     const v = byType.get(`t${i}`);
     return v ? `${v.make}|${v.model}` : "(none)";
   });
+}
+
+/** `n` register vehicles of one make, commercial name and type. */
+function cars(n: number, make: string, name: string, type: string): [string, string, string][] {
+  return Array.from({ length: n }, () => [make, name, type]);
+}
+
+/** The catalog's models of `vehicles` (make, commercial name, type), with their Generations. */
+async function modelsOf(vehicles: [string, string, string][]): Promise<Record<string, string[]>> {
+  const { header, row } = await realRow();
+  const rows = vehicles.map(([make, name, type]) =>
+    withColumns(header, row, {
+      "Tovární značka": make,
+      "Obchodní označení": name,
+      "Typ kód": type,
+    }),
+  );
+  const { entries } = await harvest(syntheticHttp(header, rows.join("\r\n"), 1), "full", null, {
+    minVehicles: 1,
+  });
+  const models = new Map<string, Set<string>>();
+  for (const { variant: v } of entries) {
+    models.set(v.model, (models.get(v.model) ?? new Set()).add(v.generation.slug));
+  }
+  return Object.fromEntries([...models].map(([m, s]) => [m, [...s].sort()]));
 }
 
 /** `row` (a plain CSV line without quotes) with the named columns set, quoted as CSV. */

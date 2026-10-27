@@ -3,12 +3,13 @@
  * vehicles with the same make, model, type-approval type, body, fuel and power are one
  * candidate; candidates become Variants once enough vehicles back them.
  *
- * - Models: commercial names are cut to their model part per row (catalog-names.ts drops trim
- *   words: "Octavia Scout" → Octavia). Spellings of one model id merge ("UP!", "UP"). A longer
- *   name folds into the shorter one it extends only on the shorter name's types, and only when
- *   its extra words are badges ("XC90 D4", "Golf R", "Evoque HSE Dynamic"). Other names stay
- *   apart even on one type-approval type: models share types ("Tiguan Allspace" approved as a
- *   Tiguan, "Golf Plus" on the Golf's), and neither the type nor counts tell a badge from a model.
+ * - Models: commercial names are cut to their model part per row (catalog-names.ts drops engine,
+ *   body and trim words: "Octavia Combi 2.0 TDI" → Octavia). Spellings of one model id merge
+ *   ("UP!", "UP"). A longer name folds into the shorter one it extends only on the shorter
+ *   name's types, and only when its extra words are badges ("XC90 D4", "Evoque HSE Dynamic") or
+ *   trims listed for that model ("Golf GTI", "Octavia RS"). Other names stay apart even on one
+ *   type-approval type: models share types ("Tiguan Allspace" approved as a Tiguan, "Golf Plus"
+ *   on the Golf's), and neither the type nor counts tell a badge from a model ("e-tron GT").
  * - Generations: the type-approval type ("5E", "NX") changes with most design cycles, so a
  *   type Wikidata does not date is one Generation, keyed by its code. A type that starts as a
  *   dated Wikidata generation is that generation, keyed by Wikidata's word for it (mk7, b6),
@@ -142,42 +143,75 @@ function spellModels(rows: Row[]): Row[] {
 }
 
 /**
- * Words that, after a model name, mark a version of it rather than a model of its own: trim,
+ * Words that, after any model name, mark a version of it rather than a model of its own: trim,
  * performance, fuel and body words the register writes after the model ("XC90 DRIVE-E",
- * "911 CARRERA GTS", "ASTRA CARAVAN"). Words that name models ("Sport", "Plus", "Picasso",
- * "Allspace", "Allroad", "Cross", "Connect") are not here. Curated, not proven: a few
- * (s, r, m, n, gt) also end model names ("Model S", "e-tron GT"), which stay apart only while
- * the shorter name holds none of their types.
+ * "911 CARRERA GTS", "ASTRA CARAVAN"). Curated, not proven. A word that also ends a model name
+ * in some make is not here ("Model S", "e-tron GT", "X5 M", "i30 N", "Astra GTC", "Megane
+ * E-Tech"; "Sport", "Plus", "Cross"); where it is only a trim for a model, that
+ * model lists it in `TRIMS`. Fuel and body words may fold models the Variant still keeps apart
+ * by its fuel or body ("Kona Electric", "Golf Variant").
  */
 const BADGES = new Set(
   (
-    "s r m n gt gts gtc st se hse sp cs csl svr srt r-t ss sxt sti gsr mps gr type " +
+    "gts st se hse sp cs csl svr srt r-t ss sxt sti gsr mps " +
     "competition performance e-performance prestige premium executive life pure titanium " +
-    "ambiente limited dynamic r-dynamic r-sport trendy easy fun speed evo quadrifoglio trofeo " +
+    "ambiente limited dynamic r-dynamic r-sport trendy easy fun speed quadrifoglio trofeo " +
     "verde abarth bullitt rubicon hellcat scat pack widebody aero racing glx lx ex xs junior " +
     "eco sdi tddi tfsie quatro carrera drive drive-e twin engine e-hybrid hybrid plug-in " +
     "aut edition anniversary lwb ii iii iv " +
-    "bifuel bi-fuel g-tron e-tech electric cng lpg blue motion bluemotion syncro mt at " +
-    "kwh convertible coup wagon sportwagon caravan van turnier weekend s-w stw grandtour volante lim"
+    "bifuel bi-fuel g-tron electric cng lpg blue motion bluemotion syncro mt at " +
+    "kwh convertible wagon sportwagon caravan van turnier weekend s-w stw grandtour volante lim"
   ).split(" "),
 );
 
 /**
+ * Trims that end a model name only as versions of the models listed, by make and model slug:
+ * "Golf GTI" is a Golf, while "GT" or "S" after another model can name one of its own.
+ */
+const TRIMS: Record<string, Record<string, string[]>> = {
+  volkswagen: {
+    golf: ["gti", "gtd", "gte", "r"],
+    polo: ["gti"],
+    up: ["gti"],
+    passat: ["gte"],
+    scirocco: ["r"],
+    "t-roc": ["r"],
+    tiguan: ["r"],
+    arteon: ["r"],
+    touareg: ["r"],
+  },
+  skoda: {
+    octavia: ["rs", "vrs", "scout"],
+    fabia: ["rs", "vrs"],
+    kodiaq: ["rs", "scout"],
+    karoq: ["scout"],
+    superb: ["scout"],
+    roomster: ["scout"],
+    enyaq: ["rs"],
+    elroq: ["rs"],
+  },
+  ford: { focus: ["rs"] },
+  renault: { megane: ["rs"], clio: ["rs"] },
+  peugeot: { "208": ["gti"], "308": ["gti"] },
+};
+
+/**
  * A word that marks a version: a badge, or an engine, power or code token ("D4", "P380", "1J",
- * "130"). A lone digit ("Ioniq 5", "Qashqai +2") can number a model, so it is no badge.
+ * "130"). A lone digit ("Ioniq 5", "Model 3", "Qashqai +2") can number a model, so it is no badge.
  */
 const isBadge = (word: string) =>
   /[A-Z]\d|\d[A-Z]|\d\d/i.test(word) || BADGES.has(slugify(word)) || !slugify(word);
 
 /**
- * Folds "XC90 D4" into "XC90": a name that extends a shorter one by badges only is that model,
- * on the types the shorter name has. A name with a word that is not a badge ("Tiguan
- * Allspace", "Range Rover Sport") stays a model of its own whatever it shares; so do a
- * badge name's rows on types the shorter name lacks ("Ioniq 5").
+ * Folds "XC90 D4" into "XC90": a name that extends a shorter one by badges or that model's
+ * trims only is that model, on the types the shorter name has. A name with any other word
+ * ("Tiguan Allspace", "Range Rover Sport", "e-tron GT") stays a model of its own whatever it
+ * shares; so do a badge name's rows on types the shorter name lacks ("Ioniq 5").
  */
 function foldBadges(rows: Row[]): Row[] {
   const out: Row[] = [];
   for (const makeRows of groupBy(rows, (r) => r.make).values()) {
+    const trims = TRIMS[slugify(makeRows[0]?.make ?? "")] ?? {};
     const types = new Map<string, Set<string>>();
     for (const r of makeRows) types.set(r.model, (types.get(r.model) ?? new Set()).add(r.type));
     const home = (model: string, type: string): string => {
@@ -185,7 +219,8 @@ function foldBadges(rows: Row[]): Row[] {
       for (let n = words.length - 1; n >= 1; n--) {
         const shorter = words.slice(0, n).join(" ");
         if (!types.has(shorter)) continue;
-        if (!words.slice(n).every(isBadge)) return model;
+        const trim = (word: string) => trims[slugify(shorter)]?.includes(slugify(word)) ?? false;
+        if (!words.slice(n).every((w) => isBadge(w) || trim(w))) return model;
         return types.get(shorter)?.has(type) ? home(shorter, type) : model;
       }
       return model;
