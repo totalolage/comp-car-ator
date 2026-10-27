@@ -160,7 +160,8 @@ const BADGES = new Set(
     "eco sdi tddi tfsie quatro carrera drive drive-e twin engine e-hybrid hybrid plug-in " +
     "aut edition anniversary lwb ii iii iv " +
     "bifuel bi-fuel g-tron electric cng lpg blue motion bluemotion syncro mt at " +
-    "kwh convertible wagon sportwagon caravan van turnier weekend s-w stw grandtour volante lim"
+    "kwh convertible coup wagon sportwagon caravan van turnier weekend s-w stw grandtour volante " +
+    "lim td4 td5 td6 sd4 si4 ed4 tdv6 tdv8 sdv6 sdv8"
   ).split(" "),
 );
 
@@ -191,20 +192,39 @@ const TRIMS: Record<string, Record<string, string[]>> = {
     elroq: ["rs"],
   },
   ford: { focus: ["rs"] },
-  renault: { megane: ["rs"], clio: ["rs"] },
+  renault: { megane: ["rs"], clio: ["rs", "e-tech"], captur: ["e-tech"], arkana: ["e-tech"] },
   peugeot: { "208": ["gti"], "308": ["gti"] },
+  audi: { tt: ["rs"], "e-tron": ["s"] },
+  porsche: Object.fromEntries(
+    ["911", "macan", "cayenne", "panamera", "cayman", "boxster", "718-cayman", "718-boxster"].map(
+      (model) => [model, ["s"]],
+    ),
+  ),
+  maserati: {
+    ghibli: ["s"],
+    levante: ["s", "gt"],
+    quattroporte: ["s"],
+    granturismo: ["s"],
+    grecale: ["gt"],
+  },
 };
 
 /**
- * A word that marks a version: a badge, or an engine, power or code token: digits with at most
- * one letter before them and a letter or another digit ("D4", "P380", "1J", "4S", "130"). A
- * lone digit ("Ioniq 5", "Model 3", "Qashqai +2") and letters before digits ("Monza SP1", "911
+ * A word that marks a version: a badge, or an engine, power or code token. Code tokens start
+ * with a digit or one letter and a digit ("D4", "P380", "1J", "4S", "130", "2.0D-S"), carry a
+ * power number after letters ("EV400", "LP640"), or are long model codes ("CW8WXJSFZL6"). A lone
+ * digit ("Ioniq 5", "Model 3", "Qashqai +2") and short letters with digits ("Monza SP1", "911
  * GT3") can name a model, so they are no badge.
  */
-const isBadge = (word: string) =>
-  (/^[A-Z]?\d+[A-Z]*$/i.test(word) && /[A-Z]\d|\d[A-Z]|\d\d/i.test(word)) ||
-  BADGES.has(slugify(word)) ||
-  !slugify(word);
+function isBadge(word: string): boolean {
+  const slug = slugify(word);
+  // A badge word with a number ("SRT-10", "E-HYBRID150"); not a two-letter one ("SP1").
+  const numbered = /^([a-z-]{3,}?)-?\d+$/.exec(slug)?.[1];
+  if (!slug || BADGES.has(slug) || (numbered && BADGES.has(numbered))) return true;
+  const code = word.replace(/[.-]/g, "");
+  if (!/[A-Z]\d|\d[A-Z]|\d\d/i.test(code)) return false;
+  return /^[A-Z]?\d/i.test(code) || /^[A-Z]+\d{3,}[A-Z]*$/i.test(code) || code.length >= 6;
+}
 
 /**
  * Folds "XC90 D4" into "XC90": a name that extends a shorter one by badges or that model's
