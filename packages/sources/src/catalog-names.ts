@@ -192,15 +192,15 @@ const TYPOS: Record<string, Record<string, string>> = {
  * caller folds only those it knows to be versions of a shorter model, and keeps the rest apart.
  */
 export function modelName(make: string, raw: string): string | undefined {
-  const words = modelWords(raw, LISTS_MODELS.has(slugify(make)));
+  const makeSlug = slugify(make);
+  const words = modelWords(raw, LISTS_MODELS.has(makeSlug)).map((t) => TYPOS[makeSlug]?.[t] ?? t);
   const name = parsedName(make, words.filter(isWord));
   return name && withPunctuation(name, words);
 }
 
 /** modelName over the name's words, punctuation left out so positions count words only. */
-function parsedName(make: string, words: string[]): string | undefined {
+function parsedName(make: string, tokens: string[]): string | undefined {
   const makeSlug = slugify(make);
-  const tokens = words.map((t) => TYPOS[makeSlug]?.[t] ?? t);
   // Some rows repeat the make ("ŠKODA OCTAVIA", "LYNK & CO 01"), or glue it onto a model
   // number ("MAZDA2", "JAECOO7") where the make names models by number.
   const prefix = (n: number) => slugify(tokens.slice(0, n).join(" "));
@@ -267,21 +267,26 @@ function isWord(token: string): boolean {
 
 /**
  * "Town Country" → "Town & Country": the punctuation `words` hold between two consecutive
- * words of `name`. A name whose words are not consecutive words of the text ("3 Series",
- * "Q4 e-tron" of "Q4 40 E-TRON") stays as it is.
+ * words of `name`, read where the text spells the name last (after a repeated make). A name
+ * whose words are not consecutive words of the text ("3 Series", "Q4 e-tron" of
+ * "Q4 40 E-TRON") stays as it is.
  */
 function withPunctuation(name: string, words: string[]): string {
-  const [head, ...rest] = name.split(" ");
-  let i = words.findIndex((w) => slugify(w) === slugify(head as string));
-  if (i < 0) return name;
-  const out = [head];
-  for (const part of rest) {
-    const gap: string[] = [];
-    while (i + 1 < words.length && !isWord(words[i + 1] as string)) gap.push(words[++i] as string);
-    if (slugify(words[++i] ?? "") !== slugify(part)) return name;
-    out.push(...gap, part);
+  const parts = name.split(" ");
+  for (let start = words.length - 1; start >= 0; start--) {
+    const out = [parts[0] as string];
+    let i = start;
+    let fits = slugify(words[i] as string) === slugify(out[0] as string);
+    for (const part of parts.slice(1)) {
+      if (!fits) break;
+      while (i + 1 < words.length && !isWord(words[i + 1] as string))
+        out.push(words[++i] as string);
+      fits = slugify(words[++i] ?? "") === slugify(part);
+      out.push(part);
+    }
+    if (fits) return out.join(" ");
   }
-  return out.join(" ");
+  return name;
 }
 
 /** modelTokens with punctuation-only tokens kept. */

@@ -504,6 +504,7 @@ describe("rsv source", () => {
       ["BMW", "BMW - 320D", "BMW|3 Series"],
       ["VOLVO", "XC - 60", "Volvo|XC60"],
       ["BMW", "1 M - SPORT", "BMW|1 Series"],
+      ["LAND ROVER", "RAGNE ROVER - SPORT", "Land Rover|Range Rover - Sport"],
     ];
     expect(await namesOf(cases.map(([make, name]) => [make, name]))).toEqual(
       cases.map((c) => c[2]),
