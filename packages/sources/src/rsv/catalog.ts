@@ -3,11 +3,10 @@
  * vehicles with the same make, model, type-approval type, body, fuel and power are one
  * candidate; candidates become Variants once enough vehicles back them.
  *
- * - Models: commercial names are cut to their model part per row (catalog-names.ts). Of names
- *   that extend one another, the one that holds most of a type-approval type's vehicles takes
- *   them all: a longer name on the shorter name's types is a trim word ("Octavia Scout" →
- *   Octavia), one with types of its own is a model of its own ("Range Rover Sport", "Golf
- *   Plus"), and the shorter name's few rows of such a type join it.
+ * - Models: commercial names are cut to their model part per row (catalog-names.ts drops trim
+ *   words: "Octavia Scout" → Octavia). Only spellings of one model id merge ("UP!", "UP"); names
+ *   that differ stay apart even on one type-approval type, since models share types ("Tiguan
+ *   Allspace" approved as a Tiguan) and counts cannot tell a trim word from a model.
  * - Generations: the type-approval type ("5E", "NX") changes with most design cycles, so a
  *   type Wikidata does not date is one Generation, keyed by its code. A type that starts as a
  *   dated Wikidata generation is that generation, keyed by Wikidata's word for it (mk7, b6),
@@ -98,7 +97,7 @@ export function createCatalog(options: CatalogOptions) {
         const [make, model, type, body, fuel, kw] = key.split("\t") as string[];
         return { make, model, type, body, fuel, powerKw: Number(kw), c } as Row;
       });
-      const merged = mergeModels(spellModels(rows));
+      const merged = spellModels(rows);
       const entries: CatalogEntry[] = [];
       for (const group of groupBy(merged, (r) => `${r.make}\t${r.model}`).values()) {
         entries.push(...modelEntries(group, generations, options, omitted));
@@ -138,45 +137,6 @@ function spellModels(rows: Row[]): Row[] {
     ...r,
     model: spelling.get(keyOf(r)) ?? r.model,
   }));
-}
-
-/**
- * Folds "Octavia Scout" into "Octavia": names that extend one another by words ("Range
- * Rover", "Range Rover Sport") are one family, and a type's vehicles in a family belong to
- * the name that holds most of them. A few "RANGE ROVER" rows of the Sport's type so join
- * the Sport instead of pulling it into the Range Rover; a model of its own keeps its name.
- */
-function mergeModels(rows: Row[]): Row[] {
-  const out: Row[] = [];
-  for (const makeRows of groupBy(rows, (r) => r.make).values()) {
-    const names = new Set(makeRows.map((r) => r.model));
-    const rootOf = (model: string): string => {
-      const words = model.split(" ");
-      for (let n = 1; n < words.length; n++) {
-        const prefix = words.slice(0, n).join(" ");
-        if (names.has(prefix)) return prefix;
-      }
-      return model;
-    };
-    const holders = new Map<string, { model: string; count: number }>();
-    for (const [key, group] of groupBy(makeRows, (r) => `${rootOf(r.model)}\t${r.type}`)) {
-      const counts = [...groupBy(group, (r) => r.model)].map(([model, modelRows]) => ({
-        model,
-        count: sum(modelRows.map((r) => r.c.count)),
-      }));
-      // Ties go to the shorter name, then the first in order, so the pick does not flip.
-      counts.sort(
-        (a, b) =>
-          b.count - a.count || a.model.length - b.model.length || a.model.localeCompare(b.model),
-      );
-      holders.set(key, counts[0] as { model: string; count: number });
-    }
-    for (const r of makeRows) {
-      const holder = holders.get(`${rootOf(r.model)}\t${r.type}`);
-      out.push({ ...r, model: holder?.model ?? r.model });
-    }
-  }
-  return out;
 }
 
 /** A Generation the register's evidence identifies: a dated Wikidata one, or a type's own. */

@@ -200,7 +200,7 @@ describe("rsv source", () => {
     expect(openYears("mk3")).toEqual([{ from: 2009, to: 2011 }]);
   });
 
-  it("gives a type's vehicles to the name that holds most of them, not to any shorter name", async () => {
+  it("keeps models apart that share a type, whichever has more vehicles", async () => {
     const { header, row } = await realRow();
     const car = (make: string, name: string, type: string) =>
       withColumns(header, row, {
@@ -208,29 +208,43 @@ describe("rsv source", () => {
         "Obchodní označení": name,
         "Typ kód": type,
       });
-    const rows = [
-      // Range Rover LG; a few "RANGE ROVER" rows carry the Sport's type LW.
-      ...Array(6).fill(car("LAND ROVER", "RANGE ROVER", "LG")),
-      ...Array(2).fill(car("LAND ROVER", "RANGE ROVER", "LW")),
-      ...Array(5).fill(car("LAND ROVER", "RANGE ROVER SPORT", "LW")),
-      // A sibling's row of that type joins the Sport too.
-      car("LAND ROVER", "RANGE ROVER VELAR", "LW"),
-      ...Array(4).fill(car("LAND ROVER", "RANGE ROVER VELAR", "LY")),
-      // A trim word on the shorter name's type still folds in.
-      ...Array(9).fill(car("LAND ROVER", "DISCOVERY", "LR")),
-      ...Array(3).fill(car("LAND ROVER", "DISCOVERY HSE", "LR")),
-    ];
-    const http = syntheticHttp(header, rows.join("\r\n"), 1);
-    const { entries } = await harvest(http, "full", null, { minVehicles: 1 });
-    const models = new Map<string, Set<string>>();
-    for (const { variant: v } of entries) {
-      models.set(v.model, (models.get(v.model) ?? new Set()).add(v.generation.slug));
+    const modelsOf = async (rows: string[]) => {
+      const http = syntheticHttp(header, rows.join("\r\n"), 1);
+      const { entries } = await harvest(http, "full", null, { minVehicles: 1 });
+      const models = new Map<string, Set<string>>();
+      for (const { variant: v } of entries) {
+        models.set(v.model, (models.get(v.model) ?? new Set()).add(v.generation.slug));
+      }
+      return Object.fromEntries([...models].map(([m, s]) => [m, [...s].sort()]));
+    };
+    // A Tiguan Allspace approved as a Tiguan: the type cannot tell them apart, nor can counts.
+    for (const [tiguans, allspaces] of [
+      [6, 4],
+      [4, 6],
+    ] as const) {
+      expect(
+        await modelsOf([
+          ...Array(tiguans).fill(car("VOLKSWAGEN", "TIGUAN", "5N")),
+          ...Array(allspaces).fill(car("VOLKSWAGEN", "TIGUAN ALLSPACE", "5N")),
+        ]),
+      ).toEqual({ Tiguan: ["5n"], "Tiguan Allspace": ["5n"] });
     }
-    expect(Object.fromEntries([...models].map(([m, s]) => [m, [...s]]))).toEqual({
-      "Range Rover": ["lg"],
+    // A few "RANGE ROVER" rows of the Sport's type stay what the register says; neither name
+    // takes the other's vehicles. A trim word still goes ("SCOUT"), per row.
+    expect(
+      await modelsOf([
+        ...Array(6).fill(car("LAND ROVER", "RANGE ROVER", "LG")),
+        ...Array(2).fill(car("LAND ROVER", "RANGE ROVER", "LW")),
+        ...Array(5).fill(car("LAND ROVER", "RANGE ROVER SPORT", "LW")),
+        ...Array(4).fill(car("LAND ROVER", "RANGE ROVER VELAR", "LY")),
+        ...Array(3).fill(car("ŠKODA", "OCTAVIA", "NX")),
+        ...Array(2).fill(car("ŠKODA", "OCTAVIA SCOUT", "NX")),
+      ]),
+    ).toEqual({
+      "Range Rover": ["lg", "lw"],
       "Range Rover Sport": ["lw"],
       "Range Rover Velar": ["ly"],
-      Discovery: ["lr"],
+      Octavia: ["nx"],
     });
   });
 
