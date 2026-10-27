@@ -157,7 +157,9 @@ export interface ReleaseResult {
  * Restores the base Ledger, records the run logs into it (oldest run first), publishes the
  * Bundle and releases both as the new latest, then prunes old data releases. A failed harvest
  * is recorded as a failed run, as it would be in process; any other failure rejects before
- * anything is released. Rejects without releasing when a newer release than the base appeared.
+ * anything is released. Rejects without releasing when a newer release than the base appeared,
+ * or when a run started before the base was released (its logs belong to an older Ledger, as
+ * when an earlier run's logs are released again after a newer release).
  */
 export async function releaseRuns(options: ReleaseRunsOptions): Promise<ReleaseResult> {
   const { store, work, now, keep = 14, log = silentLogger } = options;
@@ -173,10 +175,19 @@ export async function releaseRuns(options: ReleaseRunsOptions): Promise<ReleaseR
     options.logs.map(async (path) => ({ path, info: await readLogInfo(path) })),
   );
   logs.sort((a, b) => a.info.startedAt.getTime() - b.info.startedAt.getTime());
+  const oldest = logs[0]?.info;
+  if (base && oldest && oldest.startedAt < new Date(base.manifest.createdAt))
+    throw new Error(
+      `${oldest.source} ran at ${oldest.startedAt.toISOString()}, before ${base.tag} was released; these run logs are stale`,
+    );
 
+  const files = {
+    [ASSETS.ledger]: join(work, ASSETS.ledger),
+    [ASSETS.bundle]: join(work, ASSETS.bundle),
+    [ASSETS.manifest]: join(work, ASSETS.manifest),
+  };
   const runs: RunOutcome[] = [];
   const ledger = openLedger(ledgerPath);
-  let bundle: Uint8Array;
   try {
     for (const { path, info } of logs) {
       const run: RunOutcome = {
@@ -193,26 +204,26 @@ export async function releaseRuns(options: ReleaseRunsOptions): Promise<ReleaseR
       }
       runs.push(run);
     }
-    bundle = packBundle(publish(ledger, { now }));
+    // Streamed: the Publisher hands over one model file at a time (ADR 0012, Scale).
+    await packBundle(publish(ledger, { now }), createWriteStream(files[ASSETS.bundle]));
   } finally {
     ledger.close();
   }
 
   const tag = `${TAG_PREFIX}${now.toISOString().replace(/[-:]/g, "").replace("T", "-").slice(0, 15)}`;
-  const files = {
-    [ASSETS.ledger]: join(work, ASSETS.ledger),
-    [ASSETS.bundle]: join(work, ASSETS.bundle),
-    [ASSETS.manifest]: join(work, ASSETS.manifest),
-  };
   await pipeline(
     createReadStream(ledgerPath),
     createZstdCompress(),
     createWriteStream(files[ASSETS.ledger]),
   );
-  await writeFile(files[ASSETS.bundle], bundle);
   const lastCensus = { ...base?.manifest.lastCensus };
-  for (const run of runs)
-    if (run.summary?.census === "applied") lastCensus[run.source] = run.startedAt;
+  // A complete Census with rejections did not mark anything gone, but it was taken: counting
+  // it keeps a Source with one persistent bad listing from a full run every day.
+  for (const run of runs) {
+    const census = run.summary?.census;
+    if (census === "applied" || census === "skipped-rejections")
+      lastCensus[run.source] = run.startedAt;
+  }
   const manifest: Manifest = {
     dataRelease: 1,
     tag,

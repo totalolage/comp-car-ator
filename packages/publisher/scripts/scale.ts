@@ -53,7 +53,7 @@ if (step === "generate") {
   const dir = rest[0];
   if (!dir) throw new Error("publish needs a bundle dir");
   const ledger = openLedger(ledgerPath);
-  const files = publish(ledger, { now: new Date(`${END}T16:00:00Z`) });
+  const files = new Map(publish(ledger, { now: new Date(`${END}T16:00:00Z`) }));
   const publishSeconds = seconds();
   const publishPeakMb = peakMb();
   ledger.close();

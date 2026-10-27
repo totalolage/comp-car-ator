@@ -90,8 +90,13 @@ export interface LedgerSnapshot {
    * unless that edition's `validTo` is before the day (then it has none).
    */
   listPrices: (Omit<ListPrice, "kind" | "ref"> & { offer: string; resolution: Resolution })[];
-  /** All listings, active and gone, with history. */
-  listings(): Iterable<LedgerListing>;
+  /**
+   * All listings, active and gone, with history, in id order. Given `ids`, only those, in
+   * that order (unknown ids are skipped): a reader that groups listings by something the
+   * Ledger does not store, such as the Resolver's model, makes one pass for the grouping and
+   * reads each group back instead of holding every listing at once.
+   */
+  listings(ids?: Iterable<string>): Iterable<LedgerListing>;
 }
 
 export interface LedgerListing {

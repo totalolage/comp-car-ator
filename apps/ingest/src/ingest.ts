@@ -93,7 +93,7 @@ export async function buildSampleBundle(): Promise<BundleFiles> {
       mode: "incremental",
       now: SAMPLE.now,
     });
-    return publish(ledger, { now: SAMPLE.now });
+    return new Map(publish(ledger, { now: SAMPLE.now }));
   } finally {
     ledger.close();
   }

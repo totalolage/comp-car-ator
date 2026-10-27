@@ -1,4 +1,4 @@
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync, type StatementSync } from "node:sqlite";
 import { createResolver } from "@cca/resolver";
 import type { Checkpoint, SourceId } from "@cca/sources";
 import {
@@ -381,20 +381,14 @@ export function openLedger(path: string): Ledger {
         ).map((row) => ({ id: row.source, lastRunAt: row.at ? new Date(row.at) : null })),
         catalog: variants,
         listPrices,
-        *listings(): Iterable<LedgerListing> {
-          const rows = db
-            .prepare(
-              "SELECT id, source, ref, data, first_seen, last_seen, gone FROM listings ORDER BY id",
-            )
-            .iterate() as Iterable<{
-            id: string;
-            source: string;
-            ref: string;
-            data: string;
-            first_seen: string;
-            last_seen: string;
-            gone: string | null;
-          }>;
+        *listings(ids?: Iterable<string>): Iterable<LedgerListing> {
+          const columns = "id, source, ref, data, first_seen, last_seen, gone";
+          const rows =
+            ids === undefined
+              ? (db
+                  .prepare(`SELECT ${columns} FROM listings ORDER BY id`)
+                  .iterate() as Iterable<ListingRecord>)
+              : rowsOf(db.prepare(`SELECT ${columns} FROM listings WHERE id = ?`), ids);
           for (const row of rows) {
             const data = JSON.parse(row.data) as ListingData;
             const history = historyOf.all(row.id) as {
@@ -425,6 +419,23 @@ export function openLedger(path: string): Ledger {
       db.close();
     },
   };
+}
+
+interface ListingRecord {
+  id: string;
+  source: string;
+  ref: string;
+  data: string;
+  first_seen: string;
+  last_seen: string;
+  gone: string | null;
+}
+
+function* rowsOf(byId: StatementSync, ids: Iterable<string>): Iterable<ListingRecord> {
+  for (const id of ids) {
+    const row = byId.get(id) as ListingRecord | undefined;
+    if (row) yield row;
+  }
 }
 
 function latestFx(db: DatabaseSync): FxTable {
