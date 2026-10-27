@@ -32,6 +32,7 @@ import { openLedger } from "@cca/ledger";
 import { publish } from "@cca/publisher";
 import { type HarvestMode, type Logger, sources } from "@cca/sources";
 import { findRelease, releaseRuns, restoreLedger, TAG_PREFIX } from "./data-release.ts";
+import { harvestJob } from "./harvest-job.ts";
 import {
   buildSampleBundle,
   importObservations,
@@ -40,7 +41,6 @@ import {
   SAMPLE,
 } from "./ingest.ts";
 import { releaseStoreFrom } from "./release-store.ts";
-import { harvestToLog } from "./run-log.ts";
 import { type HarvestModes, plan } from "./schedule.ts";
 
 const log: Logger = {
@@ -94,9 +94,6 @@ function harvestMode(): HarvestMode {
 function harvestModes(): HarvestModes {
   return values.mode === "incremental,full" ? values.mode : harvestMode();
 }
-
-/** The incremental Run before a full one stops after this long, leaving the rest to the full. */
-const CATCH_UP_MINUTES = 60;
 
 function knownSource(id: string) {
   const factory = sources[id];
@@ -162,35 +159,20 @@ switch (command) {
     const http = liveHttp();
     const source = knownSource(required("source"));
     const minutes = Number(values["max-minutes"] ?? 0);
-    const deadline = minutes > 0 ? AbortSignal.timeout(minutes * 60_000) : undefined;
-    const out = required("out");
-    const modes = harvestModes();
-    let failed = false;
-    // Each mode is its own Run with its own start; the full one runs even when the
-    // incremental one failed, since its Census progress does not depend on it.
-    for (const mode of modes === "incremental,full"
-      ? (["incremental", "full"] as const)
-      : [modes]) {
-      const catchUp = modes !== mode && mode === "incremental";
-      const signals = [
-        deadline,
-        catchUp ? AbortSignal.timeout(CATCH_UP_MINUTES * 60_000) : undefined,
-      ];
-      const report = await harvestToLog({
-        ledger,
-        source,
-        http,
-        mode,
-        now: new Date(),
-        out: modes === mode ? out : out.replace(/(\.ndjson)?$/, `.${mode}.ndjson`),
-        log,
-        signal: AbortSignal.any(signals.filter((s) => s !== undefined)),
-      });
-      log.info(`${source.id} ${mode} harvest ${report.error ? "failed" : "complete"}`, {
-        ...report,
-      });
-      failed ||= report.error !== null;
+    const reports = await harvestJob({
+      ledger,
+      source,
+      http,
+      modes: harvestModes(),
+      out: required("out"),
+      log,
+      signal: minutes > 0 ? AbortSignal.timeout(minutes * 60_000) : undefined,
+    });
+    for (const report of reports) {
+      const outcome = report.error ? "failed" : "complete";
+      log.info(`${source.id} ${report.mode} harvest ${outcome}`, { ...report });
     }
+    const failed = reports.some((report) => report.error !== null);
     await http.close();
     ledger.close();
     process.exitCode = failed ? 1 : 0;

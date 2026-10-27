@@ -46,8 +46,8 @@ export interface Harvest {
  * Source has had none (`lastCensus`, by Source id) since its latest scheduled census day, so a
  * failed or skipped census runs again the next day instead of waiting a week or a month. A
  * daily Source that has had a census runs incrementally first on its census days: a census
- * longer than a day skips the slices it already read, which an incremental run covers for
- * listings new or changed since. Before its first census the Ledger knows too little for an
+ * longer than a day skips the slices it already read, and the incremental run sees the
+ * listings posted in them since. Before its first census the Ledger knows too little for an
  * incremental run to stop early, so that census runs alone. Days are Prague calendar days.
  */
 export function plan(
