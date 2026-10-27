@@ -543,6 +543,18 @@ describe("rsv source", () => {
     expect(JSON.stringify(logs)).toContain("no-model");
   });
 
+  it("tells models apart by their words, and shows the spelling that keeps punctuation", async () => {
+    expect(
+      await modelsOf([
+        ...cars(3, "CHRYSLER", "TOWN COUNTRY", "RT"),
+        ...cars(2, "CHRYSLER", "TOWN & COUNTRY", "RT"),
+        ...cars(1, "CHRYSLER", "TOWN - COUNTRY", "RS"),
+        ...cars(2, "FORD", "TRANSIT - EUROLINE", "FA"),
+        ...cars(1, "FORD", "TRANSIT", "FA"),
+      ]),
+    ).toEqual({ "Town & Country": ["rs", "rt"], "Transit - Euroline": ["fa"], Transit: ["fa"] });
+  });
+
   it("spells makes and models the way the Resolver's aliases know them", async () => {
     const { entries } = await harvest(await replay());
     const makes = new Set(entries.map((e) => e.variant.make));

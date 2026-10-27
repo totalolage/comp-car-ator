@@ -100,8 +100,9 @@ export function createCatalog(options: CatalogOptions) {
     entries(generations: readonly WikidataGeneration[]): CatalogEntry[] {
       omitted.vehicles = 0;
       const rows = [...candidates].map(([key, c]) => {
-        const [make, model, type, body, fuel, kw] = key.split("\t") as string[];
-        return { make, model, type, body, fuel, powerKw: Number(kw), c } as Row;
+        const [make, spelled, type, body, fuel, kw] = key.split("\t") as string[];
+        const model = wordsOf(spelled as string);
+        return { make, model, spelled, type, body, fuel, powerKw: Number(kw), c } as Row;
       });
       const merged = foldBadges(spellModels(rows));
       const backing = new Map<string, Row[]>();
@@ -115,7 +116,9 @@ export function createCatalog(options: CatalogOptions) {
       }
       const entries: CatalogEntry[] = [];
       for (const [key, group] of groupBy(merged, (r) => `${r.make}\t${r.model}`)) {
-        entries.push(...modelEntries(group, backing.get(key) ?? [], generations, options, omitted));
+        const model = shownName(group);
+        const shown = group.map((r) => ({ ...r, model }));
+        entries.push(...modelEntries(shown, backing.get(key) ?? [], generations, options, omitted));
       }
       return entries.sort((a, b) => idOf(a).localeCompare(idOf(b)));
     },
@@ -132,6 +135,40 @@ interface Row {
   c: Candidate;
   /** Shorter models whose Variants these vehicles back without joining them (foldBadges). */
   backs?: readonly string[];
+  /** The model as the register spells it, punctuation words included ("Town & Country"). */
+  spelled: string;
+}
+
+/**
+ * A name without its punctuation words ("Town & Country" → "Town Country"): models are told
+ * apart and folded by words only, so punctuation never splits or joins a model.
+ */
+function wordsOf(model: string): string {
+  return model
+    .split(" ")
+    .filter((w) => slugify(w) !== "")
+    .join(" ");
+}
+
+/**
+ * The name a model shows: its own rows' spelling with most vehicles, one with punctuation
+ * first. "TOWN COUNTRY" is "TOWN & COUNTRY" with the "&" lost, not another spelling of it.
+ */
+function shownName(rows: Row[]): string {
+  const model = (rows[0] as Row).model;
+  const own = rows.filter((r) => wordsOf(r.spelled) === model);
+  const counts = [...groupBy(own, (r) => r.spelled)].map(([spelled, spelledRows]) => ({
+    spelled,
+    punctuated: spelled !== model,
+    count: sum(spelledRows.map((r) => r.c.count)),
+  }));
+  counts.sort(
+    (a, b) =>
+      Number(b.punctuated) - Number(a.punctuated) ||
+      b.count - a.count ||
+      a.spelled.localeCompare(b.spelled),
+  );
+  return counts[0]?.spelled ?? model;
 }
 
 /**
