@@ -111,6 +111,8 @@ export function readHints(text: string, badges: readonly FuelWording[] = []): Hi
       .replace(/\bmk\s+(\d)/gi, "mk$1")
       // "Euro VI" is an emission class, not generation VI.
       .replace(/\beu(?:ro)?\s*-?\s*[0-9IVX]+[a-z]*\b/gi, " ")
+      // A number with a unit is a quantity: "991 km" is no Porsche 991.
+      .replace(/\b\d+\s*(?:km|kw|ps|hp|nm|ccm|cm3|kg)\b/gi, " ")
       // Displacements ("2.0d", "1,6TDI") would split into code-like words ("0d").
       .replace(/\b\d[.,]\d[a-z]*\b/gi, " ")
       // "I. majitel" is the first owner, not generation I.

@@ -1052,6 +1052,11 @@ describe("Resolver", () => {
       expect(at([g997]).resolve({ ...car, model: "911", trim: "993 Carrera" })).toMatchObject({
         status: "model",
       });
+      // A number with a unit is a quantity, not a code.
+      expect(at([g991]).resolve({ ...car, model: "911", trim: "Carrera, 997 km" })).toMatchObject({
+        status: "matched",
+        variantId: "porsche/911/991/coupe-petrol-283kw",
+      });
     });
   });
 

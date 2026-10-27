@@ -134,7 +134,7 @@ export const CHASSIS_CODES: Readonly<Record<string, RegExp>> = {
   audi: new RegExp(`^(?:${VW_GROUP}|[b-d]\\d)$`, "i"),
   bmw: /^[efgu]\d\d$/i,
   // The 911's type codes, the register's generation slugs for it.
-  porsche: /^(?:964|99[1-7])$/,
+  porsche: /^(?:964|99[1-367])$/,
   "mercedes-benz": /^[acrsvwx]\d{3}$/i,
   "land-rover": /^l\d{3}$/i,
   hyundai: /^[a-z]{2}\d$/i,
