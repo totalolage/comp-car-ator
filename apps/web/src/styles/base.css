@@ -317,22 +317,17 @@ main:focus {
 }
 
 /*
- * Both columns are sticky and the page is the only vertical scroller. The longer column
- * sets the grid's height, so it scrolls with the page. The shorter one sits at the end of
- * its grid area and sticks by its bottom edge above the tray: taller than the viewport, it
- * scrolls with the page until its end is in view and then stays; shorter, min-height
- * stretches it to the viewport below the masthead, so its content stays pinned under the
- * masthead. The far-negative top keeps the sticky view rectangle taller than the column;
- * otherwise a column taller than the viewport has its bottom inset cut to fit and never
- * sticks by its end. It holds for columns up to 100000px; raise it if one ever gets taller.
+ * Both columns stick to the top under the masthead, and the page is the only vertical
+ * scroller. The taller column sets the grid's height, so it scrolls with the page; the
+ * shorter one stays stuck under the masthead until the split's end reaches it, and then
+ * both leave together. A stuck column taller than the viewport shows its lower part only
+ * when the split's end comes up.
  */
 .rail,
 .results {
   position: sticky;
-  top: -100000px;
-  bottom: var(--tray-space, 0px);
-  align-self: end;
-  min-height: calc(100dvh - var(--masthead) - var(--s3) - var(--tray-space, 0px));
+  top: var(--masthead);
+  align-self: start;
 }
 
 .rail {
@@ -1162,8 +1157,6 @@ body {
   .rail,
   .results {
     position: static;
-    align-self: auto;
-    min-height: 0;
   }
 
   .rail-toggle {

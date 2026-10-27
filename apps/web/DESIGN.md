@@ -50,11 +50,13 @@ Sentence case everywhere; no uppercase labels.
   models. It is `<details>`, so it needs no script; the shell script only closes it on Escape
   or an outside click.
 - `.split` = rail + results. Below 48rem it stacks and the rail becomes a grid of facet groups.
-- Scrolling: the masthead sticks to the top. From 48rem both `.split` columns are sticky and
-  neither scrolls on its own: the longer one scrolls with the page; the shorter one stays
-  pinned under the masthead if it fits the viewport, or scrolls until its end is in view and
-  then stays, so the split scrolls only while the longer column has more to show (the footer
-  follows it). Both stop above the compare tray.
+- Scrolling: the masthead sticks to the top. From 48rem both `.split` columns stick to the top
+  under the masthead (plain `position: sticky`) and neither scrolls on its own: the taller one
+  scrolls with the page; the shorter one stays stuck under the masthead until the end of the
+  split reaches it, and then both scroll off together. This holds even when the shorter column
+  is taller than the viewport, so its lower part comes into view only at the end of the split,
+  and keyboard focus moved there stays below the viewport until then: the trade-off for plain
+  sticky behaviour.
 - The page is the only vertical scroller on the catalog, model and compare pages: no table,
   list or panel scrolls vertically on its own. The one exception is the Kategorie menu panel,
   which overlays the page and scrolls itself when it is taller than the viewport.
