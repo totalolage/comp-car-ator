@@ -249,6 +249,43 @@ describe("rsv source", () => {
     });
   });
 
+  it("keeps a short name its longer names back on its type, without merging them", async () => {
+    // Few "CONTINENTAL" rows of the GT's and GTC's type: cars written short, real as the
+    // GT's and GTC's together, so the Continental stays a Model; the GT and GTC stay apart, and
+    // one too rare on its own (the GT) is dropped rather than folded in.
+    for (const [gts, gtcs] of [
+      [4, 5],
+      [5, 4],
+    ] as const) {
+      expect(
+        await modelsOf(
+          [
+            ...cars(2, "BENTLEY", "CONTINENTAL", "3W"),
+            ...cars(gts, "BENTLEY", "CONTINENTAL GT", "3W"),
+            ...cars(gtcs, "BENTLEY", "CONTINENTAL GTC", "3W"),
+          ],
+          5,
+        ),
+      ).toEqual({
+        Continental: ["3w"],
+        ...(gts >= 5 ? { "Continental GT": ["3w"] } : { "Continental GTC": ["3w"] }),
+      });
+    }
+    // Names that only back each other on a shared type: an Exige of its own type, and a
+    // longer name's rows when the shorter one is on another type, stay rare.
+    expect(
+      await modelsOf(
+        [
+          ...cars(1, "LOTUS", "EXIGE", "111"),
+          ...cars(4, "LOTUS", "EXIGE SPORT 410", "111"),
+          ...cars(2, "LOTUS", "ELISE", "112"),
+          ...cars(6, "LOTUS", "ELISE CUP 250", "113"),
+        ],
+        5,
+      ),
+    ).toEqual({ Exige: ["111"], "Elise Cup 250": ["113"] });
+  });
+
   it("keeps a word some makes use as a badge, unless it is a trim of that very model", async () => {
     for (const [more, fewer] of [
       [6, 4],
@@ -760,7 +797,10 @@ function cars(n: number, make: string, name: string, type: string): [string, str
 }
 
 /** The catalog's models of `vehicles` (make, commercial name, type), with their Generations. */
-async function modelsOf(vehicles: [string, string, string][]): Promise<Record<string, string[]>> {
+async function modelsOf(
+  vehicles: [string, string, string][],
+  minVehicles = 1,
+): Promise<Record<string, string[]>> {
   const { header, row } = await realRow();
   const rows = vehicles.map(([make, name, type]) =>
     withColumns(header, row, {
@@ -770,7 +810,7 @@ async function modelsOf(vehicles: [string, string, string][]): Promise<Record<st
     }),
   );
   const { entries } = await harvest(syntheticHttp(header, rows.join("\r\n"), 1), "full", null, {
-    minVehicles: 1,
+    minVehicles,
   });
   const models = new Map<string, Set<string>>();
   for (const { variant: v } of entries) {

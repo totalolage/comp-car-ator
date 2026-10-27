@@ -17,8 +17,11 @@
  *   (Golf 1K: V and VI) is split by production year; years the dates do not settle (an overlap,
  *   past the last dated generation) are left out rather than guessed.
  * - Noise: a candidate with fewer than `minVehicles` vehicles is dropped (single imports,
- *   typos). Rare but real neighbours stay: an extra Variant makes a listing ambiguous (it
- *   resolves to the Model), a missing one could make it match the wrong Variant.
+ *   typos). Vehicles of the longer names kept apart on a shorter name's type count towards it
+ *   without joining it ("Continental GT" for "Continental"), so a short name the register
+ *   writes for those cars stays a Model. Rare but real neighbours stay: an extra Variant makes
+ *   a listing ambiguous (it resolves to the Model), a missing one could make it match the wrong
+ *   Variant.
  *
  * Memory: one fixed-size record per candidate (counts by year, two-slot majority trackers per
  * Spec), so peak memory grows with distinct candidates, not vehicles.
@@ -101,9 +104,16 @@ export function createCatalog(options: CatalogOptions) {
         return { make, model, type, body, fuel, powerKw: Number(kw), c } as Row;
       });
       const merged = foldBadges(spellModels(rows));
+      const backing = new Map<string, Row[]>();
+      for (const r of merged) {
+        for (const model of r.backs ?? []) {
+          const key = `${r.make}\t${model}`;
+          backing.set(key, [...(backing.get(key) ?? []), r]);
+        }
+      }
       const entries: CatalogEntry[] = [];
-      for (const group of groupBy(merged, (r) => `${r.make}\t${r.model}`).values()) {
-        entries.push(...modelEntries(group, generations, options, omitted));
+      for (const [key, group] of groupBy(merged, (r) => `${r.make}\t${r.model}`)) {
+        entries.push(...modelEntries(group, backing.get(key) ?? [], generations, options, omitted));
       }
       return entries.sort((a, b) => idOf(a).localeCompare(idOf(b)));
     },
@@ -118,6 +128,8 @@ interface Row {
   fuel: VariantSpec["fuel"];
   powerKw: number;
   c: Candidate;
+  /** Shorter models whose Variants these vehicles back without joining them (foldBadges). */
+  backs?: readonly string[];
 }
 
 /**
@@ -231,6 +243,10 @@ function isBadge(word: string): boolean {
  * trims only is that model, on the types the shorter name has. A name with any other word
  * ("Tiguan Allspace", "Range Rover Sport", "e-tron GT") stays a model of its own whatever it
  * shares; so do a badge name's rows on types the shorter name lacks ("Ioniq 5").
+ *
+ * A name kept apart still backs the shorter names it extends on their types: a few
+ * "CONTINENTAL" rows of a Continental GT's type and power are such cars written short, not
+ * noise, so they make a Variant of "Continental" together with the GT's, which stays the GT's.
  */
 function foldBadges(rows: Row[]): Row[] {
   const out: Row[] = [];
@@ -249,7 +265,23 @@ function foldBadges(rows: Row[]): Row[] {
       }
       return model;
     };
-    for (const r of makeRows) out.push({ ...r, model: home(r.model, r.type) });
+    // The shorter names a name extends on this type, nearest first.
+    const shorter = (model: string, type: string): string[] => {
+      const words = model.split(" ");
+      for (let n = words.length - 1; n >= 1; n--) {
+        const prefix = words.slice(0, n).join(" ");
+        if (!types.has(prefix)) continue;
+        return types.get(prefix)?.has(type) ? [prefix, ...shorter(prefix, type)] : [];
+      }
+      return [];
+    };
+    for (const r of makeRows) {
+      const model = home(r.model, r.type);
+      const backs = [...new Set(shorter(r.model, r.type).map((s) => home(s, r.type)))].filter(
+        (m) => m !== model,
+      );
+      out.push({ ...r, model, ...(backs.length > 0 ? { backs } : {}) });
+    }
   }
   return out;
 }
@@ -271,6 +303,7 @@ interface Span {
 
 function modelEntries(
   modelRows: Row[],
+  backing: readonly Row[],
   wikidata: readonly WikidataGeneration[],
   options: CatalogOptions,
   omitted: { vehicles: number },
@@ -289,14 +322,16 @@ function modelEntries(
   // and type codes with variant codes glued on ("BWYD6BA", "211U016F0") belong to the type
   // they start with ("BWY", "211"): the shortest such type of the model, whatever the counts,
   // so the folding does not change as vehicles register.
-  let rows = modelRows.map((r) => ({
+  const bodyLetter = (r: Row) => ({
     ...r,
     type: r.type.replace(/^([A-Z0-9]*\d[A-Z0-9]*?\d)[A-Z]$/, "$1"),
-  }));
+  });
+  let rows = modelRows.map(bodyLetter);
   const types = [...new Set(rows.map((r) => r.type))].sort((a, b) => a.length - b.length);
   const fold = (type: string) =>
     types.find((t) => t.length >= 2 && t.length < type.length && type.startsWith(t)) ?? type;
   rows = rows.map((r) => ({ ...r, type: fold(r.type) }));
+  const backers = backing.map(bodyLetter).map((r) => ({ ...r, type: fold(r.type) }));
 
   // Types → Generations by production year.
   const byType = [...groupBy(rows, (r) => r.type)].map(([type, typeRows]) => {
@@ -349,6 +384,17 @@ function modelEntries(
     }
   }
 
+  // Vehicles that back a Variant without joining it (foldBadges), by Generation and Variant.
+  const variantKey = (slug: string, r: Row) => `${slug}\t${r.body}\t${r.fuel}\t${r.powerKw}`;
+  const backed = new Map<string, number>();
+  for (const r of backers) {
+    const of = generationOf.get(r.type);
+    r.c.years.forEach((n, i) => {
+      const gen = n > 0 ? of?.(options.minYear + i) : undefined;
+      if (gen) backed.set(variantKey(gen.slug, r), (backed.get(variantKey(gen.slug, r)) ?? 0) + n);
+    });
+  }
+
   const entries: CatalogEntry[] = [];
   for (const genRows of groupBy(placed, (r) => r.gen.slug).values()) {
     const gen = (genRows[0] as (typeof genRows)[number]).gen;
@@ -376,7 +422,9 @@ function modelEntries(
     const variants = [
       ...groupBy(genRows, (r) => `${r.body}\t${r.fuel}\t${r.powerKw}`).values(),
     ].map((vRows) => ({ ...(vRows[0] as Row), c: combine(vRows.map((r) => r.c)) }));
-    const kept = variants.filter((v) => v.c.count >= options.minVehicles);
+    const kept = variants.filter(
+      (v) => v.c.count + (backed.get(variantKey(gen.slug, v)) ?? 0) >= options.minVehicles,
+    );
     if (kept.length === 0) continue;
 
     const genYears = yearsOf(addYears(kept.map((v) => v.c.years)), options);

@@ -958,6 +958,35 @@ describe("Resolver", () => {
         }),
       ).toMatchObject({ status: "model", modelId: "bmw/3-series" });
     });
+
+    it("finds the register's names for short, badged and glued model names", () => {
+      const gen = { slug: "t1", name: "T1", from: 2015 };
+      const register = createResolver([
+        ...variants("BMW", "1 Series", gen, [{ body: "hatchback", fuel: "petrol", powerKw: 225 }]),
+        ...variants("BMW", "5 Series", gen, [{ body: "sedan", fuel: "diesel", powerKw: 250 }]),
+        ...variants("DS", "7", gen, [{ body: "suv", fuel: "diesel", powerKw: 96 }]),
+        ...variants("DS", "7 Crossback", gen, [{ body: "suv", fuel: "diesel", powerKw: 130 }]),
+        ...variants("Porsche", "911", gen, [{ body: "coupe", fuel: "petrol", powerKw: 283 }]),
+      ]);
+      const modelOf = (make: string, model: string) => {
+        const r = register.resolve({ make, model });
+        return r.status === "unmatched" ? r.reason : r.modelId;
+      };
+      for (const model of ["1", "1 M Coupé", "M135i"]) {
+        expect(modelOf("BMW", model)).toBe("bmw/1-series");
+      }
+      for (const model of ["5", "M550d", "m550d"])
+        expect(modelOf("BMW", model)).toBe("bmw/5-series");
+      for (const model of ["DS7", "DS 7", "7"])
+        expect(modelOf("DS Automobiles", model)).toBe("ds/7");
+      for (const model of ["DS7 Crossback", "DS 7 Crossback"]) {
+        expect(modelOf("DS", model)).toBe("ds/7-crossback");
+      }
+      expect(modelOf("Porsche", "991")).toBe("porsche/911");
+      // A make's lone letter or its other brand names no model.
+      expect(modelOf("BMW", "M")).toBe("unknown-model");
+      expect(modelOf("DS", "DS")).toBe("unknown-model");
+    });
   });
 
   it("reports unknown makes and models without falling back to a shorter model", () => {

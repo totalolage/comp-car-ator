@@ -9,7 +9,7 @@ import type { FuelWording } from "./hints.ts";
  * entry is the group's key; it does not have to be the catalog's spelling, because catalog
  * names are looked up through the same groups. Slugs not in any group stand for themselves.
  */
-export const ALIASES_VERSION = 6;
+export const ALIASES_VERSION = 7;
 
 export const MAKE_GROUPS: readonly (readonly string[])[] = [
   ["volkswagen", "vw"],
@@ -28,9 +28,9 @@ const MERCEDES_CLASSES =
   );
 
 /**
- * BMW series: "Řada 3", "3er", "3 Series", "Serie 3", engine badges "320", "320d", and the
- * chassis codes some sites put in the model field ("E46", "F31"). A chassis code still
- * claims its generation.
+ * BMW series: "Řada 3", "3er", "3 Series", "Serie 3", a bare "3", engine badges "320", "320d",
+ * "M340i", and the chassis codes some sites put in the model field ("E46", "F31"). A chassis
+ * code still claims its generation.
  */
 const BMW_SERIES: Readonly<Record<string, readonly string[]>> = {
   "1": ["e81", "e82", "e87", "e88", "f20", "f21", "f40"],
@@ -61,8 +61,8 @@ export interface ModelAliases {
    */
   submodels?: Readonly<Record<string, readonly string[]>>;
   /**
-   * Engine-badge model names (BMW "118", "530"; checked on the first model token): the
-   * capture group plus `suffix` gives a slug in `groups`.
+   * Model names written as an engine badge (BMW "118", "M550d") or with the make glued on
+   * (DS "DS7"): the capture group plus `suffix` gives the model's slug or one in `groups`.
    */
   badge?: { pattern: RegExp; suffix: string };
 }
@@ -80,6 +80,7 @@ export const MODEL_ALIASES: Readonly<Record<string, ModelAliases>> = {
   bmw: {
     groups: Object.entries(BMW_SERIES).map(([n, chassis]) => [
       `${n}-series`,
+      n,
       `${n}er`,
       `rada-${n}`,
       `serie-${n}`,
@@ -87,8 +88,12 @@ export const MODEL_ALIASES: Readonly<Record<string, ModelAliases>> = {
       `${n}-reihe`,
       ...chassis,
     ]),
-    badge: { pattern: /^([1-8])\d\d[a-z]{0,2}$/, suffix: "-series" },
+    badge: { pattern: /^m?([1-8])\d\d[a-z]{0,2}$/, suffix: "-series" },
   },
+  // The catalog names DS models by number ("DS 7 Crossback" → 7 Crossback).
+  ds: { badge: { pattern: /^ds-?(\d.*)$/, suffix: "" } },
+  // Porsche's type codes stand for the 911 they approve ("991" is a 911 of the 991 type).
+  porsche: { groups: [["911", "996", "997", "991", "992"]] },
   "land-rover": {
     submodels: { "range-rover": ["sport", "velar", "evoque"], discovery: ["sport"] },
   },
