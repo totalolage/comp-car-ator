@@ -549,7 +549,9 @@ describe("autoscout24 source", () => {
     const source = autoscout24Source({ ...DE, makes: undefined });
     const run = await harvest(deFull, source, "full", {}, bandsFromMakes(fractional));
     expect(String(run.error)).toMatch(/not harvested whole: used;price=0-62499$/);
-    expect(slices(run)).toEqual(expect.arrayContaining(["used;price=31250-62499", "used;price=0-31249"]));
+    expect(slices(run)).toEqual(
+      expect.arrayContaining(["used;price=31250-62499", "used;price=0-31249"]),
+    );
   });
 
   it("without makes, harvests a listing that no make filter returns", async () => {

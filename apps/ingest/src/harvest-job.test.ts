@@ -154,7 +154,10 @@ describe("harvest job", () => {
     };
 
     const first = await day("2026-10-26");
-    expect(first.map((r) => r.error)).toEqual([null, "Error: The operation was aborted due to timeout"]);
+    expect(first.map((r) => r.error)).toEqual([
+      null,
+      "Error: The operation was aborted due to timeout",
+    ]);
     posted.push({ ref: "a2", slice: "A" });
     cutOff = null;
     const second = await day("2026-10-27");
