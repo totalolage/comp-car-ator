@@ -45,7 +45,7 @@ const t = i18n(lang);
   {
     !models && (
       <p class="categories-all">
-        <a href={t.path("/categories/")} data-tree-src>
+        <a href={t.path("/categories/")} data-tree-src data-astro-prefetch="false">
           {t.t("nav.allModels")}
         </a>
       </p>

@@ -50,8 +50,10 @@ and hash, so switching language keeps the view.
   shared list replaces the remembered one instead (Consequences).
 - **Loading the catalog index for the tray's names**: the index grows to megabytes at 50k
   Variants, and model pages load about 5 kB of JavaScript today. The store caches names.
-- **A custom hover-prefetch script**: Astro's built-in `prefetch` (`prefetchAll`, `hover`)
-  does it in about 1 kB, so the shell has no prefetch code of its own.
+- **Prefetching**: Astro's built-in hover prefetch (`prefetchAll`) handles navigation.
+  Separately, the shell script loads the category tree into the Kategorie menu on pointer or
+  focus with one fetch of `/categories/`; the “Všechny modely” link opts out of Astro
+  prefetch, so the page is fetched once.
 
 ## Consequences
 
