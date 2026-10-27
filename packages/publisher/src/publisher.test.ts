@@ -404,7 +404,7 @@ describe("publish: model files", () => {
     await record("sauto", "2026-08-10", [{ kind: "ListingGone", ref: "old" }]);
     await record("sauto", "2026-10-10", [{ kind: "ListingGone", ref: "recent" }]);
 
-    const files = publish(ledger, { now: at("2026-10-24") });
+    const files = new Map(publish(ledger, { now: at("2026-10-24") }));
     expect([...files.keys()].sort()).toEqual([
       "catalog.json",
       "manifest.json",
@@ -428,6 +428,43 @@ describe("publish: model files", () => {
       ["volkswagen/golf", 1],
       ["volkswagen/tiguan", 2],
     ]);
+  });
+
+  it("holds one model's Listings at a time, so memory follows the largest model", async () => {
+    ledger = newLedger();
+    await record("sauto", "2026-10-20", [
+      tiguanEntry,
+      golfEntry,
+      ...["g1", "g2"].map((ref) =>
+        tiguan(ref, 400_000, {
+          vehicle: { make: "VW", model: "Golf", fuel: "petrol", powerKw: 110 },
+        }),
+      ),
+      ...["t1", "t2", "t3"].map((ref) => tiguan(ref, 600_000)),
+    ]);
+    // Count the Listings the Publisher reads back per model (by id) from the snapshot.
+    let readBack = 0;
+    const counted: Ledger = {
+      ...ledger,
+      snapshot() {
+        const snapshot = ledger.snapshot();
+        return {
+          ...snapshot,
+          *listings(ids) {
+            for (const listing of snapshot.listings(ids)) {
+              if (ids) readBack++;
+              yield listing;
+            }
+          },
+        };
+      },
+    };
+    const files = publish(counted, { now: at("2026-10-24") });
+    expect(files.next().value?.[0]).toBe("models/volkswagen/golf.json");
+    expect(readBack).toBe(2);
+    expect(files.next().value?.[0]).toBe("models/volkswagen/tiguan.json");
+    expect(readBack).toBe(5);
+    expect([...files].map(([path]) => path)).toEqual(["catalog.json", "manifest.json"]);
   });
 
   it("gives every model an id that opens its model file, whatever the names", async () => {
@@ -500,7 +537,7 @@ describe("publish: determinism and scale", { timeout: 60_000 }, () => {
     })) {
       await l.record(run, shuffle ? [...observations].reverse() : observations);
     }
-    return publish(l, { now: at("2026-10-24") });
+    return new Map(publish(l, { now: at("2026-10-24") }));
   }
 
   it("publishes byte-identical files for the same Ledger state, whatever the recording order", async () => {

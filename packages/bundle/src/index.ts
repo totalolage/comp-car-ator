@@ -1,8 +1,10 @@
 export {
+  type BundleFile,
   type BundleFiles,
   BundleFormatError,
   type BundleReader,
   encodeBundle,
+  encodeBundleFiles,
   fetchLoader,
   type Loader,
   memoryLoader,

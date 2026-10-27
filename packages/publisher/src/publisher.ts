@@ -1,7 +1,7 @@
 import {
-  type BundleContent,
-  type BundleFiles,
-  encodeBundle,
+  type BundleFile,
+  type CatalogIndex,
+  encodeBundleFiles,
   type ListingRow,
   type ModelFile,
   type NewPrice,
@@ -41,22 +41,24 @@ export interface PublishOptions {
  * from reading the Ledger; deterministic for a given Ledger state and `now` (byte-identical
  * files). Rules for statistics, outliers, new prices and compaction: docs/adr/0012-publisher-statistics.md.
  *
+ * Lazy: the files come one model at a time as they are iterated (then `catalog.json` and
+ * `manifest.json`), and only one model's Listings are held at once, so memory follows the
+ * largest model rather than the Ledger. Iterate it while the Ledger is open.
+ *
  * Listings the Resolver cannot place on a known model are left out (Wave 1 stream 11 will
  * shrink that set). Listings whose currency has no FX rate are left out too.
  */
-export function publish(ledger: Ledger, options: PublishOptions): BundleFiles {
-  return encodeBundle(buildContent(ledger, options));
-}
-
-function buildContent(ledger: Ledger, { now, transportCzk }: PublishOptions): BundleContent {
+export function* publish(ledger: Ledger, options: PublishOptions): Generator<BundleFile> {
+  const { now, transportCzk } = options;
   const snapshot = ledger.snapshot();
   const today = pragueDate(now);
   const fx = snapshot.fx;
   const history = historySampler(today);
 
-  // One streaming pass: model-file rows for active and recently gone Listings, history
-  // samples for every used Listing ever seen.
-  const rowsByModel = new Map<ModelId, ListingRow[]>();
+  // First pass: history samples for every used Listing ever seen, and the ids of the active
+  // and recently gone Listings each model file will carry. The rows are built per model in
+  // the second pass, so they never all sit in memory together.
+  const idsByModel = new Map<ModelId, string[]>();
   for (const listing of snapshot.listings()) {
     if (listing.resolution.status === "unmatched") continue;
     const modelId = listing.resolution.modelId;
@@ -70,67 +72,78 @@ function buildContent(ledger: Ledger, { now, transportCzk }: PublishOptions): Bu
       );
     }
     if (listing.gone !== null && daysBetween(listing.gone, today) > GONE_KEPT_DAYS) continue;
-    const row = listingRow(listing, fx, today, transportCzk);
-    if (row) push(rowsByModel, modelId, row);
+    push(idsByModel, modelId, listing.id);
   }
 
   const listPrices = currentListPrices(snapshot, fx, today);
   const variantsByModel = groupBy(snapshot.catalog, (v) => v.modelId);
   const variantRows: VariantRow[] = [];
-  const models: ModelFile[] = [];
-  const listingCounts = new Map<ModelId, number>();
-  for (const [modelId, variants] of [...variantsByModel].sort(byKey)) {
-    const rows = (rowsByModel.get(modelId) ?? []).sort((a, b) => compare(a.id, b.id));
-    const active = rows.filter((l) => !l.gone);
-    markOutliers(rows, active);
-    const used = groupBy(
-      active.filter((l) => l.condition === "used" && l.variantId !== null),
-      (l) => l.variantId as VariantId,
-    );
-    const dealerNew = groupBy(active.filter(isDealerNewCz), (l) => l.variantId as VariantId);
-    variants.sort((a, b) => compare(a.id, b.id));
-    for (const variant of variants) {
-      variantRows.push(
-        variantRow(
-          variant,
-          used.get(variant.id) ?? [],
-          newPrice(listPrices.get(variant.id), dealerNew.get(variant.id)),
-        ),
+  const catalogModels: CatalogIndex["models"] = [];
+  let listingTotal = 0;
+
+  function* models(): Generator<ModelFile> {
+    for (const [modelId, variants] of [...variantsByModel].sort(byKey)) {
+      const rows: ListingRow[] = [];
+      for (const listing of snapshot.listings(idsByModel.get(modelId) ?? [])) {
+        const row = listingRow(listing, fx, today, transportCzk);
+        if (row) rows.push(row);
+      }
+      idsByModel.delete(modelId);
+      rows.sort((a, b) => compare(a.id, b.id));
+      const active = rows.filter((l) => !l.gone);
+      markOutliers(rows, active);
+      const used = groupBy(
+        active.filter((l) => l.condition === "used" && l.variantId !== null),
+        (l) => l.variantId as VariantId,
       );
+      const dealerNew = groupBy(active.filter(isDealerNewCz), (l) => l.variantId as VariantId);
+      variants.sort((a, b) => compare(a.id, b.id));
+      for (const variant of variants) {
+        variantRows.push(
+          variantRow(
+            variant,
+            used.get(variant.id) ?? [],
+            newPrice(listPrices.get(variant.id), dealerNew.get(variant.id)),
+          ),
+        );
+      }
+      const file = modelFile(variants, rows, active, history.history(modelId));
+      catalogModels.push({
+        id: file.model.id,
+        makeId: file.model.makeId,
+        name: file.model.name,
+        listingCount: active.filter((l) => l.condition === "used").length,
+      });
+      listingTotal += rows.length;
+      yield file;
     }
-    listingCounts.set(modelId, active.filter((l) => l.condition === "used").length);
-    models.push(modelFile(variants, rows, active, history.history(modelId)));
   }
 
-  const makes = new Map(snapshot.catalog.map((v) => [v.makeId, v.make]));
-  return {
-    manifest: {
-      format: 2,
-      generatedAt: now.toISOString(),
-      fx,
-      sources: snapshot.sources.map((s) => ({
-        id: s.id,
-        lastRunAt: s.lastRunAt?.toISOString() ?? null,
-      })),
-      counts: {
-        makes: makes.size,
-        models: models.length,
-        variants: variantRows.length,
-        listings: models.reduce((n, m) => n + m.listings.length, 0),
+  yield* encodeBundleFiles(models(), () => {
+    const makes = new Map(snapshot.catalog.map((v) => [v.makeId, v.make]));
+    return {
+      manifest: {
+        format: 2,
+        generatedAt: now.toISOString(),
+        fx,
+        sources: snapshot.sources.map((s) => ({
+          id: s.id,
+          lastRunAt: s.lastRunAt?.toISOString() ?? null,
+        })),
+        counts: {
+          makes: makes.size,
+          models: catalogModels.length,
+          variants: variantRows.length,
+          listings: listingTotal,
+        },
       },
-    },
-    catalog: {
-      makes: [...makes].sort(byKey).map(([id, name]) => ({ id, name })),
-      models: models.map((m) => ({
-        id: m.model.id,
-        makeId: m.model.makeId,
-        name: m.model.name,
-        listingCount: listingCounts.get(m.model.id) ?? 0,
-      })),
-      variants: variantRows,
-    },
-    models,
-  };
+      catalog: {
+        makes: [...makes].sort(byKey).map(([id, name]) => ({ id, name })),
+        models: catalogModels,
+        variants: variantRows,
+      },
+    };
+  });
 }
 
 /**
