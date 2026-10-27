@@ -50,7 +50,7 @@ for await (const file of walk(dist)) {
   for (const [tag] of html.matchAll(/<a\b[^>]*>/g)) {
     if (!/\sdata-tree-src(?:\s|=|\/?>)/i.test(tag)) continue;
     treeLinksChecked += 1;
-    if (!/\sdata-astro-prefetch="false"(?:\s|\/?>)/.test(tag))
+    if (!/\sdata-astro-prefetch\s*=\s*(?:"false"|'false'|false)(?:\s|\/?>)/.test(tag))
       missingTreePrefetch.push(`/${relative(dist, file)}`);
   }
   const css = new Set(
@@ -98,11 +98,16 @@ console.log(
   `bundle data: ${kb(data)} kB raw, catalog.json ${kb(catalog)} kB gzip (not budgeted here)`,
 );
 console.log(`category tree links checked: ${treeLinksChecked}`);
+if (treeLinksChecked === 0) {
+  console.error(
+    "No category tree links (a[data-tree-src]) found; the prefetch guard checked nothing",
+  );
+}
 for (const page of missingTreePrefetch)
   console.error(`Category tree link missing data-astro-prefetch="false": ${page}`);
 if (failed) {
   console.error("Performance budget exceeded; see apps/web/DESIGN.md.");
 }
-if (failed || missingTreePrefetch.length) {
+if (failed || missingTreePrefetch.length || treeLinksChecked === 0) {
   process.exit(1);
 }
