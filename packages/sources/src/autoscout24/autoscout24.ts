@@ -36,7 +36,8 @@
  * counted as many listings as its two top bands (DE used 633,456 = 633,404 + 52), so no
  * listing without a price showed up in a count. Halves [from, mid] and [mid, to] share their
  * middle price, so a price between two whole euros (none seen, but the site does not rule
- * it out) is in one of them; a listing at the shared price is in both and yielded once. No
+ * it out) is in one of them; a listing at the shared price is in both and yielded once (twice
+ * only if its price moves onto the bound after it was yielded from inside a band). No
  * band takes a listing without a price: should one appear, its Condition's recount comes out
  * short and the census fails, naming the deficit, instead of missing it (ADR 0003 has the
  * evidence and the remedy).
@@ -212,21 +213,24 @@ class Harvest {
   /**
    * How many results of `slice` its parts miss, as their counts show: 0 when they reach
    * every one. A listing no part's filter matches (no price, no year in range) shows up as a
-   * deficit; the census cannot see it, so the slice fails the run. Two price halves both
-   * take their shared price, so its count comes off their sum. Counted after the parts are
-   * harvested, the parts between two counts of the slice, and they must reach the higher of
-   * the two: a listing that went before the second count could otherwise stand in for a
-   * missed one. The site gives no per-part counts, so the parts' counts are never taken at
-   * one instant: a part that gained a listing before its count and lost one after can still
-   * hide a missed one. Counted three times before giving up.
+   * deficit; the census cannot see it, so the slice fails the run. Two price bands both
+   * take their shared price, so its count comes off their sum: the higher of one before and
+   * one after theirs, lest a listing that left the shared price between counts count twice.
+   * Counted after the parts are harvested, the parts between two counts of the slice, and
+   * they must reach the higher of the two: a listing that went before the second count could
+   * otherwise stand in for a missed one. The site gives no per-part counts, so the parts'
+   * counts are never taken at one instant: a part that gained a listing before its count and
+   * lost one after can still hide a missed one. Counted three times before giving up.
    */
   private async missed(slice: Slice, parts: Split): Promise<number> {
     let missed = 0;
     for (let attempt = 1; attempt <= 3; attempt++) {
       const before = (await this.page(slice, 1)).total;
+      const shared = parts.shared;
+      const inBoth = shared ? (await this.page(shared, 1)).total : 0;
       let inParts = 0;
       for (const part of parts.slices) inParts += (await this.page(part, 1)).total;
-      if (parts.shared) inParts -= (await this.page(parts.shared, 1)).total;
+      if (shared) inParts -= Math.max(inBoth, (await this.page(shared, 1)).total);
       const after = (await this.page(slice, 1)).total;
       missed = Math.max(before, after) - inParts;
       if (missed <= 0) return 0;
@@ -264,10 +268,9 @@ class Harvest {
       for (const raw of page.listings) {
         const ref = refOf(raw);
         seen.add(ref);
-        if (ref && atBound(slice, raw)) {
-          if (this.yieldedAtBound.has(ref)) continue;
-          this.yieldedAtBound.add(ref);
-        }
+        // Also a listing yielded at the bound, then met inside the band below as its price fell.
+        if (this.yieldedAtBound.has(ref)) continue;
+        if (ref && atBound(slice, raw)) this.yieldedAtBound.add(ref);
         yield toListingSeen(raw, slice.condition, country);
       }
       if (known) return "stopped";

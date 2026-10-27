@@ -539,6 +539,19 @@ describe("autoscout24 source", () => {
     expect(at[0]).toBeLessThan(done("used;price=31250-62500"));
     expect(slices(run)).toContain("used;price=0-31250");
     expect(listings(run)).toHaveLength(COUNTS.new + COUNTS.demo + COUNTS.used);
+    // Still once when its price falls between the two bands' pagings.
+    const lower = (query: URLSearchParams) =>
+      query.get("offer") === "U,J,O" &&
+      query.get("pricefrom") === "0" &&
+      query.get("priceto") === "31250";
+    const fell = await harvest(deFull, source, "full", {}, (cassette) => {
+      bandsFromMakes(atShared)(cassette);
+      editPages(lower, (props) => {
+        for (const l of props.listings) if (l.id === shared) l.price.priceRaw = 31_249;
+      })(cassette);
+    });
+    expect(fell.error).toBeUndefined();
+    expect(listings(fell).filter((l) => l.ref === shared)).toHaveLength(1);
   });
 
   it("without makes, a listing priced between two whole euros is harvested once and the census completes", async () => {
@@ -726,6 +739,19 @@ describe("autoscout24 source", () => {
       counted(cassette);
     });
     expect(String(twice.error)).toMatch(unpriced);
+    // Nor when it reaches the shared price while the bands are counted: the shared price's
+    // count after them holds it.
+    const topOnly = (query: URLSearchParams) =>
+      !query.has("mmmv") &&
+      query.get("offer") === "U,J,O" &&
+      query.get("pricefrom") === "1000000" &&
+      query.get("priceto") === "1000000";
+    const left = await harvest(deFull, source, "full", {}, (cassette) => {
+      bandsFromMakes(atTop)(cassette);
+      counted(cassette);
+      countsInTurn(topOnly, [0, 1])(cassette);
+    });
+    expect(String(left.error)).toMatch(unpriced);
   });
 
   it("a split slice is recounted after its parts until its count holds still", async () => {
