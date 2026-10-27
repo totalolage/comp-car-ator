@@ -148,24 +148,34 @@ describe("harvest job", () => {
         out: join(dir, "sauto.ndjson"),
         clock: () => starts.shift() ?? new Date(),
       });
+      // Each log's census outcome, or why recording it failed.
+      const recorded: string[] = [];
       for (const { mode } of reports)
-        await recordLog(ledger, join(dir, `sauto.${mode}.ndjson`)).catch(() => {});
-      return reports;
+        recorded.push(
+          await recordLog(ledger, join(dir, `sauto.${mode}.ndjson`)).then(
+            (summary) => summary.census,
+            (error) => String(error),
+          ),
+        );
+      return { reports, recorded };
     };
 
     const first = await day("2026-10-26");
-    expect(first.map((r) => r.error)).toEqual([
+    expect(first.reports.map((r) => r.error)).toEqual([
       null,
       "Error: The operation was aborted due to timeout",
     ]);
+    expect(first.recorded).toEqual(["not-full", expect.stringMatching(/harvest failed/)]);
     posted.push({ ref: "a2", slice: "A" });
     cutOff = null;
     const second = await day("2026-10-27");
     // The full Run skips slice A (b1 and SliceDone B), so only the incremental Run sees a2.
-    expect(second.map((r) => [r.mode, r.observations, r.error])).toEqual([
+    expect(second.reports.map((r) => [r.mode, r.observations, r.error])).toEqual([
       ["incremental", 1, null],
       ["full", 2, null],
     ]);
+    // The census completes, and a2, seen after its first full Run, is not missed.
+    expect(second.recorded).toEqual(["not-full", "applied"]);
     expect(ledger.checkpoint("sauto").isKnown("a2")).toBe(true);
     ledger.close();
   });

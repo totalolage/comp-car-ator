@@ -31,12 +31,12 @@
  *
  * Research notes: scrape-access.md (AutoScout24 rows). Filters checked against the live site
  * on 2026-10-25 (offer types partition the results) and 2026-10-27 (price, recorded in
- * fixtures/price-filter.cassette.json): the price filter takes whole euros, both bounds
- * inclusive, and a fractional bound matches nothing; prices are whole euros, none is 0, and
- * each Condition counts as many listings as its two top bands do (DE used 633,456 = 633,404 +
- * 52), so a listing without a price is in no count. Bands [from, mid] and [mid + 1, to] thus
- * take every price once. A listing no band takes (a price between two whole euros, or none)
- * would still show up as a recount deficit and fail the census.
+ * fixtures/price-filter.cassette.json): both price bounds are inclusive, a fractional bound
+ * matches nothing, every price seen was in whole euros and none was 0, and each Condition
+ * counted as many listings as its two top bands (DE used 633,456 = 633,404 + 52), so no
+ * listing without a price showed up in a count. Bands [from, mid] and [mid + 1, to] then take
+ * every whole-euro price once. A listing no band takes (a fractional price or none, should
+ * one appear) shows up as a recount deficit and fails the census instead of going unseen.
  */
 import type {
   Condition,

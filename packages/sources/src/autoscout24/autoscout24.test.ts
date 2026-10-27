@@ -490,7 +490,7 @@ describe("autoscout24 source", () => {
       const held = expected ? prices.filter((price) => takes(price, from, to)).length : 0;
       expect([query.toString(), props.numberOfResults]).toEqual([query.toString(), held]);
     }
-    // Each Condition counts as many listings as its two top bands: none has no price.
+    // Each Condition counted as many listings as its two top bands: no unpriced one counted.
     const roots = pages.filter((page) => !page.query.has("mmmv") && !page.query.has("pricefrom"));
     expect(roots).toHaveLength(4);
     for (const root of roots) {
@@ -538,7 +538,7 @@ describe("autoscout24 source", () => {
   });
 
   it("without makes, a listing priced between two bands' whole euros fails the census", async () => {
-    // None was seen live and the filter takes no fractional bound, but if one turned up, the
+    // None was seen live, and the filter takes no fractional bound. Should one turn up, the
     // bands either side miss it, and the recount of the band they split finds it short.
     const fractional = (offer: string, listings: RawListing[]) => {
       if (offer !== "U,J,O") return listings;
@@ -655,8 +655,8 @@ describe("autoscout24 source", () => {
   });
 
   it("a full run fails when a split slice's parts miss even one of its results", async () => {
-    // A listing without a price: the Condition counts it, no price band takes it. (Live, every
-    // listing a Condition counts has a price; see the price-filter test.)
+    // A listing without a price: the Condition counts it, no price band takes it. (In the
+    // recorded counts no such listing showed up; see the price-filter test.)
     const counted = countsInTurn(usedEverywhere, [COUNTS.used + 1]);
     const noPrice = (offer: string, listings: RawListing[]) => {
       if (offer !== "U,J,O") return listings;
