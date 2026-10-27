@@ -9,11 +9,15 @@
  *   plan --store S [--date ISO] [--source a,b --mode m]   {"base": tag or "", "harvests": [...]}
  *   restore --store S --ledger ledger.sqlite [--base tag] [--init]
  *           (--base "" expects no data release yet: the first run, with --init)
- *   harvest --source cnb --mode incremental|full --ledger ledger.sqlite --out cnb.ndjson
+ *   harvest --source cnb --mode incremental|full|incremental,full --ledger ledger.sqlite --out cnb.ndjson
  *           [--cache dir/] [--max-minutes N]   (a harvest past N minutes stops as failed)
+ *           (incremental,full: an incremental Run of at most an hour, then the full Run for the
+ *           rest of N, logged to cnb.incremental.ndjson and cnb.full.ndjson)
  *
- * Live Http: --cache keeps raw responses on disk (use a per-run directory); the T2 stealth
- * browser is opt-in with CCA_HTTP_BROWSER=patchright|camoufox (ADR 0005).
+ * Live Http: --cache keeps raw responses on disk (use a per-run directory) and serves every
+ * repeated request from it, so a full run's re-reads of a slice never reach the site: leave it
+ * off for scheduled harvests (ADR 0014). The T2 stealth browser is opt-in with
+ * CCA_HTTP_BROWSER=patchright|camoufox (ADR 0005).
  *   release --store S --runs dir/ --base tag|"" [--work dir/] [--keep 14] [--commit sha] [--init]
  *           (--base is the plan's base, "" on the first run; prints the new tag)
  *   import --ledger ledger.sqlite --observations file.json
@@ -37,7 +41,7 @@ import {
 } from "./ingest.ts";
 import { releaseStoreFrom } from "./release-store.ts";
 import { harvestToLog } from "./run-log.ts";
-import { plan } from "./schedule.ts";
+import { type HarvestModes, plan } from "./schedule.ts";
 
 const log: Logger = {
   info: (message, data) => console.error(message, data ? JSON.stringify(data) : ""),
@@ -86,6 +90,14 @@ function harvestMode(): HarvestMode {
   return mode;
 }
 
+/** --mode for a harvest job: one mode, or "incremental,full" (schedule.ts). */
+function harvestModes(): HarvestModes {
+  return values.mode === "incremental,full" ? values.mode : harvestMode();
+}
+
+/** The incremental Run before a full one stops after this long, leaving the rest to the full. */
+const CATCH_UP_MINUTES = 60;
+
 function knownSource(id: string) {
   const factory = sources[id];
   if (!factory) throw new Error(`Unknown source ${id}; known: ${Object.keys(sources).join(", ")}`);
@@ -127,7 +139,7 @@ switch (command) {
     // Explicit sources (a manual dispatch) run in the given mode; otherwise the schedule decides.
     const base = await findRelease(releaseStoreFrom(required("store"), TAG_PREFIX));
     const harvests = values.source
-      ? values.source.split(",").map((id) => ({ source: knownSource(id).id, mode: harvestMode() }))
+      ? values.source.split(",").map((id) => ({ source: knownSource(id).id, mode: harvestModes() }))
       : plan(
           Object.keys(sources),
           values.date ? new Date(values.date) : now,
@@ -150,20 +162,33 @@ switch (command) {
     const http = liveHttp();
     const source = knownSource(required("source"));
     const minutes = Number(values["max-minutes"] ?? 0);
-    const report = await harvestToLog({
-      ledger,
-      source,
-      http,
-      mode: harvestMode(),
-      now,
-      out: required("out"),
-      log,
-      signal: minutes > 0 ? AbortSignal.timeout(minutes * 60_000) : undefined,
-    });
+    const deadline = minutes > 0 ? AbortSignal.timeout(minutes * 60_000) : undefined;
+    const out = required("out");
+    const modes = harvestModes();
+    let failed = false;
+    // Each mode is its own Run with its own start; the full one runs even when the
+    // incremental one failed, since its Census progress does not depend on it.
+    for (const mode of modes === "incremental,full" ? (["incremental", "full"] as const) : [modes]) {
+      const catchUp = modes !== mode && mode === "incremental";
+      const signals = [deadline, catchUp ? AbortSignal.timeout(CATCH_UP_MINUTES * 60_000) : undefined];
+      const report = await harvestToLog({
+        ledger,
+        source,
+        http,
+        mode,
+        now: new Date(),
+        out: modes === mode ? out : out.replace(/(\.ndjson)?$/, `.${mode}.ndjson`),
+        log,
+        signal: AbortSignal.any(signals.filter((s) => s !== undefined)),
+      });
+      log.info(`${source.id} ${mode} harvest ${report.error ? "failed" : "complete"}`, {
+        ...report,
+      });
+      failed ||= report.error !== null;
+    }
     await http.close();
     ledger.close();
-    log.info(`${source.id} harvest ${report.error ? "failed" : "complete"}`, { ...report });
-    process.exitCode = report.error ? 1 : 0;
+    process.exitCode = failed ? 1 : 0;
     break;
   }
   case "release": {
