@@ -375,6 +375,63 @@ describe("publish: price statistics", () => {
     expect(used?.count).toBe(12);
     expect(used?.priceCzk?.count).toBe(11);
   });
+
+  it("gives no quantiles under 3 values, in the catalog as on the model page", async () => {
+    ledger = newLedger();
+    const golf = (ref: string, amount: number): ListingSeen =>
+      tiguan(ref, amount, {
+        vehicle: {
+          make: "VW",
+          model: "Golf",
+          fuel: "petrol",
+          powerKw: 110,
+          transmission: "manual",
+        },
+      });
+    await record("cnb", "2026-10-20", [eurRate]);
+    await record("sauto", "2026-10-20", [
+      tiguanEntry,
+      golfEntry,
+      // A mispriced Listing alone in its cohort: no fences, so the outlier rule keeps it.
+      golf("lone", 10_830),
+      // Three Czech prices, one odometer reading among them.
+      tiguan("cz0", 600_000),
+      tiguan("cz1", 620_000, { odometerKm: undefined }),
+      tiguan("cz2", 640_000, { odometerKm: undefined }),
+    ]);
+    await record("autoscout24-de", "2026-10-20", [
+      tiguan("de0", 20_000, { market: "DE", odometerKm: undefined }),
+      tiguan("de1", 22_000, { market: "DE", odometerKm: undefined }),
+    ]);
+    const catalog = await openCatalog(memoryLoader(publish(ledger, { now: at("2026-10-24") })));
+
+    // Sorted by used price, the Golf comes last however cheap its one Listing.
+    const sorted = catalog.query({ sort: { key: "usedPriceCzk", dir: "asc" } }).rows;
+    expect(sorted.map((v) => [v.model, v.used?.count, v.used?.priceCzk?.median])).toEqual([
+      ["Tiguan", 5, 600_000],
+      ["Golf", 1, undefined],
+    ]);
+    const [tiguanRow, golfRow] = sorted;
+    expect(golfRow?.used).toMatchObject({ priceCzk: null, landedCzk: null, byMarket: {} });
+    // The pooled sample has 5 prices and landed prices, but Germany only 2 and odometers 1.
+    expect(tiguanRow?.used).toMatchObject({
+      priceCzk: { count: 5 },
+      landedCzk: { count: 5 },
+      odometerKm: null,
+    });
+    expect(Object.keys(tiguanRow?.used?.byMarket ?? {})).toEqual(["CZ"]);
+    // Still findable by its price.
+    const cheap = catalog.query({ filters: { usedPriceCzk: { max: 20_000 } } }).rows;
+    expect(cheap.map((v) => v.model)).toEqual(["Golf"]);
+
+    const golfView = await catalog.model("volkswagen/golf");
+    expect(golfView?.stats).toEqual([]);
+    expect(golfView?.listings().rows.map((l) => [l.id, l.excluded ?? false])).toEqual([
+      ["sauto:lone", false],
+    ]);
+    const tiguanStats = (await catalog.model("volkswagen/tiguan"))?.stats ?? [];
+    expect(new Set(tiguanStats.map((c) => c.market))).toEqual(new Set(["CZ"]));
+  });
 });
 
 describe("publish: model files", () => {

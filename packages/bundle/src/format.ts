@@ -92,14 +92,15 @@ export interface UsedStats {
   /** Active used Listings matched to this Variant, outliers included (availability). */
   count: number;
   /**
-   * Asking price in CZK over the Listings the outlier rule keeps; null when it keeps none.
-   * Every statistic below counts only kept Listings.
+   * Asking price in CZK over the Listings the outlier rule keeps; null when it keeps fewer
+   * than 3, as for model-file cells (ADR 0012). Every statistic below counts only kept
+   * Listings, and each is null (or left out) under 3 values of its own.
    */
   priceCzk: Quantiles | null;
   /** Landed CZK (docs: CONTEXT.md "Landed price"); only listings with an estimate count. */
   landedCzk: Quantiles | null;
   odometerKm: Quantiles | null;
-  /** Asking price in CZK per Market. */
+  /** Asking price in CZK per Market; a Market with fewer than 3 kept Listings is left out. */
   byMarket: Partial<Record<Market, Quantiles>>;
   years: { min: number; max: number } | null;
   markets: Partial<Record<Market, number>>;

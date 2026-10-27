@@ -86,7 +86,8 @@ describe("ingest pipeline", () => {
     expect(catalog.manifest.fx.EUR).toEqual({ czkPerUnit: 24.335, validFor: "2026-10-23" });
     const result = catalog.query({ filters: { market: ["DE"] } });
     expect(result.rows.map((r) => r.id)).toEqual(["volkswagen/golf/mk8/hatchback-petrol-110kw"]);
-    expect(result.rows[0]?.used?.priceCzk?.median).toBe(365_025);
+    // One Listing is no median (ADR 0012); the Listing row below carries the conversion.
+    expect(result.rows[0]?.used).toMatchObject({ count: 1, priceCzk: null });
 
     const [listing] = (await catalog.model("volkswagen/golf"))?.listings().rows ?? [];
     expect(listing?.priceCzk).toBe(365_025);
