@@ -463,6 +463,9 @@ describe("rsv source", () => {
       ["BMW", "RADA 3", "BMW|3 Series"],
       ["BMW", "3 ER REIHE", "BMW|3 Series"],
       ["BMW", "M 135 I", "BMW|1 Series"],
+      // The 1 M is its own model; "M SPORT" is a 1 Series package.
+      ["BMW", "1 M COUPE", "BMW|1 M"],
+      ["BMW", "1 M SPORT", "BMW|1 Series"],
       ["BMW", "X 5", "BMW|X5"],
       ["BMW", "X5 M", "BMW|X5 M"],
       ["BMW", "X3 20D", "BMW|X3"],

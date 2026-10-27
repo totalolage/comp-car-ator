@@ -311,6 +311,10 @@ function bmw(tokens: string[]): string | undefined {
     tokens.shift();
   }
   const first = tokens[0] ?? "";
+  // "1 M COUPE" is the 1 M, its own Model; "1 M SPORT" is a 1 Series with the M package.
+  if (first === "1" && tokens[1] === "M" && !/^(?:SPORT|PA[CK])/.test(tokens[2] ?? "")) {
+    return "1 M";
+  }
   const series =
     /^M?([1-8])\d{2}[A-Z]{0,3}$/.exec(first) ?? /^([1-8])(?:ER|-?SERIES?)?$/.exec(first);
   if (series) return `${series[1]} Series`;
