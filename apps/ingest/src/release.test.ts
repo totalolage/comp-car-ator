@@ -243,7 +243,8 @@ function census(slices: Record<string, string[]>, failIn?: string): Source {
           yield {
             kind: "ListingSeen",
             ref,
-            url: `https://www.autoscout24.de/angebote/${ref}`,
+            // A "bad" ref has no URL, which the Ledger rejects.
+            url: ref.startsWith("bad") ? "" : `https://www.autoscout24.de/angebote/${ref}`,
             market: "DE",
             condition: "used",
             vehicle: { make: "VW", model: "Golf" },
@@ -324,7 +325,7 @@ describe.each([
 
     const ledger = await restored(first.tag);
     expect(ledger.snapshot().fx.EUR?.czkPerUnit).toBe(24.335);
-    const expectedBundle = publish(ledger, { now: SAMPLE.now });
+    const expectedBundle = new Map(publish(ledger, { now: SAMPLE.now }));
     ledger.close();
     await h.store.download(first.tag, ASSETS.bundle, join(dir, "bundle.json.gz"));
     const bundle = unpackBundle(await readFile(join(dir, "bundle.json.gz")));
@@ -361,6 +362,22 @@ describe.each([
     expect(ledger.checkpoint("autoscout24-de", "de").lastRunAt).toEqual(day("2026-10-11"));
     expect([...ledger.snapshot().listings()].map((l) => l.ref).sort()).toEqual(["a1", "a2", "b1"]);
     ledger.close();
+  });
+
+  it("refuses run logs that started before their base was released", async () => {
+    const first = await ingestDay(day("2026-10-10"), [census({ A: ["a1"] })], true);
+    await expect(ingestDay(day("2026-10-09"), [census({ A: ["a1"] })])).rejects.toThrow(
+      /before data-20261010-030000 was released; these run logs are stale/,
+    );
+    expect((await findRelease(h.store))?.tag).toBe(first.tag);
+  });
+
+  it("counts a complete Census with rejections as taken, so it is not retried daily", async () => {
+    const run = await ingestDay(day("2026-10-11"), [census({ A: ["a1", "bad1"] })], true);
+    expect(run.runs[0]?.summary).toMatchObject({ census: "skipped-rejections" });
+    expect((await findRelease(h.store))?.manifest.lastCensus).toEqual({
+      "autoscout24-de": "2026-10-11T03:00:00.000Z",
+    });
   });
 
   it("leaves the previous release as the latest when an upload fails midway", async () => {

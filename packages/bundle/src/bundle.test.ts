@@ -1,6 +1,9 @@
+import { Writable } from "node:stream";
+import { gunzipSync, gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import {
   type BundleContent,
+  type BundleFile,
   BundleFormatError,
   encodeBundle,
   type ListingRow,
@@ -214,13 +217,91 @@ describe("Bundle", () => {
 });
 
 describe("Bundle archive", () => {
-  it("packs a Bundle into one file and unpacks it unchanged", () => {
+  /** Packs into memory; `written` counts the compressed chunks that reached the target. */
+  async function pack(files: Iterable<BundleFile>, written = { chunks: 0 }): Promise<Buffer> {
+    const chunks: Buffer[] = [];
+    const to = new Writable({
+      write(chunk: Buffer, _encoding, done) {
+        chunks.push(chunk);
+        written.chunks++;
+        done();
+      },
+    });
+    await packBundle(files, to);
+    return Buffer.concat(chunks);
+  }
+
+  it("packs a Bundle into one file and unpacks it unchanged", async () => {
     const files = encodeBundle(content);
-    expect(unpackBundle(packBundle(files))).toEqual(files);
+    expect(unpackBundle(await pack(files))).toEqual(files);
   });
 
-  it("refuses an archive that would write outside the Bundle", () => {
-    const evil = packBundle(new Map([["../../etc/passwd", "x"]]));
+  it("stays one JSON document, and reads the single-line archives written before", async () => {
+    const files = encodeBundle(content);
+    const archive = await pack(files);
+    expect(JSON.parse(gunzipSync(archive).toString("utf8"))).toEqual({
+      bundleArchive: 1,
+      files: Object.fromEntries(files),
+    });
+    const legacy = gzipSync(JSON.stringify({ bundleArchive: 1, files: Object.fromEntries(files) }));
+    expect(unpackBundle(legacy)).toEqual(files);
+    expect(unpackBundle(await pack([]))).toEqual(new Map());
+  });
+
+  it("refuses a truncated archive", async () => {
+    const text = gunzipSync(await pack(encodeBundle(content))).toString("utf8");
+    const cut = text.slice(0, text.lastIndexOf("\n"));
+    expect(() => unpackBundle(gzipSync(cut))).toThrow(/truncated/);
+  });
+
+  it("refuses an archive whose lines are not one file each", async () => {
+    const text = gunzipSync(await pack(encodeBundle(content))).toString("utf8");
+    const lines = text.split("\n");
+    const joined = [lines[0], `${lines[1]}${lines[2]}`, ...lines.slice(3)].join("\n");
+    expect(() => unpackBundle(gzipSync(joined))).toThrow(/malformed/);
+    const noComma = text.replace("\n,", "\n");
+    expect(() => unpackBundle(gzipSync(noComma))).toThrow(/malformed/);
+    expect(() => unpackBundle(gzipSync(`${text}\n`))).toThrow();
+  });
+
+  it("streams: files are compressed as they come, not gathered first", async () => {
+    const written = { chunks: 0 };
+    const seenAt: number[] = [];
+    function* files(): Generator<BundleFile> {
+      for (let i = 0; i < 64; i++) {
+        seenAt.push(written.chunks);
+        // ~80 KB of numbers: gzip shrinks it, but every file still adds output.
+        yield [
+          `models/m${i}.json`,
+          Array.from({ length: 16_384 }, (_, j) => (i * j) % 9973).join(),
+        ];
+      }
+    }
+    const archive = await pack(files(), written);
+    expect(unpackBundle(archive).size).toBe(64);
+    // Compressed output reached the target while files were still being produced.
+    expect(seenAt.at(-1)).toBeGreaterThan(0);
+  });
+
+  it("rejects when the files fail midway", async () => {
+    function* files(): Generator<BundleFile> {
+      yield ["manifest.json", "{}"];
+      throw new Error("Ledger closed");
+    }
+    await expect(pack(files())).rejects.toThrow("Ledger closed");
+  });
+
+  it("rejects when the target fails", async () => {
+    const to = new Writable({
+      write(_chunk, _encoding, done) {
+        done(new Error("disk full"));
+      },
+    });
+    await expect(packBundle(encodeBundle(content), to)).rejects.toThrow("disk full");
+  });
+
+  it("refuses an archive that would write outside the Bundle", async () => {
+    const evil = await pack(new Map([["../../etc/passwd", "x"]]));
     expect(() => unpackBundle(evil)).toThrow(/invalid file/);
   });
 });

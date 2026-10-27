@@ -11,6 +11,9 @@ import {
 /** Bundle files by relative path ("manifest.json", "models/skoda/octavia.json"). */
 export type BundleFiles = Map<string, string>;
 
+/** One Bundle file: relative path and text. */
+export type BundleFile = readonly [path: string, text: string];
+
 /**
  * Where the reader gets file text from: the Loader seam (fetch in the browser, the file
  * system at build time and in Node, memory in tests). Resolves with the file's text, or
@@ -38,22 +41,31 @@ type EncodedModel = Omit<ModelFile, "listings" | "stats"> & { listings: Table; s
 
 /** Writer: encodes decoded documents into Bundle files. Pure; persisting them is the caller's job. */
 export function encodeBundle(content: BundleContent): BundleFiles {
-  const files: BundleFiles = new Map();
-  files.set(MANIFEST, json(content.manifest));
-  const { variants, ...catalog } = content.catalog;
-  files.set(
-    CATALOG,
-    json({ ...catalog, variants: encodeTable(variants) } satisfies EncodedCatalog),
-  );
-  for (const { listings, stats, ...model } of content.models) {
+  return new Map(encodeBundleFiles(content.models, () => content));
+}
+
+/**
+ * Streaming writer, for Bundles too large to hold decoded at once: encodes each model file as
+ * `models` yields it, then the catalog and manifest, which `index` returns once every model
+ * is through (they summarise the models). Lazy: nothing is read before the first file is
+ * asked for. Same files as `encodeBundle`.
+ */
+export function* encodeBundleFiles(
+  models: Iterable<ModelFile>,
+  index: () => Omit<BundleContent, "models">,
+): Generator<BundleFile> {
+  for (const { listings, stats, ...model } of models) {
     const encoded: EncodedModel = {
       ...model,
       listings: encodeTable(listings),
       stats: encodeTable(stats),
     };
-    files.set(modelPath(model.model.id), json(encoded));
+    yield [modelPath(model.model.id), json(encoded)];
   }
-  return files;
+  const { manifest, catalog } = index();
+  const { variants, ...rest } = catalog;
+  yield [CATALOG, json({ ...rest, variants: encodeTable(variants) } satisfies EncodedCatalog)];
+  yield [MANIFEST, json(manifest)];
 }
 
 export interface BundleReader {
@@ -105,8 +117,9 @@ export async function openBundle(loader: Loader): Promise<BundleReader> {
 }
 
 /** Loader over in-memory files, e.g. straight from `encodeBundle` in tests. */
-export function memoryLoader(files: BundleFiles): Loader {
-  return async (path) => files.get(path) ?? null;
+export function memoryLoader(files: Iterable<BundleFile>): Loader {
+  const byPath = new Map(files);
+  return async (path) => byPath.get(path) ?? null;
 }
 
 /**
