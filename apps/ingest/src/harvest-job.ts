@@ -4,7 +4,7 @@
  */
 import type { Http } from "@cca/http";
 import type { Ledger } from "@cca/ledger";
-import type { Logger, Source } from "@cca/sources";
+import type { HarvestMode, Logger, Source } from "@cca/sources";
 import { type HarvestReport, harvestToLog } from "./run-log.ts";
 import type { HarvestModes } from "./schedule.ts";
 
@@ -36,11 +36,11 @@ export interface HarvestJobOptions {
  */
 export async function harvestJob(options: HarvestJobOptions): Promise<HarvestReport[]> {
   const { modes, out, signal, clock = () => new Date(), catchUpMs = CATCH_UP_MS } = options;
-  const runs =
+  const runs: { mode: HarvestMode; out: string; limit?: number }[] =
     modes === "incremental,full"
       ? [
-          { mode: "incremental" as const, out: logOf(out, "incremental"), limit: catchUpMs },
-          { mode: "full" as const, out: logOf(out, "full") },
+          { mode: "incremental", out: logOf(out, "incremental"), limit: catchUpMs },
+          { mode: "full", out: logOf(out, "full") },
         ]
       : [{ mode: modes, out }];
   const reports: HarvestReport[] = [];
