@@ -88,12 +88,19 @@ export const MODEL_ALIASES: Readonly<Record<string, ModelAliases>> = {
       `${n}-reihe`,
       ...chassis,
     ]),
+    // "M135i", "M550d": M Performance trims of their series. The M cars ("1 M", "M3", "X5 M")
+    // are their own Models: a listing naming one never falls back to the series.
     badge: { pattern: /^m?([1-8])\d\d[a-z]{0,2}$/, suffix: "-series" },
+    submodels: {
+      "1-series": ["m"],
+      ...Object.fromEntries(["2", "3", "4", "5", "6", "8"].map((n) => [`${n}-series`, [`m${n}`]])),
+      ...Object.fromEntries(["x3", "x4", "x5", "x6", "z3", "z4"].map((x) => [x, ["m"]])),
+    },
   },
   // The catalog names DS models by number ("DS 7 Crossback" → 7 Crossback).
   ds: { badge: { pattern: /^ds-?(\d.*)$/, suffix: "" } },
-  // Porsche's type codes stand for the 911 they approve ("991" is a 911 of the 991 type). The
-  // code claims no generation (bare numbers never do): year and power place the listing.
+  // Porsche's type codes stand for the 911 they approve ("991" is a 911 of the 991 type), and
+  // each claims its generation (CHASSIS_CODES): the register keys the 911's generations by them.
   porsche: { groups: [["911", "996", "997", "991", "992"]] },
   "land-rover": {
     submodels: { "range-rover": ["sport", "velar", "evoque"], discovery: ["sport"] },
@@ -126,6 +133,8 @@ export const CHASSIS_CODES: Readonly<Record<string, RegExp>> = {
   cupra: VW_GROUP_CODE,
   audi: new RegExp(`^(?:${VW_GROUP}|[b-d]\\d)$`, "i"),
   bmw: /^[efgu]\d\d$/i,
+  // The 911's type codes, the register's generation slugs for it.
+  porsche: /^(?:964|99[1-7])$/,
   "mercedes-benz": /^[acrsvwx]\d{3}$/i,
   "land-rover": /^l\d{3}$/i,
   hyundai: /^[a-z]{2}\d$/i,

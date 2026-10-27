@@ -143,7 +143,8 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
     model.generationBodies.set(variant.generationId, bodies.add(variant.body));
     if (!model.generationWords.has(variant.generationId)) {
       const named = GENERATION_NAMES[makeKey]?.[modelKey]?.[variant.generation.slug] ?? [];
-      model.generationWords.set(variant.generationId, [...generationWords(variant), ...named]);
+      const words = generationWords(variant, CHASSIS_CODES[makeKey]);
+      model.generationWords.set(variant.generationId, [...words, ...named]);
     }
   }
 
@@ -300,12 +301,13 @@ function findModel(
 /**
  * Words that name a generation: its slug and the words of its name that are not the model's
  * name ("Octavia IV" → "IV"). Roman numerals and single letters must match in upper case
- * ("iV" is Škoda's plug-in badge, not generation IV); bare numbers never name a generation.
+ * ("iV" is Škoda's plug-in badge, not generation IV); bare numbers name a generation only
+ * when they are one of the make's chassis codes (the Porsche 911's "991").
  */
-function generationWords(variant: CatalogVariant): string[] {
+function generationWords(variant: CatalogVariant, chassis: RegExp | undefined): string[] {
   const modelWords = new Set(split(variant.model).map((w) => w.toLowerCase()));
   const words = [variant.generation.slug, ...split(variant.generation.name)].filter(
-    (w) => !/^\d+$/.test(w) && !modelWords.has(w.toLowerCase()),
+    (w) => (!/^\d+$/.test(w) || chassis?.test(w) === true) && !modelWords.has(w.toLowerCase()),
   );
   return [
     ...new Set(

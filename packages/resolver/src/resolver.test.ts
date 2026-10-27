@@ -972,9 +972,7 @@ describe("Resolver", () => {
         const r = register.resolve({ make, model });
         return r.status === "unmatched" ? r.reason : r.modelId;
       };
-      for (const model of ["1", "1 M Coupé", "M135i"]) {
-        expect(modelOf("BMW", model)).toBe("bmw/1-series");
-      }
+      for (const model of ["1", "1er", "M135i"]) expect(modelOf("BMW", model)).toBe("bmw/1-series");
       for (const model of ["5", "M550d", "m550d"])
         expect(modelOf("BMW", model)).toBe("bmw/5-series");
       for (const model of ["DS7", "DS 7", "7"])
@@ -986,6 +984,74 @@ describe("Resolver", () => {
       // A make's lone letter or its other brand names no model.
       expect(modelOf("BMW", "M")).toBe("unknown-model");
       expect(modelOf("DS", "DS")).toBe("unknown-model");
+    });
+
+    it("never files a BMW M car under the series it is built on", () => {
+      const gen = { slug: "t1", name: "T1", from: 2015 };
+      const series = [
+        ...variants("BMW", "1 Series", gen, [{ body: "coupe", fuel: "petrol", powerKw: 250 }]),
+        ...variants("BMW", "3 Series", gen, [{ body: "sedan", fuel: "petrol", powerKw: 353 }]),
+        ...variants("BMW", "X5", gen, [{ body: "suv", fuel: "petrol", powerKw: 460 }]),
+      ];
+      const power = { fuel: "petrol", powerKw: 250 } as const;
+      const without = createResolver(series);
+      for (const [model, powerKw] of [
+        ["1 M Coupé", 250],
+        ["1er M", 250],
+        ["Řada 3 M3", 353],
+        ["X5 M Competition", 460],
+      ] as const) {
+        expect(without.resolve({ make: "BMW", model, fuel: "petrol", powerKw })).toEqual({
+          status: "unmatched",
+          reason: "unknown-model",
+        });
+      }
+      // M Performance badges are trims of the series.
+      expect(
+        without.resolve({ make: "BMW", model: "X5 M50i", fuel: "petrol", powerKw: 460 }),
+      ).toMatchObject({ status: "matched", modelId: "bmw/x5" });
+
+      const withM = createResolver([
+        ...series,
+        ...variants("BMW", "1 M", gen, [{ body: "coupe", fuel: "petrol", powerKw: 250 }]),
+      ]);
+      expect(withM.resolve({ make: "BMW", model: "1 M Coupé", ...power })).toMatchObject({
+        status: "matched",
+        variantId: "bmw/1-m/t1/coupe-petrol-250kw",
+      });
+    });
+
+    it("places a Porsche 911 type code in its own generation", () => {
+      const at = (gens: readonly { slug: string; name: string; from: number; to?: number }[]) =>
+        createResolver(
+          gens.flatMap((g) =>
+            variants("Porsche", "911", g, [{ body: "coupe", fuel: "petrol", powerKw: 283 }]),
+          ),
+        );
+      const g997 = { slug: "997", name: "911 997", from: 2004, to: 2013 };
+      const g991 = { slug: "991", name: "911 991", from: 2011, to: 2019 };
+      const car = { make: "Porsche", fuel: "petrol", powerKw: 283 } as const;
+      // A code the catalog lacks is no evidence for the generation it has.
+      expect(at([g997]).resolve({ ...car, model: "991" })).toMatchObject({
+        status: "model",
+        modelId: "porsche/911",
+      });
+      expect(at([g997, g991]).resolve({ ...car, model: "991" })).toMatchObject({
+        status: "matched",
+        variantId: "porsche/911/991/coupe-petrol-283kw",
+      });
+      // In the trim too, where the years alone would not decide.
+      expect(
+        at([g997, g991]).resolve({
+          ...car,
+          model: "911",
+          trim: "Carrera S (997)",
+          firstRegistration: { year: 2012 },
+        }),
+      ).toMatchObject({ status: "matched", variantId: "porsche/911/997/coupe-petrol-283kw" });
+      expect(at([g997]).resolve({ ...car, model: "911", trim: "993 Carrera" })).toMatchObject({
+        status: "model",
+      });
     });
   });
 
