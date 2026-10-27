@@ -288,12 +288,12 @@ function findModel(
   models: Map<string, Model>,
   text: string,
 ): { model: Model; name: string } | undefined {
-  // Package words are blanked, not removed, so the name keeps its place in `text`.
+  const folded = fold(text);
+  // Package words are blanked, not removed, so offsets stay those of `text` and the name
+  // returned keeps them ("M Sport X5" is three words before the trim).
   const packages = MODEL_ALIASES[makeKey]?.packages;
-  const folded = packages
-    ? fold(text).replace(packages, (words) => " ".repeat(words.length))
-    : fold(text);
-  const spans = [...folded.matchAll(/[A-Za-z0-9]+/g)];
+  const read = packages ? folded.replace(packages, (words) => " ".repeat(words.length)) : folded;
+  const spans = [...read.matchAll(/[A-Za-z0-9]+/g)];
   const tokens = spans.map(([token]) => token.toLowerCase());
   for (let length = tokens.length; length > 0; length--) {
     const key = modelKeyOf(makeKey, tokens.slice(0, length).join("-"));

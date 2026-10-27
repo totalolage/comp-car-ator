@@ -192,8 +192,15 @@ const TYPOS: Record<string, Record<string, string>> = {
  * caller folds only those it knows to be versions of a shorter model, and keeps the rest apart.
  */
 export function modelName(make: string, raw: string): string | undefined {
+  const words = modelWords(raw, LISTS_MODELS.has(slugify(make)));
+  const name = parsedName(make, words.filter(isWord));
+  return name && withPunctuation(name, words);
+}
+
+/** modelName over the name's words, punctuation left out so positions count words only. */
+function parsedName(make: string, words: string[]): string | undefined {
   const makeSlug = slugify(make);
-  const tokens = modelTokens(raw, LISTS_MODELS.has(makeSlug)).map((t) => TYPOS[makeSlug]?.[t] ?? t);
+  const tokens = words.map((t) => TYPOS[makeSlug]?.[t] ?? t);
   // Some rows repeat the make ("ŠKODA OCTAVIA", "LYNK & CO 01"), or glue it onto a model
   // number ("MAZDA2", "JAECOO7") where the make names models by number.
   const prefix = (n: number) => slugify(tokens.slice(0, n).join(" "));
@@ -250,28 +257,55 @@ export function modelName(make: string, raw: string): string | undefined {
  * alternative names after the first.
  */
 function modelTokens(raw: string, keepList = false): string[] {
+  return modelWords(raw, keepList).filter(isWord);
+}
+
+/** Punctuation alone (".", "&") names nothing and would mint an empty id slug. */
+function isWord(token: string): boolean {
+  return slugify(token) !== "";
+}
+
+/**
+ * "Town Country" → "Town & Country": the punctuation `words` hold between two consecutive
+ * words of `name`. A name whose words are not consecutive words of the text ("3 Series",
+ * "Q4 e-tron" of "Q4 40 E-TRON") stays as it is.
+ */
+function withPunctuation(name: string, words: string[]): string {
+  const [head, ...rest] = name.split(" ");
+  let i = words.findIndex((w) => slugify(w) === slugify(head as string));
+  if (i < 0) return name;
+  const out = [head];
+  for (const part of rest) {
+    const gap: string[] = [];
+    while (i + 1 < words.length && !isWord(words[i + 1] as string)) gap.push(words[++i] as string);
+    if (slugify(words[++i] ?? "") !== slugify(part)) return name;
+    out.push(...gap, part);
+  }
+  return out.join(" ");
+}
+
+/** modelTokens with punctuation-only tokens kept. */
+function modelWords(raw: string, keepList: boolean): string[] {
   // "TUCSON, IX35", "KONA, KAUAI", "TRANSIT/TOURNEO": one car under its market names, so the
   // first name ("1,6" and "S/T" stay).
   const first = keepList ? raw : (raw.split(/(?<!\d),|,(?!\d)|;|\/(?=[^\s/]{2})/)[0] ?? "");
-  const tokens = first
-    // "CEE'D", "CEE´D": the apostrophe goes ("Ceed", as Kia now spells it).
-    .replace(/['´`’]/g, "")
-    // Hyundai/Kia "I 30" is the i30.
-    .replace(/\b(I[XO]?) (\d{2})/gi, "$1$2")
-    // ... and "I30CW" its wagon.
-    .replace(/\b(I[XO]?\d{2})(?:CW|SW)\b/gi, "$1")
-    // Volkswagen "ID.BUZZ", "ID BUZZ": "ID." and the model word.
-    .replace(/\bID(?:\.|\.? )(?=[A-Z]{2})/gi, "ID. ")
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toUpperCase()
-    .replace(/[„“"()]/g, " ")
-    .split(/\s+/)
-    .filter(Boolean);
-  // Punctuation alone (".", "- FIESTA") names nothing and would mint an empty id slug; inside
-  // a name it stays ("TOWN & COUNTRY").
-  const named = (token: string) => slugify(token) !== "";
-  return tokens.slice(tokens.findIndex(named), tokens.findLastIndex(named) + 1);
+  return (
+    first
+      // "CEE'D", "CEE´D": the apostrophe goes ("Ceed", as Kia now spells it).
+      .replace(/['´`’]/g, "")
+      // Hyundai/Kia "I 30" is the i30.
+      .replace(/\b(I[XO]?) (\d{2})/gi, "$1$2")
+      // ... and "I30CW" its wagon.
+      .replace(/\b(I[XO]?\d{2})(?:CW|SW)\b/gi, "$1")
+      // Volkswagen "ID.BUZZ", "ID BUZZ": "ID." and the model word.
+      .replace(/\bID(?:\.|\.? )(?=[A-Z]{2})/gi, "ID. ")
+      .normalize("NFKD")
+      .replace(/[̀-ͯ]/g, "")
+      .toUpperCase()
+      .replace(/[„“"()]/g, " ")
+      .split(/\s+/)
+      .filter(Boolean)
+  );
 }
 
 /**
@@ -340,8 +374,6 @@ function named(
     if (i > 0 && (LATER_NOISE.has(token) || later?.(token))) break;
     kept.push(token);
   }
-  // "TRANSIT - 2.0 TDCI": punctuation before a noise word ends nothing.
-  while (kept.length > 0 && slugify(kept.at(-1) as string) === "") kept.pop();
   if (!kept.some((t) => /[A-Z0-9]/i.test(t))) return undefined;
   return kept.map((t) => displayToken(make, t)).join(" ");
 }

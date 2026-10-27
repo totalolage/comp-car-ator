@@ -1121,6 +1121,18 @@ describe("Resolver", () => {
         status: "model",
         modelId: "bmw/x5",
       });
+      // Package words still count as words before a lone "I": it claims generation I.
+      const ii = createResolver(
+        variants("BMW", "X5", { slug: "g05", name: "X5 II", from: 2018 }, [
+          { body: "suv", fuel: "petrol", powerKw: 250 },
+        ]),
+      );
+      expect(
+        ii.resolve({ make: "BMW", model: "M Sport X5 I", fuel: "petrol", powerKw: 250 }),
+      ).toMatchObject({ status: "model", modelId: "bmw/x5" });
+      expect(
+        ii.resolve({ make: "BMW", model: "M Sport X5 II", fuel: "petrol", powerKw: 250 }),
+      ).toMatchObject({ status: "matched", modelId: "bmw/x5" });
       // The package alone names no series, and the M cars stay M cars.
       expect(withM.resolve({ make: "BMW", model: "M Sport" })).toMatchObject({
         status: "unmatched",
