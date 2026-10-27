@@ -8,6 +8,12 @@
  *   …>Ceník modelu Tiguan</a>`: the model's own list, action models (Family, People),
  *   sporty versions (GTI, R). Downloads not labelled "Ceník" (We Charge manuals) are not lists. A model
  *   without a Ceníky page (404) has no list yet; it stays listed, so nothing of it is withdrawn.
+ * - The lists name no body; the overview does. Its Next.js flight data
+ *   (`self.__next_f.push([1,"…"])`) files each model on sale under categories
+ *   (`{"name":"Tiguan",…,"data":"$b35"}` → `{"categories":"$cf4"}` → `["SUV"]`), and the one
+ *   naming a body is the model's body ("Golf" Hatchback, "Golf Variant" Kombi, "ID.7"
+ *   Limuzíny). Models no longer configurable (Touran, Touareg) have no categories; a table
+ *   names their one body. A model with neither leaves body out.
  * - A list's table header is `Zdvihový objem (l) | Model | Palivo | Výkon kW (k) | Převodovka |
  *   Pohon | Cena bez DPH | Cena s DPH` (electric models: `Popisek` first, sometimes no Palivo
  *   or Výkon). A trim line's name stands alone on a line above its rows; each row is one sales
@@ -19,6 +25,7 @@
  * Verified against the live site 2026-10-25. VW Group OKAPI needs company approval; unused.
  */
 
+import type { Body } from "@cca/vocabulary";
 import { columnOf, type PdfLine } from "../pricelist/pdf.ts";
 import {
   czk,
@@ -60,6 +67,8 @@ const vw: PriceListSite = {
       } else if (!names.has(route)) names.set(route, decode(name));
     }
     if (names.size === 0) throw new Error("vw-pricelist: the model overview links no models");
+    const bodies = bodiesOf(page.body);
+    if (bodies.size === 0) ctx.log.warn("vw-pricelist: the model overview files no model by body");
     const models: ModelLists[] = [];
     for (const [key, name] of names) {
       if (!wanted(key)) {
@@ -74,12 +83,70 @@ const vw: PriceListSite = {
       }
       if (lists.status !== 200)
         throw new Error(`vw-pricelist: ${key} price lists answered ${lists.status}`);
-      models.push({ key, name, documents: documentsOf(lists.body) });
+      const documents = documentsOf(lists.body);
+      // The table only fills in for a model the overview files under no body at all.
+      const body = bodies.has(name) ? bodies.get(name) : UNFILED_BODIES[name];
+      models.push(
+        body ? { key, name, documents, named: { [name]: { body } } } : { key, name, documents },
+      );
     }
     return { models, complete };
   },
   read,
 };
+
+/** The overview's categories that name a body; "Elektrické vozy" does not. */
+const CATEGORY_BODIES: Record<string, Body> = {
+  Hatchback: "hatchback",
+  Kombi: "wagon",
+  Limuzíny: "sedan",
+  SUV: "suv",
+};
+
+/**
+ * Bodies of the models the overview lists but files under no category (no longer
+ * configurable), each sold in one body. Touareg's page calls it "SUV prémiové třídy";
+ * Touran is offered only as the 5/7-seat compact MPV. Verified against the live site 2026-10-26.
+ */
+const UNFILED_BODIES: Record<string, Body> = { Touareg: "suv", Touran: "mpv" };
+
+/**
+ * Body per model name from the overview's flight data; undefined for a name filed under two
+ * bodies (two generations disagreeing). Names filed under no body are absent.
+ */
+function bodiesOf(html: string): Map<string, Body | undefined> {
+  let flight = "";
+  for (const m of html.matchAll(/self\.__next_f\.push\(\[1,("(?:[^"\\]|\\.)*")\]\)/g)) {
+    flight += JSON.parse(m[1] as string) as string;
+  }
+  const rows = new Map<string, unknown>();
+  for (const line of flight.split("\n")) {
+    const m = /^([0-9a-f]+):([[{].*)$/.exec(line);
+    if (!m) continue;
+    try {
+      rows.set(m[1] as string, JSON.parse(m[2] as string));
+    } catch {
+      // A row of another shape (text, module references): not a model's.
+    }
+  }
+  const at = (ref: unknown) =>
+    typeof ref === "string" && ref.startsWith("$") ? rows.get(ref.slice(1)) : undefined;
+  const filed = new Map<string, Set<Body>>();
+  for (const row of rows.values()) {
+    const model = row as { name?: unknown; status?: unknown; data?: unknown };
+    if (typeof model.name !== "string" || typeof model.status !== "string") continue;
+    const categories = at((at(model.data) as { categories?: unknown } | undefined)?.categories);
+    if (!Array.isArray(categories)) continue;
+    for (const category of categories) {
+      const body = CATEGORY_BODIES[category as string];
+      if (!body) continue;
+      const set = filed.get(model.name) ?? new Set();
+      set.add(body);
+      filed.set(model.name, set);
+    }
+  }
+  return new Map([...filed].map(([name, set]) => [name, set.size === 1 ? [...set][0] : undefined]));
+}
 
 function documentsOf(html: string): string[] {
   const urls: string[] = [];

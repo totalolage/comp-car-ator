@@ -12,6 +12,7 @@ import {
   CHASSIS_CODES,
   FUEL_BADGES,
   GENERATION_NAMES,
+  HATCHBACK_WAGONS,
   LIFTBACKS,
   MAKE_GROUPS,
   MODEL_ALIASES,
@@ -58,8 +59,9 @@ const OFF_ROAD_STAND_INS: readonly Body[] = ["wagon", "mpv", "hatchback"];
  * and Golf Plus), so a code stands in only where the generation has no Variant of the stated
  * body, or for a liftback in LIFTBACKS. The register also files some hatchbacks as wagons
  * (Golf VIII, A-Class W177), so where a generation has wagons the sedan is not the only code a
- * hatchback can have, and it does not stand in. Coupés, convertibles, vans and pickups have
- * none: when none fits, the catalog lacks the car.
+ * hatchback can have, and it does not stand in; the wagon does only in the generations
+ * HATCHBACK_WAGONS names. Coupés, convertibles, vans and pickups have none: when none fits,
+ * the catalog lacks the car.
  */
 const CODE_STAND_INS: Partial<Record<Body, Body>> = {
   hatchback: "sedan",
@@ -84,6 +86,8 @@ interface Model {
   generationBodies: Map<GenerationId, Set<Body>>;
   /** A liftback the register files as either sedan or hatchback (LIFTBACKS). */
   liftback: boolean;
+  /** Generation slugs whose hatchbacks the register files as wagons (HATCHBACK_WAGONS). */
+  hatchbackWagons: readonly string[];
 }
 
 /** Words that claim a generation for any make; a lone "I" or "V" only next to the model name. */
@@ -107,7 +111,8 @@ const ENGINE_LAYOUT = /^[vw]\d{1,2}$/i;
  *    (manufacture year exactly, registration or model year ±1), and generation equal when
  *    the text names one. When no Variant fits every field with the stated body, the register
  *    bodies that can be that car stand in for it (an SUV filed as a wagon, a liftback as a
- *    sedan; see standsIn), unless the text names a third body; a body is never dropped.
+ *    sedan, a Golf VIII hatchback as a wagon; see standsIn), unless the text names a third
+ *    body; a body is never dropped.
  * 4. One fitting Variant is a match only if fuel and power are known and the text names at
  *    most one generation, all of them known to the catalog ("Octavia III" when the catalog
  *    has only the IV is not evidence for the IV). A word claims a generation when it is a
@@ -135,6 +140,7 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
         nameWords: new Set(split(variant.model).map((w) => w.toLowerCase())),
         generationBodies: new Map(),
         liftback: LIFTBACKS[makeKey]?.includes(modelKey) === true,
+        hatchbackWagons: HATCHBACK_WAGONS[makeKey]?.[modelKey] ?? [],
       };
       models.set(modelKey, model);
     }
@@ -318,9 +324,15 @@ function generationWords(variant: CatalogVariant): string[] {
   ];
 }
 
-/** Whether Variant `v` can be the car a listing states as `stated` (OFF_ROAD_STAND_INS, CODE_STAND_INS). */
+/**
+ * Whether Variant `v` can be the car a listing states as `stated` (OFF_ROAD_STAND_INS,
+ * CODE_STAND_INS, HATCHBACK_WAGONS).
+ */
 function standsIn(model: Model, stated: Body, v: CatalogVariant): boolean {
   if (stated === "suv") return OFF_ROAD_STAND_INS.includes(v.body);
+  if (stated === "hatchback" && v.body === "wagon") {
+    return model.hatchbackWagons.includes(v.generation.slug);
+  }
   if (CODE_STAND_INS[stated] !== v.body) return false;
   if (model.liftback && (stated === "hatchback" || stated === "sedan")) return true;
   const bodies = model.generationBodies.get(v.generationId);

@@ -250,7 +250,25 @@ describe("Resolver", () => {
         { body: "sedan", fuel: "diesel", powerKw: 110 },
         { body: "hatchback", fuel: "diesel", powerKw: 85 },
       ]),
-      ...variants("Volkswagen", "Golf", golf8, [{ body: "wagon", fuel: "petrol", powerKw: 110 }]),
+      ...variants("Volkswagen", "Golf", golf8, [
+        { body: "wagon", fuel: "petrol", powerKw: 110 },
+        { body: "wagon", fuel: "petrol", powerKw: 239, years: { from: 2026 } },
+        { body: "wagon", fuel: "phev", powerKw: 110 },
+      ]),
+      ...variants("Volkswagen", "Golf", golf7, [
+        // Real hatchbacks and estates in one generation.
+        { body: "hatchback", fuel: "diesel", powerKw: 110 },
+        { body: "wagon", fuel: "diesel", powerKw: 135 },
+      ]),
+      ...variants("Volkswagen", "Golf", { slug: "mk6", name: "Golf VI", from: 2009, to: 2013 }, [
+        // Only the estate's register type is catalogued.
+        { body: "wagon", fuel: "petrol", powerKw: 90 },
+      ]),
+      ...variants("Volkswagen", "ID.3", { slug: "e1", name: "ID.3 E1", from: 2020 }, [
+        { body: "hatchback", fuel: "bev", powerKw: 150, years: { from: 2020, to: 2020 } },
+        { body: "wagon", fuel: "bev", powerKw: 150, years: { from: 2020, to: 2024 } },
+        { body: "wagon", fuel: "bev", powerKw: 125, years: { from: 2023 } },
+      ]),
       ...variants("Volkswagen", "Golf", { slug: "mk5", name: "Golf V", from: 2004, to: 2008 }, [
         { body: "wagon", fuel: "diesel", powerKw: 77 },
         { body: "mpv", fuel: "diesel", powerKw: 103 },
@@ -355,11 +373,60 @@ describe("Resolver", () => {
       ).toMatchObject({ status: "model", reason: "no-variant" });
     });
 
-    it("never takes a wagon for a hatchback, nor anything for a convertible", () => {
-      // Golf VIII hatchbacks the register files as wagons stay on the Model: a Golf VI
-      // hatchback missing from the catalog would otherwise land on a real Golf Variant.
+    it("takes a wagon for a hatchback only where the register files its hatchbacks so", () => {
+      // Every Golf VIII and nearly every ID.3 is a wagon in the register.
+      expect(
+        at({
+          make: "Volkswagen",
+          model: "Golf",
+          trim: "2,0 TSI / 239 kW GTI Edition 50",
+          firstRegistration: undefined,
+          modelYear: 2027,
+          body: "hatchback",
+          fuel: "petrol",
+          powerKw: 239,
+          transmission: "automatic",
+        }),
+      ).toBe("volkswagen/golf/mk8/wagon-petrol-239kw");
+      const id3 = {
+        make: "Volkswagen",
+        model: "ID.3 Neo",
+        body: "hatchback",
+        fuel: "bev",
+      } as const;
+      expect(at({ ...id3, powerKw: 125, firstRegistration: undefined, modelYear: 2026 })).toBe(
+        "volkswagen/id-3/e1/wagon-bev-125kw",
+      );
+      // The stated body still wins where a Variant fits it, and the wagon takes over after.
+      expect(at({ ...id3, powerKw: 150, manufactureYear: 2020 })).toBe(
+        "volkswagen/id-3/e1/hatchback-bev-150kw",
+      );
+      expect(at({ ...id3, powerKw: 150, manufactureYear: 2022 })).toBe(
+        "volkswagen/id-3/e1/wagon-bev-150kw",
+      );
+      // A badge still limits the fuel, and wording naming the wagon agrees with the stand-in;
+      // a convertible does not.
+      expect(at({ make: "VW", model: "Golf GTE", body: "hatchback", powerKw: 110 })).toBe(
+        "volkswagen/golf/mk8/wagon-phev-110kw",
+      );
+      const golf8 = { make: "VW", body: "hatchback", fuel: "petrol", powerKw: 110 } as const;
+      expect(at({ ...golf8, model: "Golf Variant" })).toBe(
+        "volkswagen/golf/mk8/wagon-petrol-110kw",
+      );
+      expect(at({ ...golf8, model: "Golf Cabrio" })).toMatchObject({ reason: "no-variant" });
+      // A Golf VII has real estates, and the Golf VI's hatchback type is not catalogued: a
+      // hatchback there is not the Golf Variant.
+      const golf = { make: "VW", model: "Golf", body: "hatchback" } as const;
+      expect(
+        at({ ...golf, fuel: "diesel", powerKw: 135, firstRegistration: { year: 2016 } }),
+      ).toMatchObject({ status: "model", reason: "no-variant" });
+      expect(
+        at({ ...golf, fuel: "petrol", powerKw: 90, firstRegistration: { year: 2011 } }),
+      ).toMatchObject({ status: "model", reason: "no-variant" });
+    });
+
+    it("takes nothing for a convertible", () => {
       const golf = { make: "VW", model: "Golf", fuel: "petrol", powerKw: 110 } as const;
-      expect(at({ ...golf, body: "hatchback" })).toMatchObject({ reason: "no-variant" });
       expect(at({ ...golf, body: "convertible" })).toMatchObject({ reason: "no-variant" });
     });
 
