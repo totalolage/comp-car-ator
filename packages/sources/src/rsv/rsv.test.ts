@@ -230,7 +230,8 @@ describe("rsv source", () => {
       ).toEqual({ Tiguan: ["5n"], "Tiguan Allspace": ["5n"] });
     }
     // A few "RANGE ROVER" rows of the Sport's type stay what the register says; neither name
-    // takes the other's vehicles. A trim word still goes ("SCOUT"), per row.
+    // takes the other's vehicles. Badges fold into the model on its types ("EVOQUE HSE
+    // DYNAMIC", "XC90 D4"), not on a type of their own ("IONIQ 5"); trim words go per row.
     expect(
       await modelsOf([
         ...Array(6).fill(car("LAND ROVER", "RANGE ROVER", "LG")),
@@ -239,6 +240,11 @@ describe("rsv source", () => {
         ...Array(4).fill(car("LAND ROVER", "RANGE ROVER VELAR", "LY")),
         ...Array(3).fill(car("LAND ROVER", "RANGE ROVER EVOQUE", "LV")),
         car("LAND ROVER", "RANGE ROVER", "LV"),
+        car("LAND ROVER", "RANGE ROVER EVOQUE HSE DYNAMIC", "LV"),
+        ...Array(3).fill(car("VOLVO", "XC90", "L")),
+        ...Array(2).fill(car("VOLVO", "XC90 D4", "L")),
+        ...Array(3).fill(car("HYUNDAI", "IONIQ", "AE")),
+        ...Array(2).fill(car("HYUNDAI", "IONIQ 5", "NE")),
         ...Array(3).fill(car("ŠKODA", "OCTAVIA", "NX")),
         ...Array(2).fill(car("ŠKODA", "OCTAVIA SCOUT", "NX")),
       ]),
@@ -247,6 +253,9 @@ describe("rsv source", () => {
       "Range Rover Sport": ["lw"],
       "Range Rover Velar": ["ly"],
       "Range Rover Evoque": ["lv"],
+      XC90: ["l"],
+      Ioniq: ["ae"],
+      "Ioniq 5": ["ne"],
       Octavia: ["nx"],
     });
   });

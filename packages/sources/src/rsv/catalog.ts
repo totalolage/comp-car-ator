@@ -4,9 +4,11 @@
  * candidate; candidates become Variants once enough vehicles back them.
  *
  * - Models: commercial names are cut to their model part per row (catalog-names.ts drops trim
- *   words: "Octavia Scout" → Octavia). Only spellings of one model id merge ("UP!", "UP"); names
- *   that differ stay apart even on one type-approval type, since models share types ("Tiguan
- *   Allspace" approved as a Tiguan) and counts cannot tell a trim word from a model.
+ *   words: "Octavia Scout" → Octavia). Spellings of one model id merge ("UP!", "UP"). A longer
+ *   name folds into the shorter one it extends only on the shorter name's types, and only when
+ *   its extra words are badges ("XC90 D4", "Golf R", "Evoque HSE Dynamic"). Other names stay
+ *   apart even on one type-approval type: models share types ("Tiguan Allspace" approved as a
+ *   Tiguan, "Golf Plus" on the Golf's), and neither the type nor counts tell a badge from a model.
  * - Generations: the type-approval type ("5E", "NX") changes with most design cycles, so a
  *   type Wikidata does not date is one Generation, keyed by its code. A type that starts as a
  *   dated Wikidata generation is that generation, keyed by Wikidata's word for it (mk7, b6),
@@ -97,7 +99,7 @@ export function createCatalog(options: CatalogOptions) {
         const [make, model, type, body, fuel, kw] = key.split("\t") as string[];
         return { make, model, type, body, fuel, powerKw: Number(kw), c } as Row;
       });
-      const merged = spellModels(rows);
+      const merged = foldBadges(spellModels(rows));
       const entries: CatalogEntry[] = [];
       for (const group of groupBy(merged, (r) => `${r.make}\t${r.model}`).values()) {
         entries.push(...modelEntries(group, generations, options, omitted));
@@ -137,6 +139,53 @@ function spellModels(rows: Row[]): Row[] {
     ...r,
     model: spelling.get(keyOf(r)) ?? r.model,
   }));
+}
+
+/**
+ * Words that, after a model name, mark a version of it rather than a model of its own: trim,
+ * performance, fuel and body words the register writes after the model ("XC90 DRIVE-E",
+ * "911 CARRERA GTS", "ASTRA CARAVAN"). Words that name models ("Sport", "Plus", "Picasso",
+ * "Allspace", "Allroad", "Cross", "Connect") are not here.
+ */
+const BADGES = new Set(
+  (
+    "s r m n gt gts gtc st se hse sp cs csl svr srt r-t ss sxt sti gsr mps gr type " +
+    "competition performance e-performance prestige premium executive life pure titanium " +
+    "ambiente limited dynamic r-dynamic r-sport trendy easy fun speed evo quadrifoglio trofeo " +
+    "verde abarth bullitt rubicon hellcat scat pack widebody aero racing glx lx ex xs junior " +
+    "eco sdi tddi tfsie quatro carrera drive drive-e twin engine e-hybrid hybrid plug-in " +
+    "bifuel bi-fuel g-tron e-tech electric cng lpg blue motion bluemotion syncro mt at " +
+    "convertible coup wagon sportwagon caravan van turnier weekend s-w stw grandtour volante lim"
+  ).split(" "),
+);
+
+/** A word that marks a version: a badge, or an engine, power or code token ("D4", "P380", "1J"). */
+const isBadge = (word: string) => /\d/.test(word) || BADGES.has(slugify(word)) || !slugify(word);
+
+/**
+ * Folds "XC90 D4" into "XC90": a name that extends a shorter one by badges only is that model,
+ * on the types the shorter name has. A name with a word that is not a badge ("Tiguan
+ * Allspace", "Range Rover Sport") stays a model of its own whatever it shares; so do a
+ * badge name's rows on types the shorter name lacks ("Ioniq 5").
+ */
+function foldBadges(rows: Row[]): Row[] {
+  const out: Row[] = [];
+  for (const makeRows of groupBy(rows, (r) => r.make).values()) {
+    const types = new Map<string, Set<string>>();
+    for (const r of makeRows) types.set(r.model, (types.get(r.model) ?? new Set()).add(r.type));
+    const home = (model: string, type: string): string => {
+      const words = model.split(" ");
+      for (let n = words.length - 1; n >= 1; n--) {
+        const shorter = words.slice(0, n).join(" ");
+        if (!types.has(shorter)) continue;
+        if (!words.slice(n).every(isBadge)) return model;
+        return types.get(shorter)?.has(type) ? home(shorter, type) : model;
+      }
+      return model;
+    };
+    for (const r of makeRows) out.push({ ...r, model: home(r.model, r.type) });
+  }
+  return out;
 }
 
 /** A Generation the register's evidence identifies: a dated Wikidata one, or a type's own. */
