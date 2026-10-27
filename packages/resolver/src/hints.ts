@@ -29,7 +29,7 @@ const word = (alternation: string) => new RegExp(`(?<![a-z0-9])(?:${alternation}
 const BODY: [Body, RegExp][] = [
   [
     "wagon",
-    word("combi|kombi|variant|avant|touring|sports ?tourer|sportswagon|estate|sw|shooting ?brake"),
+    word("combi|kombi|variant|avant|touring|sports ?tourer|sports?wagon|estate|sw|shooting ?brake"),
   ],
   ["convertible", word("cabrio|cabriolet|roadster|spider|spyder")],
 ];

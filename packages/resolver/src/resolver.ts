@@ -55,8 +55,10 @@ const OFF_ROAD_STAND_INS: readonly Body[] = ["wagon", "mpv", "hatchback"];
  * Body codes the register files one shape under: a liftback as a sedan, an MPV as a wagon.
  * A generation can also have both as real bodies (Mazda 3 sedan and hatchback, Golf Variant
  * and Golf Plus), so a code stands in only where the generation has no Variant of the stated
- * body, or for a liftback in LIFTBACKS. Coupés, convertibles, vans and pickups have none:
- * when none fits, the catalog lacks the car.
+ * body, or for a liftback in LIFTBACKS. The register also files some hatchbacks as wagons
+ * (Golf VIII, A-Class W177), so where a generation has wagons the sedan is not the only code a
+ * hatchback can have, and it does not stand in. Coupés, convertibles, vans and pickups have
+ * none: when none fits, the catalog lacks the car.
  */
 const CODE_STAND_INS: Partial<Record<Body, Body>> = {
   hatchback: "sedan",
@@ -104,7 +106,7 @@ const ENGINE_LAYOUT = /^[vw]\d{1,2}$/i;
  *    (manufacture year exactly, registration or model year ±1), and generation equal when
  *    the text names one. When no Variant fits every field with the stated body, the register
  *    bodies that can be that car stand in for it (an SUV filed as a wagon, a liftback as a
- *    sedan; see standsIn); a body is never dropped.
+ *    sedan; see standsIn), unless the text names a third body; a body is never dropped.
  * 4. One fitting Variant is a match only if fuel and power are known and the text names at
  *    most one generation, all of them known to the catalog ("Octavia III" when the catalog
  *    has only the IV is not evidence for the IV). A word claims a generation when it is a
@@ -199,7 +201,10 @@ export function createResolver(catalog: readonly CatalogVariant[]): Resolver {
         );
       let fits = fitting((v) => body === undefined || v.body === body);
       if (fits.length === 0 && body !== undefined) {
-        fits = fitting((v) => standsIn(model, body, v));
+        // Wording that names another body ("A6 Avant" listed as a hatchback) rules a stand-in out.
+        const worded = (v: CatalogVariant) =>
+          hints.body === undefined || hints.body === body || hints.body === v.body;
+        fits = fitting((v) => standsIn(model, body, v) && worded(v));
       }
       const only = fits.length === 1 ? fits[0] : undefined;
       const evidence =
@@ -312,8 +317,9 @@ function generationWords(variant: CatalogVariant): string[] {
 function standsIn(model: Model, stated: Body, v: CatalogVariant): boolean {
   if (stated === "suv") return OFF_ROAD_STAND_INS.includes(v.body);
   if (CODE_STAND_INS[stated] !== v.body) return false;
-  const liftback = model.liftback && (stated === "hatchback" || stated === "sedan");
-  return liftback || model.generationBodies.get(v.generationId)?.has(stated) !== true;
+  if (model.liftback && (stated === "hatchback" || stated === "sedan")) return true;
+  const bodies = model.generationBodies.get(v.generationId);
+  return bodies?.has(stated) !== true && !(stated === "hatchback" && bodies?.has("wagon"));
 }
 
 /** Distinct generations named; two catalog spellings of one model share generation slugs. */
