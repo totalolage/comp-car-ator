@@ -44,7 +44,7 @@ The repo follows the codebase-design vocabulary: module, interface, seam, adapte
 2. Fetch only through `ctx.http` (pass `signal: ctx.signal`; `binary: true` for PDF/ZIP), read time only from `ctx.now`.
 3. Map site data onto Observations; leave a field undefined rather than guess. Put the site's own make/model ids in `vehicle.sourceTaxonomy`.
 4. Incremental: newest first, stop when a page is all `ctx.checkpoint.isKnown(ref)`. Full: yield every listing in the adapter's `scope` or throw (a full run is a census). A site too large for one run slices its scope inside the adapter: yield `SliceDone` after each finished slice and skip slices whose `ctx.checkpoint.sliceDoneAt(slice)` is set, so a failed census resumes (ADR 0003). Price lists give each Offer a stable `ref` and withdraw it by re-emitting its edition with `validTo`. Catalog data that cannot fully identify a Variant goes out as `VariantFacts`, not a guessed `CatalogEntry`.
-5. Register it in `packages/sources/src/registry.ts` (one line).
+5. Register it in `packages/sources/src/registry.ts` (one line). If it is not a listing site (daily incremental, Sunday Census), add its cadence to `apps/ingest/src/schedule.ts`.
 6. Record fixtures (below) and write `<id>.test.ts` that runs `harvest` against `createReplayHttp`, covering incremental, full, and one failure path (blocked or changed page).
 7. Run the checks; the ingest CLI can then run it: `pnpm ingest run --source <id> --mode incremental --ledger /tmp/ledger.sqlite`.
 
