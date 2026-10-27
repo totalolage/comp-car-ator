@@ -3,27 +3,43 @@
  * 2000 or later, new cars included, damaged cars and other countries' listings excluded.
  *
  * - Search pages `/lst?…` embed their results in `__NEXT_DATA__` (`props.pageProps`):
- *   `listings[]`, `numberOfResults`, `numberOfPages`, and the make taxonomy. A query serves
+ *   `listings[]`, `numberOfResults` and `numberOfPages`. A query serves
  *   4,000 results' worth of pages (80 of 50), and every page also carries a few sponsored
  *   listings of the same query (6 of 50), so it reaches fewer: about 3,500.
  * - The adapter slices its scope until every query is under that cap: by Condition (the
- *   site's `offer` filter, the only place demo cars are told apart), then make, then price
- *   band, bisected with inclusive bounds. A slice's key names its filters
- *   ("used;make=29;price=0-15624"), so a slice keeps its key across runs and a failed
- *   census resumes where it stopped.
+ *   site's `offer` filter, the only place demo cars are told apart), then price band,
+ *   halved at whole euros, dearest first, then (one price still over the cap, as
+ *   19,990 is for used cars in DE) first-registration year. Not by make: on 2026-10-27 the
+ *   301 makes of the site's taxonomy added up to fewer listings than the Condition (AT new
+ *   12,634 of 12,642, DE demo 110,642 of 111,044), while price bands, and years within a
+ *   price, added up to all of them. Make narrows only a scope given makes. Dearest first
+ *   because prices mostly drop, and a listing that drops into a band yet to be harvested is
+ *   still seen. A slice's key names its filters ("used;price=0-15624",
+ *   "used;make=29;price=19990-19990;year=2018"), so a slice keeps its key across runs and a
+ *   failed census resumes where it stopped.
  * - full: every slice's pages newest first, a SliceDone after each slice that yielded as
  *   many distinct listings as it reports (paged a second time if it came out short); slices
  *   done earlier in the census are skipped. A split slice is recounted after its parts and
- *   must not have more results than they do. A slice still short, still over the cap at a
+ *   must not have more results than they do (counted so that one listing moving between
+ *   parts meanwhile counts in one at most). A slice still short, still over the cap at a
  *   single price, or split into parts that miss results fails the run at the end (after
  *   every other slice), so it is no census; its finished parts stay done, and the next full
- *   run recounts it.
+ *   run recounts it. Recounts and second pagings need the site's answer, not a response
+ *   cache's: a cache replays the first one.
  * - incremental: the same slices, narrowed to listings online since the last run (`adage`,
  *   whole days up to 14; no window after a longer gap), newest first, each stopping at a
  *   page of known listings.
  *
- * Research notes: scrape-access.md (AutoScout24 rows); filters verified against the live
- * site 2026-10-25 (offer types partition the results, price bounds are inclusive).
+ * Research notes: scrape-access.md (AutoScout24 rows). Filters checked against the live site
+ * on 2026-10-25 (offer types partition the results) and 2026-10-27 (price, recorded in
+ * fixtures/price-filter.cassette.json): both price bounds are inclusive, a fractional bound
+ * matches nothing, every price seen was in whole euros and none was 0, and each Condition
+ * counted as many listings as its two top bands (DE used 633,456 = 633,404 + 52), so no
+ * listing without a price showed up in a count. Bands [from, mid] and [mid + 1, to] then take
+ * every whole-euro price once. A listing no band takes (none, or a fractional price between
+ * mid and mid + 1 of a band halved there, should one appear) shows up as a recount deficit
+ * and fails the census, naming the deficit, instead of going unseen (ADR 0003 has the
+ * evidence, the remedy and what counts taken one after another cannot rule out).
  */
 import type {
   Condition,
@@ -64,8 +80,10 @@ const CONDITIONS = Object.keys(OFFERS) as Condition[];
 
 const MAX_PAGE_SIZE = 50;
 const RESULT_CAP = 4_000;
-/** First price split; the open band above it is not split further. */
+/** First price split; the open band above it is split only by year. */
 const PRICE_TOP = 999_999;
+/** First-registration year the scope starts at. */
+const FIRST_YEAR = 2000;
 /** The `adage` values the site offers, in days. */
 const ADAGES = [1, 2, 3, 4, 5, 6, 7, 14];
 const DAY_MS = 86_400_000;
@@ -102,8 +120,13 @@ interface Settings {
 interface Slice {
   condition: Condition;
   make?: number;
-  /** Inclusive EUR bounds; no `to` means open above. */
+  /** Whole-euro bounds, both inclusive, as the site filters; no `to` means open above. */
   price?: { from: number; to?: number };
+  /**
+   * First-registration year; the current year is open above. In a new year that slice keeps
+   * its key and narrows to its year, which its earlier harvest covered too.
+   */
+  year?: number;
 }
 
 interface SearchPage {
@@ -111,8 +134,6 @@ interface SearchPage {
   /** Pages the site paginates the query into, sponsored slots included. */
   pages: number;
   listings: Raw[];
-  /** Make ids in the page's taxonomy. */
-  makes: number[];
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: site JSON, read defensively field by field.
@@ -124,7 +145,7 @@ class Harvest {
   private readonly full: boolean;
   /** Incremental `adage` filter; undefined in full runs and after a gap longer than offered. */
   private readonly adage: number | undefined;
-  /** Slices this run could not harvest whole. */
+  /** Slices this run could not harvest whole, a split one with the results its parts miss. */
   private readonly unfinished: string[] = [];
   /** Incremental: whether each listing this run has met was known before it, as first met. */
   private readonly knownBefore = new Map<string, boolean>();
@@ -148,7 +169,7 @@ class Harvest {
       }
     }
     if (this.unfinished.length > 0) {
-      const message = `autoscout24: slices not harvested whole: ${this.unfinished.join(" ")}`;
+      const message = `autoscout24: slices not harvested whole: ${this.unfinished.join(", ")}`;
       if (this.full) throw new Error(message);
       this.ctx.log.warn(message);
     }
@@ -166,11 +187,12 @@ class Harvest {
     if (this.full && this.ctx.checkpoint.sliceDoneAt(key) !== null) return;
     const first = await this.page(slice, 1);
     const overCap = this.overCap(first);
-    const parts = overCap ? split(slice, first) : null;
+    const parts = overCap ? split(slice, this.ctx.now.getUTCFullYear()) : null;
     if (parts) {
       for (const part of parts) yield* this.slice(part);
       // Incremental is no census, so it skips the recount.
-      if (this.full && !(await this.covered(slice, parts))) this.unfinished.push(key);
+      const missed = this.full ? await this.missed(slice, parts) : 0;
+      if (missed > 0) this.unfinished.push(`${key} (${missedNote(slice, parts, missed)})`);
       return;
     }
     const outcome = yield* this.pages(slice, first);
@@ -186,22 +208,33 @@ class Harvest {
   }
 
   /**
-   * Whether `parts` reach every result of `slice`, as their counts show. A listing no part's
-   * filter matches (a make outside the taxonomy, a price outside every band) shows up as a
-   * deficit; the census cannot see it, so the slice fails the run. Counted after the parts
-   * are harvested, the parts between two counts of the slice, and they must reach the higher
-   * of the two: a listing that went before the second count could otherwise stand in for a
-   * missed one. The site gives no per-make counts, so the parts' counts are never taken at
-   * one instant: a part that gained a listing before its count and lost one after can still
-   * hide a missed one. Counted three times before giving up.
+   * How many results of `slice` its parts miss, as their counts show: 0 when they reach
+   * every one. A listing no part's filter matches (no price, a fractional one between two
+   * bands, no year in range) shows up as a deficit; the census cannot see it, so the slice fails the run.
+   * Counted after the parts are harvested, the parts between two counts of the slice, and
+   * they must reach the higher of the two: a listing that went before the second count could
+   * otherwise stand in for a missed one. The site gives no per-part counts, so the parts'
+   * counts are never taken at one instant, and a listing that moves from one part to another
+   * between their counts could count in both and stand in for a missed one. So the parts are
+   * counted there and back (first to last, then back to the first) and each keeps its lower
+   * count: a part's two counts bracket every later part's, so one listing that moves once
+   * while they are counted counts in one part at most. Two listings moving opposite ways
+   * across those few requests, or one moving there and back, can still count once too many
+   * and hide a missed listing. Counted three times before giving up.
    */
-  private async covered(slice: Slice, parts: readonly Slice[]): Promise<boolean> {
+  private async missed(slice: Slice, parts: readonly Slice[]): Promise<number> {
+    let missed = 0;
     for (let attempt = 1; attempt <= 3; attempt++) {
       const before = (await this.page(slice, 1)).total;
-      let inParts = 0;
-      for (const part of parts) inParts += (await this.page(part, 1)).total;
+      const counts: number[] = [];
+      for (const part of parts) counts.push((await this.page(part, 1)).total);
+      for (let i = parts.length - 2; i >= 0; i--) {
+        counts[i] = Math.min(counts[i] as number, (await this.page(parts[i] as Slice, 1)).total);
+      }
+      const inParts = counts.reduce((sum, count) => sum + count, 0);
       const after = (await this.page(slice, 1)).total;
-      if (inParts >= Math.max(before, after)) return true;
+      missed = Math.max(before, after) - inParts;
+      if (missed <= 0) return 0;
       this.ctx.log.warn("autoscout24: sub-slices miss results", {
         slice: sliceKey(slice),
         results: [before, after],
@@ -209,7 +242,7 @@ class Harvest {
         attempt,
       });
     }
-    return false;
+    return missed;
   }
 
   /**
@@ -279,7 +312,7 @@ class Harvest {
     const params = new URLSearchParams({
       atype: "C",
       cy: COUNTRY_CODES[this.settings.country],
-      fregfrom: "2000",
+      fregfrom: String(slice.year ?? FIRST_YEAR),
       damaged_listing: "exclude",
       ocs_listing: "exclude",
       offer: OFFERS[slice.condition],
@@ -293,36 +326,57 @@ class Harvest {
       params.set("pricefrom", String(slice.price.from));
       if (slice.price.to !== undefined) params.set("priceto", String(slice.price.to));
     }
+    if (slice.year !== undefined && slice.year < this.ctx.now.getUTCFullYear()) {
+      params.set("fregto", String(slice.year));
+    }
     if (this.adage !== undefined) params.set("adage", String(this.adage));
     return `${HOSTS[this.settings.country]}/lst?${params}`;
   }
 }
 
-/** Sub-slices that partition `slice`: makes, then price bands, then halves of a band. */
-function split(slice: Slice, page: SearchPage): Slice[] | null {
-  if (slice.make === undefined) {
-    return page.makes.length > 0 ? page.makes.map((make) => ({ ...slice, make })) : null;
-  }
+/**
+ * Sub-slices that partition `slice`, dearest first: price bands, then halves of a band (whole
+ * euros, so [mid + 1, to] starts where [from, mid] ends), then (a single price, or the open
+ * top band, still over the cap) first-registration years.
+ */
+function split(slice: Slice, thisYear: number): Slice[] | null {
   if (!slice.price) {
     return [
-      { ...slice, price: { from: 0, to: PRICE_TOP } },
       { ...slice, price: { from: PRICE_TOP + 1 } },
+      { ...slice, price: { from: 0, to: PRICE_TOP } },
     ];
   }
   const { from, to } = slice.price;
-  if (to === undefined || from >= to) return null;
-  const mid = Math.floor((from + to) / 2);
-  return [
-    { ...slice, price: { from, to: mid } },
-    { ...slice, price: { from: mid + 1, to } },
-  ];
+  if (to !== undefined && from < to) {
+    const mid = Math.floor((from + to) / 2);
+    return [
+      { ...slice, price: { from: mid + 1, to } },
+      { ...slice, price: { from, to: mid } },
+    ];
+  }
+  if (slice.year !== undefined) return null;
+  const years = Array.from({ length: thisYear - FIRST_YEAR + 1 }, (_, i) => thisYear - i);
+  return years.map((year) => ({ ...slice, year }));
 }
 
-/** "used", "new;make=29", "demo;make=29;price=0-15624", "used;make=74;price=1000000-". */
+/**
+ * "3 listings outside every whole-euro price band, possibly unpriced or fractional, or counts
+ * that moved": a deficit that held over every recount, most likely listings no part takes.
+ */
+function missedNote(slice: Slice, parts: readonly Slice[], missed: number): string {
+  const listings = `${missed} listing${missed === 1 ? "" : "s"}`;
+  const moved = "or counts that moved";
+  if (parts[0]?.year !== undefined) return `${listings} outside every registration year, ${moved}`;
+  const kinds = slice.price ? "fractional" : "unpriced or fractional";
+  return `${listings} outside every whole-euro price band, possibly ${kinds}, ${moved}`;
+}
+
+/** "used", "used;price=1000000-", "new;make=29;price=19990-19990;year=2018". */
 function sliceKey(slice: Slice): string {
   const parts: string[] = [slice.condition];
   if (slice.make !== undefined) parts.push(`make=${slice.make}`);
   if (slice.price) parts.push(`price=${slice.price.from}-${slice.price.to ?? ""}`);
+  if (slice.year !== undefined) parts.push(`year=${slice.year}`);
   return parts.join(";");
 }
 
@@ -348,12 +402,8 @@ function parseSearchPage(html: string, url: string): SearchPage {
   if (!props || !Array.isArray(props.listings) || !Number.isInteger(props.numberOfResults)) {
     throw new Error(`AutoScout24 page changed: no listings in __NEXT_DATA__ at ${url}`);
   }
-  const makes = Object.values((props.taxonomy?.makes ?? {}) as Record<string, Raw>)
-    .map((make) => Number(make?.value))
-    .filter((id) => Number.isInteger(id) && id > 0)
-    .sort((a, b) => a - b);
   const pages = Number.isInteger(props.numberOfPages) ? props.numberOfPages : 1;
-  return { total: props.numberOfResults, pages, listings: props.listings, makes };
+  return { total: props.numberOfResults, pages, listings: props.listings };
 }
 
 function refOf(raw: Raw): string {

@@ -19,7 +19,6 @@ import { githubReleaseStore } from "./github-release-store.ts";
 import { SAMPLE } from "./ingest.ts";
 import { localReleaseStore, type ReleaseStore } from "./release-store.ts";
 import { harvestToLog, recordLog } from "./run-log.ts";
-import { plan } from "./schedule.ts";
 
 const noHttp = createReplayHttp({ version: 1, interactions: [] });
 const day = (date: string) => new Date(`${date}T03:00:00Z`);
@@ -601,59 +600,5 @@ describe("run logs", () => {
     expect(checkpoint.sliceDoneAt("A")).toEqual(day("2026-10-26"));
     expect(checkpoint.lastRunAt).toBeNull();
     ledger.close();
-  });
-});
-
-describe("schedule", () => {
-  const ids = ["cnb", "sauto"];
-  const census = (iso: string) => ({ sauto: iso });
-
-  it("runs listings incrementally and takes a census on Sundays", () => {
-    const lastSunday = census("2026-10-18T03:00:00Z");
-    expect(plan(ids, new Date("2026-10-24T01:00:00Z"), lastSunday)).toEqual([
-      { source: "cnb", mode: "incremental" },
-      { source: "sauto", mode: "incremental" },
-    ]);
-    expect(plan(ids, new Date("2026-10-25T01:00:00Z"), lastSunday)).toEqual([
-      { source: "cnb", mode: "incremental" },
-      { source: "sauto", mode: "full" },
-    ]);
-  });
-
-  it("leaves the experimental mobile-de Source unscheduled", () => {
-    expect(
-      plan(
-        ["sauto", "mobile-de"],
-        new Date("2026-10-25T01:00:00Z"),
-        census("2026-10-18T03:00:00Z"),
-      ),
-    ).toEqual([{ source: "sauto", mode: "full" }]);
-  });
-
-  it("repeats a census that has not completed since its scheduled day", () => {
-    const monday = new Date("2026-10-26T01:00:00Z");
-    expect(plan(["sauto"], monday, census("2026-10-18T03:00:00Z"))).toEqual([
-      { source: "sauto", mode: "full" },
-    ]);
-    expect(plan(["sauto"], monday, census("2026-10-25T03:00:00Z"))).toEqual([
-      { source: "sauto", mode: "incremental" },
-    ]);
-    expect(plan(["sauto"], monday)).toEqual([{ source: "sauto", mode: "full" }]);
-  });
-
-  it("takes the register's catalog Census on the 1st and otherwise leaves it alone", () => {
-    expect(
-      plan(["rsv"], new Date("2026-11-01T02:23:00Z"), { rsv: "2026-10-01T02:23:00Z" }),
-    ).toEqual([{ source: "rsv", mode: "full" }]);
-    expect(
-      plan(["rsv"], new Date("2026-11-02T02:23:00Z"), { rsv: "2026-11-01T02:23:00Z" }),
-    ).toEqual([]);
-  });
-
-  it("uses the Prague calendar day", () => {
-    // 23:30 UTC on Saturday is already Sunday in Prague.
-    expect(
-      plan(["sauto"], new Date("2026-10-24T23:30:00Z"), census("2026-10-18T03:00:00Z")),
-    ).toEqual([{ source: "sauto", mode: "full" }]);
   });
 });

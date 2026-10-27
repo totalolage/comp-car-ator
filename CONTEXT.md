@@ -99,7 +99,7 @@ The full Runs of a Source's scope up to and including a complete one: together t
 _Avoid_: full scan, sweep
 
 **Slice**:
-A part of a Source's scope that its adapter harvests as one unit, keyed by the adapter (an AutoScout24 make/model/year/price query under the result cap). A full Run reports each Slice it finished, so a Census that fails part way resumes with the Slices left.
+A part of a Source's scope that its adapter harvests as one unit, keyed by the adapter (an AutoScout24 Condition, price band and year query under the result cap). A full Run reports each Slice it finished, so a Census that fails part way resumes with the Slices left.
 _Avoid_: shard, partition, chunk
 
 **Resolution**:

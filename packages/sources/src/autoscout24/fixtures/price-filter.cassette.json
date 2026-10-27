@@ -1,0 +1,291 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&mmmv=51872%7C%7C%7C"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&mmmv=51872%7C%7C%7C",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":4,\"numberOfPages\":1,\"listings\":[{\"id\":\"14e8ba18-ea91-4395-bcb9-c50e2047a994\",\"searchResultType\":\"Organic\",\"price\":{\"priceFormatted\":\"€ 12.000\",\"priceRaw\":12000}},{\"id\":\"78a7a7a7-c8bb-4d27-ae51-8e228395dfbb\",\"searchResultType\":\"Organic\",\"price\":{\"priceFormatted\":\"€ 19.990\",\"priceRaw\":19990}},{\"id\":\"5cdfddd2-4655-4616-97ea-799b0b2bac29\",\"searchResultType\":\"Organic\",\"price\":{\"priceFormatted\":\"€ 12.500\",\"priceRaw\":12500}},{\"id\":\"e8caebfe-a8a2-4235-b2d2-d912400ea7bb\",\"searchResultType\":\"Organic\",\"price\":{\"priceFormatted\":\"€ 14.000\",\"priceRaw\":14000}}]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&mmmv=51872%7C%7C%7C&pricefrom=19990&priceto=19990"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&mmmv=51872%7C%7C%7C&pricefrom=19990&priceto=19990",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":1,\"numberOfPages\":1,\"listings\":[{\"id\":\"78a7a7a7-c8bb-4d27-ae51-8e228395dfbb\",\"searchResultType\":\"Organic\",\"price\":{\"priceFormatted\":\"€ 19.990\",\"priceRaw\":19990}}]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&mmmv=51872%7C%7C%7C&pricefrom=12000&priceto=12000"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&mmmv=51872%7C%7C%7C&pricefrom=12000&priceto=12000",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":1,\"numberOfPages\":1,\"listings\":[{\"id\":\"14e8ba18-ea91-4395-bcb9-c50e2047a994\",\"searchResultType\":\"Organic\",\"price\":{\"priceFormatted\":\"€ 12.000\",\"priceRaw\":12000}}]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&mmmv=51872%7C%7C%7C&pricefrom=12001&priceto=19989"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&mmmv=51872%7C%7C%7C&pricefrom=12001&priceto=19989",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":2,\"numberOfPages\":1,\"listings\":[{\"id\":\"5cdfddd2-4655-4616-97ea-799b0b2bac29\",\"searchResultType\":\"Organic\",\"price\":{\"priceFormatted\":\"€ 12.500\",\"priceRaw\":12500}},{\"id\":\"e8caebfe-a8a2-4235-b2d2-d912400ea7bb\",\"searchResultType\":\"Organic\",\"price\":{\"priceFormatted\":\"€ 14.000\",\"priceRaw\":14000}}]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&mmmv=51872%7C%7C%7C&pricefrom=12000&priceto=19989"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&mmmv=51872%7C%7C%7C&pricefrom=12000&priceto=19989",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":3,\"numberOfPages\":1,\"listings\":[{\"id\":\"14e8ba18-ea91-4395-bcb9-c50e2047a994\",\"searchResultType\":\"Organic\",\"price\":{\"priceFormatted\":\"€ 12.000\",\"priceRaw\":12000}},{\"id\":\"5cdfddd2-4655-4616-97ea-799b0b2bac29\",\"searchResultType\":\"Organic\",\"price\":{\"priceFormatted\":\"€ 12.500\",\"priceRaw\":12500}},{\"id\":\"e8caebfe-a8a2-4235-b2d2-d912400ea7bb\",\"searchResultType\":\"Organic\",\"price\":{\"priceFormatted\":\"€ 14.000\",\"priceRaw\":14000}}]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&mmmv=51872%7C%7C%7C&pricefrom=12001&priceto=19990"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&mmmv=51872%7C%7C%7C&pricefrom=12001&priceto=19990",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":3,\"numberOfPages\":1,\"listings\":[{\"id\":\"78a7a7a7-c8bb-4d27-ae51-8e228395dfbb\",\"searchResultType\":\"Organic\",\"price\":{\"priceFormatted\":\"€ 19.990\",\"priceRaw\":19990}},{\"id\":\"5cdfddd2-4655-4616-97ea-799b0b2bac29\",\"searchResultType\":\"Organic\",\"price\":{\"priceFormatted\":\"€ 12.500\",\"priceRaw\":12500}},{\"id\":\"e8caebfe-a8a2-4235-b2d2-d912400ea7bb\",\"searchResultType\":\"Organic\",\"price\":{\"priceFormatted\":\"€ 14.000\",\"priceRaw\":14000}}]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&pricefrom=0&priceto=0"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&pricefrom=0&priceto=0",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":0,\"numberOfPages\":1,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=N&pricefrom=0&priceto=0"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=N&pricefrom=0&priceto=0",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":0,\"numberOfPages\":1,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=D%2CS&pricefrom=0&priceto=0"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=D%2CS&pricefrom=0&priceto=0",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":0,\"numberOfPages\":1,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&mmmv=51872%7C%7C%7C&pricefrom=19989.5&priceto=19990.5"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&mmmv=51872%7C%7C%7C&pricefrom=19989.5&priceto=19990.5",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":0,\"numberOfPages\":0,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.at/lst?atype=C&cy=A&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO"
+      },
+      "response": {
+        "url": "https://www.autoscout24.at/lst?atype=C&cy=A&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":102358,\"numberOfPages\":80,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.at/lst?atype=C&cy=A&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&pricefrom=0&priceto=999999"
+      },
+      "response": {
+        "url": "https://www.autoscout24.at/lst?atype=C&cy=A&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&pricefrom=0&priceto=999999",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":102352,\"numberOfPages\":80,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.at/lst?atype=C&cy=A&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&pricefrom=1000000"
+      },
+      "response": {
+        "url": "https://www.autoscout24.at/lst?atype=C&cy=A&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&pricefrom=1000000",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":6,\"numberOfPages\":1,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":633456,\"numberOfPages\":80,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&pricefrom=0&priceto=999999"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&pricefrom=0&priceto=999999",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":633404,\"numberOfPages\":80,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&pricefrom=1000000"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=U%2CJ%2CO&pricefrom=1000000",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":52,\"numberOfPages\":2,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=N"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=N",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":91295,\"numberOfPages\":80,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=N&pricefrom=0&priceto=999999"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=N&pricefrom=0&priceto=999999",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":91272,\"numberOfPages\":80,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=N&pricefrom=1000000"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=N&pricefrom=1000000",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":23,\"numberOfPages\":1,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=D%2CS"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=D%2CS",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":110826,\"numberOfPages\":80,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=D%2CS&pricefrom=0&priceto=999999"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=D%2CS&pricefrom=0&priceto=999999",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":110825,\"numberOfPages\":80,\"listings\":[]}}}</script></body></html>"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=D%2CS&pricefrom=1000000"
+      },
+      "response": {
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&sort=age&desc=1&size=50&page=1&offer=D%2CS&pricefrom=1000000",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html; charset=utf-8"
+        },
+        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":1,\"numberOfPages\":1,\"listings\":[]}}}</script></body></html>"
+      }
+    }
+  ]
+}
