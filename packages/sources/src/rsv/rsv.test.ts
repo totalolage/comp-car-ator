@@ -284,6 +284,16 @@ describe("rsv source", () => {
         5,
       ),
     ).toEqual({ Exige: ["111"], "Elise Cup 250": ["113"] });
+    // Backing counts per Variant: GTs of another power do not make a Continental of 300 kW.
+    expect(
+      await modelsOf(
+        [
+          ...cars(2, "BENTLEY", "CONTINENTAL", "3W", 300),
+          ...cars(6, "BENTLEY", "CONTINENTAL GT", "3W", 412),
+        ],
+        5,
+      ),
+    ).toEqual({ "Continental GT": ["3w"] });
   });
 
   it("keeps a word some makes use as a badge, unless it is a trim of that very model", async () => {
@@ -792,21 +802,22 @@ async function namesOf(pairs: [string, string][]): Promise<string[]> {
 }
 
 /** `n` register vehicles of one make, commercial name and type. */
-function cars(n: number, make: string, name: string, type: string): [string, string, string][] {
-  return Array.from({ length: n }, () => [make, name, type]);
+function cars(n: number, make: string, name: string, type: string, kw?: number): Vehicle[] {
+  return Array.from({ length: n }, () => [make, name, type, kw]);
 }
 
-/** The catalog's models of `vehicles` (make, commercial name, type), with their Generations. */
-async function modelsOf(
-  vehicles: [string, string, string][],
-  minVehicles = 1,
-): Promise<Record<string, string[]>> {
+/** A register vehicle: make, commercial name, type and, unless the fixture row's, power. */
+type Vehicle = [string, string, string, number?];
+
+/** The catalog's models of `vehicles`, with their Generations. */
+async function modelsOf(vehicles: Vehicle[], minVehicles = 1): Promise<Record<string, string[]>> {
   const { header, row } = await realRow();
-  const rows = vehicles.map(([make, name, type]) =>
+  const rows = vehicles.map(([make, name, type, kw]) =>
     withColumns(header, row, {
       "Tovární značka": make,
       "Obchodní označení": name,
       "Typ kód": type,
+      ...(kw ? { "Max. výkon [kW] / [min⁻¹]": `${kw}/6000` } : {}),
     }),
   );
   const { entries } = await harvest(syntheticHttp(header, rows.join("\r\n"), 1), "full", null, {

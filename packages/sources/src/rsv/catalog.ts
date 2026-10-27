@@ -108,7 +108,9 @@ export function createCatalog(options: CatalogOptions) {
       for (const r of merged) {
         for (const model of r.backs ?? []) {
           const key = `${r.make}\t${model}`;
-          backing.set(key, [...(backing.get(key) ?? []), r]);
+          const rows = backing.get(key);
+          if (rows) rows.push(r);
+          else backing.set(key, [r]);
         }
       }
       const entries: CatalogEntry[] = [];

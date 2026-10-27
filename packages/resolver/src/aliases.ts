@@ -92,7 +92,8 @@ export const MODEL_ALIASES: Readonly<Record<string, ModelAliases>> = {
   },
   // The catalog names DS models by number ("DS 7 Crossback" → 7 Crossback).
   ds: { badge: { pattern: /^ds-?(\d.*)$/, suffix: "" } },
-  // Porsche's type codes stand for the 911 they approve ("991" is a 911 of the 991 type).
+  // Porsche's type codes stand for the 911 they approve ("991" is a 911 of the 991 type). The
+  // code claims no generation (bare numbers never do): year and power place the listing.
   porsche: { groups: [["911", "996", "997", "991", "992"]] },
   "land-rover": {
     submodels: { "range-rover": ["sport", "velar", "evoque"], discovery: ["sport"] },
