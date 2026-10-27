@@ -133,14 +133,13 @@ const eea =
         {
           unlisted > 0 && (
             <p class="facet-note">
-              {t.t("model.unlisted", { variants: t.count("count.variants", unlisted) })}{" "}
               <a
                 href={
                   t.path(`/make/${view.model.makeId}/`) +
                   writeCatalogState({ filters: { model: [id] } })
                 }
               >
-                {t.t("model.allVariants")}
+                {t.t("model.unlisted", { variants: t.count("count.variants", unlisted) })}
               </a>
             </p>
           )

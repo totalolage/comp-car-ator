@@ -57,12 +57,12 @@ render();
 store.subscribe(render);
 
 // Category menu: the header has the makes only; the categories page has their models. Its
-// makes section replaces the menu's once the menu is about to open (hover, focus or open),
-// keeping focus on the same link. Close on Escape (focus back on its summary) and on a click
-// outside it.
+// tree replaces the menu's once the menu is about to open (hover, focus or open), keeping
+// focus on the same link. Close on Escape (focus back on its summary) and on a click outside
+// it.
 for (const menu of document.querySelectorAll<HTMLDetailsElement>("details[data-menu]")) {
-  const own = menu.querySelector("[data-makes]");
-  const src = own?.querySelector<HTMLAnchorElement>("a[data-tree-src]")?.href;
+  const own = menu.querySelector("[data-tree]");
+  const src = menu.querySelector<HTMLAnchorElement>("a[data-tree-src]")?.href;
   let loading = false;
   const load = () => {
     if (loading || !own || !src) return;
@@ -72,17 +72,14 @@ for (const menu of document.querySelectorAll<HTMLDetailsElement>("details[data-m
       .then((html) => {
         const full = new DOMParser()
           .parseFromString(html, "text/html")
-          .querySelector("[data-makes]");
+          .querySelector("main [data-tree]");
         if (!full) return;
         const focused = own.contains(document.activeElement)
           ? (document.activeElement as HTMLAnchorElement).href
           : undefined;
         own.replaceWith(full);
         if (focused)
-          (
-            full.querySelector<HTMLElement>(`a[href="${new URL(focused).pathname}"]`) ??
-            full.querySelector<HTMLElement>("a")
-          )?.focus();
+          full.querySelector<HTMLElement>(`a[href="${new URL(focused).pathname}"]`)?.focus();
       })
       .catch(() => {
         loading = false;

@@ -51,7 +51,7 @@ Sentence case everywhere; no uppercase labels.
   holds makes and body types only, with a "Všechny modely" link to the categories page: 1,600
   model links on every page would be 19 kB gzip of each page's 30 kB. The shell script
   fetches the categories page when the pointer or focus reaches the menu (or it opens) and
-  swaps its makes-with-models section in, keeping focus on the same link; it also closes the
+  swaps its makes-with-models tree in, keeping focus on the same link; it also closes the
   menu on Escape or an outside click. The menu is `<details>` and plain links, so without
   script it still opens, and the link leads to the full tree.
 - `.split` = rail + results. Below 48rem it stacks and the rail becomes a grid of facet groups.
@@ -134,7 +134,8 @@ Sentence case everywhere; no uppercase labels.
   (`ModelExplorer`). The Variants table lists every Variant with Listings (sold ones too) or a
   used median, and fills up to 30 rows with the others in order (`listedVariants`); a popular
   model has hundreds of Variants from price lists and the register, most never on sale, so a
-  note counts the rest and links to the catalog filtered to the model, which lists them all. EEA attribution shows under the Variants only once the Bundle has run
+  link ("+ 304 variant v katalogu") opens the catalog filtered to the model, which lists them
+  all. EEA attribution shows under the Variants only once the Bundle has run
   the `eea-co2` Source and a Variant carries CO₂ data.
 - `ModelExplorer` mirrors the catalog island over `model(id).listings()`: listing rail
   (Variant, condition, country, registration year, odometer with one quick pick per published
