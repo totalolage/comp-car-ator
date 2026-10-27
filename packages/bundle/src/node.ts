@@ -70,17 +70,23 @@ export function unpackBundle(archive: Uint8Array): BundleFiles {
     for (const [path, content] of Object.entries(parsed.files)) files.set(path, content);
   } else {
     if (text.toString("utf8", 0, firstBreak) !== HEAD) throw new Error("Not a Bundle archive");
+    // Line 1 is HEAD, then one file per line (each after the first led by its comma), then TAIL.
     let start = firstBreak + 1;
-    for (;;) {
+    for (let n = 0; ; n++) {
       const end = text.indexOf(0x0a, start);
       const line = text.toString("utf8", start, end === -1 ? text.length : end);
-      if (line === TAIL && end === -1) break;
-      if (end === -1) throw new Error("Bundle archive is truncated");
-      const entry = JSON.parse(`{${line.startsWith(",") ? line.slice(1) : line}}`) as Record<
-        string,
-        string
-      >;
-      for (const [path, content] of Object.entries(entry)) files.set(path, content);
+      if (end === -1) {
+        if (line !== TAIL) throw new Error("Bundle archive is truncated");
+        break;
+      }
+      const lead = n === 0 ? "" : ",";
+      if (lead && !line.startsWith(lead))
+        throw new Error(`Bundle archive line ${n + 2} is malformed`);
+      const entry = Object.entries(JSON.parse(`{${line.slice(lead.length)}}`) as object);
+      const [path, content] = entry[0] ?? [];
+      if (entry.length !== 1 || typeof path !== "string" || typeof content !== "string")
+        throw new Error(`Bundle archive line ${n + 2} is malformed`);
+      files.set(path, content);
       start = end + 1;
     }
   }

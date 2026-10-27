@@ -254,6 +254,16 @@ describe("Bundle archive", () => {
     expect(() => unpackBundle(gzipSync(cut))).toThrow(/truncated/);
   });
 
+  it("refuses an archive whose lines are not one file each", async () => {
+    const text = gunzipSync(await pack(encodeBundle(content))).toString("utf8");
+    const lines = text.split("\n");
+    const joined = [lines[0], `${lines[1]}${lines[2]}`, ...lines.slice(3)].join("\n");
+    expect(() => unpackBundle(gzipSync(joined))).toThrow(/malformed/);
+    const noComma = text.replace("\n,", "\n");
+    expect(() => unpackBundle(gzipSync(noComma))).toThrow(/malformed/);
+    expect(() => unpackBundle(gzipSync(`${text}\n`))).toThrow();
+  });
+
   it("streams: files are compressed as they come, not gathered first", async () => {
     const written = { chunks: 0 };
     const seenAt: number[] = [];

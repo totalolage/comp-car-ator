@@ -365,6 +365,14 @@ describe.each([
     ledger.close();
   });
 
+  it("refuses run logs that started before their base was released", async () => {
+    const first = await ingestDay(day("2026-10-10"), [census({ A: ["a1"] })], true);
+    await expect(ingestDay(day("2026-10-09"), [census({ A: ["a1"] })])).rejects.toThrow(
+      /before data-20261010-030000 was released; these run logs are stale/,
+    );
+    expect((await findRelease(h.store))?.tag).toBe(first.tag);
+  });
+
   it("counts a complete Census with rejections as taken, so it is not retried daily", async () => {
     const run = await ingestDay(day("2026-10-11"), [census({ A: ["a1", "bad1"] })], true);
     expect(run.runs[0]?.summary).toMatchObject({ census: "skipped-rejections" });
