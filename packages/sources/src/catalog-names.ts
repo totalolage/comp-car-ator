@@ -265,8 +265,11 @@ function isWord(token: string): boolean {
   return slugify(token) !== "";
 }
 
+/** Punctuation that joins the words of a name ("Town & Country", "Terios / Feroza"). */
+const JOINERS = /^(?:[&+/]|\p{Pd})+$/u;
+
 /**
- * "Town Country" → "Town & Country": the punctuation `words` hold between two consecutive
+ * "Town Country" → "Town & Country": the JOINERS `words` hold between two consecutive
  * words of `name`, read where the text spells the name last (after a repeated make). A name
  * whose words are not consecutive words of the text ("3 Series", "Q4 e-tron" of
  * "Q4 40 E-TRON") stays as it is.
@@ -279,8 +282,10 @@ function withPunctuation(name: string, words: string[]): string {
     let fits = slugify(words[i] as string) === slugify(out[0] as string);
     for (const part of parts.slice(1)) {
       if (!fits) break;
-      while (i + 1 < words.length && !isWord(words[i + 1] as string))
-        out.push(words[++i] as string);
+      while (i + 1 < words.length && !isWord(words[i + 1] as string)) {
+        const gap = words[++i] as string;
+        if (JOINERS.test(gap)) out.push(gap);
+      }
       fits = slugify(words[++i] ?? "") === slugify(part);
       out.push(part);
     }

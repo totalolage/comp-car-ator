@@ -505,6 +505,7 @@ describe("rsv source", () => {
       ["VOLVO", "XC - 60", "Volvo|XC60"],
       ["BMW", "1 M - SPORT", "BMW|1 Series"],
       ["LAND ROVER", "RAGNE ROVER - SPORT", "Land Rover|Range Rover - Sport"],
+      ["FORD", "GALAXY ? PLUS", "Ford|Galaxy Plus"],
     ];
     expect(await namesOf(cases.map(([make, name]) => [make, name]))).toEqual(
       cases.map((c) => c[2]),
@@ -551,8 +552,15 @@ describe("rsv source", () => {
         ...cars(1, "CHRYSLER", "TOWN - COUNTRY", "RS"),
         ...cars(2, "FORD", "TRANSIT - EUROLINE", "FA"),
         ...cars(1, "FORD", "TRANSIT", "FA"),
+        // A name that repeats the type ends before it, and before punctuation in front of it.
+        ...cars(1, "CHEVROLET", "CORVETTE - C6", "C6"),
       ]),
-    ).toEqual({ "Town & Country": ["rs", "rt"], "Transit - Euroline": ["fa"], Transit: ["fa"] });
+    ).toEqual({
+      "Town & Country": ["rs", "rt"],
+      "Transit - Euroline": ["fa"],
+      Transit: ["fa"],
+      Corvette: ["c6"],
+    });
   });
 
   it("spells makes and models the way the Resolver's aliases know them", async () => {

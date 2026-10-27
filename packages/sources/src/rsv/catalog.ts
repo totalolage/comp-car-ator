@@ -152,7 +152,8 @@ function wordsOf(model: string): string {
 
 /**
  * The name a model shows: its own rows' spelling with most vehicles, one with punctuation
- * first. "TOWN COUNTRY" is "TOWN & COUNTRY" with the "&" lost, not another spelling of it.
+ * first ("Town & Country" over a more frequent "Town Country"): its words are the same, and
+ * the punctuation says more.
  */
 function shownName(rows: Row[]): string {
   const model = (rows[0] as Row).model;
