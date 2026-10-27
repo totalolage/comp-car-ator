@@ -129,7 +129,7 @@
     },
     {
       "request": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=1000000"
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=999999"
       },
       "response": {
         "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=999999",
@@ -143,7 +143,7 @@
     },
     {
       "request": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=500000"
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=499999"
       },
       "response": {
         "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=499999",
@@ -157,7 +157,7 @@
     },
     {
       "request": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=250000"
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=249999"
       },
       "response": {
         "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=249999",
@@ -171,7 +171,7 @@
     },
     {
       "request": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=125000"
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=124999"
       },
       "response": {
         "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=124999",
@@ -185,7 +185,7 @@
     },
     {
       "request": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=2&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=125000"
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=2&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=124999"
       },
       "response": {
         "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=2&mmmv=51964%7C%7C%7C&pricefrom=0&priceto=124999",
@@ -199,7 +199,7 @@
     },
     {
       "request": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=125000&priceto=250000"
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=125000&priceto=249999"
       },
       "response": {
         "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=125000&priceto=249999",
@@ -213,7 +213,7 @@
     },
     {
       "request": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=250000&priceto=500000"
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=250000&priceto=499999"
       },
       "response": {
         "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=250000&priceto=499999",
@@ -227,7 +227,7 @@
     },
     {
       "request": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=500000&priceto=1000000"
+        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=500000&priceto=999999"
       },
       "response": {
         "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=500000&priceto=999999",
@@ -292,62 +292,6 @@
           "content-type": "text/html; charset=utf-8"
         },
         "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":9,\"numberOfPages\":5,\"listings\":[{\"id\":\"edbe081f-c03e-49ca-a5c8-e92fcdc78b0c\",\"url\":\"/angebote/ford-tourneo-custom-320-titanium-x-l1-8-sitz-ahk-carplay-schalter-diesel-orange-cat_ma29gr74251ge897va3873mt12436tr7898-edbe081f-c03e-49ca-a5c8-e92fcdc78b0c\",\"searchResultType\":\"Nfm\",\"images\":[\"https://prod.pictures.autoscout24.net/listing-images/edbe081f-c03e-49ca-a5c8-e92fcdc78b0c_e50cb441-66fa-41b6-bfbd-1bbb5eca20ce.jpg/250x188.webp\",\"https://prod.pictures.autoscout24.net/listing-images/edbe081f-c03e-49ca-a5c8-e92fcdc78b0c_c845377e-f729-4bc3-b3eb-c43b5d994838.jpg/250x188.webp\"],\"price\":{\"priceFormatted\":\"€ 28.890\",\"priceRaw\":28890,\"isConditionalPrice\":false},\"vehicle\":{\"make\":\"Ford\",\"model\":\"Tourneo Custom\",\"modelId\":74251,\"modelVersionInput\":\"320 Titanium X L1 8-Sitz AHK CarPlay Schalter\",\"offerType\":\"U\",\"transmission\":\"Schaltgetriebe\",\"fuel\":\"Diesel\",\"mileageInKm\":\"83.480 km\",\"engineDisplacementInCCM\":\"1.997 cm³\"},\"location\":{\"countryCode\":\"DE\",\"zip\":\"84030\",\"city\":\"Landshut\"},\"seller\":{\"type\":\"Dealer\"},\"tracking\":{\"firstRegistration\":\"10-2020\",\"fuelType\":\"d\",\"mileage\":\"83480\",\"price\":\"28890\",\"modelTaxonomy\":\"[make_id:29, model_group_id:74251, variant_id:3873, generation_id:897, motortype_id:12436, trim_id:7898];\"},\"vehicleDetails\":[{\"data\":\"83.480 km\",\"iconName\":\"mileage_odometer\",\"ariaLabel\":\"Kilometerstand\"},{\"data\":\"Schaltgetriebe\",\"iconName\":\"gearbox\",\"ariaLabel\":\"Getriebe\"},{\"data\":\"10/2020\",\"iconName\":\"calendar\",\"ariaLabel\":\"Erstzulassung\"},{\"data\":\"Diesel\",\"iconName\":\"gas_pump\",\"ariaLabel\":\"Kraftstoff\"},{\"data\":\"136 kW (185 PS)\",\"iconName\":\"speedometer\",\"ariaLabel\":\"Leistung\"},{\"data\":\"- (l/100 km)\",\"isPlaceholder\":true,\"iconName\":\"water_drop\",\"ariaLabel\":\"Kraftstoffverbrauch\",\"name\":\"fuelConsumptionExtended\"},{\"data\":\"- (g/km)\",\"iconName\":\"leaf\",\"isPlaceholder\":true,\"ariaLabel\":\"CO₂-Emissionen\",\"name\":\"co2Emission\"}]},{\"id\":\"05b123e2-08e2-44c4-91d0-5dc8e98c1bf3\",\"url\":\"/angebote/mercedes-benz-g-klasse-mansory-pano-starlight-akrapovic-carbon-benzin-schwarz-cat_ma47gr100062ge651va3864mt1023tr480515-05b123e2-08e2-44c4-91d0-5dc8e98c1bf3\",\"searchResultType\":\"Nfm\",\"images\":[\"https://prod.pictures.autoscout24.net/listing-images/05b123e2-08e2-44c4-91d0-5dc8e98c1bf3_baae6754-91dc-4cb3-a0d4-9689c520f9da.jpg/250x188.webp\"],\"price\":{\"priceFormatted\":\"€ 199.849\",\"priceRaw\":199849,\"isConditionalPrice\":false},\"vehicle\":{\"make\":\"Mercedes-Benz\",\"model\":\"G 63 AMG\",\"modelId\":20167,\"modelVersionInput\":\"MANSORY PANO STARLIGHT AKRAPOVIC CARBON\",\"offerType\":\"U\",\"transmission\":\"Automatik\",\"fuel\":\"Benzin\",\"mileageInKm\":\"68.665 km\",\"engineDisplacementInCCM\":\"3.982 cm³\"},\"location\":{\"countryCode\":\"DE\",\"zip\":\"64569\",\"city\":\"Nauheim\"},\"seller\":{\"type\":\"Dealer\"},\"tracking\":{\"firstRegistration\":\"06-2020\",\"fuelType\":\"b\",\"mileage\":\"68665\",\"price\":\"199849\",\"modelTaxonomy\":\"[make_id:47, model_group_id:100062, variant_id:3864, generation_id:651, motortype_id:1023, trim_id:480515];\"},\"vehicleDetails\":[{\"data\":\"68.665 km\",\"iconName\":\"mileage_odometer\",\"ariaLabel\":\"Kilometerstand\"},{\"data\":\"Automatik\",\"iconName\":\"gearbox\",\"ariaLabel\":\"Getriebe\"},{\"data\":\"06/2020\",\"iconName\":\"calendar\",\"ariaLabel\":\"Erstzulassung\"},{\"data\":\"Benzin\",\"iconName\":\"gas_pump\",\"ariaLabel\":\"Kraftstoff\"},{\"data\":\"430 kW (585 PS)\",\"iconName\":\"speedometer\",\"ariaLabel\":\"Leistung\"},{\"data\":\"- (l/100 km)\",\"isPlaceholder\":true,\"iconName\":\"water_drop\",\"ariaLabel\":\"Kraftstoffverbrauch\",\"name\":\"fuelConsumptionExtended\"},{\"data\":\"- (g/km)\",\"iconName\":\"leaf\",\"isPlaceholder\":true,\"ariaLabel\":\"CO₂-Emissionen\",\"name\":\"co2Emission\"}]},{\"id\":\"ecb61d2f-516b-4f2f-8f13-5f30b38c2137\",\"url\":\"/angebote/ford-ranger-2-5-diesel-xlt-doppelkabine-4x4-starker-allrad-top-diesel-gruen-cat_ma29gr15862ge881va3216mt10973tr4973-ecb61d2f-516b-4f2f-8f13-5f30b38c2137\",\"searchResultType\":\"Nfm\",\"images\":[\"https://prod.pictures.autoscout24.net/listing-images/ecb61d2f-516b-4f2f-8f13-5f30b38c2137_7cc2a80f-1ba6-4683-855e-3209a778e069.jpg/250x188.webp\",\"https://prod.pictures.autoscout24.net/listing-images/ecb61d2f-516b-4f2f-8f13-5f30b38c2137_0c956d24-7a51-4d24-8f42-31520cdb4d94.jpg/250x188.webp\"],\"price\":{\"priceFormatted\":\"€ 12.000\",\"priceRaw\":12000,\"isConditionalPrice\":false},\"vehicle\":{\"make\":\"Ford\",\"model\":\"Ranger\",\"modelId\":15862,\"modelVersionInput\":\"2.5 DIESEL XLT Doppelkabine 4X4 Starker Allrad TOP\",\"offerType\":\"U\",\"transmission\":\"Schaltgetriebe\",\"fuel\":\"Diesel\",\"mileageInKm\":\"229.000 km\",\"engineDisplacementInCCM\":\"2.500 cm³\"},\"location\":{\"countryCode\":\"DE\",\"zip\":\"47906\",\"city\":\"Kempen\"},\"seller\":{\"type\":\"Dealer\"},\"tracking\":{\"firstRegistration\":\"07-2011\",\"fuelType\":\"d\",\"mileage\":\"229000\",\"price\":\"12000\",\"modelTaxonomy\":\"[make_id:29, model_group_id:15862, variant_id:3216, generation_id:881, motortype_id:10973, trim_id:4973];\"},\"vehicleDetails\":[{\"data\":\"229.000 km\",\"iconName\":\"mileage_odometer\",\"ariaLabel\":\"Kilometerstand\"},{\"data\":\"Schaltgetriebe\",\"iconName\":\"gearbox\",\"ariaLabel\":\"Getriebe\"},{\"data\":\"07/2011\",\"iconName\":\"calendar\",\"ariaLabel\":\"Erstzulassung\"},{\"data\":\"Diesel\",\"iconName\":\"gas_pump\",\"ariaLabel\":\"Kraftstoff\"},{\"data\":\"105 kW (143 PS)\",\"iconName\":\"speedometer\",\"ariaLabel\":\"Leistung\"},{\"data\":\"9,30 l/100 km (komb.)\",\"iconName\":\"water_drop\",\"ariaLabel\":\"Kraftstoffverbrauch\",\"name\":\"fuelConsumptionExtended\"},{\"data\":\"246 g/km (komb.)\",\"iconName\":\"leaf\",\"ariaLabel\":\"CO₂-Emissionen\",\"name\":\"co2Emission\"}]}],\"taxonomy\":{\"makes\":{\"51872\":{\"label\":\"Aiways\",\"value\":51872},\"51964\":{\"label\":\"Zeekr\",\"value\":51964}}}}}}</script></body></html>",
-        "tier": "T0"
-      }
-    },
-    {
-      "request": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=1000000&priceto=1000000"
-      },
-      "response": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=1000000",
-        "status": 200,
-        "headers": {
-          "content-type": "text/html; charset=utf-8"
-        },
-        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":0,\"numberOfPages\":1,\"listings\":[],\"taxonomy\":{\"makes\":{\"51872\":{\"label\":\"Aiways\",\"value\":51872},\"51964\":{\"label\":\"Zeekr\",\"value\":51964}}}}}}</script></body></html>",
-        "tier": "T0"
-      }
-    },
-    {
-      "request": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=500000&priceto=500000"
-      },
-      "response": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=1000000",
-        "status": 200,
-        "headers": {
-          "content-type": "text/html; charset=utf-8"
-        },
-        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":0,\"numberOfPages\":1,\"listings\":[],\"taxonomy\":{\"makes\":{\"51872\":{\"label\":\"Aiways\",\"value\":51872},\"51964\":{\"label\":\"Zeekr\",\"value\":51964}}}}}}</script></body></html>",
-        "tier": "T0"
-      }
-    },
-    {
-      "request": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=250000&priceto=250000"
-      },
-      "response": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=1000000",
-        "status": 200,
-        "headers": {
-          "content-type": "text/html; charset=utf-8"
-        },
-        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":0,\"numberOfPages\":1,\"listings\":[],\"taxonomy\":{\"makes\":{\"51872\":{\"label\":\"Aiways\",\"value\":51872},\"51964\":{\"label\":\"Zeekr\",\"value\":51964}}}}}}</script></body></html>",
-        "tier": "T0"
-      }
-    },
-    {
-      "request": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=125000&priceto=125000"
-      },
-      "response": {
-        "url": "https://www.autoscout24.de/lst?atype=C&cy=D&fregfrom=2000&damaged_listing=exclude&ocs_listing=exclude&offer=U%2CJ%2CO&sort=age&desc=1&size=2&page=1&mmmv=51964%7C%7C%7C&pricefrom=1000000",
-        "status": 200,
-        "headers": {
-          "content-type": "text/html; charset=utf-8"
-        },
-        "body": "<!DOCTYPE html><html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{\"numberOfResults\":0,\"numberOfPages\":1,\"listings\":[],\"taxonomy\":{\"makes\":{\"51872\":{\"label\":\"Aiways\",\"value\":51872},\"51964\":{\"label\":\"Zeekr\",\"value\":51964}}}}}}</script></body></html>",
         "tier": "T0"
       }
     }
