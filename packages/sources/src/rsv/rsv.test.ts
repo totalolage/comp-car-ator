@@ -231,7 +231,8 @@ describe("rsv source", () => {
     }
     // A few "RANGE ROVER" rows of the Sport's type stay what the register says; neither name
     // takes the other's vehicles. Badges fold into the model on its types ("EVOQUE HSE
-    // DYNAMIC", "XC90 D4"), not on a type of their own ("IONIQ 5"); trim words go per row.
+    // DYNAMIC", "XC90 D4"), not on a type of their own ("IONIQ 5"), and a lone digit is no badge
+    // ("QASHQAI +2"); trim words go per row.
     expect(
       await modelsOf([
         ...Array(6).fill(car("LAND ROVER", "RANGE ROVER", "LG")),
@@ -245,6 +246,8 @@ describe("rsv source", () => {
         ...Array(2).fill(car("VOLVO", "XC90 D4", "L")),
         ...Array(3).fill(car("HYUNDAI", "IONIQ", "AE")),
         ...Array(2).fill(car("HYUNDAI", "IONIQ 5", "NE")),
+        ...Array(3).fill(car("NISSAN", "QASHQAI", "J10")),
+        ...Array(2).fill(car("NISSAN", "QASHQAI +2", "J10")),
         ...Array(3).fill(car("ŠKODA", "OCTAVIA", "NX")),
         ...Array(2).fill(car("ŠKODA", "OCTAVIA SCOUT", "NX")),
       ]),
@@ -256,6 +259,8 @@ describe("rsv source", () => {
       XC90: ["l"],
       Ioniq: ["ae"],
       "Ioniq 5": ["ne"],
+      Qashqai: ["j10"],
+      "Qashqai +2": ["j10"],
       Octavia: ["nx"],
     });
   });

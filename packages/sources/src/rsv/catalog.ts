@@ -145,7 +145,9 @@ function spellModels(rows: Row[]): Row[] {
  * Words that, after a model name, mark a version of it rather than a model of its own: trim,
  * performance, fuel and body words the register writes after the model ("XC90 DRIVE-E",
  * "911 CARRERA GTS", "ASTRA CARAVAN"). Words that name models ("Sport", "Plus", "Picasso",
- * "Allspace", "Allroad", "Cross", "Connect") are not here.
+ * "Allspace", "Allroad", "Cross", "Connect") are not here. Curated, not proven: a few
+ * (s, r, m, n, gt) also end model names ("Model S", "e-tron GT"), which stay apart only while
+ * the shorter name holds none of their types.
  */
 const BADGES = new Set(
   (
@@ -155,12 +157,16 @@ const BADGES = new Set(
     "verde abarth bullitt rubicon hellcat scat pack widebody aero racing glx lx ex xs junior " +
     "eco sdi tddi tfsie quatro carrera drive drive-e twin engine e-hybrid hybrid plug-in " +
     "bifuel bi-fuel g-tron e-tech electric cng lpg blue motion bluemotion syncro mt at " +
-    "convertible coup wagon sportwagon caravan van turnier weekend s-w stw grandtour volante lim"
+    "kwh convertible coup wagon sportwagon caravan van turnier weekend s-w stw grandtour volante lim"
   ).split(" "),
 );
 
-/** A word that marks a version: a badge, or an engine, power or code token ("D4", "P380", "1J"). */
-const isBadge = (word: string) => /\d/.test(word) || BADGES.has(slugify(word)) || !slugify(word);
+/**
+ * A word that marks a version: a badge, or an engine, power or code token ("D4", "P380", "1J",
+ * "130"). A lone digit ("Ioniq 5", "Qashqai +2") can number a model, so it is no badge.
+ */
+const isBadge = (word: string) =>
+  /[A-Z]\d|\d[A-Z]|\d\d/i.test(word) || BADGES.has(slugify(word)) || !slugify(word);
 
 /**
  * Folds "XC90 D4" into "XC90": a name that extends a shorter one by badges only is that model,
