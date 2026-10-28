@@ -249,7 +249,10 @@ describe("Ledger", () => {
       });
       expect(listings.get("tipcars:19337165")).toMatchObject({
         ...eur(55_000),
-        priceHistory: [{ date: "2026-10-26", ...eur(55_000) }],
+        priceHistory: [
+          { date: "2026-10-26", ...eur(55_000) },
+          { date: "2026-10-29", ...eur(55_000) },
+        ],
       });
       expect(listings.get("tipcars:32587029")).toMatchObject({
         ...czk(225_000),
@@ -291,6 +294,33 @@ describe("Ledger", () => {
         seen("56607021", 10_830, eur(10_830)),
       ]);
       expect(later.priceChanges).toBe(0);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps repeated EUR TipCars history points when correcting an older Ledger", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "cca-ledger-"));
+    try {
+      const file = join(dir, "ledger.sqlite");
+      const eur = { price: { amount: 10_830, currency: "EUR" as const } };
+      ledger = openLedger(file);
+      await run("tipcars", "full", "2026-10-26", [seen("56607021", 10_830, eur)]);
+      ledger.close();
+
+      const db = new DatabaseSync(file);
+      db.prepare("UPDATE meta SET value = '3' WHERE key = 'schema_version'").run();
+      db.prepare(
+        "INSERT INTO price_history (listing_id, date, amount, currency) VALUES (?, ?, ?, ?)",
+      ).run("tipcars:56607021", "2026-10-27", 10_830, "EUR");
+      db.close();
+
+      ledger = openLedger(file);
+      const listing = [...ledger.snapshot().listings()][0];
+      expect(listing?.priceHistory).toEqual([
+        { date: "2026-10-26", price: { amount: 10_830, currency: "EUR" } },
+        { date: "2026-10-27", price: { amount: 10_830, currency: "EUR" } },
+      ]);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
