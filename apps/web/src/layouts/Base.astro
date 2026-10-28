@@ -29,8 +29,10 @@ interface Props {
   recent?: { id: string; label: string };
   /** The compare page shows the list itself and leaves the tray out. */
   tray?: boolean;
+  /** Kept out of search results (the offline page). */
+  noindex?: boolean;
 }
-const { lang, title, path, crumbs, recent, tray = true } = Astro.props;
+const { lang, title, path, crumbs, recent, tray = true, noindex = false } = Astro.props;
 const t = i18n(lang);
 const other: Lang = lang === "cs" ? "en" : "cs";
 const tree = await categoryTree();
@@ -44,13 +46,19 @@ const trail: Crumb[] | undefined = crumbs && [
 <html lang={lang}>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
     <meta name="description" content={t.t("site.tagline")} />
+    {noindex && <meta name="robots" content="noindex" />}
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" sizes="any" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content={site} />
+    {/* Installed on iOS the status bar sits over the page; the masthead's green runs under it. */}
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#00664a" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0c5240" media="(prefers-color-scheme: dark)" />
     <link rel="alternate" hreflang="cs" href={new URL(path, Astro.site)} />

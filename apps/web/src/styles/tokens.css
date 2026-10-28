@@ -43,9 +43,14 @@
 
   /* Layout */
   --page-max: 100rem;
-  --gutter: var(--s4);
+  /* Safe areas (viewport-fit=cover): the notch in landscape, the status bar of the installed
+     app on iOS. They are 0 everywhere else. */
+  --safe-x: max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+  --gutter: max(var(--s4), var(--safe-x));
   --rail: 15rem;
-  --masthead: 2.5rem;
+  --masthead-bar: 2.5rem;
+  /* The masthead's full height, status bar included: sticky things stop below it. */
+  --masthead: calc(var(--masthead-bar) + env(safe-area-inset-top, 0px));
   --cell-y: 0.125rem; /* 2px: ~19px rows at 12px text */
   --cell-x: 0.375rem;
 }
