@@ -10,12 +10,19 @@
 //   index and its rows files carry a stamp that must match (packages/bundle); serving a cached
 //   index from yesterday's deploy next to a rows file fetched from today's would trip it on
 //   every daily deploy, so the cache only answers when the network does not.
-// - /_astro/ assets: hashed, so served from the cache this deploy's worker filled at install.
+// - /_astro/ assets: hashed, so served from any of the worker's caches, the network only when
+//   none has them.
+// - Everything else goes to the browser untouched: other origins (listing photos), /_vercel/
+//   (the toolbar and comments), and requests that carry their own credentials (an
+//   Authorization header, or a script's fetch with credentials "include"), whose answer may be
+//   someone's and must neither fill the cache nor be answered from it.
 // The version is a hash of everything precached (the offline pages carry the data date, so in
 // practice every deploy). All caches carry it: a kept page must find the assets it links, and
-// a model's kept index the rows files of the same Bundle. A deploy installs a new worker,
-// which takes over at once and deletes the older versions' caches, so what is kept for
-// offline starts over after an update (which only happens online).
+// a model's kept index the rows files of the same Bundle. A deploy's new worker installs next
+// to the old one and waits, as workers do, until no tab runs the old one: an open tab may
+// still import a chunk of its own deploy that the server no longer has, and the old caches
+// hold it. Once the new worker activates it deletes the older versions' caches, so what is
+// kept for offline starts over after an update (which only happens online).
 import { createHash } from "node:crypto";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
@@ -74,10 +81,7 @@ export function worker(version, precache) {
 
   sw.addEventListener("install", (/** @type {any} */ event) => {
     event.waitUntil(
-      caches
-        .open(SHELL)
-        .then((cache) => cache.addAll(precache))
-        .then(() => sw.skipWaiting()),
+      caches.open(SHELL).then((cache) => cache.addAll(precache)),
     );
   });
 
@@ -85,9 +89,9 @@ export function worker(version, precache) {
     event.waitUntil(
       (async () => {
         for (const name of await caches.keys())
-          if (!name.endsWith(`-${version}`)) await caches.delete(name);
+          if (/^(shell|pages|data)-/.test(name) && !name.endsWith(`-${version}`))
+            await caches.delete(name);
         await sw.registration.navigationPreload?.enable();
-        await sw.clients.claim();
       })(),
     );
   });
@@ -95,15 +99,18 @@ export function worker(version, precache) {
   sw.addEventListener("fetch", (/** @type {any} */ event) => {
     /** @type {Request} */
     const request = event.request;
-    if (request.method !== "GET") return;
+    if (request.method !== "GET" || request.headers.has("authorization")) return;
+    // Navigations, stylesheets and images carry credentials "include" by default; only a
+    // script's fetch (no destination) asks for it itself.
+    if (request.credentials === "include" && !request.destination) return;
     const url = new URL(request.url);
-    if (url.origin !== location.origin) return;
+    if (url.origin !== location.origin || url.pathname.startsWith("/_vercel/")) return;
     if (request.mode === "navigate") {
       event.respondWith(page(event, url));
     } else if (url.pathname.startsWith("/_astro/")) {
-      event.respondWith(
-        caches.match(request, { cacheName: SHELL }).then((hit) => hit ?? fetch(request)),
-      );
+      // Any version's cache: a tab still on an older deploy, or a fresh page of the newer one
+      // while its worker waits, finds its chunks offline or after the server dropped them.
+      event.respondWith(caches.match(request).then((hit) => hit ?? fetch(request)));
     } else if (
       url.pathname.startsWith("/bundle/") ||
       /^\/model\/.+\/first\.json\.gz$/.test(url.pathname)

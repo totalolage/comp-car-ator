@@ -42,8 +42,13 @@ function cacheStorage() {
     async delete(name: string) {
       return stores.delete(name);
     },
-    async match(k: string | Request, { cacheName }: { cacheName: string }) {
-      return stores.get(cacheName)?.get(keyOf(k))?.clone();
+    /** In one cache, or the first hit across all of them in creation order. */
+    async match(k: string | Request, { cacheName }: { cacheName?: string } = {}) {
+      const names = cacheName === undefined ? [...stores.keys()] : [cacheName];
+      for (const name of names) {
+        const hit = stores.get(name)?.get(keyOf(k));
+        if (hit) return hit.clone();
+      }
     },
   };
 }
@@ -55,15 +60,27 @@ function basic(body: string, status = 200) {
   return r;
 }
 
-let handlers: Map<string, Handler>;
+type Worker = Map<string, Handler>;
+let handlers: Worker;
 let store: ReturnType<typeof cacheStorage>;
 let online: boolean;
 let server: (url: URL) => Response;
 
-async function dispatch(type: string, extra: object = {}) {
+/** A worker as one deploy serves it; the browser has not yet sent it any event. */
+function boot(version: string, precache: string[]): Worker {
+  const own: Worker = new Map();
+  vi.stubGlobal("self", {
+    addEventListener: (type: string, h: Handler) => own.set(type, h),
+    registration: { navigationPreload: { enable: async () => {} } },
+  });
+  worker(version, precache);
+  return own;
+}
+
+async function dispatch(type: string, extra: object = {}, to: Worker = handlers) {
   const waits: Promise<unknown>[] = [];
   let response: Promise<Response> | undefined;
-  handlers.get(type)?.({
+  to.get(type)?.({
     ...extra,
     waitUntil: (p: Promise<unknown>) => waits.push(p),
     respondWith: (p: Promise<Response>) => {
@@ -78,22 +95,24 @@ async function dispatch(type: string, extra: object = {}) {
 // A Request cannot be constructed with mode "navigate"; the worker reads only these fields.
 const navigate = (path: string) =>
   dispatch("fetch", {
-    request: { url: ORIGIN + path, method: "GET", mode: "navigate" },
+    request: {
+      url: ORIGIN + path,
+      method: "GET",
+      mode: "navigate",
+      destination: "document",
+      credentials: "include",
+      headers: new Headers(),
+    },
     preloadResponse: Promise.resolve(undefined),
   });
-const get = (path: string) => dispatch("fetch", { request: new Request(ORIGIN + path) });
+const get = (path: string, init?: RequestInit, to?: Worker) =>
+  dispatch("fetch", { request: new Request(ORIGIN + path, init) }, to);
 
 beforeEach(async () => {
   handlers = new Map();
   store = cacheStorage();
   online = true;
   server = (url) => basic(`${url.pathname}${url.search} v2`);
-  vi.stubGlobal("self", {
-    addEventListener: (type: string, h: Handler) => handlers.set(type, h),
-    skipWaiting: async () => {},
-    clients: { claim: async () => {} },
-    registration: { navigationPreload: { enable: async () => {} } },
-  });
   vi.stubGlobal("location", new URL(ORIGIN));
   vi.stubGlobal("caches", store);
   vi.stubGlobal(
@@ -104,7 +123,7 @@ beforeEach(async () => {
     }),
   );
   await store.open("pages-old");
-  worker("new", PRECACHE);
+  handlers = boot("new", PRECACHE);
   await dispatch("install");
   await dispatch("activate");
 });
@@ -116,6 +135,33 @@ describe("service worker", () => {
   it("precaches the shell and drops older versions' caches", async () => {
     expect(await store.keys()).toEqual(["shell-new"]);
     expect([...(store.stores.get("shell-new")?.keys() ?? [])]).toHaveLength(PRECACHE.length);
+  });
+
+  it("lets a tab on the older deploy load its chunks until the new worker activates", async () => {
+    store = cacheStorage();
+    vi.stubGlobal("caches", store);
+    await store.open("other-app");
+    const old = boot("old", [...PRECACHE, "/_astro/lazy.old.js"]);
+    await dispatch("install", {}, old);
+    await dispatch("activate", {}, old);
+    // The next deploy drops the old chunk and adds its own.
+    server = (url) =>
+      url.pathname === "/_astro/lazy.old.js" ? basic("not found", 404) : basic(`${url.pathname} v3`);
+    const next = boot("next", [...PRECACHE, "/_astro/lazy.next.js"]);
+    await dispatch("install", {}, next);
+    expect(await store.keys()).toEqual(["other-app", "shell-old", "shell-next"]);
+
+    // The open tab still runs the old worker: its own chunk comes from its cache, and a page
+    // of the new deploy opened meanwhile finds the new chunks offline in the waiting cache.
+    expect(await (await get("/_astro/lazy.old.js", {}, old))?.text()).toBe("/_astro/lazy.old.js v2");
+    online = false;
+    expect(await (await get("/_astro/lazy.next.js", {}, old))?.text()).toBe(
+      "/_astro/lazy.next.js v3",
+    );
+
+    // Once no tab runs the old worker, the new one activates and drops the old caches only.
+    await dispatch("activate", {}, next);
+    expect(await store.keys()).toEqual(["other-app", "shell-next"]);
   });
 
   it("serves pages from the network, keeps one copy per path, and falls back offline", async () => {
@@ -157,8 +203,28 @@ describe("service worker", () => {
     expect(await (await get("/_astro/shell.js"))?.text()).toBe("/_astro/shell.js v2");
   });
 
+  it("never reads or fills the cache for a request that carries its own credentials", async () => {
+    await get("/bundle/catalog.json.gz");
+    server = () => basic("someone's", 200);
+    // Not answered by the worker, so neither read from the cache nor written to it.
+    for (const init of [
+      { headers: { Authorization: "Bearer a" } },
+      { credentials: "include" as const },
+    ]) {
+      expect(await get("/bundle/catalog.json.gz", init)).toBeUndefined();
+      expect(await get("/bundle/models/b/index.json.gz", init)).toBeUndefined();
+      expect(await get("/_astro/shell.js", init)).toBeUndefined();
+    }
+    expect([...(store.stores.get("data-new")?.keys() ?? [])]).toEqual([
+      `${ORIGIN}/bundle/catalog.json.gz`,
+    ]);
+    online = false;
+    expect(await (await get("/bundle/catalog.json.gz"))?.text()).toBe("/bundle/catalog.json.gz v2");
+  });
+
   it("leaves other origins, other methods and other paths to the browser", async () => {
     expect(await get("/manifest.webmanifest")).toBeUndefined();
+    expect(await get("/_vercel/toolbar/x.js")).toBeUndefined();
     expect(
       await dispatch("fetch", { request: new Request("https://example.com/x") }),
     ).toBeUndefined();

@@ -255,6 +255,11 @@ answers from its cache only when the network fails; a page never kept falls back
 kept copy, a 404 does not. The catalog pages and `/_astro/` assets are precached, so the
 installed app opens offline, but its filters need `catalog.json`, which is only kept once
 fetched. Offline reads are best effort: a model's kept index and rows files may come from
-different deploys, and the rows stamp check then fails as it would online. Every cache carries the worker's version, a hash of what it
-precaches; a deploy's new worker takes over at once and drops the older caches. `shell.ts`
-registers it (a few dozen bytes); `vercel.json` serves `/sw.js` with `no-cache`.
+different deploys, and the rows stamp check then fails as it would online. Other origins
+(listing photos), `/_vercel/` and requests that carry their own credentials (an
+`Authorization` header, a script's fetch with `credentials: "include"`) bypass the worker.
+Every cache carries the worker's version, a hash of what it precaches. A deploy's new worker
+waits until no tab runs the old one, so an open tab still loads its own deploy's chunks from
+the old cache after the server has dropped them; when the new worker activates it drops the
+older caches. Nothing announces an update: the next visit after the tabs close gets it.
+`shell.ts` registers it (a few dozen bytes); `vercel.json` serves `/sw.js` with `no-cache`.
