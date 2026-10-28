@@ -96,6 +96,23 @@ const listings = (os: Observation[]) =>
 const slicesDone = (os: Observation[]) =>
   os.flatMap((o) => (o.kind === "SliceDone" ? [o.slice] : []));
 const CARD = 'data-listing-item-id-value="';
+/** A list page without its first `n` cards. */
+const without = (n: number) => (b: string) => {
+  const parts = b.split(CARD);
+  parts.splice(1, n);
+  return parts.join(CARD);
+};
+/** A list page whose card `ref` is one of the site's "Ostatní" bucket: make XX, no model. */
+const other = (ref: string) => (b: string) => {
+  const start = b.indexOf(`${CARD}${ref}"`);
+  if (start < 0) throw new Error(`no card ${ref}`);
+  const end = b.indexOf(CARD, start + CARD.length);
+  const card = b
+    .slice(start, end < 0 ? undefined : end)
+    .replace(/(&quot;manufacturer&quot;:&quot;)\w+/, "$1XX")
+    .replace(/(advertisement-name__title">\s*<h3>)[^<]*/, "$1 Ostatní ");
+  return b.slice(0, start) + card + (end < 0 ? "" : b.slice(end));
+};
 
 describe("tipcars source", () => {
   it("incremental run yields the listings the Ledger does not know, newest first, and stops", async () => {
@@ -123,6 +140,33 @@ describe("tipcars source", () => {
       live: true,
     });
     expect(listings(live).map((o) => o.ref)).toEqual(seen.map((o) => o.ref));
+  });
+
+  it("an Ostatní card without a model is out of scope and does not keep the incremental walk going", async () => {
+    // 100171421 leads page 2 of the used list. Unknown and in the scope it would send the
+    // walk on to page 3, which replay does not have.
+    const cassette = edit(
+      await loadCassette(incremental),
+      "/ojete?str=2-20&2000-=",
+      body(other("100171421")),
+    );
+    const knownBefore = await known();
+    knownBefore.delete("100171421");
+    const os = await harvest(cassette, { mode: "incremental", known: knownBefore });
+    expect(listings(os).map((o) => o.ref)).not.toContain("100171421");
+    expect(listings(os)).toHaveLength(8);
+  });
+
+  it("a full run leaves Ostatní cards without a model out and still finishes the slice", async () => {
+    const plain = await loadCassette(full);
+    const page = plain.interactions.find((x) => x.request.url.endsWith("/ojete?2000-2000="));
+    const ref = page?.response.body.split(CARD)[1]?.split('"')[0] ?? "";
+    const os = await harvest(edit(plain, "/ojete?2000-2000=", body(other(ref))), { mode: "full" });
+    expect(slicesDone(os)).toEqual(FULL_SLICES);
+    const seen = listings(os);
+    expect(seen.map((o) => o.ref)).not.toContain(ref);
+    expect(seen.every((o) => o.vehicle.make && o.vehicle.model)).toBe(true);
+    expect(seen).toHaveLength(listings(await harvest(plain, { mode: "full" })).length - 1);
   });
 
   it("maps a used listing from its list card", async () => {
@@ -265,23 +309,44 @@ describe("tipcars source", () => {
     expect(slicesDone(os)).toEqual(FULL_SLICES);
   });
 
-  it("a slice that stays short of its count is paged twice, then fails the run after the others", async () => {
+  it("a slice that stays short of its count is paged three times, then fails the run after the others", async () => {
     // Drop one card from the first page of used:2000: every pass then sees one listing less
     // than the slice reports.
-    const cassette = edit(
-      await loadCassette(full),
-      "/ojete?2000-2000=",
-      body((b) => {
-        const parts = b.split(CARD);
-        parts.splice(1, 1);
-        return parts.join(CARD);
-      }),
-    );
+    const cassette = edit(await loadCassette(full), "/ojete?2000-2000=", body(without(1)));
     const os: Observation[] = [];
-    await expect(harvest(cassette, { mode: "full" }, os)).rejects.toThrow(
+    const urls: string[] = [];
+    await expect(harvest(cassette, { mode: "full", urls }, os)).rejects.toThrow(
       /fewer listings than reported: used:2000/,
     );
+    expect(urls.filter((u) => u.endsWith("/ojete?2000-2000="))).toHaveLength(3);
     expect(slicesDone(os)).toEqual(["used:2001"]);
+  });
+
+  it("a slice is done when its passes together reach its count, though each alone falls short", async () => {
+    // Re-dated listings jump above a pass: pass 1 misses the first card of page 1, pass 2
+    // the second; both report the whole count.
+    const cassette = await loadCassette(full);
+    const interactions = cassette.interactions.flatMap((x) => {
+      if (!x.request.url.endsWith("/ojete?2000-2000=")) return [x];
+      const missing = (n: number) => {
+        const parts = x.response.body.split(CARD);
+        parts.splice(n, 1);
+        return { ...x, response: { ...x.response, body: parts.join(CARD) } };
+      };
+      return [missing(1), missing(2)];
+    });
+    const os = await harvest({ ...cassette, interactions }, { mode: "full" });
+    expect(slicesDone(os)).toEqual(FULL_SLICES);
+    const whole = await harvest(await loadCassette(full), { mode: "full" });
+    expect(
+      listings(os)
+        .map((o) => o.ref)
+        .sort(),
+    ).toEqual(
+      listings(whole)
+        .map((o) => o.ref)
+        .sort(),
+    );
   });
 
   it("a slice short on its first pass and whole on its second is done", async () => {
@@ -308,25 +373,20 @@ describe("tipcars source", () => {
     );
   });
 
-  it("a second pass must reach its own count: the first pass's cards cannot fill it", async () => {
-    // Pass 1 misses card X on page 1. Before pass 2 one listing is gone (every page reports
-    // one less) and pass 2 misses X and Y. Together the passes have all but X: one less than
-    // pass 2 reports, so a union would pass for complete while X is still unseen.
+  it("the passes must reach the highest count reported: a listing gone meanwhile cannot fill in", async () => {
+    // Pass 1 misses card X on page 1. Before pass 2 Y is gone (every page reports one less)
+    // and pass 2 misses X and Y. Together the passes have all but X: as many as pass 2
+    // reports, one less than pass 1 did, so the slice stays not done.
     const cassette = await loadCassette(full);
-    const without = (b: string, n: number) => {
-      const parts = b.split(CARD);
-      parts.splice(1, n);
-      return parts.join(CARD);
-    };
     const fewer = (b: string) =>
       b.replace(/"numberOfItems":\s*(\d+)/, (_, n) => `"numberOfItems": ${Number(n) - 1}`);
     const interactions = cassette.interactions.flatMap((x) => {
       if (!x.request.url.includes("2000-2000=")) return [x];
       const firstPage = x.request.url.endsWith("/ojete?2000-2000=");
-      const pass1 = firstPage ? { ...x.response, body: without(x.response.body, 1) } : x.response;
+      const pass1 = firstPage ? { ...x.response, body: without(1)(x.response.body) } : x.response;
       const pass2 = {
         ...x.response,
-        body: fewer(firstPage ? without(x.response.body, 2) : x.response.body),
+        body: fewer(firstPage ? without(2)(x.response.body) : x.response.body),
       };
       return [
         { ...x, response: pass1 },

@@ -22,12 +22,19 @@
  *   `new:<from>-<to>` (price bands; the last is open; the site's price filter leaves out
  *   listings without a price). A slice is paged to its end before any
  *   of its detail pages, so it is paged in minutes; then its listings, then SliceDone. Slices
- *   done earlier in the census are skipped. A slice with fewer distinct listings than it
- *   reports (one removed meanwhile shifts the next across a page boundary) is paged once
- *   more; still short, it stays not done and the run fails after the other slices, so it is
- *   no census. Listings without a price ("Dohodou") are outside the scope.
+ *   done earlier in the census are skipped. "Newest first" is by the date a listing was last
+ *   updated, and dealers' feeds re-date listings all day: one re-dated while a pass reads
+ *   further down jumps above it and is missed (a large used year, paged in some 15 minutes,
+ *   came out 20 to 180 short of its count, every pass). So a slice short of the highest
+ *   count its pages reported is paged again from the top, up to three passes, until the
+ *   listings of all passes together reach that count; still short, it stays not done and the
+ *   run fails after the other slices, so it is no census. Limit: a listing removed after one
+ *   pass met it can stand in for one every pass missed; the Ledger retires a listing only
+ *   after two censuses miss it.
+ * - Out of scope: listings without a price ("Dohodou"), and cards of the site's "Ostatní"
+ *   bucket (makes it does not list) that name no model.
  * - incremental: both lists newest first, yielding the listings not known before, each list
- *   stopping at a page with none.
+ *   stopping at a page with none in the scope.
  *
  * Research notes: scrape-access.md (TipCars row); lists, filters and pages verified against
  * the live site 2026-10-25. Cloudflare scores clients there, so every request starts at T1.
@@ -64,7 +71,11 @@ export interface TipcarsOptions {
 
 const BASE = "https://www.tipcars.com";
 const PAGE_SIZE = 20;
+/** Most times a full run pages one slice before it leaves the slice not done. */
+const PASSES = 3;
 const FIRST_YEAR = 2000;
+/** The site's make code for its "Ostatní" (other makes) bucket. */
+const OTHER_MAKE = "XX";
 /** Lower edges of the new/demo price bands (CZK); the last band is open. */
 const NEW_PRICE_EDGES = [
   0, 500_000, 600_000, 700_000, 800_000, 900_000, 1_000_000, 1_200_000, 1_500_000, 2_000_000,
@@ -144,40 +155,39 @@ class Harvest {
   }
 
   /**
-   * Every card of a slice, paged twice when the first pass has fewer distinct listings than
-   * the slice reports (a listing removed meanwhile shifts the next one onto a page already
-   * read). A pass is complete when it alone reaches the highest total any of its pages
-   * reported; the cards of both passes come out either way.
+   * Every card of a slice, paged again (up to PASSES times) while the passes so far have
+   * fewer distinct listings than the highest total any of their pages reported. A listing
+   * re-dated while a pass reads further down jumps above it and is missed; the next pass,
+   * starting at the top, meets it there. The cards of every pass come out either way.
    */
   private async census(slice: Slice): Promise<{ cards: Card[]; complete: boolean }> {
     const cards = new Map<string, Card>();
-    for (let pass = 1; pass <= 2; pass++) {
-      const refs = new Set<string>();
-      let reported = 0;
+    let reported = 0;
+    for (let pass = 1; pass <= PASSES; pass++) {
       for await (const page of this.pages(slice.list, slice.filter, true)) {
         reported = Math.max(reported, page.total);
-        for (const card of page.cards) {
-          refs.add(card.ref);
-          if (!cards.has(card.ref)) cards.set(card.ref, card);
-        }
+        for (const card of page.cards) if (!cards.has(card.ref)) cards.set(card.ref, card);
       }
-      if (refs.size >= reported) return { cards: [...cards.values()], complete: true };
+      if (cards.size >= reported) return { cards: [...cards.values()], complete: true };
       this.ctx.log.warn("tipcars slice came out short", {
         slice: slice.key,
         pass,
-        distinct: refs.size,
+        distinct: cards.size,
         reported,
       });
     }
     return { cards: [...cards.values()], complete: false };
   }
 
-  /** New listings of one list, newest first, up to the first page of only known ones. */
+  /**
+   * New listings of one list, newest first, up to the first page with none in the scope: a
+   * card outside it never becomes known, so it cannot keep the walk going.
+   */
   private async *incremental(list: Slice["list"], filter: string): AsyncIterable<Observation> {
     for await (const page of this.pages(list, filter, false)) {
       const fresh = page.cards.filter((card) => !this.wasKnown(card.ref));
       for (const card of fresh) yield* this.listing(card);
-      if (fresh.length === 0) return;
+      if (!fresh.some((card) => outOfScope(card) === null)) return;
     }
   }
 
@@ -219,9 +229,9 @@ class Harvest {
     }
     if (this.done.has(card.ref)) return;
     this.done.add(card.ref);
-    if (card.priceOnRequest) {
-      // No ListingSeen: the scope is priced listings.
-      this.ctx.log.info("tipcars listing without a price", { ref: card.ref });
+    const outside = outOfScope(card);
+    if (outside) {
+      this.ctx.log.info(`tipcars listing ${outside}`, { ref: card.ref });
       return;
     }
     if (!card.currency) {
@@ -389,6 +399,20 @@ function parseDetailPage(html: string): Detail {
 
 // ---------------------------------------------------------------------------------------
 // Mapping
+
+/**
+ * Why a card is outside the scope, or null. The scope is priced listings ("Dohodou" is not)
+ * of a named make and model. The site files makes it does not list under "Ostatní", whose
+ * cards name no model (title "Ostatní", the rest in the trim); the Ledger takes no listing
+ * without one, and a guess from the trim would be a guess.
+ */
+function outOfScope(card: Card): string | null {
+  if (card.priceOnRequest) return "without a price";
+  if (text(card.record.manufacturer) === OTHER_MAKE && !splitTitle(card.title)[1]) {
+    return "of an unnamed make and model";
+  }
+  return null;
+}
 
 /** A card the adapter cannot map comes out without a ref, as a ListingSeen the Ledger rejects. */
 function rejected(card: Card): ListingSeen {
