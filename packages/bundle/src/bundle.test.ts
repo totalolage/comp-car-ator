@@ -1,20 +1,28 @@
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Writable } from "node:stream";
 import { gunzipSync, gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
+import { encodeTable } from "./columns.ts";
 import {
+  BundleChangedError,
   type BundleContent,
   type BundleFile,
   BundleFormatError,
   encodeBundle,
+  fetchLoader,
+  type ListingEntry,
   type ListingRow,
   type Loader,
   type ModelFile,
+  type ModelIndex,
   memoryLoader,
   odometerBand,
   openBundle,
   type VariantRow,
 } from "./index.ts";
-import { packBundle, unpackBundle } from "./node.ts";
+import { fsLoader, packBundle, unpackBundle, writeBundleFiles } from "./node.ts";
 
 const model: ModelFile = {
   model: { id: "skoda/octavia", makeId: "skoda", make: "Škoda", name: "Octavia" },
@@ -25,9 +33,48 @@ const model: ModelFile = {
   history: [],
 };
 
+const listing = (i: number): ListingRow => ({
+  id: `sauto:${i}`,
+  source: "sauto",
+  url: `https://www.sauto.cz/${i}`,
+  market: "CZ",
+  condition: "used",
+  variantId: i % 2 ? "skoda/octavia/mk4/wagon-diesel-85kw" : null,
+  title: "Škoda Octavia",
+  ...(i % 3 ? { year: 2021, odometerKm: 1_000 * i } : {}),
+  price: { amount: 400_000 + i, currency: "CZK" },
+  priceCzk: 400_000 + i,
+  landed:
+    i % 2 ? null : { totalCzk: 1, lines: [{ code: "price", czk: 1 }], flags: [], fxDate: null },
+  seller: "dealer",
+  photos: i % 4 ? [] : ["https://img.example/1.jpg"],
+  firstSeen: "2026-10-01",
+  lastSeen: "2026-10-24",
+  ...(i === 3 ? { gone: "2026-10-20", excluded: true as const } : {}),
+  daysOnMarket: 23,
+  priceHistory: [
+    {
+      date: "2026-10-01",
+      price: { amount: 400_000 + i, currency: "CZK" },
+      priceCzk: 400_000 + i,
+    },
+  ],
+});
+
+/** A model as the reader returns it, with every row loaded: the model file again. */
+async function whole(index: ModelIndex | null) {
+  if (!index) return index;
+  const { listings, rows, ...rest } = index;
+  return { ...rest, listings: byId(await rows(listings)) };
+}
+
+function byId(rows: ListingRow[]): ListingRow[] {
+  return [...rows].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
 const content: BundleContent = {
   manifest: {
-    format: 2,
+    format: 3,
     generatedAt: "2026-10-24T16:00:00.000Z",
     fx: { EUR: { czkPerUnit: 24.335, validFor: "2026-10-23" } },
     sources: [{ id: "cnb", lastRunAt: "2026-10-24T16:00:00.000Z" }],
@@ -46,7 +93,7 @@ describe("Bundle", () => {
     const reader = await openBundle(memoryLoader(encodeBundle(content)));
     expect(reader.manifest).toEqual(content.manifest);
     expect(await reader.catalog()).toEqual(content.catalog);
-    expect(await reader.model("skoda/octavia")).toEqual(model);
+    expect(await whole(await reader.model("skoda/octavia"))).toEqual(model);
   });
 
   it("returns null for an unknown model", async () => {
@@ -68,7 +115,98 @@ describe("Bundle", () => {
       reader.model("skoda/octavia"),
       reader.model("skoda/octavia"),
     ]);
-    expect(loads.sort()).toEqual(["catalog.json", "manifest.json", "models/skoda/octavia.json"]);
+    expect(loads.sort()).toEqual([
+      "catalog.json",
+      "manifest.json",
+      "models/skoda/octavia/index.json",
+    ]);
+  });
+
+  it("indexes a model's Listings, active and cheapest first, and loads only the rows asked for", async () => {
+    // 100 Listings, dearer as the id grows; the first is gone and the second an outlier.
+    const listings = Array.from({ length: 100 }, (_n, i) => {
+      const { gone: _g, excluded: _e, ...row } = listing(i);
+      return {
+        ...row,
+        landed: null,
+        priceCzk: 100_000 + i,
+        ...(i === 0 ? { gone: "2026-10-20" } : i === 1 ? { excluded: true as const } : {}),
+      };
+    });
+    const files = encodeBundle({ ...content, models: [{ ...model, listings }] });
+    const loads: string[] = [];
+    const reader = await openBundle(async (path) => {
+      loads.push(path);
+      return files.get(path) ?? null;
+    });
+    const index = (await reader.model("skoda/octavia")) as ModelIndex;
+    // The index carries what filters, sorts and statistics read, not what a row displays.
+    expect(index.listings[0]).toEqual({
+      variantId: null,
+      market: "CZ",
+      condition: "used",
+      source: "sauto",
+      year: 2021,
+      odometerKm: 2_000,
+      priceCzk: 100_002,
+      firstSeen: "2026-10-01",
+      daysOnMarket: 23,
+    });
+    expect(index.listings.map((l) => l.priceCzk).slice(-2)).toEqual([100_001, 100_000]);
+    const picked = [index.listings[40], index.listings[0], index.listings[3]] as ListingEntry[];
+    expect((await index.rows(picked)).map((r) => r.id)).toEqual(["sauto:42", "sauto:2", "sauto:5"]);
+    expect(loads.filter((p) => p.startsWith("models/")).sort()).toEqual([
+      "models/skoda/octavia/0.json",
+      "models/skoda/octavia/1.json",
+      "models/skoda/octavia/index.json",
+    ]);
+    await index.rows(index.listings.slice(0, 32));
+    expect(loads).toHaveLength(4);
+    expect(byId(await index.rows(index.listings))).toEqual(byId(listings));
+    await expect(index.rows([{ ...index.listings[0] } as ListingEntry])).rejects.toThrow(
+      /not from skoda\/octavia/,
+    );
+  });
+
+  it("notices a rows file from another Bundle than the index it was read with", async () => {
+    const before = encodeBundle({ ...content, models: [{ ...model, listings: [listing(1)] }] });
+    const after = encodeBundle({
+      ...content,
+      models: [{ ...model, listings: [listing(2), listing(1)] }],
+    });
+    // The page opened the index before a deploy and asks for rows after it.
+    const reader = await openBundle(
+      async (path) => (path.endsWith("/0.json") ? after : before).get(path) ?? null,
+    );
+    const index = (await reader.model("skoda/octavia")) as ModelIndex;
+    await expect(index.rows(index.listings)).rejects.toBeInstanceOf(BundleChangedError);
+    // The same Listings in the same order, one of them repriced.
+    const repriced = encodeBundle({
+      ...content,
+      models: [{ ...model, listings: [{ ...listing(1), priceCzk: 1 }] }],
+    });
+    const mixed = await openBundle(
+      async (path) => (path.endsWith("/0.json") ? repriced : before).get(path) ?? null,
+    );
+    const old = (await mixed.model("skoda/octavia")) as ModelIndex;
+    await expect(old.rows(old.listings)).rejects.toBeInstanceOf(BundleChangedError);
+  });
+
+  it("retries a model or rows file that failed to load", async () => {
+    const files = encodeBundle({ ...content, models: [{ ...model, listings: [listing(1)] }] });
+    let fail = true;
+    const reader = await openBundle(async (path) => {
+      if (path.startsWith("models/") && fail) {
+        fail = false;
+        throw new Error("offline");
+      }
+      return files.get(path) ?? null;
+    });
+    await expect(reader.model("skoda/octavia")).rejects.toThrow("offline");
+    const index = (await reader.model("skoda/octavia")) as ModelIndex;
+    fail = true;
+    await expect(index.rows(index.listings)).rejects.toThrow("offline");
+    expect((await index.rows(index.listings)).map((r) => r.id)).toEqual(["sauto:1"]);
   });
 
   it("refuses a Bundle in another format version", async () => {
@@ -131,33 +269,6 @@ describe("Bundle", () => {
             },
     });
     const variants = Array.from({ length: 200 }, (_, i) => variant(i));
-    const listing = (i: number): ListingRow => ({
-      id: `sauto:${i}`,
-      source: "sauto",
-      url: `https://www.sauto.cz/${i}`,
-      market: "CZ",
-      condition: "used",
-      variantId: i % 2 ? (variants[0] as VariantRow).id : null,
-      title: "Škoda Octavia",
-      ...(i % 3 ? { year: 2021, odometerKm: 1_000 * i } : {}),
-      price: { amount: 400_000 + i, currency: "CZK" },
-      priceCzk: 400_000 + i,
-      landed:
-        i % 2 ? null : { totalCzk: 1, lines: [{ code: "price", czk: 1 }], flags: [], fxDate: null },
-      seller: "dealer",
-      photos: i % 4 ? [] : ["https://img.example/1.jpg"],
-      firstSeen: "2026-10-01",
-      lastSeen: "2026-10-24",
-      ...(i === 3 ? { gone: "2026-10-20", excluded: true as const } : {}),
-      daysOnMarket: 23,
-      priceHistory: [
-        {
-          date: "2026-10-01",
-          price: { amount: 400_000 + i, currency: "CZK" },
-          priceCzk: 400_000 + i,
-        },
-      ],
-    });
     const rich: ModelFile = {
       ...model,
       variantIds: variants.map((v) => v.id),
@@ -194,7 +305,10 @@ describe("Bundle", () => {
     });
     const reader = await openBundle(memoryLoader(files));
     expect((await reader.catalog()).variants).toStrictEqual(variants);
-    expect(await reader.model("skoda/octavia")).toEqual(rich);
+    expect(await whole(await reader.model("skoda/octavia"))).toEqual({
+      ...rich,
+      listings: byId(rich.listings),
+    });
     // Repeated values are stored once per column, not once per row.
     expect(files.get("catalog.json")?.length).toBeLessThan(JSON.stringify(variants).length / 3);
   });
@@ -212,7 +326,8 @@ describe("Bundle", () => {
       models: [{ ...model, listings: odd as unknown as ListingRow[] }],
     });
     const reader = await openBundle(memoryLoader(files));
-    expect((await reader.model("skoda/octavia"))?.listings).toStrictEqual(odd);
+    const index = (await reader.model("skoda/octavia")) as ModelIndex;
+    expect(await index.rows(index.listings)).toStrictEqual(odd);
   });
 });
 
@@ -300,8 +415,67 @@ describe("Bundle archive", () => {
     await expect(packBundle(encodeBundle(content), to)).rejects.toThrow("disk full");
   });
 
+  it("upgrades a format-2 archive (one file per model) to the current format", async () => {
+    const rich = { ...model, listings: [listing(0), listing(1), listing(2)] };
+    const current = encodeBundle({ ...content, models: [rich] });
+    const { listings, stats, ...rest } = rich;
+    const v2 = new Map([
+      [
+        "models/skoda/octavia.json",
+        JSON.stringify({ ...rest, listings: encodeTable(listings), stats: encodeTable(stats) }),
+      ],
+      ["catalog.json", current.get("catalog.json") as string],
+      ["manifest.json", JSON.stringify({ ...content.manifest, format: 2 })],
+    ]);
+    const files = unpackBundle(await pack(v2));
+    expect([...files.keys()].sort()).toEqual([...current.keys()].sort());
+    const reader = await openBundle(memoryLoader(files));
+    expect(await whole(await reader.model("skoda/octavia"))).toEqual({
+      ...rich,
+      listings: byId(listings),
+    });
+  });
+
   it("refuses an archive that would write outside the Bundle", async () => {
     const evil = await pack(new Map([["../../etc/passwd", "x"]]));
     expect(() => unpackBundle(evil)).toThrow(/invalid file/);
+  });
+});
+
+describe("Bundle storage", () => {
+  const rich = { ...model, listings: [listing(0), listing(1)] };
+  const files = encodeBundle({ ...content, models: [rich] });
+
+  it("stores files gzipped for the website and reads them back from disk and over HTTP", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "bundle-"));
+    await writeBundleFiles(dir, files, { gzip: true });
+    const index = join(dir, "models/skoda/octavia/index.json.gz");
+    expect(gunzipSync(await readFile(index)).toString("utf8")).toBe(
+      files.get("models/skoda/octavia/index.json"),
+    );
+    // Over HTTP: the `.gz` bytes as stored, or already inflated by the host.
+    const served = (inflate: boolean): typeof fetch =>
+      (async (url: URL) => {
+        const path = url.pathname.slice(1);
+        try {
+          const bytes = await readFile(join(dir, path));
+          return new Response(inflate ? gunzipSync(bytes) : bytes);
+        } catch {
+          return new Response(null, { status: 404 });
+        }
+      }) as unknown as typeof fetch;
+    for (const loader of [
+      fsLoader(dir),
+      fetchLoader("http://bundle.test/", { gzip: true, fetch: served(false) }),
+      fetchLoader("http://bundle.test/", { gzip: true, fetch: served(true) }),
+    ]) {
+      const reader = await openBundle(loader);
+      expect(await whole(await reader.model("skoda/octavia"))).toEqual({
+        ...rich,
+        listings: byId(rich.listings),
+      });
+      expect(await reader.model("skoda/kodiaq")).toBeNull();
+    }
+    await rm(dir, { recursive: true });
   });
 });

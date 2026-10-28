@@ -7,6 +7,18 @@ export async function modelPaths() {
   return index.map(({ value }) => ({ params: { id: value } }));
 }
 
+/** Models with Listings (sold ones too): only their pages have a listings island. */
+export async function listingModelPaths() {
+  const catalog = await buildCatalog();
+  const paths = [];
+  for (const path of await modelPaths()) {
+    const view = await catalog.model(path.params.id);
+    if (view && view.listings({ filters: { includeGone: true }, limit: 0 }).total > 0)
+      paths.push(path);
+  }
+  return paths;
+}
+
 /** One catalog page per make: a node of the category tree. */
 export async function makePaths() {
   const tree = await categoryTree();

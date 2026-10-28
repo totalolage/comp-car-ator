@@ -1,10 +1,12 @@
 /**
  * A model page's listings island: the listing facet rail, the price statistics for the
  * current selection and the dense listings table, each row expandable to its landed-price
- * breakdown, price history and photos. First paint comes from build-time props; after
- * hydration it opens the Bundle over fetch, applies the listing state in the URL and re-runs
- * the model's listing query on every change, writing the state back with lib/url-state. It
- * owns only the listing URL state; what it shows is lib/listing-view.ts.
+ * breakdown, price history and photos. On load it fetches the model's first page (a few kB,
+ * written by the build); the first use (or a URL with listing state) opens the model's
+ * listing index over fetch, applies the listing state in the URL and re-runs the model's
+ * listing query on every change, loading the full rows of the shown page, and writes the
+ * state back with lib/url-state. It owns only the listing URL state; what it shows is
+ * lib/listing-view.ts.
  */
 
 import type { ListingRow } from "@cca/bundle";
@@ -12,8 +14,8 @@ import { fetchLoader } from "@cca/bundle";
 import {
   type ListingResult,
   type ListingSortKey,
-  type ModelView,
-  openCatalog,
+  type ModelListings,
+  openModel,
   type Range,
   type Sort,
 } from "@cca/catalog";
@@ -23,11 +25,13 @@ import { type I18n, i18n, MISSING } from "../i18n/i18n.ts";
 import type { Lang, MessageKey } from "../i18n/messages.ts";
 import {
   DEFAULT_LISTING_SORT,
+  type FirstPage,
   historySeries,
   LISTING_FIRST,
   LISTING_PAGE,
   LISTING_RAIL,
   type ListingEnumFacet,
+  type ListingLine,
   type ListingRangeFacet,
   landedBreakdown,
   landedSummary,
@@ -45,16 +49,18 @@ import { type ListingState, readListingState, writeListingState } from "../lib/u
 import HistoryChart from "./HistoryChart.tsx";
 import RangeFilter from "./RangeFilter.tsx";
 
+/** A page of the table: the engine's result with the full rows of the shown entries. */
+type Page = Omit<ListingResult, "rows"> & { rows: ListingRow[] };
+
 interface Props {
   lang: Lang;
   modelId: ModelId;
-  initial: ListingResult;
+  /** Active Listings, for the count before the first page arrives. */
+  total: number;
   initialStats: StatRow[];
   /** Variant id → display name. */
   names: Record<string, string>;
-  /** ČNB rates of the currencies the model's listings use. */
-  fx: FxTable;
-  history: ModelView["history"];
+  history: ModelListings["history"];
 }
 
 const RANGE_LABEL: Record<ListingRangeFacet, MessageKey> = {
@@ -69,9 +75,14 @@ const COLUMNS = 9;
 
 export default function ModelExplorer(props: Props) {
   // `history` the prop, not window.history (used below to replace the URL).
-  const { lang, modelId, initial, initialStats, names, fx, history: weekly } = props;
+  const { lang, modelId, total, initialStats, names, history: weekly } = props;
   const t = i18n(lang);
-  const [view, setView] = useState<ModelView | null>(null);
+  // In use once the visitor interacts or the URL carries listing state; until then the
+  // island shows the model's first page and has not fetched its listing index.
+  const [used, setUsed] = useState(false);
+  const [first, setFirst] = useState<FirstPage | null>(null);
+  const [view, setView] = useState<ModelListings | null>(null);
+  const [page, setPage] = useState<Page | null>(null);
   const [state, setState] = useState<ListingState>({ filters: {} });
   const [limit, setLimit] = useState(LISTING_FIRST);
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
@@ -79,31 +90,67 @@ export default function ModelExplorer(props: Props) {
   const [resets, setResets] = useState(0);
 
   useEffect(() => {
-    setState(readListingState(location.search));
-    // TODO(wave1-stream15): the catalog interface loads catalog.json before any model file; a model page
-    // needs only its own file (reported to the orchestrator as a catalog interface follow-up).
-    openCatalog(fetchLoader(new URL("/bundle/", location.href)))
-      .then((c) => c.model(modelId))
-      .then(setView);
+    const fromUrl = readListingState(location.search);
+    setState(fromUrl);
+    if (writeListingState(fromUrl) !== "") return setUsed(true);
+    // Without the first page the index has to answer the unfiltered view too.
+    fetchLoader(new URL("/model/", location.href), { gzip: true })(`${modelId}/first.json`).then(
+      (text) => (text ? setFirst(JSON.parse(text)) : setUsed(true)),
+      () => setUsed(true),
+    );
   }, [modelId]);
 
-  const result = useMemo(
-    () => (view ? listingPage(view, state, limit) : initial),
-    [view, state, limit, initial],
+  useEffect(() => {
+    // A failed load leaves the first paint up; the next use tries again.
+    if (used && !view)
+      openModel(fetchLoader(new URL("/bundle/", location.href), { gzip: true }), modelId).then(
+        setView,
+        () => setUsed(false),
+      );
+  }, [used, view, modelId]);
+
+  const latest = useMemo(
+    () => (view ? listingPage(view, state, limit) : null),
+    [view, state, limit],
   );
+  useEffect(() => {
+    if (!view || !latest) return;
+    let current = true;
+    // A failed load (offline, or a deploy replaced the Bundle under this index) drops the
+    // index; the next use opens it again.
+    view.rows(latest.rows).then(
+      (rows) => current && setPage({ ...latest, rows }),
+      () => {
+        if (!current) return;
+        setView(null);
+        setUsed(false);
+      },
+    );
+    return () => {
+      current = false;
+    };
+  }, [view, latest]);
+  const loading = used && (!page || page.facets !== latest?.facets);
+  const data = page ?? first;
+  const result = data ?? { total };
+  const lines: ListingLine[] = page
+    ? page.rows.map((r) => ({ ...r, landedCzk: r.landed?.totalCzk, change: priceChange(r) }))
+    : (first?.rows ?? []);
+  const full = new Map(page?.rows.map((r) => [r.id, r]));
   const stats = useMemo(
     () => (view ? priceStats(view, state) : initialStats),
     [view, state, initialStats],
   );
 
   useEffect(() => {
-    if (!view) return;
+    if (!used) return;
     const url = location.pathname + writeListingState(state) + location.hash;
     if (url !== location.pathname + location.search + location.hash)
       history.replaceState(history.state, "", url);
-  }, [view, state]);
+  }, [used, state]);
 
   function update(change: (s: ListingState) => ListingState) {
+    setUsed(true);
     setLimit(LISTING_FIRST);
     setState(change);
   }
@@ -119,14 +166,17 @@ export default function ModelExplorer(props: Props) {
     const next = nextListingSort(sort, key);
     const isDefault =
       next.key === DEFAULT_LISTING_SORT.key && next.dir === DEFAULT_LISTING_SORT.dir;
+    setUsed(true);
     setState((s) => ({ ...s, sort: isDefault ? undefined : next }));
   };
-  const toggleOpen = (id: string) =>
+  const toggleOpen = (id: string) => {
+    setUsed(true);
     setOpen((o) => {
       const next = new Set(o);
       if (!next.delete(id)) next.add(id);
       return next;
     });
+  };
 
   return (
     <div class="split">
@@ -146,42 +196,44 @@ export default function ModelExplorer(props: Props) {
         data-open={railOpen}
         aria-label={t.t("catalog.filters")}
       >
-        {LISTING_RAIL.map((facet) =>
-          facet.kind === "range" ? (
-            <RangeFilter
-              key={`${facet.key}-${resets}`}
-              facet={facet.key}
-              legend={t.t(RANGE_LABEL[facet.key])}
-              value={filters[facet.key]}
-              bounds={result.facets.ranges[facet.key]}
-              disabled={!view}
-              t={t}
-              bare={facet.key === "year"}
-              picks={facet.key === "odometerKm" ? listingBands() : undefined}
-              onChange={(r: Range | undefined) =>
-                update((s) => ({ ...s, filters: withRange(s.filters, facet.key, r) }))
-              }
-            />
-          ) : (
-            <EnumFacet
-              key={facet.key}
-              facet={facet.key}
-              result={result}
-              state={state}
-              names={names}
-              disabled={!view}
-              t={t}
-              onToggle={(value) =>
-                update((s) => ({ ...s, filters: toggleListingValue(s.filters, facet.key, value) }))
-              }
-            />
-          ),
-        )}
+        {data &&
+          LISTING_RAIL.map((facet) =>
+            facet.kind === "range" ? (
+              <RangeFilter
+                key={`${facet.key}-${resets}`}
+                facet={facet.key}
+                legend={t.t(RANGE_LABEL[facet.key])}
+                value={filters[facet.key]}
+                bounds={data.facets.ranges[facet.key]}
+                disabled={false}
+                t={t}
+                bare={facet.key === "year"}
+                picks={facet.key === "odometerKm" ? listingBands() : undefined}
+                onChange={(r: Range | undefined) =>
+                  update((s) => ({ ...s, filters: withRange(s.filters, facet.key, r) }))
+                }
+              />
+            ) : (
+              <EnumFacet
+                key={facet.key}
+                facet={facet.key}
+                result={data}
+                state={state}
+                names={names}
+                t={t}
+                onToggle={(value) =>
+                  update((s) => ({
+                    ...s,
+                    filters: toggleListingValue(s.filters, facet.key, value),
+                  }))
+                }
+              />
+            ),
+          )}
         <label class="facet-option facet-flag">
           <input
             type="checkbox"
             checked={filters.includeGone === true}
-            disabled={!view}
             onChange={() =>
               update((s) => {
                 const { includeGone, ...rest } = s.filters;
@@ -191,18 +243,18 @@ export default function ModelExplorer(props: Props) {
           />
           <span class="facet-label">{t.t("model.gone")}</span>
         </label>
-        <button type="button" class="button-quiet" disabled={!view || !active} onClick={clear}>
+        <button type="button" class="button-quiet" disabled={!active} onClick={clear}>
           {t.t("catalog.clear")}
         </button>
       </aside>
-      <section class="results" aria-busy={!view}>
+      <section class="results" aria-busy={loading || !data}>
         <Stats rows={stats} t={t} />
         <HistoryChart series={historySeries(view ?? { history: weekly }, state)} t={t} />
         <h2 class="section-title">{t.t("model.listings")}</h2>
         <p class="results-count" aria-live="polite">
           <output data-testid="total">{t.count("count.listings", result.total)}</output>
         </p>
-        {result.rows.length === 0 ? (
+        {data && lines.length === 0 ? (
           <div class="empty">
             <p>{t.t("model.empty")}</p>
             {active && (
@@ -234,12 +286,13 @@ export default function ModelExplorer(props: Props) {
                 </tr>
               </thead>
               <tbody>
-                {result.rows.map((l) => (
+                {lines.map((l) => (
                   <ListingRows
                     key={l.id}
                     l={l}
+                    row={full.get(l.id)}
                     t={t}
-                    fx={fx}
+                    fx={view?.fx ?? {}}
                     names={names}
                     open={open.has(l.id)}
                     onToggle={() => toggleOpen(l.id)}
@@ -249,20 +302,22 @@ export default function ModelExplorer(props: Props) {
             </table>
           </div>
         )}
-        {result.total > result.rows.length && (
+        {result.total > lines.length && (
           <p class="results-more">
             <button
               type="button"
               class="button-quiet"
-              disabled={!view}
-              onClick={() => setLimit((n) => n + LISTING_PAGE)}
+              onClick={() => {
+                setUsed(true);
+                setLimit((n) => n + LISTING_PAGE);
+              }}
             >
               {t.t("catalog.more", {
-                n: Math.min(LISTING_PAGE, result.total - result.rows.length),
+                n: Math.min(LISTING_PAGE, result.total - lines.length),
               })}
             </button>{" "}
             <span class="count">
-              {t.t("catalog.shown", { shown: result.rows.length, total: result.total })}
+              {t.t("catalog.shown", { shown: lines.length, total: result.total })}
             </span>
           </p>
         )}
@@ -273,14 +328,13 @@ export default function ModelExplorer(props: Props) {
 
 function EnumFacet(props: {
   facet: ListingEnumFacet;
-  result: ListingResult;
+  result: Pick<ListingResult, "facets">;
   state: ListingState;
   names: Record<string, string>;
-  disabled: boolean;
   t: I18n;
   onToggle(value: string): void;
 }) {
-  const { facet, result, state, names, disabled, t, onToggle } = props;
+  const { facet, result, state, names, t, onToggle } = props;
   const options = listingFacetOptions(facet, result, state.filters, names, t);
   if (options.length === 0) return null;
   return (
@@ -293,7 +347,6 @@ function EnumFacet(props: {
             name={facet}
             value={value}
             checked={checked}
-            disabled={disabled}
             aria-label={`${label}, ${t.count("count.listingsFacet", count)}`}
             onChange={() => onToggle(value)}
           />
@@ -397,16 +450,17 @@ function Stats({ rows, t }: { rows: StatRow[]; t: I18n }) {
 }
 
 function ListingRows(props: {
-  l: ListingRow;
+  l: ListingLine;
+  /** The full row once loaded: the landed tooltip and the detail need it. */
+  row: ListingRow | undefined;
   t: I18n;
   fx: FxTable;
   names: Record<string, string>;
   open: boolean;
   onToggle(): void;
 }) {
-  const { l, t, fx, names, open, onToggle } = props;
-  const change = priceChange(l);
-  const breakdown = landedBreakdown(l, fx, t);
+  const { l, row, t, fx, names, open, onToggle } = props;
+  const change = l.change;
   const detailId = `listing-${l.id.replace(/[^\w-]/g, "_")}`;
   return (
     <>
@@ -441,10 +495,10 @@ function ListingRows(props: {
             class="disclose"
             aria-expanded={open}
             aria-controls={detailId}
-            title={landedSummary(breakdown)}
+            title={row ? landedSummary(landedBreakdown(row, fx, t)) : undefined}
             onClick={onToggle}
           >
-            {breakdown ? breakdown.total : MISSING}
+            {l.landedCzk === undefined ? MISSING : t.czk(l.landedCzk)}
             <span class="visually-hidden">, {t.t("landed.show")}</span>
           </button>
         </td>
@@ -454,9 +508,7 @@ function ListingRows(props: {
       </tr>
       {open && (
         <tr class="detail" id={detailId}>
-          <td colSpan={COLUMNS}>
-            <Detail l={l} t={t} fx={fx} />
-          </td>
+          <td colSpan={COLUMNS}>{row ? <Detail l={row} t={t} fx={fx} /> : MISSING}</td>
         </tr>
       )}
     </>

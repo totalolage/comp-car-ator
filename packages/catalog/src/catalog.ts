@@ -1,21 +1,7 @@
-import {
-  type ListingRow,
-  type Loader,
-  openBundle,
-  type UsedGroup,
-  type VariantRow,
-} from "@cca/bundle";
+import { type Loader, openBundle, type UsedGroup, type VariantRow } from "@cca/bundle";
 import { type FacetDefs, point, runQuery } from "./engine.ts";
-import type {
-  Catalog,
-  ListingFacets,
-  ListingResult,
-  ListingSortKey,
-  ModelView,
-  VariantFacets,
-  VariantResult,
-  VariantSortKey,
-} from "./types.ts";
+import { modelListings } from "./model.ts";
+import type { Catalog, ModelView, VariantFacets, VariantResult, VariantSortKey } from "./types.ts";
 
 /** Opens the catalog query engine over a Bundle. Loads the manifest and catalog index. */
 export async function openCatalog(loader: Loader): Promise<Catalog> {
@@ -43,25 +29,14 @@ export async function openCatalog(loader: Loader): Promise<Catalog> {
     model(id) {
       let view = views.get(id);
       if (!view) {
-        view = bundle.model(id).then((file) => {
-          if (!file) return null;
-          const listings = file.listings;
-          // Built once, so the engine reads each array into columns only once.
-          const active = listings.filter((l) => !l.gone);
-          return {
-            model: file.model,
-            generations: file.generations,
-            variants: file.variantIds.flatMap((v) => byId.get(v) ?? []),
-            stats: file.stats,
-            history: file.history,
-            listings(query = {}) {
-              const { filters = {}, sort, offset, limit } = query;
-              const { includeGone = false, ...rest } = filters;
-              const rows = includeGone ? listings : active;
-              return runQuery(rows, listingDefs, rest, sort, offset, limit) as ListingResult;
-            },
-          };
-        });
+        view = bundle.model(id).then((file) =>
+          file
+            ? {
+                ...modelListings(file, bundle.manifest),
+                variants: file.variantIds.flatMap((v) => byId.get(v) ?? []),
+              }
+            : null,
+        );
         views.set(id, view);
       }
       return view;
@@ -114,33 +89,3 @@ function variantFacetDefs(
     },
   };
 }
-
-type ListingEnum = keyof ListingFacets["values"];
-type ListingRange = keyof ListingFacets["ranges"];
-
-const listingDefs: FacetDefs<ListingRow, ListingEnum, ListingRange, ListingSortKey> = {
-  values: {
-    variant: (l) => (l.variantId ? [l.variantId] : []),
-    market: (l) => [l.market],
-    source: (l) => [l.source],
-    condition: (l) => [l.condition],
-    body: (l) => (l.body ? [l.body] : []),
-    fuel: (l) => (l.fuel ? [l.fuel] : []),
-    transmission: (l) => (l.transmission ? [l.transmission] : []),
-  },
-  ranges: {
-    year: (l) => point(l.year),
-    odometerKm: (l) => point(l.odometerKm),
-    priceCzk: (l) => point(l.priceCzk),
-    landedCzk: (l) => point(l.landed?.totalCzk),
-    powerKw: (l) => point(l.powerKw),
-  },
-  sort: {
-    priceCzk: (l) => l.priceCzk,
-    landedCzk: (l) => l.landed?.totalCzk,
-    year: (l) => l.year,
-    odometerKm: (l) => l.odometerKm,
-    daysOnMarket: (l) => l.daysOnMarket,
-    firstSeen: (l) => l.firstSeen,
-  },
-};

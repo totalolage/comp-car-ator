@@ -91,12 +91,31 @@ for (const r of rows) {
     `  ${r.page.padEnd(26).slice(0, 26)}${kb(r.html)} ${kb(r.css)} ${kb(r.js)} ${kb(r.total)}${r.over ? `  OVER: ${r.over}` : ""}`,
   );
 }
+// Bundle files are staged gzipped (`<path>.gz`), so their size on disk is what they transfer.
 let data = 0;
-for await (const file of walk(join(dist, "bundle"))) data += (await stat(file)).size;
-const catalog = await gzSize(join(dist, "bundle/catalog.json"));
+let files = 0;
+let index = { path: "", size: 0 };
+for await (const file of walk(join(dist, "bundle"))) {
+  const { size } = await stat(file);
+  data += size;
+  files += 1;
+  if (file.endsWith("/index.json.gz") && size > index.size)
+    index = { path: relative(dist, file), size };
+}
+const catalog = (await stat(join(dist, "bundle/catalog.json.gz"))).size;
 console.log(
-  `bundle data: ${kb(data)} kB raw, catalog.json ${kb(catalog)} kB gzip (not budgeted here)`,
+  `bundle data: ${kb(data)} kB in ${files} files, catalog.json ${kb(catalog)} kB, largest model index ${kb(index.size)} kB (${index.path}); gzip, not budgeted here`,
 );
+// What a model page fetches on load: its first listing page (pages/model/[...id]/first.json.gz.ts).
+let first = { path: "", size: 0 };
+let firsts = 0;
+for await (const file of walk(join(dist, "model"))) {
+  if (!file.endsWith("/first.json.gz")) continue;
+  const { size } = await stat(file);
+  firsts += 1;
+  if (size > first.size) first = { path: relative(dist, file), size };
+}
+console.log(`model first pages: ${firsts}, largest ${kb(first.size)} kB gzip (${first.path})`);
 console.log(`category tree links checked: ${treeLinksChecked}`);
 if (treeLinksChecked === 0) {
   console.error(

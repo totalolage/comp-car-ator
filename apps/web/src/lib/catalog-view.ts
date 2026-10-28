@@ -18,7 +18,7 @@ import type {
 import { BODIES, FUELS, MARKETS, TRANSMISSIONS } from "@cca/vocabulary";
 import { type I18n, MISSING } from "../i18n/i18n.ts";
 import type { MessageKey } from "../i18n/messages.ts";
-import { type CatalogState, readCatalogState, writeCatalogState } from "./url-state.ts";
+import type { CatalogState } from "./url-state.ts";
 
 export type EnumFacet = keyof VariantFacets["values"];
 export type RangeFacet = keyof VariantFacets["ranges"];
@@ -173,30 +173,6 @@ export function odometerBands(): { label: string; range: Range }[] {
       range: { ...(min ? { min } : {}), ...(max === undefined ? {} : { max }) },
     };
   });
-}
-
-/**
- * The range two typed fields make: undefined when both are empty, null while the text is not
- * a range yet (not a number, "from" above "to", or a number the URL cannot carry). Commas
- * are decimal points and spaces are ignored, so "1,5" and "300 000" work. Only ranges that
- * survive a round trip through the URL are made, so a shared link reproduces the view.
- */
-export function rangeFromText(minText: string, maxText: string): Range | undefined | null {
-  const parse = (input: string) => {
-    const clean = input.replace(/[\s\u00a0]/g, "").replace(",", ".");
-    return clean === "" ? undefined : Number(clean);
-  };
-  const min = parse(minText);
-  const max = parse(maxText);
-  if (min === undefined && max === undefined) return undefined;
-  if (min !== undefined && max !== undefined && min > max) return null;
-  const range: Range = {
-    ...(min === undefined ? {} : { min }),
-    ...(max === undefined ? {} : { max }),
-  };
-  // Every range field is written the same way; `year` stands in for all of them.
-  const back = readCatalogState(writeCatalogState({ filters: { year: range } })).filters.year;
-  return back?.min === range.min && back?.max === range.max ? range : null;
 }
 
 export interface Column {

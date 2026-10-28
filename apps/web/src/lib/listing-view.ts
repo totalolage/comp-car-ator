@@ -13,6 +13,7 @@ import type {
   ListingQuery,
   ListingResult,
   ListingSortKey,
+  ModelListings,
   ModelView,
   Range,
   Sort,
@@ -69,7 +70,7 @@ export function listingQuery(state: ListingState, limit = LISTING_PAGE): Listing
  * head a price sort. They stay in the table, tagged, and in the counts.
  */
 export function listingPage(
-  view: Pick<ModelView, "listings">,
+  view: Pick<ModelListings, "listings">,
   state: ListingState,
   limit = LISTING_FIRST,
 ): ListingResult {
@@ -121,7 +122,7 @@ const VOCABULARY: Partial<Record<ListingEnumFacet, readonly string[]>> = {
  */
 export function listingFacetOptions(
   key: ListingEnumFacet,
-  result: ListingResult,
+  result: Pick<ListingResult, "facets">,
   filters: ListingFilters,
   names: Record<string, string>,
   t: I18n,
@@ -235,7 +236,10 @@ const MIN_CELL = 3;
  * count disagrees with the matching Listings is not used. Gone Listings never count, whatever
  * the table shows.
  */
-export function priceStats(view: ModelView, state: ListingState): StatRow[] {
+export function priceStats(
+  view: Pick<ModelListings, "listings" | "stats">,
+  state: ListingState,
+): StatRow[] {
   const { includeGone: _, ...filters } = state.filters;
   const all = view.listings({ filters, limit: Number.MAX_SAFE_INTEGER }).rows;
   const shape = cellShape(filters);
@@ -358,7 +362,7 @@ export function listedVariants(
  * published cells; a missing entry had fewer than 3 Listings.
  */
 export function variantMedians(
-  view: Pick<ModelView, "stats">,
+  view: Pick<ModelListings, "stats">,
 ): Record<string, Partial<Record<Market, number>>> {
   const out: Record<string, Partial<Record<Market, number>>> = {};
   for (const c of view.stats) {
@@ -382,7 +386,7 @@ export interface HistorySeries {
  * to the Markets the listing filter chose. Always the whole model: the model file drops
  * Listings gone over 30 days ago, so other selections cannot be rebuilt for past weeks.
  */
-export function historySeries(view: Pick<ModelView, "history">, state: ListingState) {
+export function historySeries(view: Pick<ModelListings, "history">, state: ListingState) {
   const chosen = state.filters.market;
   return MARKETS.flatMap((market): HistorySeries[] => {
     if (chosen?.length && !chosen.includes(market)) return [];
@@ -444,10 +448,63 @@ export function landedSummary(b: LandedBreakdown | null): string {
   return b.lines.map((line) => `${line.label}: ${line.value}`).join("\n");
 }
 
+/** What a listing table row shows; the expanded detail needs the full `ListingRow`. */
+export type ListingLine = Pick<
+  ListingRow,
+  | "id"
+  | "url"
+  | "title"
+  | "condition"
+  | "gone"
+  | "excluded"
+  | "variantId"
+  | "year"
+  | "odometerKm"
+  | "transmission"
+  | "price"
+  | "market"
+  | "source"
+  | "daysOnMarket"
+> & { landedCzk?: number; change: { amount: number; percent: number } | null };
+
 /**
- * A listing cut to what the first paint needs, so the island's serialized props stay small:
- * photos are shown only in an expanded row, after the island has the full rows.
+ * A row cut to its table line, which is all the first paint serializes for hydration: the
+ * detail (landed-price lines, price history, photos) loads with the model's rows on use.
  */
-export function firstPaintListing(l: ListingRow): ListingRow {
-  return l.photos.length ? { ...l, photos: [] } : l;
+export function listingLine(l: ListingRow): ListingLine {
+  const line: ListingLine = {
+    id: l.id,
+    url: l.url,
+    title: l.title,
+    condition: l.condition,
+    gone: l.gone,
+    excluded: l.excluded,
+    variantId: l.variantId,
+    year: l.year,
+    odometerKm: l.odometerKm,
+    transmission: l.transmission,
+    price: l.price,
+    market: l.market,
+    source: l.source,
+    daysOnMarket: l.daysOnMarket,
+    landedCzk: l.landed?.totalCzk,
+    change: priceChange(l),
+  };
+  for (const key of Object.keys(line) as (keyof ListingLine)[])
+    if (line[key] === undefined) delete line[key];
+  return line;
+}
+
+/**
+ * The unfiltered first page of a model's listing table: what the island shows before it
+ * needs the model's listing index. The build writes it once per model (it holds no
+ * localized text), gzipped as `/model/<id>/first.json.gz`, so model pages carry none of it.
+ */
+export type FirstPage = Omit<ListingResult, "rows"> & { rows: ListingLine[] };
+
+export async function firstPage(
+  view: Pick<ModelListings, "listings" | "rows">,
+): Promise<FirstPage> {
+  const result = listingPage(view, { filters: {} });
+  return { ...result, rows: (await view.rows(result.rows)).map(listingLine) };
 }

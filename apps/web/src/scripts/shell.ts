@@ -56,7 +56,7 @@ function render() {
 render();
 store.subscribe(render);
 
-// Category menu: the header has the makes only; the categories page has their models. Its
+// Category menu: the header has body types only; the categories page has makes and models. Its
 // tree replaces the menu's once the menu is about to open (hover, focus or open), keeping
 // focus on the same link. Close on Escape (focus back on its summary) and on a click outside
 // it.

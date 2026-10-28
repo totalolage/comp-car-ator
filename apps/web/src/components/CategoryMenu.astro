@@ -1,9 +1,10 @@
 ---
 /**
- * The category tree as a header disclosure: makes and body types (CategoryIndex), plus the
- * person's recently viewed models (filled in by scripts/shell.ts). Plain links and
- * <details>, so it works before and without JavaScript; links prefetch on hover. The models
- * come from the categories page once the menu is about to open (scripts/shell.ts).
+ * The category tree as a header disclosure: body types and a link to every make and model
+ * (CategoryIndex), plus the person's recently viewed models (filled in by scripts/shell.ts).
+ * Plain links and <details>, so it works before and without JavaScript; links prefetch on
+ * hover. Makes and models come from the categories page once the menu is about to open
+ * (scripts/shell.ts).
  */
 import { i18n } from "../i18n/i18n.ts";
 import type { Lang } from "../i18n/messages.ts";
@@ -24,6 +25,6 @@ const t = i18n(lang);
       <h2>{t.t("nav.recents")}</h2>
       <ul></ul>
     </section>
-    <CategoryIndex lang={lang} tree={tree} />
+    <CategoryIndex lang={lang} tree={tree} menu />
   </div>
 </details>

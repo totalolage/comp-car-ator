@@ -1,4 +1,5 @@
 export { openCatalog } from "./catalog.ts";
+export { openModel } from "./model.ts";
 export type {
   Catalog,
   FacetCount,
@@ -9,6 +10,7 @@ export type {
   ListingResult,
   ListingSortKey,
   Loader,
+  ModelListings,
   ModelView,
   Range,
   Sort,

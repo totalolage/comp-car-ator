@@ -84,7 +84,7 @@ function synthetic(n: number): BundleContent {
   });
   return {
     manifest: {
-      format: 2,
+      format: 3,
       generatedAt: "2026-10-25T00:00:00Z",
       fx: {} as BundleContent["manifest"]["fx"],
       sources: [],

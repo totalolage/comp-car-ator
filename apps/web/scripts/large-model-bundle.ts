@@ -11,7 +11,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { encodeBundle, type ListingRow, openBundle } from "@cca/bundle";
+import { encodeBundle, type ListingRow, type ModelFile, openBundle } from "@cca/bundle";
 import { fsLoader } from "@cca/bundle/node";
 
 const OUT = process.argv[2];
@@ -28,10 +28,12 @@ const rand = () => {
 const sample = fileURLToPath(new URL("../../../fixtures/sample-bundle", import.meta.url));
 const bundle = await openBundle(fsLoader(sample));
 const catalog = await bundle.catalog();
-const models = [];
+const models: ModelFile[] = [];
 for (const m of catalog.models) {
-  const file = await bundle.model(m.id);
-  if (file) models.push(file);
+  const index = await bundle.model(m.id);
+  if (!index) continue;
+  const { listings, rows, ...rest } = index;
+  models.push({ ...rest, listings: await rows(listings) });
 }
 const octavia = models.find((m) => m.model.id === MODEL);
 if (!octavia) throw new Error(`${MODEL} missing from the sample Bundle`);
@@ -80,7 +82,8 @@ for (const [name, text] of files) {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, text);
 }
-const size = files.get(`models/${MODEL}.json`)?.length ?? 0;
+let size = 0;
+for (const [name, text] of files) if (name.startsWith(`models/${MODEL}/`)) size += text.length;
 console.log(
-  `wrote ${files.size} files to ${OUT}; ${MODEL} model file ${(size / 1e6).toFixed(2)} MB raw`,
+  `wrote ${files.size} files to ${OUT}; ${MODEL} model files ${(size / 1e6).toFixed(2)} MB raw`,
 );

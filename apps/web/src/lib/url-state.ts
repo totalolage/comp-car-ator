@@ -273,3 +273,27 @@ function writeSort<K extends string>(sort: Sort<K>, aliases: Record<string, K>):
 function encodeValue(value: string): string {
   return encodeURIComponent(value).replaceAll("%2F", "/");
 }
+
+/**
+ * The range two typed fields make: undefined when both are empty, null while the text is not
+ * a range yet (not a number, "from" above "to", or a number the URL cannot carry). Commas
+ * are decimal points and spaces are ignored, so "1,5" and "300 000" work. Only ranges that
+ * survive a round trip through the URL are made, so a shared link reproduces the view.
+ */
+export function rangeFromText(minText: string, maxText: string): Range | undefined | null {
+  const parse = (input: string) => {
+    const clean = input.replace(/[\s\u00a0]/g, "").replace(",", ".");
+    return clean === "" ? undefined : Number(clean);
+  };
+  const min = parse(minText);
+  const max = parse(maxText);
+  if (min === undefined && max === undefined) return undefined;
+  if (min !== undefined && max !== undefined && min > max) return null;
+  const range: Range = {
+    ...(min === undefined ? {} : { min }),
+    ...(max === undefined ? {} : { max }),
+  };
+  // Every range field is written the same way; `year` stands in for all of them.
+  const back = readCatalogState(writeCatalogState({ filters: { year: range } })).filters.year;
+  return back?.min === range.min && back?.max === range.max ? range : null;
+}

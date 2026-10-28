@@ -151,6 +151,7 @@ const cs = {
   "model.historyEmpty": "Zatím žádná historie cen.",
   "model.date": "Datum",
   "model.empty": "Žádný inzerát neodpovídá filtrům.",
+  "model.noScript": "Inzeráty se načítají JavaScriptem; bez něj vidíte jen varianty a ceny.",
   "model.gone": "Zobrazit i inzeráty, které už nejsou v nabídce (30 dní)",
   "model.goneBadge": "v nabídce do {date}",
   "model.excludedBadge": "mimo statistiku",
@@ -379,6 +380,8 @@ const en: Record<MessageKey, string> = {
   "model.historyEmpty": "No price history yet.",
   "model.date": "Date",
   "model.empty": "No listing matches the filters.",
+  "model.noScript":
+    "Listings load with JavaScript; without it you see only the Variants and prices.",
   "model.gone": "Include listings no longer offered (30 days)",
   "model.goneBadge": "listed until {date}",
   "model.excludedBadge": "not in statistics",

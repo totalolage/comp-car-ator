@@ -21,7 +21,7 @@ import type {
 } from "@cca/vocabulary";
 
 /** Bumped on any change a previous reader cannot read. */
-export const BUNDLE_FORMAT = 2;
+export const BUNDLE_FORMAT = 3;
 
 export interface BundleContent {
   manifest: BundleManifest;
@@ -189,6 +189,33 @@ export function odometerBand(km: number): OdometerBand {
   return ODOMETER_BANDS[Math.max(i, 0)] as OdometerBand;
 }
 
+/**
+ * A Listing as its model's listing index holds it: only what the listing filters, sorts and
+ * statistics read. The rest of its row (title, URL, prices as shown, landed-price lines,
+ * photos, price history) is loaded on demand with `ModelIndex.rows`.
+ */
+export type ListingEntry = Pick<
+  ListingRow,
+  | "variantId"
+  | "market"
+  | "source"
+  | "condition"
+  | "body"
+  | "fuel"
+  | "transmission"
+  | "year"
+  | "odometerKm"
+  | "priceCzk"
+  | "powerKw"
+  | "daysOnMarket"
+  | "firstSeen"
+  | "gone"
+  | "excluded"
+> & {
+  /** `landed.totalCzk`; absent when the Listing has no estimate. */
+  landedCzk?: number;
+};
+
 export interface ListingRow {
   /** `<source>:<ref>`, unique across the Bundle. */
   id: string;
@@ -216,7 +243,7 @@ export interface ListingRow {
   landed: LandedPrice | null;
   seller: Seller;
   location?: string;
-  /** The first 3 photos; the rest stay at the Source. */
+  /** The first photo; the rest stay at the Source. */
   photos: string[];
   firstSeen: IsoDate;
   lastSeen: IsoDate;

@@ -89,7 +89,8 @@ describe("ingest pipeline", () => {
     // One Listing is no median (ADR 0012); the Listing row below carries the conversion.
     expect(result.rows[0]?.used).toMatchObject({ count: 1, priceCzk: null });
 
-    const [listing] = (await catalog.model("volkswagen/golf"))?.listings().rows ?? [];
+    const golf = await catalog.model("volkswagen/golf");
+    const [listing] = (await golf?.rows(golf.listings().rows)) ?? [];
     expect(listing?.priceCzk).toBe(365_025);
     // goods 365,025 + transport 12,000 + full inspection 4,230 + registration 800
     expect(listing?.landed).toMatchObject({
