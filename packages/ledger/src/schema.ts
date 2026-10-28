@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { TIPCARS_EUR_REFS } from "./tipcars-eur-refs.ts";
 
 /**
  * Ordered migrations; index + 1 is the schema version. Append only: never edit a
@@ -91,7 +92,38 @@ const MIGRATIONS: string[] = [
   `
   DELETE FROM catalog_entries WHERE variant_id LIKE '/%' OR variant_id LIKE '%//%';
   `,
+  // TipCars listings recorded with their EUR price labelled CZK, before the adapter read a
+  // listing's currency from its record (2026-10-28).
+  relabelEur("tipcars", TIPCARS_EUR_REFS, "2026-10-28"),
 ];
+
+/**
+ * Relabels as EUR the CZK prices a Source recorded for these refs before `fixed`, the day
+ * its adapter learned their currency. What it recorded since is left alone (a listing seen
+ * since is priced right), and a history point that then repeats the one before it goes, so
+ * a listing re-seen in EUR before this ran keeps no change that never happened.
+ */
+function relabelEur(source: string, refs: readonly string[], fixed: string): string {
+  const ids = refs.map((ref) => {
+    if (!/^\d+$/.test(ref)) throw new Error(`not a ${source} ref: ${ref}`);
+    return `'${source}:${ref}'`;
+  });
+  const listed = `(${ids.join(", ")})`;
+  return `
+  UPDATE listings SET price_currency = 'EUR', data = json_set(data, '$.price.currency', 'EUR')
+  WHERE id IN ${listed} AND price_currency = 'CZK' AND last_seen < '${fixed}';
+  UPDATE price_history SET currency = 'EUR'
+  WHERE listing_id IN ${listed} AND currency = 'CZK' AND date < '${fixed}';
+  DELETE FROM price_history
+  WHERE listing_id IN ${listed} AND EXISTS (
+    SELECT 1 FROM price_history AS earlier
+    WHERE earlier.listing_id = price_history.listing_id
+      AND earlier.amount = price_history.amount AND earlier.currency = price_history.currency
+      AND earlier.date = (
+        SELECT max(date) FROM price_history AS before
+        WHERE before.listing_id = price_history.listing_id AND before.date < price_history.date));
+  `;
+}
 
 export function migrate(db: DatabaseSync): void {
   db.exec("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");

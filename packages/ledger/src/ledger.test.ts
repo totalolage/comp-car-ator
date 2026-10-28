@@ -201,6 +201,66 @@ describe("Ledger", () => {
     }
   });
 
+  it("relabels the EUR prices TipCars recorded as CZK when it opens an older Ledger", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "cca-ledger-"));
+    try {
+      const file = join(dir, "ledger.sqlite");
+      const czk = (amount: number) => ({ price: { amount, currency: "CZK" } });
+      const eur = (amount: number) => ({ price: { amount, currency: "EUR" } });
+      // Recorded before the fix (2026-10-28): a Dubai dealer's Wrangler at 10 830 EUR, then
+      // 10 500 EUR; a listing the fixed adapter saw again in EUR before the Ledger was
+      // corrected; one it saw again in CZK; one seller in CZK all along.
+      ledger = openLedger(file);
+      await run("tipcars", "full", "2026-10-26", [
+        seen("56607021", 10_830),
+        seen("19337165", 9_148),
+        seen("1", 489_000),
+      ]);
+      await run("tipcars", "incremental", "2026-10-27", [
+        seen("56607021", 10_500),
+        seen("32587029", 9_000),
+      ]);
+      await run("tipcars", "incremental", "2026-10-28", [seen("32587029", 225_000)]);
+      await run("tipcars", "incremental", "2026-10-29", [seen("19337165", 9_148, eur(9_148))]);
+      ledger.close();
+      // A schema v3 Ledger, as Data releases carry.
+      const db = new DatabaseSync(file);
+      db.prepare("UPDATE meta SET value = '3' WHERE key = 'schema_version'").run();
+      db.close();
+
+      ledger = openLedger(file);
+      const listings = new Map([...ledger.snapshot().listings()].map((l) => [l.id, l]));
+      expect(listings.get("tipcars:56607021")).toMatchObject({
+        ...eur(10_500),
+        priceHistory: [
+          { date: "2026-10-26", ...eur(10_830) },
+          { date: "2026-10-27", ...eur(10_500) },
+        ],
+      });
+      expect(listings.get("tipcars:19337165")).toMatchObject({
+        ...eur(9_148),
+        priceHistory: [{ date: "2026-10-26", ...eur(9_148) }],
+      });
+      expect(listings.get("tipcars:32587029")).toMatchObject({
+        ...czk(225_000),
+        priceHistory: [
+          { date: "2026-10-27", ...eur(9_000) },
+          { date: "2026-10-28", ...czk(225_000) },
+        ],
+      });
+      expect(listings.get("tipcars:1")).toMatchObject({
+        ...czk(489_000),
+        priceHistory: [{ date: "2026-10-26", ...czk(489_000) }],
+      });
+      const later = await run("tipcars", "incremental", "2026-11-01", [
+        seen("56607021", 10_500, eur(10_500)),
+      ]);
+      expect(later.priceChanges).toBe(0);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("resolves listings against the current catalog at snapshot time", async () => {
     ledger = openLedger(":memory:");
     await run("sauto", "incremental", "2026-10-10", [seen("1", 1)]);
