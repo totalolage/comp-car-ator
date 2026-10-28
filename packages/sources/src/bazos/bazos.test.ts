@@ -428,6 +428,8 @@ describe("bazos source", () => {
     expect(warnings).toContain(
       "Bazoš list page has 19 rows, its header 20: https://auto.bazos.cz/kia/16/",
     );
+    // The first walk falls short; the redone one, hidden the same ad, is taken.
+    expect(warnings).toContain("bazos: walk met fewer ads than the site counts");
     expect(warnings).toContain("bazos: the site counts ads its list pages do not show");
     expect(refs(observations).sort()).toEqual(IN_SCOPE);
     expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
@@ -658,11 +660,25 @@ describe("bazos source", () => {
       );
       const { observations, error, warnings, listed } = await harvest(recorded, "full");
       expect(error).toBeUndefined();
-      expect(warnings).toContain(hidden);
+      // The ads met reach the counts: no ad is taken for hidden.
+      expect(warnings).not.toContain(hidden);
       expect(warnings).not.toContain(unmatched);
       expect(listed.filter((path) => path === "/kia/")).toHaveLength(2);
       expect(refs(observations).sort()).toEqual(IN_SCOPE);
       expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
+    });
+
+    it("a page short in one walk only lends no credit to an ad no walk met", async () => {
+      // /kia/16/ is short in the first walk, its row met on /kia/32/; the walk over today's
+      // ads counts 60, one ad more than any page shows. The redone walk has no short page.
+      const recorded = await cassette("full", (c) => {
+        cutAt(c, "/kia/16/", (read) => read <= 2);
+        inPages(c, "inzerátů z 59", "inzerátů z 60", (url, n) => url.endsWith("/kia/") && n === 2);
+      });
+      const { observations, error, warnings } = await harvest(recorded, "full");
+      expect(warnings).not.toContain(hidden);
+      expect(String(error)).toMatch(/not harvested whole: kia/);
+      expect(observations).toEqual([]);
     });
 
     it("staying short, incremental reads the rows shown and goes on to later pages and categories", async () => {

@@ -244,9 +244,11 @@ class Harvest {
    * A page can show fewer rows than its header counts, again when fetched again: the site
    * counts ads it does not list (seen live 2026-10-28: Ford and Mercedes pages, 19 of 20,
    * the gap moving down the list as ads are bumped above it, never shown on a neighbouring
-   * page). Those ads cannot be met, so the counts below are lowered by them; more than one
-   * per ADS_PER_HIDDEN ads in the category (at least 5) means rows the parser cannot read,
-   * and the walk fails as before.
+   * page). Those ads cannot be met, so when a walk falls short, the redone walk lowers the
+   * counts below by the ads hidden from both; more than one per ADS_PER_HIDDEN ads in the
+   * category (at least 5) means rows the parser cannot read, and the walk fails as before.
+   * Telling hidden ads apart is approximate: two short pages in a row count once, and a gap
+   * that moves along with the walk may count twice; the bound caps either.
    *
    * An ad met and removed later in the walk must not stand in for one the walk missed, so
    * - the ads met must cover the highest count any page reported, which includes an ad
@@ -258,6 +260,8 @@ class Harvest {
    * the gap without closing it (see Limits).
    */
   private async collect(category: string): Promise<Map<string, Row> | null> {
+    /** Ads hidden from the walk before this one, which came out short. */
+    let hiddenBefore: number | undefined;
     for (let attempt = 1; attempt <= 2; attempt++) {
       const rows = new Map<string, Row>();
       const datedToday = new Set<string>();
@@ -310,17 +314,24 @@ class Harvest {
         });
         continue;
       }
-      if (hidden > 0) {
-        this.ctx.log.warn("bazos: the site counts ads its list pages do not show", {
-          category,
-          hidden,
-        });
-      }
       const gone = [...datedToday].filter((id) => !toppedUp.has(id)).length;
-      if (rows.size + hidden >= highest && rows.size - gone + hidden >= final) {
+      const covers = (credit: number) =>
+        rows.size + credit >= highest && rows.size - gone + credit >= final;
+      // A page served short once may show its ad on a neighbour, or on the next walk: only
+      // ads hidden from both walks lower the counts, so a row met elsewhere lends no credit
+      // that could cover an ad the walk missed.
+      const credit = Math.min(hidden, hiddenBefore ?? 0);
+      if (covers(0) || covers(credit)) {
+        if (!covers(0)) {
+          this.ctx.log.warn("bazos: the site counts ads its list pages do not show", {
+            category,
+            hidden: credit,
+          });
+        }
         this.stats.rows = rows.size;
         return rows;
       }
+      hiddenBefore = hidden;
       this.ctx.log.warn("bazos: walk met fewer ads than the site counts", {
         category,
         met: rows.size,
