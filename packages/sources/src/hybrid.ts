@@ -18,8 +18,8 @@ const SKODA_IV = /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/;
  * Romeo's "e-Hybrid" is a 48 V mild hybrid.
  */
 const E_HYBRID = /e-?hybrid/i;
-const E_HYBRID_MAKES = new Set(["volkswagen", "vw", "audi", "seat", "cupra", "porsche"]);
-const SKODA = new Set(["skoda", "škoda"]);
+const SKODA = ["skoda", "škoda"];
+const E_HYBRID_MAKES = new Set(["volkswagen", "vw", "audi", ...SKODA, "seat", "cupra", "porsche"]);
 const MILD = word("m-?hev|mild[\\s-]?hybrid|e-?tsi|48\\s?v(?:olt)?");
 const PETROL = word("e-?tsi|tsi|tfsi");
 const DIESEL = word("tdi");
@@ -39,7 +39,7 @@ export function hybridFuel(
   const key = make.trim().toLowerCase();
   const plugIn =
     PLUG_IN.test(text) ||
-    (SKODA.has(key) && SKODA_IV.test(text)) ||
+    (SKODA.includes(key) && SKODA_IV.test(text)) ||
     (E_HYBRID_MAKES.has(key) && E_HYBRID.test(text));
   if (!MILD.test(text)) return plugIn ? "phev" : undefined;
   if (plugIn) return undefined;

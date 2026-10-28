@@ -165,7 +165,10 @@ export const FUEL_BADGES: Readonly<Record<string, readonly FuelWording[]>> = {
   seat: [[["phev"], badge("e-?hybrid")]],
   cupra: [[["phev"], badge("e-?hybrid")]],
   porsche: [[["phev"], badge("e-?hybrid")]],
-  skoda: [[["phev", "bev"], /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/]],
+  skoda: [
+    [["phev", "bev"], /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/],
+    [["phev"], badge("e-?hybrid")],
+  ],
   audi: [
     [["hev", "phev", "bev", "reev"], badge("e-?tron")],
     [["phev"], badge("e-?hybrid")],
