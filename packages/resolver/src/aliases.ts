@@ -153,8 +153,9 @@ const badge = (word: string) => new RegExp(`(?<![a-z0-9])${word}(?![a-z0-9])`, "
 
 /**
  * Electrified badges one make owns, with the fuels each allows ("GTE" is a plug-in
- * Volkswagen but a petrol Opel; "e-Hybrid" a plug-in Volkswagen but a mild-hybrid Jeep). Read only in that make's listings, with case kept: Škoda's
- * "iV" is the badge, "IV" and "iv" a generation. Keyed by make group key.
+ * Volkswagen but a petrol Opel; "e-Hybrid" a plug-in Audi but a mild-hybrid Jeep). Read only
+ * in that make's listings, with case kept: Škoda's "iV" is the badge, "IV" and "iv" a
+ * generation. Keyed by make group key.
  */
 export const FUEL_BADGES: Readonly<Record<string, readonly FuelWording[]>> = {
   volkswagen: [
@@ -165,7 +166,10 @@ export const FUEL_BADGES: Readonly<Record<string, readonly FuelWording[]>> = {
   cupra: [[["phev"], badge("e-?hybrid")]],
   porsche: [[["phev"], badge("e-?hybrid")]],
   skoda: [[["phev", "bev"], /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/]],
-  audi: [[["hev", "phev", "bev", "reev"], badge("e-?tron")]],
+  audi: [
+    [["hev", "phev", "bev", "reev"], badge("e-?tron")],
+    [["phev"], badge("e-?hybrid")],
+  ],
   renault: [[["hev", "phev", "bev", "reev"], badge("e-?tech")]],
 };
 
