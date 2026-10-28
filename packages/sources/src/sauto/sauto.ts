@@ -9,10 +9,10 @@
  *   drive, seats, VAT deductibility, condition, every photo); 404 once the listing is removed.
  *   The Ledger stores each ListingSeen whole, so every listing yielded carries its detail.
  *
- * incremental: walks the newest-first order down to the last run (a day back on a first run)
- *   and yields the listings created since then that the Ledger does not know, plus up to
- *   `backlog` unknown older ones moved up by an edit or top-up (see `incremental`); the
- *   rest, and known ones, wait for the census.
+ * incremental: walks the newest-first order down to the last run (a day back on a first run),
+ *   in price halves where it outgrows the 10,000-result window, and reads a detail for every
+ *   listing on the way that the Ledger does not know, up to `budget`; past it the run fails
+ *   and the next one resumes (see `incremental`).
  * full: a census sliced by condition and price band; a band over `sliceLimit` results is
  *   halved until each fits (2,000 by default: some 40 minutes of detail pages, well within
  *   one run). Slices done earlier in the census are skipped before any split. Each band
@@ -74,23 +74,23 @@ export interface SautoOptions {
   /** A full-run slice with more results than this is halved by price. Default 2,000. */
   sliceLimit?: number;
   /**
-   * Unknown listings created before the last run that an incremental run still reads, as
-   * the order meets them (see `incremental`). Default 600: some 11 minutes of detail pages.
+   * Detail pages an incremental run may read. Past it the run fails after yielding what it
+   * read, and the next one picks up the rest. Default 2,400: some 40 minutes.
    */
-  backlog?: number;
+  budget?: number;
 }
 
 export function sautoSource(options: SautoOptions = {}): Source {
   const pageSize = options.pageSize ?? 100;
   const sliceLimit = Math.min(options.sliceLimit ?? SLICE_LIMIT, WINDOW - pageSize);
-  const backlog = options.backlog ?? 600;
+  const budget = options.budget ?? 2_400;
   const filter = options.manufacturerModel;
   return {
     id: "sauto",
     ...(filter ? { scope: filter } : {}),
     async *harvest(ctx: HarvestContext): AsyncIterable<Observation> {
       const run = new Run(ctx, filter, pageSize);
-      yield* ctx.mode === "incremental" ? run.incremental(backlog) : run.full(sliceLimit);
+      yield* ctx.mode === "incremental" ? run.incremental(budget) : run.full(sliceLimit);
     },
   };
 }
@@ -121,56 +121,84 @@ class Run {
   }
 
   /**
-   * New listings: those created since the last run (a day back on a first run) that the
-   * Ledger does not know. `sorting_date` is never earlier than a listing's creation, so they
-   * all sit above the last run in the order, and the walk ends at the first page older than
-   * it. The listings above it are mostly not new: top-ups move some 5,000 older listings a
-   * day up the order (95 of the newest 100 on 2026-10-28), and a detail page each would take
-   * longer than the hour the run may have. Known ones wait for the census; of the unknown
-   * ones, the first `backlog` are read too. While a census is under way most moved listings
-   * are unknown and the budget caps them; once it is done, the unknown ones are few (a
-   * listing published days after it was drafted, one back after its removal) and all fit.
-   * Reaching the 10,000-result window after a last run means new listings may have gone
-   * unseen, so the run fails rather than complete and move `lastRunAt` past them; a full
-   * run catches up.
+   * The listings moved up the order since the last run (a day back on a first run). Top-ups
+   * move some 5,000 older listings a day (95 of the newest 100 on 2026-10-28), so a detail
+   * page each would take longer than the hour the run may have. A known listing gets a
+   * ListingPriceSeen from its search item instead, so its price changes land daily (an edit
+   * moves it up). Details go only to the listings the Ledger does not know: those created
+   * since the last run first, then older ones (published days after they were drafted, back
+   * after their removal, or not yet reached by the census), newest first, up to `budget`.
+   * Past it the run fails once it has yielded what it read, so `lastRunAt` stays and the next
+   * run walks from the same point, skipping the listings now known. Nothing moved up is
+   * dropped: it is read, or the run fails.
    */
-  async *incremental(backlog: number): AsyncIterable<Observation> {
+  async *incremental(budget: number): AsyncIterable<Observation> {
     const { checkpoint, now } = this.ctx;
     const from = checkpoint.lastRunAt
       ? checkpoint.lastRunAt.getTime() - SINCE_MARGIN_MS
       : now.getTime() - FIRST_RUN_LOOKBACK_MS;
     const since = pragueLocal(new Date(from));
-    let older = 0;
-    for (let offset = 0; offset + this.pageSize <= WINDOW; offset += this.pageSize) {
-      const page = await this.search({ conditions: CONDITION_SEOS, offset });
+    const created: Item[] = [];
+    const older: Item[] = [];
+    const met = new Set<string>();
+    for await (const item of this.moved(since)) {
+      if (isSkipped(item)) continue;
+      const ref = refOf(item);
+      if (ref !== undefined) {
+        if (met.has(ref)) continue;
+        met.add(ref);
+        if (checkpoint.isKnown(ref)) {
+          // The search price is the field the detail's ListingSeen carries, so a known
+          // listing's price is kept daily without its detail page.
+          if (typeof item.price === "number") {
+            yield { kind: "ListingPriceSeen", ref, price: { amount: item.price, currency: "CZK" } };
+          }
+          continue;
+        }
+      }
+      (text(item.create_date) >= since ? created : older).push(item);
+    }
+    const unknown = [...created, ...older];
+    for (const item of unknown.slice(0, budget)) yield* this.listing(item);
+    this.ctx.log.info("sauto incremental read the unknown listings moved up", {
+      created: created.length,
+      older: older.length,
+    });
+    if (unknown.length > budget) {
+      throw new Error(
+        `Sauto incremental left ${unknown.length - budget} of ${unknown.length} unknown listings for the next run (budget ${budget})`,
+      );
+    }
+  }
+
+  /**
+   * Search items sorted since `since`, newest first, with repeats. A query whose order holds
+   * more than the 10,000-result window above `since` is walked again in price halves, each
+   * with a window of its own (listings without a price drop out, as they are skipped anyway).
+   */
+  private async *moved(since: string, band?: Band): AsyncIterable<Item> {
+    for (let offset = 0; ; offset += this.pageSize) {
+      if (offset + this.pageSize > WINDOW) {
+        const halves = band ? halve(band) : [{ from: 0, to: PRICE_TOP }, { from: PRICE_TOP }];
+        if (!halves) {
+          throw new Error(
+            `Sauto incremental: band ${band?.from}-${band?.to ?? ""} cannot be split`,
+          );
+        }
+        for (const half of halves) yield* this.moved(since, half);
+        return;
+      }
+      const page = await this.search({ conditions: CONDITION_SEOS, band, offset });
       let more = false;
       for (const item of page.items) {
         // Skipped listings never become known, so only their timestamp keeps the walk going.
         if (text(item.sorting_date) < since) continue;
         more = true;
-        if (isSkipped(item)) continue;
-        const ref = refOf(item);
-        if (ref !== undefined && this.ctx.checkpoint.isKnown(ref)) continue;
-        if (text(item.create_date) >= since) {
-          yield* this.listing(item);
-        } else if (backlog > 0 && !(ref !== undefined && this.done.has(ref))) {
-          backlog--;
-          yield* this.listing(item);
-        } else older++;
+        yield item;
       }
-      if (!more || page.items.length < this.pageSize || offset + this.pageSize >= page.total) {
-        this.ctx.log.info("sauto incremental left changed older listings to the census", {
-          older,
-        });
+      if (!more || page.items.length < this.pageSize || offset + this.pageSize >= page.total)
         return;
-      }
     }
-    if (checkpoint.lastRunAt) {
-      throw new Error(
-        `Sauto incremental reached the ${WINDOW}-result window before the last run; run a full harvest`,
-      );
-    }
-    this.ctx.log.warn("sauto first incremental run stopped at the 10,000-result window");
   }
 
   /** The census: every band, then a failure naming the bands that came out short. */
@@ -203,13 +231,11 @@ class Run {
     }
     const first = await this.search({ conditions: [condition], band, offset: 0 });
     if (first.total > limit) {
-      const mid = band.to === undefined ? band.from * 2 : Math.floor((band.from + band.to) / 2);
-      // Never down to [0, 1): `price_to=0` would drop the bound.
-      if (mid <= band.from || (band.from === 0 && mid <= 1)) {
+      const halves = halve(band);
+      if (!halves) {
         throw new Error(`Sauto slice ${slice} holds ${first.total} results and cannot be split`);
       }
-      yield* this.band(condition, { from: band.from, to: mid }, limit, short);
-      yield* this.band(condition, { ...band, from: mid }, limit, short);
+      for (const half of halves) yield* this.band(condition, half, limit, short);
       return;
     }
     // Page the whole band before the slow detail requests, so the order barely moves under us.
@@ -359,6 +385,17 @@ class Run {
 interface Page {
   total: number;
   items: Item[];
+}
+
+/** A price band's two halves, or undefined when it cannot be split. */
+function halve(band: Band): [Band, Band] | undefined {
+  const mid = band.to === undefined ? band.from * 2 : Math.floor((band.from + band.to) / 2);
+  // Never down to [0, 1): `price_to=0` would drop the bound.
+  if (mid <= band.from || (band.from === 0 && mid <= 1)) return undefined;
+  return [
+    { from: band.from, to: mid },
+    { ...band, from: mid },
+  ];
 }
 
 function parseJson(body: string, url: string): unknown {

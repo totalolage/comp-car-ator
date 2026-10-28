@@ -21,8 +21,7 @@ import { type SautoOptions, sautoSource } from "./sauto.ts";
 // sautoSource(OPTIONS), personal fields (phone, user, VIN, description) stripped.
 const fixture = new URL("./fixtures/dacia-spring.cassette.json", import.meta.url);
 const now = new Date("2026-10-25T13:27:00Z");
-// No backlog: an incremental run reads only the listings created since its last run.
-const OPTIONS = { manufacturerModel: "dacia:spring", pageSize: 4, sliceLimit: 8, backlog: 0 };
+const OPTIONS = { manufacturerModel: "dacia:spring", pageSize: 4, sliceLimit: 8 };
 /** A last run before every listing of the fixture: an incremental run yields all it does not know. */
 const LONG_AGO = new Date("2020-01-01T00:00:00Z");
 
@@ -31,6 +30,7 @@ async function harvest(
   checkpoint: Partial<Checkpoint> = {},
   edit: (cassette: Cassette) => void = () => {},
   signal = new AbortController().signal,
+  options: { source?: SautoOptions; consume?: (o: Observation) => void } = {},
 ): Promise<{ observations: Observation[]; urls: string[] }> {
   const cassette = structuredClone(await loadCassette(fixture));
   edit(cassette);
@@ -51,12 +51,18 @@ async function harvest(
     signal,
   };
   const observations: Observation[] = [];
-  for await (const o of sautoSource(OPTIONS).harvest(ctx)) observations.push(o);
+  for await (const o of sautoSource({ ...OPTIONS, ...options.source }).harvest(ctx)) {
+    observations.push(o);
+    options.consume?.(o);
+  }
   return { observations, urls };
 }
 
 const listings = (os: Observation[]) =>
   os.filter((o): o is ListingSeen => o.kind === "ListingSeen");
+const prices = (os: Observation[]) =>
+  os.flatMap((o) => (o.kind === "ListingPriceSeen" ? [[o.ref, o.price.amount] as const] : []));
+const details = (urls: string[]) => urls.filter((u) => !u.includes("/items/search?"));
 const slices = (os: Observation[]) => os.flatMap((o) => (o.kind === "SliceDone" ? [o.slice] : []));
 const searches = (urls: string[]) => urls.filter((u) => u.includes("/items/search?"));
 
@@ -265,15 +271,56 @@ describe("sauto source", () => {
   // 10-13 (09-14) | 10-13 (10-13) 211264902, 10-05 (10-05), 10-05 (04-22), 09-14 (09-14) | ...
   const LAST_RUN = new Date("2026-10-12T00:00:00Z"); // less the margin, 10-12 00:00 in Prague
 
-  it("incremental run after a last run reads down to it and fetches only listings created since", async () => {
+  it("incremental run after a last run reads down to it and reads every unknown listing moved up", async () => {
     const { observations, urls } = await harvest("incremental", { lastRunAt: LAST_RUN });
     // The 3rd page is wholly older than the last run.
     expect(searches(urls)).toHaveLength(3);
-    // Page 1 was moved up by edits and top-ups: older listings, left to the census.
-    expect(urls.filter((u) => !u.includes("/items/search?"))).toEqual([
-      "https://www.sauto.cz/api/v1/items/211264902",
+    // The listing created since comes first; then page 1, older listings moved up by edits
+    // and top-ups, newest first.
+    const read = ["211264902", "211187061", "210518621", "210389525", "211098051"];
+    expect(details(urls)).toEqual(read.map((ref) => `https://www.sauto.cz/api/v1/items/${ref}`));
+    expect(listings(observations).map((o) => o.ref)).toEqual(read);
+  });
+
+  it("incremental run prices known listings moved up from their search items, without a detail", async () => {
+    const page1 = new Set(["211187061", "210518621", "210389525", "211098051"]);
+    const { observations, urls } = await harvest("incremental", {
+      lastRunAt: LAST_RUN,
+      isKnown: (ref) => page1.has(ref),
+    });
+    expect(details(urls)).toEqual(["https://www.sauto.cz/api/v1/items/211264902"]);
+    expect(prices(observations)).toEqual([
+      ["211187061", 220000],
+      ["210518621", 359000],
+      ["210389525", 249000],
+      ["211098051", 259000],
     ]);
     expect(listings(observations).map((o) => o.ref)).toEqual(["211264902"]);
+  });
+
+  it("incremental run's search price is the price the listing's ListingSeen carries", async () => {
+    // Like for like, or the Ledger would record changes that did not happen.
+    const full = await harvest("full");
+    const seen = new Map(listings(full.observations).map((o) => [o.ref, o.price.amount]));
+    const { observations } = await harvest("incremental", { isKnown: () => true });
+    expect(prices(observations).length).toBe(seen.size);
+    expect(new Map(prices(observations))).toEqual(seen);
+    expect(prices(observations).every(([, amount]) => amount > 0)).toBe(true);
+    expect(listings(full.observations).some((o) => o.priceBasis !== "unknown")).toBe(true);
+  });
+
+  it("a known listing's price change shows up in the next incremental run", async () => {
+    const { observations, urls } = await harvest(
+      "incremental",
+      { lastRunAt: LAST_RUN, isKnown: () => true },
+      (cassette) =>
+        editBodies(cassette, firstSearchPage, (body) => {
+          const item = body.results.find((i) => i.id === 210518621);
+          if (item) Object.assign(item, { price: 339000, sorting_date: "2026-10-25T12:00:00" });
+        }),
+    );
+    expect(details(urls)).toEqual([]);
+    expect(prices(observations)).toContainEqual(["210518621", 339000]);
   });
 
   it("first incremental run reads back a day", async () => {
@@ -297,23 +344,47 @@ describe("sauto source", () => {
     expect(listings(observations).map((o) => o.ref)).toEqual(["211264902"]);
   });
 
-  it("incremental run also reads unknown older listings moved up, up to its backlog", async () => {
-    // Six listings created 10-01, all topped up today, none in the Ledger.
-    const list = [1, 2, 3, 4, 5, 6].map((id) => car(id, { create_date: "2026-10-01T00:00:00" }));
-    const { observations, urls, error } = await harvestSite("incremental", paged(list), {
-      checkpoint: { lastRunAt: new Date("2026-10-24T00:00:00Z") },
-      source: { backlog: 2 },
-    });
-    expect(error).toBeUndefined();
-    expect(listings(observations).map((o) => o.ref)).toEqual(["1", "2"]);
-    expect(urls.filter((u) => !u.includes("/items/search?"))).toHaveLength(2);
+  it("incremental run never drops a late-published listing: past its budget it fails, and the next run reads the rest", async () => {
+    // Page 1 holds four listings created before the last run (drafted earlier, published or
+    // topped up since), none in the Ledger; 211264902 was created since.
+    const recorded = new Set<string>();
+    const day = async () => {
+      const out: Observation[] = [];
+      const error = await harvest(
+        "incremental",
+        { lastRunAt: LAST_RUN, isKnown: (ref) => recorded.has(ref) },
+        () => {},
+        undefined,
+        {
+          source: { budget: 3 },
+          consume: (o) => {
+            out.push(o);
+            if (o.kind === "ListingSeen") recorded.add(o.ref);
+          },
+        },
+      ).then(
+        () => undefined,
+        (e: unknown) => e,
+      );
+      return { error, out };
+    };
+    const first = await day();
+    // The one created since first, then the older ones newest first; the Ledger keeps what a
+    // failed run yielded, and lastRunAt stays where it was.
+    expect(listings(first.out).map((o) => o.ref)).toEqual(["211264902", "211187061", "210518621"]);
+    expect(String(first.error)).toMatch(/left 2 of 5 unknown listings for the next run/);
+    const second = await day();
+    expect(second.error).toBeUndefined();
+    expect(listings(second.out).map((o) => o.ref)).toEqual(["210389525", "211098051"]);
+    expect(prices(second.out).map(([ref]) => ref)).toEqual(["211187061", "210518621", "211264902"]);
   });
 
-  it("incremental run leaves known listings to the census, however recently changed", async () => {
+  it("incremental run prices known listings and reads no detail for them, however recently changed", async () => {
     const known = { isKnown: () => true };
     const longAgo = await harvest("incremental", known);
-    expect(longAgo.observations).toEqual([]);
-    expect(longAgo.urls.every((u) => u.includes("/items/search?"))).toBe(true);
+    expect(listings(longAgo.observations)).toEqual([]);
+    expect(prices(longAgo.observations)).toHaveLength(13);
+    expect(details(longAgo.urls)).toEqual([]);
     expect(searches(longAgo.urls)).toHaveLength(4);
     const justNow = await harvest("incremental", { ...known, lastRunAt: now });
     expect(justNow.observations).toEqual([]);
@@ -495,53 +566,26 @@ describe("sauto source", () => {
     ).rejects.toBeInstanceOf(HttpBlockedError);
   });
 
-  it("incremental run fails at the 10,000-result window after a last run, but not on a first run", async () => {
-    // Every page repeats one new listing, so only its detail is needed.
-    const item = {
-      id: 1,
-      price: 100000,
-      create_date: "2026-10-25T13:00:00",
-      sorting_date: "2026-10-25T14:00:00",
-      manufacturer_cb: { name: "Dacia", seo_name: "dacia", value: 15 },
-      model_cb: { name: "Spring", seo_name: "spring", value: 9057 },
-      condition_cb: { name: "Ojeté", value: 2 },
+  it("incremental run walks price halves when the order since the last run outgrows the 10,000-result window", async () => {
+    // Two days of top-ups: more than the window above the last run. Each price half fits.
+    const low = [car(1, { price: 90000 }), car(2, { price: 80000 })];
+    const high = [car(3, { price: 200_000_000 })];
+    const search = (q: URLSearchParams) => {
+      const offset = Number(q.get("offset"));
+      if (q.get("price_from") === "0")
+        return { total: 2, results: low.slice(offset, offset + 100) };
+      if (q.get("price_from")) return { total: 1, results: high.slice(offset, offset + 100) };
+      return { total: 10_001, results: Array.from({ length: 100 }, () => low[0] as ApiItem) };
     };
-    const json = (url: string, body: unknown): Interaction => ({
-      request: { url },
-      response: { url, status: 200, headers: {}, body: JSON.stringify(body), tier: "T0" },
-    });
-    const interactions = [json("https://www.sauto.cz/api/v1/items/1", { result: item })];
-    for (let offset = 0; offset < 10_000; offset += 100) {
-      const params = new URLSearchParams({
-        category_id: "838",
-        condition_seo: "nove,predvadeci,ojete",
-        operating_lease: "false",
-        vehicle_age_from: "2000",
-        limit: "100",
-        offset: String(offset),
+    for (const lastRunAt of [new Date("2026-10-24T00:00:00Z"), null]) {
+      const { observations, urls, error } = await harvestSite("incremental", search, {
+        checkpoint: { lastRunAt },
+        source: { pageSize: 100 },
       });
-      interactions.push(
-        json(`https://www.sauto.cz/api/v1/items/search?${params}`, {
-          pagination: { total: 10_001 },
-          results: Array.from({ length: 100 }, () => item),
-        }),
-      );
+      expect(error).toBeUndefined();
+      expect(searches(urls)).toHaveLength(102);
+      expect(listings(observations).map((o) => o.ref)).toEqual(["1", "2", "3"]);
     }
-    const run = async (checkpoint: Partial<Checkpoint>) => {
-      const out: Observation[] = [];
-      const ctx: HarvestContext = {
-        http: createReplayHttp({ version: 1, interactions }),
-        mode: "incremental",
-        checkpoint: { ...emptyCheckpoint, ...checkpoint },
-        now,
-        log: silentLogger,
-        signal: new AbortController().signal,
-      };
-      for await (const o of sautoSource({ pageSize: 100 }).harvest(ctx)) out.push(o);
-      return out;
-    };
-    await expect(run({ lastRunAt: new Date("2026-10-25T12:00:00Z") })).rejects.toThrow(/window/);
-    expect(listings(await run({}))).toHaveLength(1);
   });
 
   it("full run leaves a band whose pages hold fewer results than its total not done, and fails", async () => {

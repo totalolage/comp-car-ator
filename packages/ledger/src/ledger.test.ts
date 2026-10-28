@@ -89,6 +89,49 @@ describe("Ledger", () => {
     });
   });
 
+  it("reprices a live listing from a price-only sighting, leaving the rest and when it was seen", async () => {
+    ledger = openLedger(":memory:");
+    await run("sauto", "full", "2026-10-10", [seen("1", 489_000), seen("2", 1)]);
+    const price = (ref: string, amount: number, currency = "CZK"): Observation => ({
+      kind: "ListingPriceSeen",
+      ref,
+      price: { amount, currency },
+    });
+    const unchanged = await run("sauto", "incremental", "2026-10-11", [price("1", 489_000)]);
+    expect(unchanged).toMatchObject({ priceChanges: 0, rejected: [] });
+    const later = await run("sauto", "incremental", "2026-10-12", [
+      price("1", 479_000),
+      // Only a ListingSeen adds a listing or changes its currency.
+      price("9", 1),
+      price("2", 1, "EUR"),
+    ]);
+    expect(later).toMatchObject({ priceChanges: 1, recorded: { ListingPriceSeen: 1 } });
+    expect(later.rejected.map((r) => r.reason)).toEqual([
+      "no live listing with this ref to reprice",
+      "price currency EUR differs from the listing's CZK",
+    ]);
+
+    const [listing] = [...ledger.snapshot().listings()];
+    expect(listing).toMatchObject({
+      id: "sauto:1",
+      lastSeen: "2026-10-10",
+      price: { amount: 479_000, currency: "CZK" },
+      priceBasis: "gross",
+      vehicle: { powerKw: 110 },
+      priceHistory: [
+        { date: "2026-10-10", price: { amount: 489_000, currency: "CZK" } },
+        { date: "2026-10-12", price: { amount: 479_000, currency: "CZK" } },
+      ],
+    });
+    // A price-only sighting is not a census sighting: two full runs that miss it still retire it.
+    await run("sauto", "full", "2026-10-17", [seen("2", 1)]);
+    await run("sauto", "incremental", "2026-10-18", [price("1", 479_000)]);
+    const twice = await run("sauto", "full", "2026-10-24", [seen("2", 1)]);
+    expect(twice.gone).toBe(1);
+    const gone = await run("sauto", "incremental", "2026-10-25", [price("1", 1)]);
+    expect(gone.rejected).toHaveLength(1);
+  });
+
   it("marks a listing gone after two complete full runs miss it, as of the first miss", async () => {
     ledger = openLedger(":memory:");
     await run("sauto", "full", "2026-10-10", [seen("1", 1), seen("2", 2)]);
