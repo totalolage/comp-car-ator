@@ -357,6 +357,9 @@ describe("autoscout24 source", () => {
     expect(await fuelOf("Jeep", "Compass 1.3 4xe Plug-in Hybrid")).toBe("phev");
     expect(await fuelOf("Volkswagen", "Golf 1.4 TSI eHybrid DSG")).toBe("phev");
     expect(await fuelOf("CUPRA", "Formentor 1.4 e-HYBRID VZ")).toBe("phev");
+    expect(await fuelOf("Audi", "A6 Avant TFSI e-hybrid quattro")).toBe("phev");
+    expect(await fuelOf("Ford", "Kuga 2.5PHEV ST-Line")).toBe("phev");
+    expect(await fuelOf("Volkswagen", "Golf 1.5eTSI 48 Volt DSG")).toBe("petrol");
     // Mild and plug-in wording at once says neither.
     expect(await fuelOf("Volkswagen", "Tiguan 1.5 eTSI eHybrid DSG")).toBeUndefined();
   });

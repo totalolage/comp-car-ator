@@ -5,19 +5,23 @@
  */
 import type { Fuel } from "@cca/vocabulary";
 
-const bounded = (alternation: string, flags = "i") =>
-  new RegExp(`(?<![A-Za-z0-9])(?:${alternation})(?![A-Za-z0-9])`, flags);
+/** A word between letters, so digits may touch it: "1.5TSI", "2.5PHEV", "48V". */
+const word = (alternation: string) =>
+  new RegExp(`(?<![A-Za-z])(?:${alternation})(?![A-Za-z])`, "i");
 
-// "Pluginhybrid" runs on, so only the start is bounded.
-const PLUG_IN = /(?<![A-Za-z0-9])(?:plug[\s-]?in|phev)/i;
+// Runs on into other words: "Pluginhybrid", "Plug-In-Hybrid".
+const PLUG_IN = /plug[\s-]?in|phev/i;
 /** Škoda's plug-in badge keeps its case: "Octavia IV" is the fourth generation. */
-const SKODA_IV = bounded("iV", "");
-/** The Volkswagen group's plug-in badge; Jeep's and Alfa Romeo's "e-Hybrid" is a 48 V mild one. */
-const E_HYBRID = bounded("e-?hybrid");
-const E_HYBRID_MAKES = new Set(["volkswagen", "vw", "seat", "cupra", "porsche"]);
-const MILD = bounded("m-?hev|mild[\\s-]?hybrid|e-?tsi|48\\s?v");
-const PETROL = bounded("e-?tsi|tsi|tfsi");
-const DIESEL = bounded("tdi");
+const SKODA_IV = /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/;
+/**
+ * The Volkswagen group's plug-in badge ("e-Hybrid", Audi's "TFSI e-hybrid"); Jeep's and Alfa
+ * Romeo's "e-Hybrid" is a 48 V mild hybrid.
+ */
+const E_HYBRID = /e-?hybrid/i;
+const E_HYBRID_MAKES = new Set(["volkswagen", "vw", "audi", "seat", "cupra", "porsche"]);
+const MILD = word("m-?hev|mild[\\s-]?hybrid|e-?tsi|48\\s?v(?:olt)?");
+const PETROL = word("e-?tsi|tsi|tfsi");
+const DIESEL = word("tdi");
 
 /**
  * The fuel a hybrid's wording states: "phev" for a plug-in ("PHEV", "Plug-in", Škoda's "iV",
