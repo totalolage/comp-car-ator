@@ -249,7 +249,15 @@ describe("service worker", () => {
   });
 
   it("leaves other origins, other methods and other paths to the browser", async () => {
-    expect(await get("/manifest.webmanifest")).toBeUndefined();
+    // What an installer reads: the manifest and its icons, as the page loads them and as a
+    // browser's own fetch does.
+    for (const path of ["/manifest.webmanifest", "/icon-maskable-512.png", "/icon-192.png"]) {
+      expect(await get(path)).toBeUndefined();
+      expect(await dispatch("fetch", { request: subresource(path, "image") })).toBeUndefined();
+    }
+    expect(
+      await dispatch("fetch", { request: subresource("/manifest.webmanifest", "manifest") }),
+    ).toBeUndefined();
     expect(await get("/_vercel/toolbar/x.js")).toBeUndefined();
     expect(
       await dispatch("fetch", { request: new Request("https://example.com/x") }),
