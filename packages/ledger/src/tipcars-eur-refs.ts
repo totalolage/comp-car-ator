@@ -7,7 +7,8 @@
  * median, every Dubai seller's, and the rest of the Slovak sellers' towns. Each pair here is a
  * ref whose listing page, read on 2026-10-28, carries a record for that ref with
  * `price_currency` "L" (EUR) and this amount, which is the amount the Ledger held. Each had one
- * price point. Migration 4 relabels the points recorded at exactly this amount.
+ * price point. Migration 4 relabels the CZK points recorded at exactly this amount before
+ * 2026-10-28.
  */
 export const TIPCARS_EUR_PRICES: readonly (readonly [ref: string, amountEur: number])[] = [
   ["8944845", 713900],

@@ -211,7 +211,9 @@ describe("Ledger", () => {
       // a Dubai dealer's Wrangler at its 10 830 EUR; a listing the fixed adapter saw again
       // in EUR before the Ledger was corrected; one it saw again in CZK; a seller in CZK
       // who switched to EUR before the fix, and one who switched on the day of the fix; one
-      // held at an amount other than the confirmed 9 920 EUR; one seller in CZK all along.
+      // held at an amount other than the confirmed 9 920 EUR, whose price went up and back the
+      // same day; one priced in CZK at its confirmed amount after the fix; one seller in CZK
+      // all along.
       ledger = openLedger(file);
       await run("tipcars", "full", "2026-10-25", [seen("32587046", 400_000)]);
       await run("tipcars", "full", "2026-10-26", [
@@ -224,10 +226,13 @@ describe("Ledger", () => {
       await run("tipcars", "incremental", "2026-10-27", [
         seen("32587029", 15_900),
         seen("32587151", 450_000),
+        seen("32587182", 9_600),
       ]);
+      await run("tipcars", "incremental", "2026-10-27", [seen("32587182", 9_500)]);
       await run("tipcars", "incremental", "2026-10-28", [
         seen("32587029", 225_000),
         seen("32587151", 20_500, eur(20_500)),
+        seen("32587193", 22_600),
       ]);
       await run("tipcars", "incremental", "2026-10-29", [seen("19337165", 55_000, eur(55_000))]);
       ledger.close();
@@ -269,7 +274,14 @@ describe("Ledger", () => {
       });
       expect(listings.get("tipcars:32587182")).toMatchObject({
         ...czk(9_500),
-        priceHistory: [{ date: "2026-10-26", ...czk(9_500) }],
+        priceHistory: [
+          { date: "2026-10-26", ...czk(9_500) },
+          { date: "2026-10-27", ...czk(9_500) },
+        ],
+      });
+      expect(listings.get("tipcars:32587193")).toMatchObject({
+        ...czk(22_600),
+        priceHistory: [{ date: "2026-10-28", ...czk(22_600) }],
       });
       expect(listings.get("tipcars:1")).toMatchObject({
         ...czk(489_000),
