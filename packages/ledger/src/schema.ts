@@ -138,7 +138,7 @@ const MIGRATIONS: string[] = [
   `,
   // openpilot list rows; like catalog entries, a full census retires the rows it did not state.
   `
-  CREATE TABLE openpilot_support (
+  CREATE TABLE IF NOT EXISTS openpilot_support (
     source TEXT NOT NULL,
     ref TEXT NOT NULL,
     data TEXT NOT NULL,

@@ -2,7 +2,13 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import type { CatalogEntry, ListingSeen, ListPrice, Observation } from "@cca/vocabulary";
+import type {
+  CatalogEntry,
+  ListingSeen,
+  ListPrice,
+  Observation,
+  OpenpilotSupport,
+} from "@cca/vocabulary";
 import { afterEach, describe, expect, it } from "vitest";
 import { type Ledger, openLedger } from "./index.ts";
 
@@ -695,6 +701,126 @@ describe("Ledger", () => {
       edition("a", 1_050_000, "2026-10-21"),
     ]);
     expect(ledger.checkpoint("cnb").offersInForce()).toEqual([]);
+  });
+
+  describe("openpilot list rows", () => {
+    function variant(
+      model: string,
+      generation: CatalogEntry["variant"]["generation"],
+      fuel: CatalogEntry["variant"]["fuel"],
+      powerKw: number,
+      years: CatalogEntry["variant"]["years"],
+    ): CatalogEntry {
+      const make = model === "Golf" ? "Volkswagen" : "Hyundai";
+      return {
+        kind: "CatalogEntry",
+        variant: { make, model, generation, body: "hatchback", fuel, powerKw, years },
+      };
+    }
+    const mk7 = { slug: "au", name: "Golf VII", from: 2012, to: 2020 };
+    const mk8 = { slug: "cd", name: "Golf VIII", from: 2020 };
+    const kona = { slug: "os", name: "Kona I", from: 2017, to: 2023 };
+    const catalog = [
+      variant("Golf", mk7, "petrol", 81, { from: 2012, to: 2020 }),
+      variant("Golf", mk7, "petrol", 110, { from: 2012, to: 2014 }),
+      variant("Golf", mk8, "petrol", 110, { from: 2020 }),
+      variant("Kona", kona, "petrol", 88, { from: 2017, to: 2023 }),
+      variant("Kona", kona, "bev", 150, { from: 2018, to: 2023 }),
+    ];
+    function row(model: string, years: number[], extra: Partial<OpenpilotSupport> = {}) {
+      const make = model.startsWith("Golf") ? "Volkswagen" : "Hyundai";
+      return {
+        kind: "OpenpilotSupport",
+        ref: `${make}|${model} ${years.join(",")}`,
+        make,
+        model,
+        years,
+        level: "upstream",
+        market: "US",
+        url: "https://comma.ai/vehicles",
+        ...extra,
+      } satisfies OpenpilotSupport;
+    }
+    const placed = () =>
+      Object.fromEntries(
+        ledger
+          .snapshot()
+          .openpilot.map((m) => [`${m.model} ${m.years.join(",")}`, [m.modelId, m.variantIds]]),
+      );
+
+    it("places a row on the Generation its model years fall in and the Variants that fit", async () => {
+      ledger = openLedger(":memory:");
+      await run("rsv", "full", "2026-10-01", catalog);
+      await run("comma-openpilot", "full", "2026-10-02", [
+        // Mostly Golf VII: not Golf VIII, nor a Golf VII Variant built only before 2015.
+        row("Golf", [2015, 2016, 2017, 2018, 2019, 2020]),
+        // One year both Generations were built in decides nothing.
+        row("Golf", [2020], { package: "Adaptive Cruise Control (ACC) & Lane Assist" }),
+        // The petrol Kona: its electric sibling is listed on its own.
+        row("Kona", [2020]),
+        row("Kona Electric", [2018, 2019, 2020, 2021], { fuel: "bev" }),
+        // Rows for other markets, and models the catalog does not know, stay unplaced, even
+        // where the Resolver would take the longer name for a shorter one.
+        row("Kona", [2022], { market: "China", europe: false }),
+        // Mostly before the only Kona Generation the catalog has.
+        row("Kona", [2015, 2016, 2017, 2018]),
+        row("Golf Cabriolet", [2016]),
+      ]);
+      expect(placed()).toEqual({
+        "Golf 2015,2016,2017,2018,2019,2020": [
+          "volkswagen/golf",
+          ["volkswagen/golf/au/hatchback-petrol-81kw"],
+        ],
+        "Golf 2020": ["volkswagen/golf", []],
+        "Kona 2020": ["hyundai/kona", ["hyundai/kona/os/hatchback-petrol-88kw"]],
+        "Kona Electric 2018,2019,2020,2021": [
+          "hyundai/kona",
+          ["hyundai/kona/os/hatchback-bev-150kw"],
+        ],
+        "Kona 2022": [null, []],
+        "Kona 2015,2016,2017,2018": ["hyundai/kona", []],
+        "Golf Cabriolet 2016": ["volkswagen/golf", []],
+      });
+      const kona = ledger.snapshot().openpilot.find((m) => m.row.endsWith("Kona 2020"));
+      expect(kona).toMatchObject({
+        row: "comma-openpilot:Hyundai|Kona 2020",
+        level: "upstream",
+        market: "US",
+        generationIds: ["hyundai/kona/os"],
+      });
+    });
+
+    it("a census retires the rows the list no longer states", async () => {
+      ledger = openLedger(":memory:");
+      await run("rsv", "full", "2026-10-01", catalog);
+      await run("comma-openpilot", "full", "2026-10-02", [
+        row("Kona", [2020]),
+        row("Golf", [2016]),
+      ]);
+      await run("comma-openpilot", "incremental", "2026-10-05", [row("Kona", [2020])]);
+      expect(ledger.snapshot().openpilot).toHaveLength(2);
+      const census = await run("comma-openpilot", "full", "2026-10-09", [row("Kona", [2020])]);
+      expect(census).toMatchObject({ census: "applied", retired: 1 });
+      expect(ledger.snapshot().openpilot.map((m) => m.row)).toEqual([
+        "comma-openpilot:Hyundai|Kona 2020",
+      ]);
+    });
+
+    it("rejects rows with unordered years or an unknown level", async () => {
+      ledger = openLedger(":memory:");
+      const summary = await run("comma-openpilot", "full", "2026-10-02", [
+        row("Kona", [2021, 2020]),
+        row("Kona", [2020], { level: "works" as never }),
+        row("Kona", [2020], { minSteerKmh: -1 }),
+        row("Kona", [2020]),
+      ]);
+      expect(summary.recorded).toEqual({ OpenpilotSupport: 1 });
+      expect(summary.rejected.map((r) => r.reason)).toEqual([
+        "years must be a non-empty ascending list of years",
+        "unknown level works",
+        "speeds must be finite numbers >= 0",
+      ]);
+    });
   });
 });
 

@@ -1,8 +1,35 @@
 import type { Resolver } from "@cca/resolver";
-import type { CatalogVariant, Fuel, OpenpilotSupport } from "@cca/vocabulary";
+import { type CatalogVariant, type Fuel, type OpenpilotSupport, slugify } from "@cca/vocabulary";
 import type { OpenpilotMatch } from "./types.ts";
 
 type Row = Omit<OpenpilotSupport, "kind" | "ref"> & { source: string; row: string };
+
+/**
+ * Words a listed model name may add to the catalog's name of the same car: trims, fuels and
+ * bodies ("Golf GTI", "Kona Electric", "Corolla Hatchback"). Any other word may name another
+ * car the catalog lacks ("Corolla Cross", "Golf Cabriolet"), which the Resolver would still
+ * place on the shorter name, so such a row is not placed.
+ */
+const SAME_CAR_WORDS = new Set([
+  "alltrack",
+  "awd",
+  "e",
+  "electric",
+  "ev",
+  "gtd",
+  "gte",
+  "gti",
+  "hatchback",
+  "hybrid",
+  "in",
+  "phev",
+  "plug",
+  "prime",
+  "r",
+  "rs",
+  "scout",
+  "sedan",
+]);
 
 interface Generation {
   id: string;
@@ -23,9 +50,11 @@ export function matchOpenpilot(
   resolver: Resolver,
 ): OpenpilotMatch[] {
   const generationsOf = new Map<string, Generation[]>();
+  const modelNames = new Map<string, string>();
   for (const variant of variants) {
-    let generations = generationsOf.get(variant.modelId);
-    if (!generations) generationsOf.set(variant.modelId, (generations = []));
+    modelNames.set(variant.modelId, variant.model);
+    const generations = generationsOf.get(variant.modelId) ?? [];
+    generationsOf.set(variant.modelId, generations);
     let generation = generations.find((g) => g.id === variant.generationId);
     if (!generation) {
       generation = {
@@ -42,7 +71,8 @@ export function matchOpenpilot(
   const placed = rows.map((row) => {
     const { source, ...rest } = row;
     const modelId = row.europe === false ? null : modelOf(row, source, resolver);
-    const generations = modelId ? generationsFor(row.years, generationsOf.get(modelId) ?? []) : [];
+    const sameCar = modelId !== null && namesSameCar(row.model, modelNames.get(modelId) ?? "");
+    const generations = sameCar ? generationsFor(row.years, generationsOf.get(modelId) ?? []) : [];
     return { match: { ...rest, modelId, generationIds: [], variantIds: [] }, generations };
   });
 
@@ -86,10 +116,19 @@ function modelOf(row: Row, source: string, resolver: Resolver): string | null {
   return resolution.status === "unmatched" ? null : resolution.modelId;
 }
 
+function namesSameCar(listed: string, catalog: string): boolean {
+  const own = new Set(slugify(catalog).split("-"));
+  return slugify(listed)
+    .split("-")
+    .every((word) => own.has(word) || SAME_CAR_WORDS.has(word));
+}
+
 /**
  * The Generation a row's model years fall in: the one holding most of them, when it holds
- * more than any other and at least two (or the row's only year). Model years run ahead of
- * production years, so a year shared with the next Generation decides nothing.
+ * more than any other, more than half of them, and at least two (or the row's only year).
+ * Model years run ahead of production years, so a year shared with the next Generation
+ * decides nothing, and a row mostly outside the Generation the catalog has ("Golf GTI
+ * 2015-21" on a catalog with only the Golf VIII) belongs to one it lacks.
  */
 function generationsFor(years: number[], generations: Generation[]): Generation[] {
   const scored = generations
@@ -97,7 +136,9 @@ function generationsFor(years: number[], generations: Generation[]): Generation[
     .filter((s) => s.overlap > 0)
     .sort((a, b) => b.overlap - a.overlap);
   const [best, second] = scored;
-  if (!best || best.overlap < Math.min(2, years.length)) return [];
+  if (!best || best.overlap < Math.min(2, years.length) || best.overlap * 2 <= years.length) {
+    return [];
+  }
   if (second && second.overlap === best.overlap) return [];
   return [best.g];
 }

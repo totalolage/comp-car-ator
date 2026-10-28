@@ -97,12 +97,14 @@ const variants = [
     powerKw: 70,
     years: { from: 2021 },
     used: used(320_000, [["CZ", "sauto", 1]]),
+    openpilot: { level: "upstream", years: [2022, 2023] },
   }),
   variant("volkswagen/golf/d", {
     fuel: "diesel",
     powerKw: 85,
     years: { from: 2012, to: 2019 },
     used: null,
+    openpilot: { level: "dashcam", years: [2015] },
   }),
 ];
 
@@ -137,6 +139,20 @@ const content: BundleContent = {
       ],
       stats: [],
       history: [],
+      openpilot: [
+        {
+          make: "Škoda",
+          model: "Octavia",
+          years: [2015, 2016],
+          level: "upstream",
+          package: "Adaptive Cruise Control (ACC) & Lane Assist",
+          market: "Europe",
+          europe: true,
+          url: "https://comma.ai/vehicles#skoda",
+          generationIds: ["skoda/octavia/mk3"],
+          variantIds: ["skoda/octavia/a"],
+        },
+      ],
     },
   ],
 };
@@ -253,6 +269,23 @@ describe("catalog query engine", () => {
     expect(page?.total).toBe(2);
     expect(loads).not.toContain("catalog.json");
     expect(await openModel(memoryLoader(files), "lada/niva")).toBeNull();
+  });
+
+  it("filters on the openpilot level, with Variants no list row reached as unlisted", async () => {
+    const catalog = await open();
+    expect(catalog.query().facets.values.openpilot).toEqual([
+      { value: "unlisted", count: 2 },
+      { value: "dashcam", count: 1 },
+      { value: "upstream", count: 1 },
+    ]);
+    const supported = catalog.query({ filters: { openpilot: ["upstream", "community"] } });
+    expect(supported.rows.map((v) => [v.id, v.openpilot])).toEqual([
+      ["skoda/fabia/c", { level: "upstream", years: [2022, 2023] }],
+    ]);
+    const view = await catalog.model("skoda/octavia");
+    expect(view?.openpilot.map((r) => [r.level, r.years, r.variantIds])).toEqual([
+      ["upstream", [2015, 2016], ["skoda/octavia/a"]],
+    ]);
   });
 
   it("returns null for an unknown model", async () => {

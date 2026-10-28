@@ -455,6 +455,166 @@
       ]
     },
     {
+      "source": "comma-openpilot",
+      "mode": "full",
+      "startedAt": "2026-10-05T03:00:00Z",
+      "observations": [
+        {
+          "kind": "OpenpilotSupport",
+          "ref": "Hyundai|i30 2017-19|Smart Cruise Control (SCC)",
+          "make": "Hyundai",
+          "model": "i30",
+          "years": [
+            2017,
+            2018,
+            2019
+          ],
+          "level": "upstream",
+          "package": "Smart Cruise Control (SCC)",
+          "market": "US",
+          "harness": "Hyundai E connector",
+          "longitudinal": "stock",
+          "minSteerKmh": 51,
+          "minEnableKmh": 0,
+          "url": "https://comma.ai/vehicles#hyundai"
+        },
+        {
+          "kind": "OpenpilotSupport",
+          "ref": "Škoda|Fabia 2022-23|Adaptive Cruise Control (ACC) & Lane Assist",
+          "make": "Škoda",
+          "model": "Fabia",
+          "years": [
+            2022,
+            2023
+          ],
+          "level": "upstream",
+          "package": "Adaptive Cruise Control (ACC) & Lane Assist",
+          "market": "Europe",
+          "europe": true,
+          "harness": "VW J533 connector",
+          "longitudinal": "optional",
+          "minSteerKmh": 0,
+          "minEnableKmh": 0,
+          "url": "https://comma.ai/vehicles#škoda"
+        },
+        {
+          "kind": "OpenpilotSupport",
+          "ref": "Škoda|Octavia 2015-19|Adaptive Cruise Control (ACC) & Lane Assist",
+          "make": "Škoda",
+          "model": "Octavia",
+          "years": [
+            2015,
+            2016,
+            2017,
+            2018,
+            2019
+          ],
+          "level": "upstream",
+          "package": "Adaptive Cruise Control (ACC) & Lane Assist",
+          "market": "Europe",
+          "europe": true,
+          "harness": "VW J533 connector",
+          "longitudinal": "optional",
+          "minSteerKmh": 0,
+          "minEnableKmh": 0,
+          "url": "https://comma.ai/vehicles#škoda"
+        },
+        {
+          "kind": "OpenpilotSupport",
+          "ref": "Toyota|Corolla 2020-22|All",
+          "make": "Toyota",
+          "model": "Corolla",
+          "years": [
+            2020,
+            2021,
+            2022
+          ],
+          "level": "upstream",
+          "market": "US",
+          "harness": "Toyota A connector",
+          "longitudinal": "openpilot",
+          "minSteerKmh": 0,
+          "minEnableKmh": 0,
+          "url": "https://comma.ai/vehicles#toyota"
+        },
+        {
+          "kind": "OpenpilotSupport",
+          "ref": "Toyota|Corolla Cross 2022-25|All",
+          "make": "Toyota",
+          "model": "Corolla Cross",
+          "years": [
+            2022,
+            2023,
+            2024,
+            2025
+          ],
+          "level": "incompatible",
+          "market": "US",
+          "url": "https://comma.ai/vehicles#toyota"
+        },
+        {
+          "kind": "OpenpilotSupport",
+          "ref": "Toyota|Corolla Hatchback 2019-22|All",
+          "make": "Toyota",
+          "model": "Corolla Hatchback",
+          "years": [
+            2019,
+            2020,
+            2021,
+            2022
+          ],
+          "level": "upstream",
+          "market": "US",
+          "harness": "Toyota A connector",
+          "longitudinal": "openpilot",
+          "minSteerKmh": 0,
+          "minEnableKmh": 0,
+          "url": "https://comma.ai/vehicles#toyota"
+        },
+        {
+          "kind": "OpenpilotSupport",
+          "ref": "Toyota|Corolla Hybrid 2020-22|All",
+          "make": "Toyota",
+          "model": "Corolla Hybrid",
+          "fuel": "hev",
+          "years": [
+            2020,
+            2021,
+            2022
+          ],
+          "level": "upstream",
+          "market": "US",
+          "harness": "Toyota A connector",
+          "longitudinal": "openpilot",
+          "minSteerKmh": 0,
+          "minEnableKmh": 0,
+          "url": "https://comma.ai/vehicles#toyota"
+        },
+        {
+          "kind": "OpenpilotSupport",
+          "ref": "Volkswagen|Golf 2015-20|Adaptive Cruise Control (ACC) & Lane Assist",
+          "make": "Volkswagen",
+          "model": "Golf",
+          "years": [
+            2015,
+            2016,
+            2017,
+            2018,
+            2019,
+            2020
+          ],
+          "level": "upstream",
+          "package": "Adaptive Cruise Control (ACC) & Lane Assist",
+          "market": "US",
+          "harness": "VW J533 connector",
+          "longitudinal": "optional",
+          "minSteerKmh": 0,
+          "minEnableKmh": 0,
+          "url": "https://comma.ai/vehicles#volkswagen"
+        }
+      ]
+    },
+    {
       "source": "sauto",
       "mode": "full",
       "startedAt": "2026-10-10T03:00:00Z",
