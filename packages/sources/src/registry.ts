@@ -3,6 +3,7 @@ import { autoesaSource } from "./autoesa/autoesa.ts";
 import { autoscout24Source } from "./autoscout24/autoscout24.ts";
 import { bazosSource } from "./bazos/bazos.ts";
 import { cnbSource } from "./cnb/cnb.ts";
+import { commaOpenpilotSource } from "./comma-openpilot/comma-openpilot.ts";
 import { eeaCo2Source } from "./eea-co2/eea-co2.ts";
 import { mobiledeSource } from "./mobilede/mobilede.ts";
 import { rsvSource } from "./rsv/rsv.ts";
@@ -20,6 +21,7 @@ export const sources: Record<SourceId, () => Source> = {
   aaaauto: () => aaaautoSource(),
   autoesa: () => autoesaSource(),
   cnb: () => cnbSource(),
+  "comma-openpilot": () => commaOpenpilotSource(),
   "eea-co2": () => eeaCo2Source(),
   rsv: () => rsvSource(),
   tipcars: () => tipcarsSource(),
