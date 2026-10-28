@@ -261,5 +261,7 @@ different deploys, and the rows stamp check then fails as it would online. Other
 Every cache carries the worker's version, a hash of what it precaches. A deploy's new worker
 waits until no tab runs the old one, so an open tab still loads its own deploy's chunks from
 the old cache after the server has dropped them; when the new worker activates it drops the
-older caches. Nothing announces an update: the next visit after the tabs close gets it.
+older caches. Nothing announces an update: the next visit after the tabs close gets it. Nor
+does a worker claim the page that installed it: that page and what it fetches pass by as if
+there were no worker, and the next page load is the first one it handles.
 `shell.ts` registers it (a few dozen bytes); `vercel.json` serves `/sw.js` with `no-cache`.

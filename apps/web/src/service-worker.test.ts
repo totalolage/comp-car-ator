@@ -105,6 +105,15 @@ const navigate = (path: string) =>
     },
     preloadResponse: Promise.resolve(undefined),
   });
+// An element's load (<link rel=stylesheet>, a classic <script>), credentials "include".
+const subresource = (path: string, destination: string, headers?: HeadersInit) => ({
+  url: ORIGIN + path,
+  method: "GET",
+  mode: "no-cors",
+  destination,
+  credentials: "include",
+  headers: new Headers(headers),
+});
 const get = (path: string, init?: RequestInit, to?: Worker) =>
   dispatch("fetch", { request: new Request(ORIGIN + path, init) }, to);
 
@@ -150,6 +159,7 @@ describe("service worker", () => {
     const next = boot("next", [...PRECACHE, "/_astro/lazy.next.js"]);
     await dispatch("install", {}, next);
     expect(await store.keys()).toEqual(["other-app", "shell-old", "shell-next"]);
+    await (await store.open("other-app")).put("/_astro/lazy.old.js", basic("not ours"));
 
     // The open tab still runs the old worker: its own chunk comes from its cache, and a page
     // of the new deploy opened meanwhile finds the new chunks offline in the waiting cache.
@@ -198,9 +208,13 @@ describe("service worker", () => {
     expect(kept[0]).toBe(`${ORIGIN}/bundle/models/m1/rows-0.json.gz`);
   });
 
-  it("serves hashed assets from the precache", async () => {
+  it("serves hashed assets from the precache, to elements that send credentials too", async () => {
     online = false;
     expect(await (await get("/_astro/shell.js"))?.text()).toBe("/_astro/shell.js v2");
+    for (const destination of ["style", "script"])
+      expect(
+        await (await dispatch("fetch", { request: subresource("/_astro/shell.js", destination) }))?.text(),
+      ).toBe("/_astro/shell.js v2");
   });
 
   it("never reads or fills the cache for a request that carries its own credentials", async () => {
@@ -215,6 +229,12 @@ describe("service worker", () => {
       expect(await get("/bundle/models/b/index.json.gz", init)).toBeUndefined();
       expect(await get("/_astro/shell.js", init)).toBeUndefined();
     }
+    // An Authorization header bypasses whatever the destination.
+    expect(
+      await dispatch("fetch", {
+        request: subresource("/_astro/shell.js", "style", { authorization: "Bearer a" }),
+      }),
+    ).toBeUndefined();
     expect([...(store.stores.get("data-new")?.keys() ?? [])]).toEqual([
       `${ORIGIN}/bundle/catalog.json.gz`,
     ]);

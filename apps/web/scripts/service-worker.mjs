@@ -100,17 +100,16 @@ export function worker(version, precache) {
     /** @type {Request} */
     const request = event.request;
     if (request.method !== "GET" || request.headers.has("authorization")) return;
-    // Navigations, stylesheets and images carry credentials "include" by default; only a
-    // script's fetch (no destination) asks for it itself.
+    // Navigations and elements' loads (stylesheets, images) send credentials "include" by
+    // default and stay handled; a request with no destination (fetch, XHR, link prefetch)
+    // that says "include" asked for it.
     if (request.credentials === "include" && !request.destination) return;
     const url = new URL(request.url);
     if (url.origin !== location.origin || url.pathname.startsWith("/_vercel/")) return;
     if (request.mode === "navigate") {
       event.respondWith(page(event, url));
     } else if (url.pathname.startsWith("/_astro/")) {
-      // Any version's cache: a tab still on an older deploy, or a fresh page of the newer one
-      // while its worker waits, finds its chunks offline or after the server dropped them.
-      event.respondWith(caches.match(request).then((hit) => hit ?? fetch(request)));
+      event.respondWith(asset(request));
     } else if (
       url.pathname.startsWith("/bundle/") ||
       /^\/model\/.+\/first\.json\.gz$/.test(url.pathname)
@@ -118,6 +117,19 @@ export function worker(version, precache) {
       event.respondWith(networkFirst(event, DATA, url.href, fetch(request)));
     }
   });
+
+  /**
+   * From any version's shell: a tab still on an older deploy, or a fresh page of the newer one
+   * while its worker waits, finds its chunks offline or after the server dropped them.
+   * @param {Request} request
+   */
+  async function asset(request) {
+    for (const name of await caches.keys()) {
+      const hit = name.startsWith("shell-") && (await caches.match(request, { cacheName: name }));
+      if (hit) return hit;
+    }
+    return fetch(request);
+  }
 
   /**
    * A page is kept once per path: its query is URL state the islands read, not other HTML.
