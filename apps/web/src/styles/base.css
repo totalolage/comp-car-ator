@@ -78,6 +78,7 @@ a:hover {
   position: sticky;
   top: 0;
   z-index: 10;
+  padding-top: env(safe-area-inset-top, 0px);
   background: var(--sign);
   color: var(--on-sign);
   /* Yellow ring on green in both schemes. */
@@ -89,7 +90,7 @@ a:hover {
   align-items: stretch;
   gap: var(--s1);
   max-width: var(--page-max);
-  height: var(--masthead);
+  height: var(--masthead-bar);
   margin: 0 auto;
   padding: 0 var(--gutter);
 }
@@ -163,7 +164,7 @@ a:hover {
 }
 
 .menu > summary {
-  height: var(--masthead);
+  height: var(--masthead-bar);
   list-style: none;
 }
 
@@ -1136,7 +1137,7 @@ body {
 
 @media (width < 48rem) {
   :root {
-    --gutter: var(--s3);
+    --gutter: max(var(--s3), var(--safe-x));
   }
 
   .wordmark {

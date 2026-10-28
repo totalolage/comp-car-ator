@@ -238,3 +238,20 @@ budget: no web fonts, no images in chrome except the inline mark (one path, unde
 one shared CSS file, Preact islands only where state changes in place, the shell script
 stays framework-free and does not import the message catalogs (`i18n/locale.ts` holds what
 it needs).
+
+## Install and offline
+
+The site installs as an app (`public/manifest.webmanifest`: standalone, start and scope `/`,
+the tile icons from `assets/logo/`, plus the maskable one). On iOS the `apple-mobile-web-app-*`
+meta make Add to Home Screen open standalone with a translucent status bar: the page runs
+under it (`viewport-fit=cover`), the masthead pads itself by `env(safe-area-inset-top)` so its
+green fills the bar, `--masthead` includes that inset for everything that sticks below it, and
+`--gutter` grows to the side insets in landscape.
+
+The service worker (`scripts/service-worker.mjs`, written to `/sw.js` after the build) keeps
+pages and Bundle data network first, so online nothing is older than the last deploy, and
+answers from its cache only when the network fails; a page never kept falls back to
+`/offline/` (`/en/offline/`), which lists the recently viewed models. The catalog pages and
+`/_astro/` assets are precached. Every cache carries the worker's version, a hash of what it
+precaches; a deploy's new worker takes over at once and drops the older caches. `shell.ts`
+registers it (a few dozen bytes); `vercel.json` serves `/sw.js` with `no-cache`.

@@ -1,0 +1,39 @@
+---
+/**
+ * The page the service worker (scripts/service-worker.mjs) answers with when a page is
+ * neither online nor kept on the device. It is served at the URL that failed, so "try again"
+ * reloads that URL; the shell fills in the recently viewed models, which may be kept.
+ */
+import { i18n } from "../i18n/i18n.ts";
+import type { Lang } from "../i18n/messages.ts";
+import Base from "../layouts/Base.astro";
+
+interface Props {
+  lang: Lang;
+}
+// Only this page uses these strings, so they stay out of messages.ts, which every page's JS
+// carries.
+const TEXT = {
+  cs: {
+    title: "Jste offline",
+    body: "Tahle stránka se zatím neuložila do zařízení. Otevřete ji znovu, až budete online.",
+    retry: "Zkusit znovu",
+  },
+  en: {
+    title: "You are offline",
+    body: "This page is not saved on this device yet. Open it again once you are online.",
+    retry: "Try again",
+  },
+} satisfies Record<Lang, Record<string, string>>;
+const { lang } = Astro.props;
+const t = i18n(lang);
+const text = TEXT[lang];
+---
+<Base lang={lang} path="/offline/" title={text.title} tray={false} noindex>
+  <h1 class="page-title">{text.title}</h1>
+  <p class="page-summary">{text.body} <a href="">{text.retry}</a></p>
+  <section data-recents hidden>
+    <h2 class="section-title">{t.t("nav.recents")}</h2>
+    <ul></ul>
+  </section>
+</Base>

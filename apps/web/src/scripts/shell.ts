@@ -3,7 +3,8 @@
  * current URL state along, the header compare link and the recents list follow the store,
  * the category menu loads its models and closes on Escape or an outside click, and the
  * compare tray (tray.ts, one chunk with this script) follows the store. Hover prefetch is
- * Astro's built-in `prefetch` (astro.config.mjs).
+ * Astro's built-in `prefetch` (astro.config.mjs). It also registers the service worker
+ * (scripts/service-worker.mjs), which the build writes to /sw.js.
  */
 import { type Lang, localePath } from "../i18n/locale.ts";
 import { siteStore } from "../lib/store.ts";
@@ -97,3 +98,6 @@ for (const menu of document.querySelectorAll<HTMLDetailsElement>("details[data-m
     if (menu.open && !menu.contains(e.target as Node)) menu.open = false;
   });
 }
+
+if (import.meta.env.PROD && "serviceWorker" in navigator)
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
