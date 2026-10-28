@@ -403,11 +403,11 @@ describe("bazos source", () => {
       ),
     );
     const { observations, error } = await harvest(recorded, "full");
-    expect(String(error)).toMatch(/not harvested whole: kia/);
+    expect(String(error)).toMatch(/not harvested whole: kia \(met 59 ads of 70 counted\)$/);
     expect(observations).toEqual([]);
   });
 
-  it("an ad the site counts but no page shows does not keep the census from its slices", async () => {
+  it("an ad the site counts but no page shows keeps the category out of the census, by name", async () => {
     // As on Ford and Mercedes live: the 26th place is counted (the category holds 60) and
     // /kia/16/ shows 19 of the 20 rows its header counts, on every read.
     const kia = await category();
@@ -424,15 +424,16 @@ describe("bazos source", () => {
       ),
       "full",
     );
-    expect(error).toBeUndefined();
     expect(warnings).toContain(
       "Bazoš list page has 19 rows, its header 20: https://auto.bazos.cz/kia/16/",
     );
-    // The first walk falls short; the redone one, hidden the same ad, is taken.
+    // The ad lacked lies mid-page, on no page next to it, and no walk meets it.
+    expect(warnings).toContain("bazos: walk met a list page whose rows do not match its header");
     expect(warnings).toContain("bazos: walk met fewer ads than the site counts");
-    expect(warnings).toContain("bazos: the site counts ads its list pages do not show");
-    expect(refs(observations).sort()).toEqual(IN_SCOPE);
-    expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
+    expect(String(error)).toBe(
+      "Error: bazos: categories not harvested whole: kia (pages whose rows do not match their header: /kia/16/ 19 of 20; met 59 ads of 60 counted)",
+    );
+    expect(observations).toEqual([]);
   });
 
   it("leaves out new cars", async () => {
@@ -638,7 +639,6 @@ describe("bazos source", () => {
       });
     const short = "Bazoš list page has 19 rows, its header 20: https://auto.bazos.cz/kia/16/";
     const unmatched = "bazos: walk met a list page whose rows do not match its header";
-    const hidden = "bazos: the site counts ads its list pages do not show";
 
     it("is fetched again", async () => {
       const recorded = await cassette("full", (c) => cutAt(c, "/kia/16/", (read) => read === 1));
@@ -653,31 +653,39 @@ describe("bazos source", () => {
     it.each([
       ["the walk", [1, 2]],
       ["the walk over today's ads", [2, 3]],
-    ])("short twice in %s, the census walk is taken as it is", async (_, reads) => {
-      // The row the page leaves out shows on the next one, which overlaps it.
-      const recorded = await cassette("full", (c) =>
-        cutAt(c, "/kia/16/", (read) => reads.includes(read)),
-      );
-      const { observations, error, warnings, listed } = await harvest(recorded, "full");
-      expect(error).toBeUndefined();
-      // The ads met reach the counts: no ad is taken for hidden.
-      expect(warnings).not.toContain(hidden);
-      expect(warnings).not.toContain(unmatched);
-      expect(listed.filter((path) => path === "/kia/")).toHaveLength(2);
-      expect(refs(observations).sort()).toEqual(IN_SCOPE);
-      expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
-    });
+    ])(
+      "short twice in %s, the census walk is redone and taken when the redo reads it whole",
+      async (_, reads) => {
+        // The row the page leaves out shows on the next page, which overlaps it; that does not
+        // tell it apart from an ad that moved there between the two reads.
+        const recorded = await cassette("full", (c) =>
+          cutAt(c, "/kia/16/", (read) => reads.includes(read)),
+        );
+        const { observations, error, warnings, listed } = await harvest(recorded, "full");
+        expect(error).toBeUndefined();
+        expect(warnings).toContain(short);
+        expect(warnings).toContain(unmatched);
+        expect(listed.filter((path) => path === "/kia/")).toHaveLength(4);
+        expect(refs(observations).sort()).toEqual(IN_SCOPE);
+        expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
+      },
+    );
 
-    it("a page short in one walk only lends no credit to an ad no walk met", async () => {
-      // /kia/16/ is short in the first walk, its row met on /kia/32/; the walk over today's
-      // ads counts 60, one ad more than any page shows. The redone walk has no short page.
+    // Counterexample from review: the row /kia/16/ leaves out shows on /kia/32/, while a
+    // different ad escapes every walk (the walk over today's ads counts 60, one more than any
+    // page shows). Lowering the count by the rows short pages lack would take the census.
+    it("a short page whose ad is met elsewhere lends no credit to an ad no walk met", async () => {
       const recorded = await cassette("full", (c) => {
-        cutAt(c, "/kia/16/", (read) => read <= 2);
-        inPages(c, "inzerátů z 59", "inzerátů z 60", (url, n) => url.endsWith("/kia/") && n === 2);
+        cutAt(c, "/kia/16/", () => true);
+        inPages(c, "inzerátů z 59", "inzerátů z 60", (url, n) => url.endsWith("/kia/") && n >= 2);
       });
-      const { observations, error, warnings } = await harvest(recorded, "full");
-      expect(warnings).not.toContain(hidden);
-      expect(String(error)).toMatch(/not harvested whole: kia/);
+      const { observations, error, warnings, listed } = await harvest(recorded, "full");
+      expect(warnings).toContain(unmatched);
+      expect(listed.filter((path) => path === "/kia/")).toHaveLength(4);
+      // Both walks are refused, and the count is not lowered by the row /kia/16/ lacks.
+      expect(String(error)).toBe(
+        "Error: bazos: categories not harvested whole: kia (pages whose rows do not match their header: /kia/16/ 19 of 20; met 59 ads of 60 counted)",
+      );
       expect(observations).toEqual([]);
     });
 
@@ -704,7 +712,9 @@ describe("bazos source", () => {
       ]);
       // Each category's cars, the Kia ones read from the short page included.
       expect(refs(observations).sort()).toEqual(IN_SCOPE.flatMap((ref) => [ref, ref]));
-      expect(warnings).toContain("bazos: categories not harvested whole: kia");
+      expect(warnings).toContain(
+        "bazos: categories not harvested whole: kia (page whose rows do not match its header: /kia/16/ 19 of 20)",
+      );
     });
 
     it("showing no rows, incremental gives up on that category and goes on to the next", async () => {
@@ -719,27 +729,26 @@ describe("bazos source", () => {
       expect(warnings).toContain("bazos: lost its place in kia at offset 0");
       expect(listed.slice(0, 3)).toEqual(["/kia/", "/kia/", "/mazda/"]);
       expect(refs(observations).sort()).toEqual(IN_SCOPE);
-      expect(warnings).toContain("bazos: categories not harvested whole: kia");
+      expect(warnings).toContain(
+        "bazos: categories not harvested whole: kia (lost its place at offset 0)",
+      );
     });
 
-    it("lacking more ads than the site could hide in a full run, that category reports no slice done while the others do", async () => {
-      // Six rows from the middle of /kia/16/, on no other page: more than a parser that still
-      // reads the rows would see the site hide (5 in a category this small).
-      const sixGone = (body: string) => {
+    it("lacking an ad no page next to it shows in a full run, that category reports no slice done while the others do", async () => {
+      // A row from the middle of /kia/16/, which no other page covers.
+      const midRow = (body: string) => {
         const blocks = body.split(ROW);
-        blocks.splice(9, 6);
+        blocks.splice(10, 1);
         return blocks.join(ROW);
       };
       const { observations, error, warnings, listed, details } = await harvest(
-        await stayingShort("/kia/16/", sixGone),
+        await stayingShort("/kia/16/", midRow),
         "full",
         {},
         undefined,
         ["kia", "mazda"],
       );
-      expect(warnings).toContain(
-        "Bazoš list page has 14 rows, its header 20: https://auto.bazos.cz/kia/16/",
-      );
+      expect(warnings).toContain(short);
       expect(warnings).toContain(unmatched);
       // The Kia walk is redone once, then the Mazda census runs as usual.
       expect(listed.filter((path) => path === "/kia/")).toHaveLength(4);
@@ -763,7 +772,9 @@ describe("bazos source", () => {
         "mazda;part=1/2",
       ]);
       // The run fails at the end, so the census resumes with Kia only.
-      expect(String(error)).toMatch(/categories not harvested whole: kia$/);
+      expect(String(error)).toMatch(
+        /categories not harvested whole: kia \(pages whose rows do not match their header: \/kia\/16\/ 19 of 20; met 58 ads of 59 counted\)$/,
+      );
     });
   });
 

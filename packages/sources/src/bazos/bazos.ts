@@ -32,8 +32,9 @@
  * - A list page can show fewer rows than its header counts, twice running: seen in Citroën
  *   mid-list, where the same page and its neighbours read later showed every row, so the
  *   site served it short; Ford and Mercedes pages lack an ad the site counts but never lists.
- *   Incremental reads the rows shown and goes on; a census walk lowers the counts it must
- *   reconcile with by the ads such pages lack, within a bound (see `collect`).
+ *   Incremental reads the rows shown and goes on. A census walk cannot tell which ad such a
+ *   page lacks, so it does not take the walk (see `collect`): a category where the site
+ *   counts an ad it never lists stays out of the census, and the run fails naming it.
  * - robots.txt disallows search, sort and price-filter parameters; the adapter reads only
  *   category pages and ad pages.
  * - Limits: the count check is a sanity check, not proof. A census still misses an ad that
@@ -72,11 +73,8 @@ const HOST = "https://auto.bazos.cz";
 const STRIDE = 16;
 /** Times one walk may step back before it gives up on keeping its place. */
 const MAX_STEPS_BACK = 20;
-/**
- * Most ads a census walk lets the site count without showing them, per this many ads in the
- * category (and at least 5): more means rows the parser no longer reads, not hidden ads.
- */
-const ADS_PER_HIDDEN = 1_000;
+/** Short pages a failure reason names before it only counts the rest. */
+const PAGES_NAMED = 5;
 const DAY_MS = 86_400_000;
 const MIN_PRICE = 10_000;
 const MAX_PRICE = 50_000_000;
@@ -119,43 +117,29 @@ interface Row {
 }
 
 interface ListPage {
+  /** `/<category>/<offset>/` */
+  path: string;
   /** Ads in the category, as the page header counts them. */
   total: number;
   /** 1-based positions of the page's first and last row, as the header states them. */
   from: number;
   to: number;
+  /** Rows the header counts on this page. */
+  expected: number;
   rows: Row[];
   /** Row blocks without an ad id. */
   idless: number;
   /** Whether the rows still did not match the header when the page was fetched again. */
   uneven: boolean;
-  /** Rows the header counts that an uneven page did not show. */
-  missing: number;
 }
 
 /** The list moved under a walk more than it can follow. */
 class LostPlace extends Error {
+  readonly reason: string;
   constructor(category: string, offset: number) {
     super(`bazos: lost its place in ${category} at offset ${offset}`);
     this.name = "LostPlace";
-  }
-}
-
-/**
- * Ads one walk's pages count but do not show, the same on a second fetch. Consecutive pages
- * overlap, so two short ones in a row may lack the same ad: the second adds only what it
- * lacks beyond the first.
- */
-class Hidden {
-  ads = 0;
-  /** Whether a page showed more rows than its header counts. */
-  surplus = false;
-  private last = 0;
-
-  add(page: ListPage): void {
-    this.surplus ||= page.uneven && page.missing === 0;
-    this.ads += Math.max(0, page.missing - this.last);
-    this.last = page.missing;
+    this.reason = `lost its place at offset ${offset}`;
   }
 }
 
@@ -176,7 +160,8 @@ class Harvest {
   private readonly full: boolean;
   private readonly today: IsoDate;
   private readonly thisYear: number;
-  private readonly unfinished = new Set<string>();
+  /** Categories not harvested whole, each with why. */
+  private readonly unfinished = new Map<string, string[]>();
   /** Full runs: slices with an ad the parser could not read. */
   private readonly unreadable = new Set<string>();
   /** Whether each ad this run has met was known before the run, as first met. */
@@ -201,7 +186,9 @@ class Harvest {
     }
     const problems = [
       this.unfinished.size > 0 &&
-        `categories not harvested whole: ${[...this.unfinished].join(" ")}`,
+        `categories not harvested whole: ${[...this.unfinished]
+          .map(([category, reasons]) => `${category} (${reasons.join("; ")})`)
+          .join(", ")}`,
       this.unreadable.size > 0 && `slices with unreadable ads: ${[...this.unreadable].join(" ")}`,
     ].filter(Boolean);
     if (problems.length === 0) return;
@@ -218,8 +205,8 @@ class Harvest {
     );
     if (parts.length === 0) return;
     const rows = await this.collect(category);
-    if (!rows) {
-      this.unfinished.add(category);
+    if (typeof rows === "string") {
+      this.unfinish(category, rows);
       return;
     }
     for (const part of parts) {
@@ -237,18 +224,16 @@ class Harvest {
   /**
    * Every ad in a category, by id: one walk over all pages, then one over today's ads,
    * which catches ads bumped from below the walk to above it. A walk that loses its place,
-   * meets a page whose rows do not match its header (beyond the ads the site counts but does
-   * not show, below), or whose ads do not reconcile with the site's counts is redone once.
-   * Null when the category cannot be harvested whole.
+   * meets a page whose rows do not match its header (when fetched again too), or whose ads
+   * do not reconcile with the site's counts is redone once. Otherwise, why the category
+   * cannot be harvested whole.
    *
-   * A page can show fewer rows than its header counts, again when fetched again: the site
-   * counts ads it does not list (seen live 2026-10-28: Ford and Mercedes pages, 19 of 20,
-   * the gap moving down the list as ads are bumped above it, never shown on a neighbouring
-   * page). Those ads cannot be met, so when a walk falls short, the redone walk lowers the
-   * counts below by the ads hidden from both; more than one per ADS_PER_HIDDEN ads in the
-   * category (at least 5) means rows the parser cannot read, and the walk fails as before.
-   * Telling hidden ads apart is approximate: two short pages in a row count once, and a gap
-   * that moves along with the walk may count twice; the bound caps either.
+   * A page short of its header lacks an ad, and nothing tells which: the ad a neighbouring
+   * page shows at a place the short page claims may have moved there between the two reads,
+   * and an ad the site counts but never lists (seen live 2026-10-28 on Ford and Mercedes
+   * pages, 19 of 20 rows) lies on no page. Taking the count lower by the rows such pages
+   * lack would let an ad met on a neighbour stand in for one the walk missed, so no walk
+   * with such a page is taken. A page with more rows than its header is not taken either.
    *
    * An ad met and removed later in the walk must not stand in for one the walk missed, so
    * - the ads met must cover the highest count any page reported, which includes an ad
@@ -259,15 +244,14 @@ class Harvest {
    * An ad removed before a count rose again is not caught by either, so the check narrows
    * the gap without closing it (see Limits).
    */
-  private async collect(category: string): Promise<Map<string, Row> | null> {
-    /** Ads hidden from the walk before this one, which came out short. */
-    let hiddenBefore: number | undefined;
+  private async collect(category: string): Promise<Map<string, Row> | string> {
+    let reason = "";
     for (let attempt = 1; attempt <= 2; attempt++) {
       const rows = new Map<string, Row>();
       const datedToday = new Set<string>();
       const toppedUp = new Set<string>();
-      const walk = new Hidden();
-      const topUp = new Hidden();
+      /** Pages whose rows did not match their header, when fetched again too. */
+      const uneven: ListPage[] = [];
       let idless = 0;
       let highest = 0;
       let final = 0;
@@ -279,7 +263,7 @@ class Harvest {
             if (row.date === this.today) datedToday.add(row.id);
           }
           idless += page.idless;
-          walk.add(page);
+          if (page.uneven) uneven.push(page);
         }
         let first = true;
         for await (const page of this.pages(category)) {
@@ -291,58 +275,53 @@ class Harvest {
             toppedUp.add(row.id);
           }
           idless += page.idless;
-          topUp.add(page);
+          if (page.uneven) uneven.push(page);
           if (page.rows.every((row) => row.date !== undefined && row.date < this.today)) break;
         }
       } catch (error) {
         if (!(error instanceof LostPlace)) throw error;
         this.ctx.log.warn(error.message, { attempt });
+        reason = error.reason;
         continue;
       }
       if (idless > 0) {
         // An ad without an id cannot be told apart from a gone one, so no census here.
         this.ctx.log.warn("bazos: list rows without an ad id", { category, idless });
-        return null;
-      }
-      // The walk over today's ads reads pages the first walk read too, so the same hidden ads.
-      const hidden = Math.max(walk.ads, topUp.ads);
-      if (walk.surplus || topUp.surplus || hidden > Math.max(5, highest / ADS_PER_HIDDEN)) {
-        this.ctx.log.warn("bazos: walk met a list page whose rows do not match its header", {
-          category,
-          hidden,
-          attempt,
-        });
-        continue;
+        return `${idless} list rows without an ad id`;
       }
       const gone = [...datedToday].filter((id) => !toppedUp.has(id)).length;
-      const covers = (credit: number) =>
-        rows.size + credit >= highest && rows.size - gone + credit >= final;
-      // A page served short once may show its ad on a neighbour, or on the next walk: only
-      // ads hidden from both walks lower the counts, so a row met elsewhere lends no credit
-      // that could cover an ad the walk missed.
-      const credit = Math.min(hidden, hiddenBefore ?? 0);
-      if (covers(0) || covers(credit)) {
-        if (!covers(0)) {
-          this.ctx.log.warn("bazos: the site counts ads its list pages do not show", {
-            category,
-            hidden: credit,
-          });
-        }
+      const covered = rows.size >= highest && rows.size - gone >= final;
+      if (uneven.length === 0 && covered) {
         this.stats.rows = rows.size;
         return rows;
       }
-      hiddenBefore = hidden;
-      this.ctx.log.warn("bazos: walk met fewer ads than the site counts", {
-        category,
-        met: rows.size,
-        gone,
-        hidden,
-        highest,
-        final,
-        attempt,
-      });
+      const reasons: string[] = [];
+      if (uneven.length > 0) {
+        this.ctx.log.warn("bazos: walk met a list page whose rows do not match its header", {
+          category,
+          pages: uneven.map(rowsOf),
+          attempt,
+        });
+        reasons.push(`pages whose rows do not match their header: ${named(uneven)}`);
+      }
+      if (!covered) {
+        this.ctx.log.warn("bazos: walk met fewer ads than the site counts", {
+          category,
+          met: rows.size,
+          gone,
+          highest,
+          final,
+          attempt,
+        });
+        reasons.push(
+          rows.size < highest
+            ? `met ${rows.size} ads of ${highest} counted`
+            : `met ${rows.size} ads, ${gone} since gone, of ${final} counted`,
+        );
+      }
+      reason = reasons.join("; ");
     }
-    return null;
+    return reason;
   }
 
   /**
@@ -374,15 +353,22 @@ class Harvest {
         });
         this.stats.rows += page.rows.length;
         // The rows shown are read; one left out may wait for the next full run.
-        if (page.uneven) this.unfinished.add(category);
+        if (page.uneven)
+          this.unfinish(category, `page whose rows do not match its header: ${rowsOf(page)}`);
         for (const row of fresh) yield* this.observe(category, row);
         if (page.rows.every(isOld)) return;
       }
     } catch (error) {
       if (!(error instanceof LostPlace)) throw error;
-      this.unfinished.add(category);
+      this.unfinish(category, error.reason);
       this.ctx.log.warn(error.message);
     }
+  }
+
+  private unfinish(category: string, reason: string): void {
+    const reasons = this.unfinished.get(category) ?? [];
+    reasons.push(reason);
+    this.unfinished.set(category, reasons);
   }
 
   /**
@@ -424,17 +410,10 @@ class Harvest {
         throw new Error(`Bazoš returned HTTP ${response.status} for ${url}`);
       }
       const page = parseListPage(response.body, url);
-      const expected = Math.max(0, Math.min(page.to, page.total) - page.from + 1);
-      if (page.rows.length + page.idless === expected) return page;
-      const message = `Bazoš list page has ${page.rows.length + page.idless} rows, its header ${expected}: ${url}`;
+      if (page.rows.length + page.idless === page.expected) return page;
+      const message = `Bazoš list page has ${page.rows.length + page.idless} rows, its header ${page.expected}: ${url}`;
       this.ctx.log.warn(message);
-      if (attempt === 2) {
-        return {
-          ...page,
-          uneven: true,
-          missing: Math.max(0, expected - page.rows.length - page.idless),
-        };
-      }
+      if (attempt === 2) return { ...page, uneven: true };
     }
   }
 
@@ -542,6 +521,18 @@ class Harvest {
   }
 }
 
+/** A page by its rows shown and its header's: `/ford/960/ 19 of 20`. */
+function rowsOf(page: ListPage): string {
+  return `${page.path} ${page.rows.length + page.idless} of ${page.expected}`;
+}
+
+/** The first few pages, each once (both walks read some), then how many more. */
+function named(pages: readonly ListPage[]): string {
+  const shown = [...new Set(pages.map(rowsOf))];
+  const more = shown.length - PAGES_NAMED;
+  return shown.slice(0, PAGES_NAMED).join(", ") + (more > 0 ? ` and ${more} more` : "");
+}
+
 function partKey(category: string, part: number, parts: number): string {
   return `${category};part=${part}/${parts}`;
 }
@@ -589,14 +580,16 @@ function parseListPage(html: string, url: string): ListPage {
   if (!header) throw new Error(`Bazoš list page changed (no result count): ${url}`);
   const [, from, to, total] = header as unknown as [string, string, string, string];
   const page: ListPage = {
+    path: url.slice(HOST.length),
     total: Number(total.replace(/\D/g, "")),
     from: Number(from),
     to: Number(to),
+    expected: 0,
     rows: [],
     idless: 0,
     uneven: false,
-    missing: 0,
   };
+  page.expected = Math.max(0, Math.min(page.to, page.total) - page.from + 1);
   const blocks = html.split(ROW_START).slice(1);
   for (const block of blocks) {
     const row = parseRow(block);
