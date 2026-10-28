@@ -80,9 +80,7 @@ export function worker(version, precache) {
   const LIMIT = { [PAGES]: 60, [DATA]: 150 };
 
   sw.addEventListener("install", (/** @type {any} */ event) => {
-    event.waitUntil(
-      caches.open(SHELL).then((cache) => cache.addAll(precache)),
-    );
+    event.waitUntil(caches.open(SHELL).then((cache) => cache.addAll(precache)));
   });
 
   sw.addEventListener("activate", (/** @type {any} */ event) => {
@@ -102,7 +100,7 @@ export function worker(version, precache) {
     if (request.method !== "GET" || request.headers.has("authorization")) return;
     // Navigations and elements' loads (stylesheets, images) send credentials "include" by
     // default and stay handled; a request with no destination (fetch, XHR, link prefetch)
-    // that says "include" asked for it.
+    // with "include" is bypassed.
     if (request.credentials === "include" && !request.destination) return;
     const url = new URL(request.url);
     if (url.origin !== location.origin || url.pathname.startsWith("/_vercel/")) return;

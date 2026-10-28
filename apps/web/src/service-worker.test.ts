@@ -155,7 +155,9 @@ describe("service worker", () => {
     await dispatch("activate", {}, old);
     // The next deploy drops the old chunk and adds its own.
     server = (url) =>
-      url.pathname === "/_astro/lazy.old.js" ? basic("not found", 404) : basic(`${url.pathname} v3`);
+      url.pathname === "/_astro/lazy.old.js"
+        ? basic("not found", 404)
+        : basic(`${url.pathname} v3`);
     const next = boot("next", [...PRECACHE, "/_astro/lazy.next.js"]);
     await dispatch("install", {}, next);
     expect(await store.keys()).toEqual(["other-app", "shell-old", "shell-next"]);
@@ -163,7 +165,9 @@ describe("service worker", () => {
 
     // The open tab still runs the old worker: its own chunk comes from its cache, and a page
     // of the new deploy opened meanwhile finds the new chunks offline in the waiting cache.
-    expect(await (await get("/_astro/lazy.old.js", {}, old))?.text()).toBe("/_astro/lazy.old.js v2");
+    expect(await (await get("/_astro/lazy.old.js", {}, old))?.text()).toBe(
+      "/_astro/lazy.old.js v2",
+    );
     online = false;
     expect(await (await get("/_astro/lazy.next.js", {}, old))?.text()).toBe(
       "/_astro/lazy.next.js v3",
@@ -213,7 +217,9 @@ describe("service worker", () => {
     expect(await (await get("/_astro/shell.js"))?.text()).toBe("/_astro/shell.js v2");
     for (const destination of ["style", "script"])
       expect(
-        await (await dispatch("fetch", { request: subresource("/_astro/shell.js", destination) }))?.text(),
+        await (
+          await dispatch("fetch", { request: subresource("/_astro/shell.js", destination) })
+        )?.text(),
       ).toBe("/_astro/shell.js v2");
   });
 
