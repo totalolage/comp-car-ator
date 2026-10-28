@@ -30,16 +30,19 @@ describe("web app manifest", () => {
     expect(manifest.short_name).toBeTruthy();
   });
 
-  it("uses the masthead green and the paper colour", async () => {
+  it("uses the masthead green for the bar and the background", async () => {
     const tokens = await readFile(new URL("styles/tokens.css", import.meta.url), "utf8");
     expect(tokens).toContain(`--sign: light-dark(${manifest.theme_color},`);
-    expect(tokens).toContain(`--paper: light-dark(${manifest.background_color},`);
+    // Firefox for Android draws its fallback icon, a white letter, on the background colour;
+    // on the white paper that was a blank tile.
+    expect(manifest.background_color).toBe(manifest.theme_color);
   });
 
-  it("has 192 and 512 px icons and a maskable one, at their declared sizes", async () => {
+  it("has 192 and 512 px icons, plain and maskable, at their declared sizes", async () => {
     const any = manifest.icons.filter((i) => (i.purpose ?? "any").split(" ").includes("any"));
     expect(any.map((i) => i.sizes)).toEqual(expect.arrayContaining(["192x192", "512x512"]));
-    expect(manifest.icons.some((i) => i.purpose?.split(" ").includes("maskable"))).toBe(true);
+    const maskable = manifest.icons.filter((i) => i.purpose?.split(" ").includes("maskable"));
+    expect(maskable.map((i) => i.sizes)).toEqual(expect.arrayContaining(["192x192", "512x512"]));
     for (const icon of manifest.icons) {
       expect(icon.type).toBe("image/png");
       expect(await pngSize(icon.src)).toBe(icon.sizes);
