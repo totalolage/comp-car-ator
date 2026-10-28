@@ -207,21 +207,29 @@ describe("Ledger", () => {
       const file = join(dir, "ledger.sqlite");
       const czk = (amount: number) => ({ price: { amount, currency: "CZK" } });
       const eur = (amount: number) => ({ price: { amount, currency: "EUR" } });
-      // Recorded before the fix (2026-10-28): a Dubai dealer's Wrangler at 10 830 EUR, then
-      // 10 500 EUR; a listing the fixed adapter saw again in EUR before the Ledger was
-      // corrected; one it saw again in CZK; one seller in CZK all along.
+      // Recorded before the fix (2026-10-28), against the EUR amounts confirmed on TipCars:
+      // a Dubai dealer's Wrangler at its 10 830 EUR; a listing the fixed adapter saw again
+      // in EUR before the Ledger was corrected; one it saw again in CZK; a seller in CZK
+      // who switched to EUR before the fix, and one who switched on the day of the fix; one
+      // held at an amount other than the confirmed 9 920 EUR; one seller in CZK all along.
       ledger = openLedger(file);
+      await run("tipcars", "full", "2026-10-25", [seen("32587046", 400_000)]);
       await run("tipcars", "full", "2026-10-26", [
         seen("56607021", 10_830),
-        seen("19337165", 9_148),
+        seen("19337165", 55_000),
+        seen("32587046", 16_800),
+        seen("32587182", 9_500),
         seen("1", 489_000),
       ]);
       await run("tipcars", "incremental", "2026-10-27", [
-        seen("56607021", 10_500),
-        seen("32587029", 9_000),
+        seen("32587029", 15_900),
+        seen("32587151", 450_000),
       ]);
-      await run("tipcars", "incremental", "2026-10-28", [seen("32587029", 225_000)]);
-      await run("tipcars", "incremental", "2026-10-29", [seen("19337165", 9_148, eur(9_148))]);
+      await run("tipcars", "incremental", "2026-10-28", [
+        seen("32587029", 225_000),
+        seen("32587151", 20_500, eur(20_500)),
+      ]);
+      await run("tipcars", "incremental", "2026-10-29", [seen("19337165", 55_000, eur(55_000))]);
       ledger.close();
       // A schema v3 Ledger, as Data releases carry.
       const db = new DatabaseSync(file);
@@ -231,29 +239,44 @@ describe("Ledger", () => {
       ledger = openLedger(file);
       const listings = new Map([...ledger.snapshot().listings()].map((l) => [l.id, l]));
       expect(listings.get("tipcars:56607021")).toMatchObject({
-        ...eur(10_500),
-        priceHistory: [
-          { date: "2026-10-26", ...eur(10_830) },
-          { date: "2026-10-27", ...eur(10_500) },
-        ],
+        ...eur(10_830),
+        priceHistory: [{ date: "2026-10-26", ...eur(10_830) }],
       });
       expect(listings.get("tipcars:19337165")).toMatchObject({
-        ...eur(9_148),
-        priceHistory: [{ date: "2026-10-26", ...eur(9_148) }],
+        ...eur(55_000),
+        priceHistory: [{ date: "2026-10-26", ...eur(55_000) }],
       });
       expect(listings.get("tipcars:32587029")).toMatchObject({
         ...czk(225_000),
         priceHistory: [
-          { date: "2026-10-27", ...eur(9_000) },
+          { date: "2026-10-27", ...eur(15_900) },
           { date: "2026-10-28", ...czk(225_000) },
         ],
+      });
+      expect(listings.get("tipcars:32587046")).toMatchObject({
+        ...eur(16_800),
+        priceHistory: [
+          { date: "2026-10-25", ...czk(400_000) },
+          { date: "2026-10-26", ...eur(16_800) },
+        ],
+      });
+      expect(listings.get("tipcars:32587151")).toMatchObject({
+        ...eur(20_500),
+        priceHistory: [
+          { date: "2026-10-27", ...czk(450_000) },
+          { date: "2026-10-28", ...eur(20_500) },
+        ],
+      });
+      expect(listings.get("tipcars:32587182")).toMatchObject({
+        ...czk(9_500),
+        priceHistory: [{ date: "2026-10-26", ...czk(9_500) }],
       });
       expect(listings.get("tipcars:1")).toMatchObject({
         ...czk(489_000),
         priceHistory: [{ date: "2026-10-26", ...czk(489_000) }],
       });
       const later = await run("tipcars", "incremental", "2026-11-01", [
-        seen("56607021", 10_500, eur(10_500)),
+        seen("56607021", 10_830, eur(10_830)),
       ]);
       expect(later.priceChanges).toBe(0);
     } finally {

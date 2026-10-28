@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { TIPCARS_EUR_REFS } from "./tipcars-eur-refs.ts";
+import { TIPCARS_EUR_PRICES } from "./tipcars-eur-refs.ts";
 
 /**
  * Ordered migrations; index + 1 is the schema version. Append only: never edit a
@@ -94,26 +94,34 @@ const MIGRATIONS: string[] = [
   `,
   // TipCars listings recorded with their EUR price labelled CZK, before the adapter read a
   // listing's currency from its record (2026-10-28).
-  relabelEur("tipcars", TIPCARS_EUR_REFS, "2026-10-28"),
+  relabelEur("tipcars", TIPCARS_EUR_PRICES, "2026-10-28"),
 ];
 
 /**
  * Relabels as EUR the CZK prices a Source recorded for these refs before `fixed`, the day
- * its adapter learned their currency. What it recorded since is left alone (a listing seen
- * since is priced right), and a history point that then repeats the one before it goes, so
- * a listing re-seen in EUR before this ran keeps no change that never happened.
+ * its adapter learned their currency, where the amount is the EUR amount confirmed on the
+ * site: a price at any other amount may have been CZK and stays. What it recorded since is
+ * left alone (a listing seen since is priced right), and a history point that then repeats
+ * the one before it goes, so a listing re-seen in EUR before this ran keeps no change that
+ * never happened.
  */
-function relabelEur(source: string, refs: readonly string[], fixed: string): string {
-  const ids = refs.map((ref) => {
+function relabelEur(
+  source: string,
+  prices: readonly (readonly [ref: string, amountEur: number])[],
+  fixed: string,
+): string {
+  const rows = prices.map(([ref, amount]) => {
     if (!/^\d+$/.test(ref)) throw new Error(`not a ${source} ref: ${ref}`);
-    return `'${source}:${ref}'`;
+    if (!Number.isFinite(amount)) throw new Error(`not an amount: ${amount}`);
+    return `('${source}:${ref}', ${amount})`;
   });
-  const listed = `(${ids.join(", ")})`;
+  const confirmed = `(VALUES ${rows.join(", ")})`;
+  const listed = `(SELECT column1 FROM ${confirmed})`;
   return `
   UPDATE listings SET price_currency = 'EUR', data = json_set(data, '$.price.currency', 'EUR')
-  WHERE id IN ${listed} AND price_currency = 'CZK' AND last_seen < '${fixed}';
+  WHERE (id, price_amount) IN ${confirmed} AND price_currency = 'CZK' AND last_seen < '${fixed}';
   UPDATE price_history SET currency = 'EUR'
-  WHERE listing_id IN ${listed} AND currency = 'CZK' AND date < '${fixed}';
+  WHERE (listing_id, amount) IN ${confirmed} AND currency = 'CZK' AND date < '${fixed}';
   DELETE FROM price_history
   WHERE listing_id IN ${listed} AND EXISTS (
     SELECT 1 FROM price_history AS earlier
