@@ -878,20 +878,31 @@ describe("Resolver", () => {
       });
     });
 
-    it("reads e-Hybrid as a Volkswagen plug-in but a Jeep mild hybrid", () => {
+    it("reads e-Hybrid as a Volkswagen plug-in but not a Jeep's, a mild hybrid", () => {
       const compass = createResolver(
         variants("Jeep", "Compass", { slug: "mp", name: "Compass II", from: 2017 }, [
-          { body: "suv", fuel: "hev", powerKw: 96, transmissions: ["automatic"] },
+          { body: "suv", fuel: "petrol", powerKw: 96, transmissions: ["automatic"] },
           { body: "suv", fuel: "phev", powerKw: 96, transmissions: ["automatic"] },
         ]),
       );
-      expect(
-        compass.resolve({ make: "Jeep", model: "Compass", trim: "1.5 T4 48V e-Hybrid 96 kW" }),
-      ).toMatchObject({ status: "matched", variantId: "jeep/compass/mp/suv-hev-96kw" });
-      expect(golf.resolve({ ...vw, trim: "1.4 TSI eHybrid 150 kW DSG" })).toMatchObject({
-        status: "matched",
-        variantId: "volkswagen/golf/mk8/hatchback-phev-150kw",
-      });
+      const jeep = { make: "Jeep", model: "Compass" } as const;
+      for (const trim of ["1.5 T4 48V e-Hybrid 96 kW", "1.5 T4 48V eHybrid 96 kW"]) {
+        expect(compass.resolve({ ...jeep, fuel: "petrol", trim })).toMatchObject({
+          status: "matched",
+          variantId: "jeep/compass/mp/suv-petrol-96kw",
+        });
+      }
+      for (const trim of ["1.5 T4 e-Hybrid 96 kW", "1.5 T4 eHybrid 96 kW"]) {
+        expect(compass.resolve({ ...jeep, trim })).not.toMatchObject({
+          variantId: "jeep/compass/mp/suv-phev-96kw",
+        });
+      }
+      for (const trim of ["1.4 TSI eHybrid 150 kW DSG", "1.4 TSI e-Hybrid 150 kW DSG"]) {
+        expect(golf.resolve({ ...vw, trim })).toMatchObject({
+          status: "matched",
+          variantId: "volkswagen/golf/mk8/hatchback-phev-150kw",
+        });
+      }
     });
 
     it("reads a plug-in hybrid from its wording, and a mild hybrid by its stated fuel", () => {

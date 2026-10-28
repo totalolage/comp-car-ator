@@ -60,7 +60,8 @@ const ELECTRIFIED: FuelWording[] = [
   [["bev"], word("bev|ev")],
   // "m-HEV" is a mild hybrid.
   [["hev"], word("(?<!m-)hev|full ?hybrid|voll-?hybrid[a-z]*|self-? ?charging")],
-  [["hev", "phev"], word("(?<!mild[- ]?)hybrid[a-z]*")],
+  // "e-Hybrid" is a badge (aliases.ts): Jeep's is a mild hybrid.
+  [["hev", "phev"], word("(?<!mild[- ]?|e-?)hybrid[a-z]*")],
   [["hev", "phev", "bev", "reev"], word("elektro|elektroauto|elektromotor|elektrisch")],
   [["petrol", "diesel", "hev"], word("m-?hev|mild[- ]?hybrid|48 ?v|e-?tsi")],
 ];

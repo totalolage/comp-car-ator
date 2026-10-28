@@ -52,6 +52,7 @@ import type {
   VehicleDescriptor,
   YearMonth,
 } from "@cca/vocabulary";
+import { hybridFuel } from "../hybrid.ts";
 import type { HarvestContext, Source } from "../source.ts";
 
 export interface AutoScout24Options {
@@ -487,16 +488,11 @@ const FUELS: Record<string, Fuel> = {
   o: "other",
 };
 
-/**
- * Hybrid codes cover HEV and PHEV; only a version text that says plug-in tells them apart.
- * "e-Hybrid" is the Volkswagen group's plug-in badge, but Jeep's 48 V mild hybrid.
- */
+/** Hybrid codes 2 (Elektro/Benzin) and 3 (Elektro/Diesel) leave the rest to the version text. */
 function fuelOf(code: unknown, version: string, make: string): Fuel | undefined {
   const value = text(code).toLowerCase();
-  if (value === "2" || value === "3") {
-    const plugIn = make.toLowerCase() === "jeep" ? /plug-?in|phev/i : /plug-?in|phev|e-?hybrid/i;
-    return plugIn.test(version) ? "phev" : undefined;
-  }
+  if (value === "2") return hybridFuel(version, make, "petrol");
+  if (value === "3") return hybridFuel(version, make, "diesel");
   return FUELS[value];
 }
 

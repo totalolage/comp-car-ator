@@ -330,7 +330,7 @@ describe("autoscout24 source", () => {
     expect(newHybrid?.vehicle.fuel).toBeUndefined();
   });
 
-  it("reads Jeep's e-Hybrid as a mild hybrid, the Volkswagen group's as a plug-in", async () => {
+  it("reads a hybrid's version text: e-Hybrid is a Volkswagen plug-in, a Jeep mild hybrid", async () => {
     const fuelOf = async (make: string, version: string) => {
       const run = await harvest(
         deFull,
@@ -351,9 +351,14 @@ describe("autoscout24 source", () => {
       return listings(run).find((l) => l.ref === "ebb7bf2f-4b57-4761-bcd9-a36ad0488cce")?.vehicle
         .fuel;
     };
-    expect(await fuelOf("Jeep", "Avenger 1.2 48V e-Hybrid Altitude")).toBeUndefined();
+    // The listing's fuel code is 2, Elektro/Benzin: a mild hybrid is a petrol car.
+    expect(await fuelOf("Jeep", "Avenger 1.2 48V e-Hybrid Altitude")).toBe("petrol");
+    expect(await fuelOf("Alfa Romeo", "Tonale 1.5 e-Hybrid Veloce")).toBeUndefined();
     expect(await fuelOf("Jeep", "Compass 1.3 4xe Plug-in Hybrid")).toBe("phev");
-    expect(await fuelOf("Volkswagen", "Golf 1.5 eTSI eHybrid DSG")).toBe("phev");
+    expect(await fuelOf("Volkswagen", "Golf 1.4 TSI eHybrid DSG")).toBe("phev");
+    expect(await fuelOf("CUPRA", "Formentor 1.4 e-HYBRID VZ")).toBe("phev");
+    // Mild and plug-in wording at once says neither.
+    expect(await fuelOf("Volkswagen", "Tiguan 1.5 eTSI eHybrid DSG")).toBeUndefined();
   });
 
   it("maps AT listings onto ListingSeen", async () => {
