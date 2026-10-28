@@ -40,6 +40,8 @@ interface Generation {
 
 /** Fuels a row that names none can mean: the combustion cars the list's model name stands for. */
 const COMBUSTION: ReadonlySet<Fuel> = new Set(["petrol", "diesel", "lpg", "cng"]);
+/** Fuels of a model without a combustion engine, whose rows name none (Ioniq 5, ID.4, Nexo). */
+const NO_ENGINE: ReadonlySet<Fuel> = new Set(["bev", "hydrogen"]);
 
 /**
  * A Variant whose production began this many years or more before a row's first model year
@@ -90,15 +92,16 @@ export function matchOpenpilot(
     const first = row.years[0] as number;
     // Electrified versions are listed under their own names ("Kona Electric", "Kuga
     // Plug-in Hybrid"), so a row that names no fuel is the combustion car, unless the
-    // Generation has none (an electric-only model such as the Ioniq 5).
-    const combustion = generation.variants.some((v) => COMBUSTION.has(v.fuel));
+    // model has no engine at all (Ioniq 5). A hybrid-only Generation (the European
+    // Corolla) is not the plain row's car: its hybrid is listed on its own.
+    const engineless = generation.variants.every((v) => NO_ENGINE.has(v.fuel));
     const fits = generation.variants.filter((v) => {
       const to = v.years.to ?? Number.POSITIVE_INFINITY;
       // Two shared years at least (or all of a one-year row or Variant): a Variant that
       // ends or starts in a row's boundary year is usually the design before or after.
       const shared = row.years.filter((y) => y >= v.years.from && y <= to).length;
       return (
-        (row.fuel ? v.fuel === row.fuel : !combustion || COMBUSTION.has(v.fuel)) &&
+        (row.fuel ? v.fuel === row.fuel : engineless || COMBUSTION.has(v.fuel)) &&
         shared >= Math.min(2, row.years.length, to - v.years.from + 1) &&
         v.years.from > first - EARLIER_CAR_YEARS
       );
