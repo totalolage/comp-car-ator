@@ -249,8 +249,8 @@ describe("service worker", () => {
   });
 
   it("leaves other origins, other methods and other paths to the browser", async () => {
-    // What an installer reads: the manifest and its icons, as the page loads them and as a
-    // browser's own fetch does.
+    // The manifest and its icons, which an installer reads: the worker answers none of these
+    // requests, whatever their destination.
     for (const path of ["/manifest.webmanifest", "/icon-maskable-512.png", "/icon-192.png"]) {
       expect(await get(path)).toBeUndefined();
       expect(await dispatch("fetch", { request: subresource(path, "image") })).toBeUndefined();
