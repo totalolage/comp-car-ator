@@ -59,11 +59,11 @@ export function serviceWorker() {
 
 /**
  * The worker itself, serialised into sw.js: it runs in the service worker scope, so it may use
- * only its arguments and the worker's globals.
+ * only its arguments and the worker's globals. Exported for its test.
  * @param {string} version
  * @param {string[]} precache
  */
-function worker(version, precache) {
+export function worker(version, precache) {
   /** @type {any} */
   const sw = self;
   const SHELL = `shell-${version}`;
@@ -134,13 +134,14 @@ function worker(version, precache) {
 
   /**
    * The network's answer, kept in cache `name` under `key`; the kept copy when the network
-   * fails.
+   * fails or the server errs (5xx). A 404 is an answer: the page or file is gone.
    * @param {any} event @param {keyof typeof LIMIT} name @param {string} key
    * @param {Promise<Response>} network
    */
   async function networkFirst(event, name, key, network) {
     try {
       const response = await network;
+      if (response.status >= 500) return (await caches.match(key, { cacheName: name })) ?? response;
       if (response.ok && response.type === "basic") {
         const copy = response.clone();
         event.waitUntil(

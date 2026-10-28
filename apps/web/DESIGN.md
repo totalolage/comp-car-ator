@@ -251,7 +251,10 @@ green fills the bar, `--masthead` includes that inset for everything that sticks
 The service worker (`scripts/service-worker.mjs`, written to `/sw.js` after the build) keeps
 pages and Bundle data network first, so online nothing is older than the last deploy, and
 answers from its cache only when the network fails; a page never kept falls back to
-`/offline/` (`/en/offline/`), which lists the recently viewed models. The catalog pages and
-`/_astro/` assets are precached. Every cache carries the worker's version, a hash of what it
+`/offline/` (`/en/offline/`), which lists the recently viewed models; a 5xx also gets the
+kept copy, a 404 does not. The catalog pages and `/_astro/` assets are precached, so the
+installed app opens offline, but its filters need `catalog.json`, which is only kept once
+fetched. Offline reads are best effort: a model's kept index and rows files may come from
+different deploys, and the rows stamp check then fails as it would online. Every cache carries the worker's version, a hash of what it
 precaches; a deploy's new worker takes over at once and drops the older caches. `shell.ts`
 registers it (a few dozen bytes); `vercel.json` serves `/sw.js` with `no-cache`.
