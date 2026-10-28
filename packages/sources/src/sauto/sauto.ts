@@ -10,8 +10,9 @@
  *   The Ledger stores each ListingSeen whole, so every listing yielded carries its detail.
  *
  * incremental: walks the newest-first order down to the last run (a day back on a first run)
- *   and yields the listings created since then that the Ledger does not know (see
- *   `incremental`); listings moved up by an edit or top-up wait for the census.
+ *   and yields the listings created since then that the Ledger does not know, plus up to
+ *   `backlog` unknown older ones moved up by an edit or top-up (see `incremental`); the
+ *   rest, and known ones, wait for the census.
  * full: a census sliced by condition and price band; a band over `sliceLimit` results is
  *   halved until each fits (2,000 by default: some 40 minutes of detail pages, well within
  *   one run). Slices done earlier in the census are skipped before any split. Each band
@@ -72,18 +73,24 @@ export interface SautoOptions {
   pageSize?: number;
   /** A full-run slice with more results than this is halved by price. Default 2,000. */
   sliceLimit?: number;
+  /**
+   * Unknown listings created before the last run that an incremental run still reads, as
+   * the order meets them (see `incremental`). Default 600: some 11 minutes of detail pages.
+   */
+  backlog?: number;
 }
 
 export function sautoSource(options: SautoOptions = {}): Source {
   const pageSize = options.pageSize ?? 100;
   const sliceLimit = Math.min(options.sliceLimit ?? SLICE_LIMIT, WINDOW - pageSize);
+  const backlog = options.backlog ?? 600;
   const filter = options.manufacturerModel;
   return {
     id: "sauto",
     ...(filter ? { scope: filter } : {}),
     async *harvest(ctx: HarvestContext): AsyncIterable<Observation> {
       const run = new Run(ctx, filter, pageSize);
-      yield* ctx.mode === "incremental" ? run.incremental() : run.full(sliceLimit);
+      yield* ctx.mode === "incremental" ? run.incremental(backlog) : run.full(sliceLimit);
     },
   };
 }
@@ -119,12 +126,15 @@ class Run {
    * all sit above the last run in the order, and the walk ends at the first page older than
    * it. The listings above it are mostly not new: top-ups move some 5,000 older listings a
    * day up the order (95 of the newest 100 on 2026-10-28), and a detail page each would take
-   * longer than the hour the run may have. Those, known or not, wait for the census.
+   * longer than the hour the run may have. Known ones wait for the census; of the unknown
+   * ones, the first `backlog` are read too. While a census is under way most moved listings
+   * are unknown and the budget caps them; once it is done, the unknown ones are few (a
+   * listing published days after it was drafted, one back after its removal) and all fit.
    * Reaching the 10,000-result window after a last run means new listings may have gone
    * unseen, so the run fails rather than complete and move `lastRunAt` past them; a full
    * run catches up.
    */
-  async *incremental(): AsyncIterable<Observation> {
+  async *incremental(backlog: number): AsyncIterable<Observation> {
     const { checkpoint, now } = this.ctx;
     const from = checkpoint.lastRunAt
       ? checkpoint.lastRunAt.getTime() - SINCE_MARGIN_MS
@@ -141,8 +151,12 @@ class Run {
         if (isSkipped(item)) continue;
         const ref = refOf(item);
         if (ref !== undefined && this.ctx.checkpoint.isKnown(ref)) continue;
-        if (text(item.create_date) >= since) yield* this.listing(item);
-        else older++;
+        if (text(item.create_date) >= since) {
+          yield* this.listing(item);
+        } else if (backlog > 0 && !(ref !== undefined && this.done.has(ref))) {
+          backlog--;
+          yield* this.listing(item);
+        } else older++;
       }
       if (!more || page.items.length < this.pageSize || offset + this.pageSize >= page.total) {
         this.ctx.log.info("sauto incremental left changed older listings to the census", {

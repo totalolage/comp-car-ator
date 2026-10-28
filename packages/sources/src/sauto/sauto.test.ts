@@ -15,13 +15,14 @@ import {
   type HarvestMode,
   silentLogger,
 } from "../source.ts";
-import { sautoSource } from "./sauto.ts";
+import { type SautoOptions, sautoSource } from "./sauto.ts";
 
 // Recorded 2026-10-25 against live Sauto: an incremental and a full run of
 // sautoSource(OPTIONS), personal fields (phone, user, VIN, description) stripped.
 const fixture = new URL("./fixtures/dacia-spring.cassette.json", import.meta.url);
 const now = new Date("2026-10-25T13:27:00Z");
-const OPTIONS = { manufacturerModel: "dacia:spring", pageSize: 4, sliceLimit: 8 };
+// No backlog: an incremental run reads only the listings created since its last run.
+const OPTIONS = { manufacturerModel: "dacia:spring", pageSize: 4, sliceLimit: 8, backlog: 0 };
 /** A last run before every listing of the fixture: an incremental run yields all it does not know. */
 const LONG_AGO = new Date("2020-01-01T00:00:00Z");
 
@@ -112,6 +113,7 @@ async function harvestSite(
     checkpoint?: Partial<Checkpoint>;
     details?: Record<string, ApiItem>;
     consume?: (o: Observation) => void;
+    source?: SautoOptions;
   } = {},
 ): Promise<{ observations: Observation[]; urls: string[]; error?: unknown }> {
   const served = new Map<string, ApiItem>();
@@ -143,7 +145,7 @@ async function harvestSite(
   };
   const observations: Observation[] = [];
   try {
-    for await (const o of sautoSource({ pageSize: 4 }).harvest(ctx)) {
+    for await (const o of sautoSource({ pageSize: 4, ...options.source }).harvest(ctx)) {
       observations.push(o);
       options.consume?.(o);
     }
@@ -293,6 +295,18 @@ describe("sauto source", () => {
     );
     expect(searches(urls)).toHaveLength(3);
     expect(listings(observations).map((o) => o.ref)).toEqual(["211264902"]);
+  });
+
+  it("incremental run also reads unknown older listings moved up, up to its backlog", async () => {
+    // Six listings created 10-01, all topped up today, none in the Ledger.
+    const list = [1, 2, 3, 4, 5, 6].map((id) => car(id, { create_date: "2026-10-01T00:00:00" }));
+    const { observations, urls, error } = await harvestSite("incremental", paged(list), {
+      checkpoint: { lastRunAt: new Date("2026-10-24T00:00:00Z") },
+      source: { backlog: 2 },
+    });
+    expect(error).toBeUndefined();
+    expect(listings(observations).map((o) => o.ref)).toEqual(["1", "2"]);
+    expect(urls.filter((u) => !u.includes("/items/search?"))).toHaveLength(2);
   });
 
   it("incremental run leaves known listings to the census, however recently changed", async () => {
