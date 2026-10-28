@@ -242,7 +242,9 @@ it needs).
 ## Install and offline
 
 The site installs as an app (`public/manifest.webmanifest`: standalone, start and scope `/`,
-the tile icons from `assets/logo/`, plus the maskable one). On iOS the `apple-mobile-web-app-*`
+the tile icons from `assets/logo/` plus maskable ones, which Android browsers prefer; the
+background is the sign green: Firefox for Android, when no icon loads, draws the host's first
+letter in white on it, which on white left a blank tile). On iOS the `apple-mobile-web-app-*`
 meta make Add to Home Screen open standalone with a translucent status bar: the page runs
 under it (`viewport-fit=cover`), the masthead pads itself by `env(safe-area-inset-top)` so its
 green fills the bar, `--masthead` includes that inset for everything that sticks below it, and
