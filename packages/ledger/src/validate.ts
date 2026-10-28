@@ -5,6 +5,7 @@ import {
   FUELS,
   MARKETS,
   type Observation,
+  OPENPILOT_LEVELS,
   PRICE_BASES,
   SELLERS,
   slugify,
@@ -80,6 +81,33 @@ export function invalidReason(o: Observation): string | null {
         return "validTo must be YYYY-MM-DD, not before validFrom";
       }
       return vehicleReason(o.vehicle);
+    case "OpenpilotSupport":
+      if (!nonEmpty(o.ref)) return "ref is empty";
+      if (!nonEmpty(o.make) || !nonEmpty(o.model)) return "make/model is empty";
+      if (o.fuel !== undefined && !oneOf(FUELS, o.fuel)) return `unknown fuel ${o.fuel}`;
+      if (
+        !Array.isArray(o.years) ||
+        o.years.length === 0 ||
+        !o.years.every((y, i) => Number.isInteger(y) && (i === 0 || y > (o.years[i - 1] as number)))
+      ) {
+        return "years must be a non-empty ascending list of years";
+      }
+      if (!oneOf(OPENPILOT_LEVELS, o.level)) return `unknown level ${o.level}`;
+      if (!nonEmpty(o.market)) return "market is empty";
+      if (o.europe !== undefined && typeof o.europe !== "boolean")
+        return "europe must be a boolean";
+      if (
+        o.longitudinal !== undefined &&
+        !oneOf(["openpilot", "optional", "stock"] as const, o.longitudinal)
+      ) {
+        return `unknown longitudinal ${o.longitudinal}`;
+      }
+      for (const speed of [o.minSteerKmh, o.minEnableKmh]) {
+        if (speed !== undefined && !(Number.isFinite(speed) && speed >= 0)) {
+          return "speeds must be finite numbers >= 0";
+        }
+      }
+      return nonEmpty(o.url) ? null : "url is empty";
     case "SliceDone":
       return nonEmpty(o.slice) ? null : "slice is empty";
     default:

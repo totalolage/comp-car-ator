@@ -12,11 +12,13 @@ import {
   makeIdOf,
   modelIdOf,
   type Observation,
+  type OpenpilotSupport,
   pragueDate,
   type VariantFacts,
   type VariantSpec,
   variantIdOf,
 } from "@cca/vocabulary";
+import { matchOpenpilot } from "./openpilot.ts";
 import { migrate } from "./schema.ts";
 import type { Ledger, LedgerListing, LedgerSnapshot, RunInfo, RunSummary } from "./types.ts";
 import { invalidReason } from "./validate.ts";
@@ -142,6 +144,18 @@ export function openLedger(path: string): Ledger {
       `UPDATE catalog_entries SET retired = :day
        WHERE source = :source AND scope = :scope AND retired IS NULL AND last_seen_run < :census`,
     ),
+    upsertOpenpilot: db.prepare(
+      `INSERT INTO openpilot_support (source, ref, data, updated, scope, last_seen_run)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT (source, ref) DO UPDATE SET data = excluded.data, updated = excluded.updated,
+         scope = excluded.scope, last_seen_run = excluded.last_seen_run, retired = NULL`,
+    ),
+    // The openpilot list is a census too: rows no run of the census stated are retired.
+    retireOpenpilot: db.prepare(
+      `UPDATE openpilot_support SET retired = :day
+       WHERE source = :source AND scope = :scope AND retired IS NULL
+         AND last_seen_run < :census`,
+    ),
     upsertFacts: db.prepare(
       `INSERT INTO variant_facts (source, key, data, updated) VALUES (?, ?, ?, ?)
        ON CONFLICT (source, key) DO UPDATE SET data = excluded.data, updated = excluded.updated`,
@@ -237,6 +251,11 @@ export function openLedger(path: string): Ledger {
       case "VariantFacts":
         q.upsertFacts.run(run.source, JSON.stringify(o.vehicle), JSON.stringify(o), day);
         break;
+      case "OpenpilotSupport": {
+        const { kind: _kind, ref: _ref, ...data } = o;
+        q.upsertOpenpilot.run(run.source, o.ref, JSON.stringify(data), day, run.scope, runId);
+        break;
+      }
       case "SliceDone":
         q.insertSlice.run(runId, o.slice);
         break;
@@ -426,7 +445,8 @@ export function openLedger(path: string): Ledger {
         q.countSliceMissed.run({ ...at, run: runId });
         if (complete && rejectedTotal === 0) {
           q.countMissed.run(at);
-          summary.retired = Number(q.retireCatalog.run(at).changes);
+          summary.retired =
+            Number(q.retireCatalog.run(at).changes) + Number(q.retireOpenpilot.run(at).changes);
         }
         if (complete) goneAfterMisses(true);
       };
@@ -510,9 +530,20 @@ export function openLedger(path: string): Ledger {
         };
       });
 
+      const openpilotRows = (
+        db
+          .prepare(
+            "SELECT source, ref, data FROM openpilot_support WHERE retired IS NULL ORDER BY source, ref",
+          )
+          .all() as { source: string; ref: string; data: string }[]
+      ).map((row) => ({
+        ...(JSON.parse(row.data) as Omit<OpenpilotSupport, "kind" | "ref">),
+        source: row.source,
+        row: `${row.source}:${row.ref}`,
+      }));
+
       return {
-        // TODO(comma-data): match the openpilot rows.
-        openpilot: [],
+        openpilot: matchOpenpilot(openpilotRows, variants, resolver),
         fx: latestFx(db),
         sources: (
           db

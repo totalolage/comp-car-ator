@@ -75,8 +75,12 @@ export interface VariantRow {
   newPriceCzk?: NewPrice;
   /** Aggregates over active used listings matched to this Variant; null when none. */
   used: UsedStats | null;
-  /** The best openpilot support level of the list rows matched to this Variant; absent: none. */
-  openpilot?: OpenpilotLevel;
+  /**
+   * The best openpilot support level among the list rows matched to this Variant, and the
+   * model years the list gives that level for (a Variant can span years the list rates
+   * differently); absent when no row matched.
+   */
+  openpilot?: { level: OpenpilotLevel; years: number[] };
 }
 
 /**

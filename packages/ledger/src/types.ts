@@ -41,7 +41,10 @@ export interface RunSummary {
   priceChanges: number;
   /** Listings marked gone by this run (explicit ListingGone, or missed by 2 censuses). */
   gone: number;
-  /** Catalog entries of this Source retired by this run's census (stated by none of its runs). */
+  /**
+   * Catalog entries and openpilot list rows of this Source retired by this run's census
+   * (stated by none of its runs).
+   */
   retired: number;
   /**
    * Whether this run counted as a census: only complete full runs without rejected

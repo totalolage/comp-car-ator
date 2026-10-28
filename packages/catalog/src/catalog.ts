@@ -65,7 +65,7 @@ function variantFacetDefs(
       transmission: (r) => r.variant.transmissions ?? [],
       market: (r) => (r.group ? [r.group.market] : []),
       source: (r) => (r.group ? [r.group.source] : []),
-      openpilot: (r) => [r.variant.openpilot ?? "unlisted"],
+      openpilot: (r) => [r.variant.openpilot?.level ?? "unlisted"],
     },
     ranges: {
       year: (r) => [r.variant.years.from, r.variant.years.to ?? thisYear],

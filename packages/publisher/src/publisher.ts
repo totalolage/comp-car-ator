@@ -6,6 +6,7 @@ import {
   type ListingRow,
   type ModelFile,
   type NewPrice,
+  type OpenpilotRow,
   type UsedStats,
   type VariantRow,
 } from "@cca/bundle";
@@ -19,6 +20,8 @@ import {
   MARKETS,
   type ModelId,
   type Money,
+  OPENPILOT_LEVELS,
+  type OpenpilotLevel,
   pragueDate,
   type VariantId,
   type YearMonth,
@@ -77,6 +80,7 @@ export function* publish(ledger: Ledger, options: PublishOptions): Generator<Bun
   }
 
   const listPrices = currentListPrices(snapshot, fx, today);
+  const openpilot = openpilotRows(snapshot);
   const variantsByModel = groupBy(snapshot.catalog, (v) => v.modelId);
   const variantRows: VariantRow[] = [];
   const catalogModels: CatalogIndex["models"] = [];
@@ -105,10 +109,17 @@ export function* publish(ledger: Ledger, options: PublishOptions): Generator<Bun
             variant,
             used.get(variant.id) ?? [],
             newPrice(listPrices.get(variant.id), dealerNew.get(variant.id)),
+            openpilot.levels.get(variant.id),
           ),
         );
       }
-      const file = modelFile(variants, rows, active, history.history(modelId));
+      const file = modelFile(
+        variants,
+        rows,
+        active,
+        history.history(modelId),
+        openpilot.byModel.get(modelId),
+      );
       catalogModels.push({
         id: file.model.id,
         makeId: file.model.makeId,
@@ -276,6 +287,7 @@ function variantRow(
   variant: CatalogVariant,
   activeUsed: ListingRow[],
   newPriceCzk: NewPrice | undefined,
+  openpilot: VariantRow["openpilot"],
 ): VariantRow {
   return omitUndefined({
     id: variant.id,
@@ -302,7 +314,43 @@ function variantRow(
     lengthMm: variant.lengthMm,
     newPriceCzk,
     used: usedStats(activeUsed),
+    openpilot,
   });
+}
+
+/**
+ * The openpilot list rows placed on the catalog, per model (best level first), and each
+ * Variant's best level among them. Rows the Ledger could not place are left out.
+ */
+function openpilotRows(snapshot: LedgerSnapshot): {
+  byModel: Map<ModelId, OpenpilotRow[]>;
+  levels: Map<VariantId, NonNullable<VariantRow["openpilot"]>>;
+} {
+  const rank = (level: OpenpilotLevel) => OPENPILOT_LEVELS.indexOf(level);
+  const byModel = new Map<ModelId, OpenpilotRow[]>();
+  const levels = new Map<VariantId, NonNullable<VariantRow["openpilot"]>>();
+  for (const { row: _row, modelId, ...row } of snapshot.openpilot) {
+    if (modelId === null || row.variantIds.length === 0) continue;
+    push(byModel, modelId, row);
+    for (const id of row.variantIds) {
+      const best = levels.get(id);
+      if (best === undefined || rank(row.level) < rank(best.level)) {
+        levels.set(id, { level: row.level, years: [...row.years] });
+      } else if (row.level === best.level) {
+        best.years = [...new Set([...best.years, ...row.years])].sort((a, b) => a - b);
+      }
+    }
+  }
+  for (const rows of byModel.values()) {
+    rows.sort(
+      (a, b) =>
+        rank(a.level) - rank(b.level) ||
+        compare(a.model, b.model) ||
+        (a.years[0] as number) - (b.years[0] as number) ||
+        compare(a.package ?? "", b.package ?? ""),
+    );
+  }
+  return { byModel, levels };
 }
 
 function usedStats(listings: ListingRow[]): UsedStats | null {
@@ -348,6 +396,7 @@ function modelFile(
   rows: ListingRow[],
   active: ListingRow[],
   history: ModelFile["history"],
+  openpilot: OpenpilotRow[] | undefined,
 ): ModelFile {
   const first = variants[0] as CatalogVariant;
   const generations = new Map(
@@ -368,6 +417,7 @@ function modelFile(
     listings: rows,
     stats: priceCells(active.filter((l) => !l.excluded)),
     history,
+    ...(openpilot ? { openpilot } : {}),
   };
 }
 
