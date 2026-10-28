@@ -97,7 +97,11 @@ Sentence case everywhere; no uppercase labels.
   can be unchosen. Long lists (makes, models) show in full; the page scrolls them.
 - Range fields narrow on every keystroke that parses (Czech `1,5` is fine); the placeholder
   shows the bound the other filters leave.
-- Table: make and model link to the model page, then generation, years, body, fuel, power,
+- Table: make and model link to the model page, opened on the row's Variant under the
+  catalog filters a Listing can take (gearbox, country, source, years, odometer, used price;
+  ADR 0009), then generation, years, body (a known liftback reads "liftback (sedan)" or
+  "liftback (hatchback)", naming the register code it is filed under, which also tells such
+  Variants of one generation apart: `lib/variant-body.ts`, display only), fuel, power,
   transmission, consumption, seats, new price (from), used median, landed-in-CZ median,
   listing countries, listing count. Headers with a sort are buttons; `aria-sort` marks the
   current one. 100 rows, then "show 100 more".
@@ -148,7 +152,7 @@ Sentence case everywhere; no uppercase labels.
 - Listings table: title (links to the source; condition, sold and "not in statistics" tags;
   its Variant on a second line), year, odometer, gearbox (from the listing), asking price in
   its own currency with the move since first seen (▼/▲ %), landed price in CZ, country,
-  source, days listed. 25 rows, then "show 50 more" from the model file the island loaded.
+  source, days listed. While filters are set, "clear filters" also sits next to the count. 25 rows, then "show 50 more" from the model file the island loaded.
   Default order is landed price ascending, so Czech and imported cars compare directly; year, odometer, price, landed and days sort. Listings the outlier rule
   left out of statistics (placeholder prices) always come last, tagged. The landed price is a
   button (hover shows the breakdown as a tooltip): it expands the row to the landed-price

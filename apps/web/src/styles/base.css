@@ -481,6 +481,11 @@ main:focus {
   font-size: var(--text-sm);
 }
 
+.results-count .button-quiet {
+  margin-left: var(--s2);
+  padding: 0 var(--s2);
+}
+
 .empty {
   padding: var(--s6) 0;
   color: var(--muted);

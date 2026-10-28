@@ -9,6 +9,7 @@ import { MARKETS, type VariantId } from "@cca/vocabulary";
 import { type I18n, i18n, MISSING } from "../i18n/i18n.ts";
 import { LANGS, type MessageKey } from "../i18n/messages.ts";
 import type { CompareLabel } from "./store.ts";
+import { bodyLabel } from "./variant-body.ts";
 
 /** One compared Variant, in the order the person added them. `variant` is null when the id
  * is no longer in the catalog (an old shared link, a Variant the Bundle dropped). */
@@ -95,7 +96,7 @@ export function variantLabel(v: VariantRow, t: I18n): string {
 const variantName = (v: VariantRow) => `${v.make} ${v.generation}`;
 
 const variantDetail = (v: VariantRow, t: I18n) =>
-  [t.kw(v.powerKw), t.label("body", v.body), t.label("fuel", v.fuel), gearbox(v, t)]
+  [t.kw(v.powerKw), bodyLabel(v, t), t.label("fuel", v.fuel), gearbox(v, t)]
     .filter(Boolean)
     .join(" · ");
 
@@ -160,7 +161,7 @@ const GROUPS: { id: string; label: MessageKey; lines(t: I18n): LineSpec[] }[] = 
         line("make", "facet.make", (v) => v.make),
         line("generation", "col.generation", (v) => v.generation),
         line("years", "facet.year", (v) => `${v.years.from}–${v.years.to ?? ""}`),
-        line("body", "col.body", (v, t) => t.label("body", v.body)),
+        line("body", "col.body", (v, t) => bodyLabel(v, t)),
         line("fuel", "col.fuel", (v, t) => t.label("fuel", v.fuel)),
         line("power", "col.power", (v, t) => t.kw(v.powerKw)),
         line("transmission", "col.transmission", (v, t) => gearbox(v, t) || MISSING),

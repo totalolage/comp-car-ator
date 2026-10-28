@@ -251,8 +251,16 @@ export default function ModelExplorer(props: Props) {
         <Stats rows={stats} t={t} />
         <HistoryChart series={historySeries(view ?? { history: weekly }, state)} t={t} />
         <h2 class="section-title">{t.t("model.listings")}</h2>
-        <p class="results-count" aria-live="polite">
-          <output data-testid="total">{t.count("count.listings", result.total)}</output>
+        <p class="results-count">
+          <output data-testid="total" aria-live="polite">
+            {t.count("count.listings", result.total)}
+          </output>
+          {/* Filters a link brought along are in the rail, which folds away on phones. */}
+          {active && lines.length > 0 && (
+            <button type="button" class="button-quiet" onClick={clear}>
+              {t.t("catalog.clear")}
+            </button>
+          )}
         </p>
         {data && lines.length === 0 ? (
           <div class="empty">

@@ -5,6 +5,7 @@
  * stays shareable. This island owns the catalog URL, the compare list (`cmp`) included: a
  * `cmp` it opens with replaces the remembered list, and a change to the remembered list (a
  * pick box here, the compare tray, another tab) is written back with the filters (ADR 0009).
+ * Row links carry the view into the model page's listing state (`listingStateFor`).
  */
 
 import { prefetch } from "astro:prefetch";
@@ -26,6 +27,7 @@ import {
   DEFAULT_SORT,
   type EnumFacet,
   facetOptions,
+  listingStateFor,
   type Names,
   namesOf,
   nextSort,
@@ -43,6 +45,7 @@ import {
   COMPARE_MAX,
   readCatalogState,
   writeCatalogState,
+  writeListingState,
 } from "../lib/url-state.ts";
 import RangeFilter from "./RangeFilter.tsx";
 
@@ -251,7 +254,12 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
                   <tr key={v.id} data-variant={v.id}>
                     <th scope="row">
                       <PickBox t={t} variant={v} picked={picked} />
-                      <a href={t.path(`/model/${v.modelId}/`)}>
+                      <a
+                        href={
+                          t.path(`/model/${v.modelId}/`) +
+                          writeListingState(listingStateFor(state.filters, v))
+                        }
+                      >
                         {v.make} {v.model}
                       </a>
                     </th>
