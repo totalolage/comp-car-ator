@@ -720,9 +720,17 @@ describe("Ledger", () => {
     const mk7 = { slug: "au", name: "Golf VII", from: 2012, to: 2020 };
     const mk8 = { slug: "cd", name: "Golf VIII", from: 2020 };
     const kona = { slug: "os", name: "Kona I", from: 2017, to: 2023 };
+    // A register type spanning both Generations (ADR 0011).
+    const wide = { slug: "1k", name: "Golf 1K", from: 2004, to: 2019 };
     const catalog = [
       variant("Golf", mk7, "petrol", 81, { from: 2012, to: 2020 }),
       variant("Golf", mk7, "petrol", 110, { from: 2012, to: 2014 }),
+      // A Variant ending in the row's first year, an earlier car filed under the same
+      // type, and the e-Golf.
+      variant("Golf", mk7, "petrol", 63, { from: 2013, to: 2015 }),
+      variant("Golf", mk7, "diesel", 77, { from: 2009, to: 2016 }),
+      variant("Golf", mk7, "bev", 100, { from: 2014, to: 2020 }),
+      variant("Golf", wide, "petrol", 59, { from: 2004, to: 2019 }),
       variant("Golf", mk8, "petrol", 110, { from: 2020 }),
       variant("Kona", kona, "petrol", 88, { from: 2017, to: 2023 }),
       variant("Kona", kona, "bev", 150, { from: 2018, to: 2023 }),
@@ -752,11 +760,14 @@ describe("Ledger", () => {
       ledger = openLedger(":memory:");
       await run("rsv", "full", "2026-10-01", catalog);
       await run("comma-openpilot", "full", "2026-10-02", [
-        // Mostly Golf VII: not Golf VIII, nor a Golf VII Variant built only before 2015.
+        // Mostly Golf VII: not Golf VIII, nor a Golf VII Variant built only before 2015 or
+        // from years before, nor the e-Golf, which is listed on its own.
         row("Golf", [2015, 2016, 2017, 2018, 2019, 2020]),
+        // Wholly inside both Golf VII and the wider type: the narrower one.
+        row("Golf R", [2015, 2016, 2017, 2018]),
         // One year both Generations were built in decides nothing.
         row("Golf", [2020], { package: "Adaptive Cruise Control (ACC) & Lane Assist" }),
-        // The petrol Kona: its electric sibling is listed on its own.
+        // The combustion Kona: the electric one is listed on its own.
         row("Kona", [2020]),
         row("Kona Electric", [2018, 2019, 2020, 2021], { fuel: "bev" }),
         // Rows for other markets, and models the catalog does not know, stay unplaced, even
@@ -768,6 +779,10 @@ describe("Ledger", () => {
       ]);
       expect(placed()).toEqual({
         "Golf 2015,2016,2017,2018,2019,2020": [
+          "volkswagen/golf",
+          ["volkswagen/golf/au/hatchback-petrol-81kw"],
+        ],
+        "Golf R 2015,2016,2017,2018": [
           "volkswagen/golf",
           ["volkswagen/golf/au/hatchback-petrol-81kw"],
         ],

@@ -38,6 +38,16 @@ interface Generation {
   variants: CatalogVariant[];
 }
 
+/** Fuels a row that names none can mean: the combustion cars the list's model name stands for. */
+const COMBUSTION: ReadonlySet<Fuel> = new Set(["petrol", "diesel", "lpg", "cng"]);
+
+/**
+ * A Variant whose production began this many years or more before a row's first model year
+ * is an earlier car the register files under the same Generation (one type approval can span
+ * two designs), not the one the list rates.
+ */
+const EARLIER_CAR_YEARS = 4;
+
 /**
  * Places openpilot list rows on the catalog, precision first: a car wrongly shown as
  * supported is worse than one not shown. A row lands on one Generation of its model, the one
@@ -68,47 +78,41 @@ export function matchOpenpilot(
     generation.variants.push(variant);
   }
 
-  const placed = rows.map((row) => {
-    const { source, ...rest } = row;
+  return rows.map(({ source, ...row }) => {
+    const unplaced = { ...row, modelId: null, generationIds: [], variantIds: [] };
     const modelId = row.europe === false ? null : modelOf(row, source, resolver);
-    const sameCar = modelId !== null && namesSameCar(row.model, modelNames.get(modelId) ?? "");
-    const generations = sameCar ? generationsFor(row.years, generationsOf.get(modelId) ?? []) : [];
-    return { match: { ...rest, modelId, generationIds: [], variantIds: [] }, generations };
-  });
+    if (modelId === null) return unplaced;
+    const placedOnModel = { ...unplaced, modelId };
+    if (!namesSameCar(row.model, modelNames.get(modelId) ?? "")) return placedOnModel;
+    const generation = generationFor(row.years, generationsOf.get(modelId) ?? []);
+    if (!generation) return placedOnModel;
 
-  // A row that names no fuel ("Kona") leaves out the fuels its siblings on the same
-  // Generation name ("Kona Electric"): those are listed, and supported, on their own.
-  const namedFuels = new Map<string, Set<Fuel>>();
-  for (const { match, generations } of placed) {
-    if (!match.fuel) continue;
-    for (const g of generations) {
-      const key = `${match.modelId} ${g.id}`;
-      namedFuels.set(key, (namedFuels.get(key) ?? new Set()).add(match.fuel));
-    }
-  }
-
-  return placed.map(({ match, generations }) => {
-    const first = match.years[0] as number;
-    const last = match.years[match.years.length - 1] as number;
-    const generationIds: string[] = [];
-    const variantIds: string[] = [];
-    for (const g of generations) {
-      const excluded = namedFuels.get(`${match.modelId} ${g.id}`);
-      const fits = g.variants.filter(
-        (v) =>
-          (match.fuel ? v.fuel === match.fuel : !excluded?.has(v.fuel)) &&
-          v.years.from <= last &&
-          (v.years.to ?? Number.POSITIVE_INFINITY) >= first,
+    const first = row.years[0] as number;
+    // Electrified versions are listed under their own names ("Kona Electric", "Kuga
+    // Plug-in Hybrid"), so a row that names no fuel is the combustion car, unless the
+    // Generation has none (an electric-only model such as the Ioniq 5).
+    const combustion = generation.variants.some((v) => COMBUSTION.has(v.fuel));
+    const fits = generation.variants.filter((v) => {
+      const to = v.years.to ?? Number.POSITIVE_INFINITY;
+      // Two shared years at least (or all of a one-year row or Variant): a Variant that
+      // ends or starts in a row's boundary year is usually the design before or after.
+      const shared = row.years.filter((y) => y >= v.years.from && y <= to).length;
+      return (
+        (row.fuel ? v.fuel === row.fuel : !combustion || COMBUSTION.has(v.fuel)) &&
+        shared >= Math.min(2, row.years.length, to - v.years.from + 1) &&
+        v.years.from > first - EARLIER_CAR_YEARS
       );
-      if (fits.length === 0) continue;
-      generationIds.push(g.id);
-      variantIds.push(...fits.map((v) => v.id).sort());
-    }
-    return { ...match, generationIds, variantIds };
+    });
+    if (fits.length === 0) return placedOnModel;
+    return {
+      ...placedOnModel,
+      generationIds: [generation.id],
+      variantIds: fits.map((v) => v.id).sort(),
+    };
   });
 }
 
-function modelOf(row: Row, source: string, resolver: Resolver): string | null {
+function modelOf(row: Omit<Row, "source">, source: string, resolver: Resolver): string | null {
   const resolution = resolver.resolve(
     { make: row.make, model: row.model, ...(row.fuel ? { fuel: row.fuel } : {}) },
     source,
@@ -128,17 +132,21 @@ function namesSameCar(listed: string, catalog: string): boolean {
  * more than any other, more than half of them, and at least two (or the row's only year).
  * Model years run ahead of production years, so a year shared with the next Generation
  * decides nothing, and a row mostly outside the Generation the catalog has ("Golf GTI
- * 2015-21" on a catalog with only the Golf VIII) belongs to one it lacks.
+ * 2015-21" on a catalog with only the Golf VIII) belongs to one it lacks. Generations that
+ * each hold every year of a row of two or more are one register type nested in a wider one
+ * ("Octavia 5E" in "Octavia SE"): the narrowest is taken.
  */
-function generationsFor(years: number[], generations: Generation[]): Generation[] {
+function generationFor(years: number[], generations: Generation[]): Generation | null {
   const scored = generations
     .map((g) => ({ g, overlap: years.filter((y) => y >= g.from && y <= g.to).length }))
     .filter((s) => s.overlap > 0)
-    .sort((a, b) => b.overlap - a.overlap);
+    .sort((a, b) => b.overlap - a.overlap || a.g.to - a.g.from - (b.g.to - b.g.from));
   const [best, second] = scored;
   if (!best || best.overlap < Math.min(2, years.length) || best.overlap * 2 <= years.length) {
-    return [];
+    return null;
   }
-  if (second && second.overlap === best.overlap) return [];
-  return [best.g];
+  if (!second || second.overlap < best.overlap) return best.g;
+  const nested = years.length >= 2 && best.overlap === years.length;
+  const narrower = best.g.to - best.g.from < second.g.to - second.g.from;
+  return nested && narrower ? best.g : null;
 }
