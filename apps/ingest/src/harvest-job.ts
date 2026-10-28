@@ -6,10 +6,7 @@ import type { Http } from "@cca/http";
 import type { Ledger } from "@cca/ledger";
 import type { HarvestMode, Logger, Source } from "@cca/sources";
 import { type HarvestReport, harvestToLog } from "./run-log.ts";
-import type { HarvestModes } from "./schedule.ts";
-
-/** The incremental Run before a full one stops after this long, leaving the rest to the full. */
-const CATCH_UP_MS = 60 * 60_000;
+import { catchUpMs as catchUpOf, type HarvestModes } from "./schedule.ts";
 
 export interface HarvestJobOptions {
   /** Read only, for the Source's Checkpoint. */
@@ -25,7 +22,10 @@ export interface HarvestJobOptions {
   signal?: AbortSignal;
   /** Each Run's start. Default: the wall clock. */
   clock?: () => Date;
-  /** Limit of the incremental Run of `incremental,full`. Default: an hour. */
+  /**
+   * Limit of the incremental Run of `incremental,full`, after which it stops and leaves the
+   * rest to the full Run. Default: the Source's schedule (an hour unless it says otherwise).
+   */
   catchUpMs?: number;
 }
 
@@ -35,7 +35,8 @@ export interface HarvestJobOptions {
  * does not depend on it.
  */
 export async function harvestJob(options: HarvestJobOptions): Promise<HarvestReport[]> {
-  const { modes, out, signal, clock = () => new Date(), catchUpMs = CATCH_UP_MS } = options;
+  const { modes, out, signal, clock = () => new Date() } = options;
+  const catchUpMs = options.catchUpMs ?? catchUpOf(options.source.id);
   const runs: { mode: HarvestMode; out: string; limit?: number }[] =
     modes === "incremental,full"
       ? [

@@ -11,6 +11,8 @@ export interface Schedule {
   daily: boolean;
   /** Census cadence: Sundays, the 1st of the month, or never. */
   full: "weekly" | "monthly" | "never";
+  /** Most minutes the incremental Run before a full one may take. Default 60. */
+  catchUpMinutes?: number;
 }
 
 /** Listing sites: incremental daily, a census every Sunday. */
@@ -28,7 +30,16 @@ export const schedules: Record<SourceId, Schedule> = {
   "vw-pricelist": { daily: false, full: "weekly" },
   // Experimental and T2-only (headed Chrome); run by manual dispatch only (ADR 0015).
   "mobile-de": { daily: false, full: "never" },
+  // Its incremental reads an ad page for each candidate the Ledger does not know, and ads
+  // whose text states no year or odometer never become known: about 70 minutes a day, read
+  // twice over the day after a failed Run (ADR 0014).
+  bazos: { ...LISTINGS, catchUpMinutes: 150 },
 };
+
+/** How long the incremental Run of a Source's `incremental,full` job may take, in ms. */
+export function catchUpMs(source: SourceId): number {
+  return (schedules[source]?.catchUpMinutes ?? 60) * 60_000;
+}
 
 /**
  * What one harvest job runs: one mode, or an incremental Run and then a full one. The second
@@ -49,7 +60,7 @@ export interface Harvest {
  * the slices it already read, and the incremental run sees the listings posted in them since.
  * That holds for its first census too, which resumes like any other; only on a Source's very
  * first day, when the Ledger knows none of its listings, can the incremental run take its
- * whole hour. Days are Prague calendar days.
+ * whole catch-up time (`catchUpMs`). Days are Prague calendar days.
  */
 export function plan(
   sourceIds: readonly SourceId[],
