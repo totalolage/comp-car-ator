@@ -201,6 +201,131 @@ describe("Ledger", () => {
     }
   });
 
+  it("relabels the EUR prices TipCars recorded as CZK when it opens an older Ledger", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "cca-ledger-"));
+    try {
+      const file = join(dir, "ledger.sqlite");
+      const czk = (amount: number) => ({ price: { amount, currency: "CZK" } });
+      const eur = (amount: number) => ({ price: { amount, currency: "EUR" } });
+      // Recorded before the fix (2026-10-28), against the EUR amounts confirmed on TipCars:
+      // a Dubai dealer's Wrangler at its 10 830 EUR; a listing the fixed adapter saw again
+      // in EUR before the Ledger was corrected; one it saw again in CZK; a seller in CZK
+      // who switched to EUR before the fix, and one who switched on the day of the fix; one
+      // held at an amount other than the confirmed 9 920 EUR, whose price went up and back the
+      // same day; one priced in CZK at its confirmed amount after the fix; one seller in CZK
+      // all along.
+      ledger = openLedger(file);
+      await run("tipcars", "full", "2026-10-25", [seen("32587046", 400_000)]);
+      await run("tipcars", "full", "2026-10-26", [
+        seen("56607021", 10_830),
+        seen("19337165", 55_000),
+        seen("32587046", 16_800),
+        seen("32587182", 9_500),
+        seen("1", 489_000),
+      ]);
+      await run("tipcars", "incremental", "2026-10-27", [
+        seen("32587029", 15_900),
+        seen("32587151", 450_000),
+        seen("32587182", 9_600),
+      ]);
+      await run("tipcars", "incremental", "2026-10-27", [seen("32587182", 9_500)]);
+      await run("tipcars", "incremental", "2026-10-28", [
+        seen("32587029", 225_000),
+        seen("32587151", 20_500, eur(20_500)),
+        seen("32587193", 22_600),
+      ]);
+      await run("tipcars", "incremental", "2026-10-29", [seen("19337165", 55_000, eur(55_000))]);
+      ledger.close();
+      // A schema v3 Ledger, as Data releases carry.
+      const db = new DatabaseSync(file);
+      db.prepare("UPDATE meta SET value = '3' WHERE key = 'schema_version'").run();
+      db.close();
+
+      ledger = openLedger(file);
+      const listings = new Map([...ledger.snapshot().listings()].map((l) => [l.id, l]));
+      expect(listings.get("tipcars:56607021")).toMatchObject({
+        ...eur(10_830),
+        priceHistory: [{ date: "2026-10-26", ...eur(10_830) }],
+      });
+      expect(listings.get("tipcars:19337165")).toMatchObject({
+        ...eur(55_000),
+        priceHistory: [
+          { date: "2026-10-26", ...eur(55_000) },
+          { date: "2026-10-29", ...eur(55_000) },
+        ],
+      });
+      expect(listings.get("tipcars:32587029")).toMatchObject({
+        ...czk(225_000),
+        priceHistory: [
+          { date: "2026-10-27", ...eur(15_900) },
+          { date: "2026-10-28", ...czk(225_000) },
+        ],
+      });
+      expect(listings.get("tipcars:32587046")).toMatchObject({
+        ...eur(16_800),
+        priceHistory: [
+          { date: "2026-10-25", ...czk(400_000) },
+          { date: "2026-10-26", ...eur(16_800) },
+        ],
+      });
+      expect(listings.get("tipcars:32587151")).toMatchObject({
+        ...eur(20_500),
+        priceHistory: [
+          { date: "2026-10-27", ...czk(450_000) },
+          { date: "2026-10-28", ...eur(20_500) },
+        ],
+      });
+      expect(listings.get("tipcars:32587182")).toMatchObject({
+        ...czk(9_500),
+        priceHistory: [
+          { date: "2026-10-26", ...czk(9_500) },
+          { date: "2026-10-27", ...czk(9_500) },
+        ],
+      });
+      expect(listings.get("tipcars:32587193")).toMatchObject({
+        ...czk(22_600),
+        priceHistory: [{ date: "2026-10-28", ...czk(22_600) }],
+      });
+      expect(listings.get("tipcars:1")).toMatchObject({
+        ...czk(489_000),
+        priceHistory: [{ date: "2026-10-26", ...czk(489_000) }],
+      });
+      const later = await run("tipcars", "incremental", "2026-11-01", [
+        seen("56607021", 10_830, eur(10_830)),
+      ]);
+      expect(later.priceChanges).toBe(0);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps repeated EUR TipCars history points when correcting an older Ledger", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "cca-ledger-"));
+    try {
+      const file = join(dir, "ledger.sqlite");
+      const eur = { price: { amount: 10_830, currency: "EUR" as const } };
+      ledger = openLedger(file);
+      await run("tipcars", "full", "2026-10-26", [seen("56607021", 10_830, eur)]);
+      ledger.close();
+
+      const db = new DatabaseSync(file);
+      db.prepare("UPDATE meta SET value = '3' WHERE key = 'schema_version'").run();
+      db.prepare(
+        "INSERT INTO price_history (listing_id, date, amount, currency) VALUES (?, ?, ?, ?)",
+      ).run("tipcars:56607021", "2026-10-27", 10_830, "EUR");
+      db.close();
+
+      ledger = openLedger(file);
+      const listing = [...ledger.snapshot().listings()][0];
+      expect(listing?.priceHistory).toEqual([
+        { date: "2026-10-26", price: { amount: 10_830, currency: "EUR" } },
+        { date: "2026-10-27", price: { amount: 10_830, currency: "EUR" } },
+      ]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("resolves listings against the current catalog at snapshot time", async () => {
     ledger = openLedger(":memory:");
     await run("sauto", "incremental", "2026-10-10", [seen("1", 1)]);

@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { TIPCARS_EUR_PRICES } from "./tipcars-eur-refs.ts";
 
 /**
  * Ordered migrations; index + 1 is the schema version. Append only: never edit a
@@ -91,7 +92,38 @@ const MIGRATIONS: string[] = [
   `
   DELETE FROM catalog_entries WHERE variant_id LIKE '/%' OR variant_id LIKE '%//%';
   `,
+  // TipCars listings recorded with their EUR price labelled CZK, before the adapter read a
+  // listing's currency from its record (2026-10-28). This only relabels currency; it never
+  // deletes history points.
+  relabelEur("tipcars", TIPCARS_EUR_PRICES, "2026-10-28"),
 ];
+
+/**
+ * Relabels as EUR the CZK prices a Source recorded for these refs before `fixed`, the day
+ * its adapter learned their currency, where the amount is the EUR amount confirmed on the
+ * site: a price at any other amount may have been CZK and stays (one at that amount is taken
+ * as EUR, as the stored row cannot tell otherwise). What it recorded since is left alone (a
+ * listing seen since is priced right). The correction only relabels currency; it never deletes
+ * history points.
+ */
+function relabelEur(
+  source: string,
+  prices: readonly (readonly [ref: string, amountEur: number])[],
+  fixed: string,
+): string {
+  const rows = prices.map(([ref, amount]) => {
+    if (!/^\d+$/.test(ref)) throw new Error(`not a ${source} ref: ${ref}`);
+    if (!Number.isFinite(amount)) throw new Error(`not an amount: ${amount}`);
+    return `('${source}:${ref}', ${amount})`;
+  });
+  const confirmed = `(VALUES ${rows.join(", ")})`;
+  return `
+  UPDATE listings SET price_currency = 'EUR', data = json_set(data, '$.price.currency', 'EUR')
+  WHERE (id, price_amount) IN ${confirmed} AND price_currency = 'CZK' AND last_seen < '${fixed}';
+  UPDATE price_history SET currency = 'EUR'
+  WHERE (listing_id, amount) IN ${confirmed} AND currency = 'CZK' AND date < '${fixed}';
+  `;
+}
 
 export function migrate(db: DatabaseSync): void {
   db.exec("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
