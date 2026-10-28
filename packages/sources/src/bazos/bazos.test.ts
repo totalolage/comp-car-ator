@@ -18,6 +18,8 @@ import { bazosSource } from "./bazos.ts";
 // bump.cassette moves 224316711 to the top during the walk; shift.cassette removes the
 // 2nd-7th rows during the walk; changed.cassette serves a maintenance page.
 const now = new Date("2026-10-25T17:00:00Z");
+/** A last run before every ad of the fixtures: an incremental run reads every page. */
+const LONG_AGO = new Date("2026-09-01T03:00:00Z");
 
 const fixture = (name: string) => new URL(`./fixtures/${name}.cassette.json`, import.meta.url);
 
@@ -123,13 +125,18 @@ async function category() {
       if (!rows.has(ref)) rows.set(ref, block.replace("</div></body></html>", ""));
     }
   }
-  const page = (list: string[], offset: number): Interaction => {
+  const page = (list: string[], offset: number, hidden: ReadonlySet<string>): Interaction => {
     const url = `https://auto.bazos.cz/kia/${offset === 0 ? "" : `${offset}/`}`;
-    const shown = list.slice(offset, offset + 20).map((id) => {
-      const row = rows.get(id.replace("*", "")) as string;
-      return ROW + (id.endsWith("*") ? row.replace(/\[\d+\.\d+\. \d{4}\]/, "[25.10. 2026]") : row);
-    });
-    const header = `Zobrazeno ${offset + 1}-${offset + shown.length} inzerátů z ${list.length}`;
+    const slots = list.slice(offset, offset + 20);
+    const shown = slots
+      .filter((id) => !hidden.has(id))
+      .map((id) => {
+        const row = rows.get(id.replace("*", "")) as string;
+        return (
+          ROW + (id.endsWith("*") ? row.replace(/\[\d+\.\d+\. \d{4}\]/, "[25.10. 2026]") : row)
+        );
+      });
+    const header = `Zobrazeno ${offset + 1}-${offset + slots.length} inzerátů z ${list.length}`;
     const body = `<html><body><div class="maincontent">\n<div class="listainzerat inzeratyflex"><div class="inzeratynadpis">${header}</div></div>\n${shown.join("")}</div></body></html>`;
     const headers = { "content-type": "text/html; charset=UTF-8" };
     return {
@@ -143,13 +150,19 @@ async function category() {
     post(ref: string, like: string) {
       rows.set(ref, (rows.get(like) as string).replaceAll(like, ref));
     },
-    /** The list pages served in request order, `[offset, list]` each, plus the ad pages. */
-    async cassette(served: [number, string[]][]): Promise<Cassette> {
+    /**
+     * The list pages served in request order, `[offset, list]` each, plus the ad pages. Ids
+     * in `hidden` hold their place and count, but no page shows them.
+     */
+    async cassette(
+      served: [number, string[]][],
+      hidden: ReadonlySet<string> = new Set(),
+    ): Promise<Cassette> {
       const details = await loadCassette(fixture("details"));
       return {
         version: 1,
         interactions: [
-          ...served.map(([offset, list]) => page(list, offset)),
+          ...served.map(([offset, list]) => page(list, offset, hidden)),
           ...details.interactions,
         ],
       };
@@ -394,6 +407,32 @@ describe("bazos source", () => {
     expect(observations).toEqual([]);
   });
 
+  it("an ad the site counts but no page shows does not keep the census from its slices", async () => {
+    // As on Ford and Mercedes live: the 26th place is counted (the category holds 60) and
+    // /kia/16/ shows 19 of the 20 rows its header counts, on every read.
+    const kia = await category();
+    const list = [...kia.ids.slice(0, 25), "225999999", ...kia.ids.slice(25)];
+    const { observations, error, warnings } = await harvest(
+      await kia.cassette(
+        [
+          [0, list],
+          [16, list],
+          [32, list],
+          [48, list],
+        ],
+        new Set(["225999999"]),
+      ),
+      "full",
+    );
+    expect(error).toBeUndefined();
+    expect(warnings).toContain(
+      "Bazoš list page has 19 rows, its header 20: https://auto.bazos.cz/kia/16/",
+    );
+    expect(warnings).toContain("bazos: the site counts ads its list pages do not show");
+    expect(refs(observations).sort()).toEqual(IN_SCOPE);
+    expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
+  });
+
   it("leaves out new cars", async () => {
     const recorded = await cassette("full", (c) => {
       // Said in the list row: no ad page. Said on the ad page only: read, then left out.
@@ -476,7 +515,7 @@ describe("bazos source", () => {
     // A full run fails at the end, so the census resumes with that part only.
     expect(String(full.error)).toMatch(/slices with unreadable ads: kia;part=0\/2/);
 
-    const incremental = await harvest(recorded, "incremental");
+    const incremental = await harvest(recorded, "incremental", { lastRunAt: LONG_AGO });
     expect(incremental.error).toBeUndefined();
     expect(listing(incremental.observations, "224899514")?.price.amount).toBeNaN();
   });
@@ -539,6 +578,20 @@ describe("bazos source", () => {
     expect(refs(observations).sort()).toEqual([...retry].sort());
   });
 
+  it("incremental run without a complete run yet stops at the first page older than yesterday", async () => {
+    // The Ledger knows nothing. Reading every page would take hours on the live site, so
+    // the run would never complete; it reads a day of ads, and a full run the rest.
+    const { observations, error, listed, details } = await harvest(
+      await cassette("full"),
+      "incremental",
+    );
+    expect(error).toBeUndefined();
+    // /kia/ holds today's ads; /kia/16/ is dated wholly before yesterday (2026-10-24).
+    expect(listed).toEqual(["/kia/", "/kia/16/"]);
+    expect(details.length).toBeGreaterThan(0);
+    expect(refs(observations).every((ref) => IN_SCOPE.includes(ref))).toBe(true);
+  });
+
   describe("a list page cut short", () => {
     const lastRow = (body: string) => body.slice(0, body.lastIndexOf(ROW));
     const everyRow = (body: string) => body.slice(0, body.indexOf(ROW));
@@ -583,6 +636,7 @@ describe("bazos source", () => {
       });
     const short = "Bazoš list page has 19 rows, its header 20: https://auto.bazos.cz/kia/16/";
     const unmatched = "bazos: walk met a list page whose rows do not match its header";
+    const hidden = "bazos: the site counts ads its list pages do not show";
 
     it("is fetched again", async () => {
       const recorded = await cassette("full", (c) => cutAt(c, "/kia/16/", (read) => read === 1));
@@ -597,14 +651,16 @@ describe("bazos source", () => {
     it.each([
       ["the walk", [1, 2]],
       ["the walk over today's ads", [2, 3]],
-    ])("short twice in %s, the census walk is redone and taken", async (_, reads) => {
+    ])("short twice in %s, the census walk is taken as it is", async (_, reads) => {
+      // The row the page leaves out shows on the next one, which overlaps it.
       const recorded = await cassette("full", (c) =>
         cutAt(c, "/kia/16/", (read) => reads.includes(read)),
       );
       const { observations, error, warnings, listed } = await harvest(recorded, "full");
       expect(error).toBeUndefined();
-      expect(warnings).toContain(unmatched);
-      expect(listed.filter((path) => path === "/kia/")).toHaveLength(4);
+      expect(warnings).toContain(hidden);
+      expect(warnings).not.toContain(unmatched);
+      expect(listed.filter((path) => path === "/kia/")).toHaveLength(2);
       expect(refs(observations).sort()).toEqual(IN_SCOPE);
       expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
     });
@@ -613,7 +669,7 @@ describe("bazos source", () => {
       const { observations, error, warnings, listed } = await harvest(
         await stayingShort(),
         "incremental",
-        {},
+        { lastRunAt: LONG_AGO },
         undefined,
         ["kia", "mazda"],
       );
@@ -639,7 +695,7 @@ describe("bazos source", () => {
       const { observations, error, warnings, listed } = await harvest(
         await stayingShort("/kia/", everyRow),
         "incremental",
-        {},
+        { lastRunAt: LONG_AGO },
         undefined,
         ["kia", "mazda"],
       );
@@ -650,15 +706,24 @@ describe("bazos source", () => {
       expect(warnings).toContain("bazos: categories not harvested whole: kia");
     });
 
-    it("staying short in a full run, that category reports no slice done while the others do", async () => {
+    it("lacking more ads than the site could hide in a full run, that category reports no slice done while the others do", async () => {
+      // Six rows from the middle of /kia/16/, on no other page: more than a parser that still
+      // reads the rows would see the site hide (5 in a category this small).
+      const sixGone = (body: string) => {
+        const blocks = body.split(ROW);
+        blocks.splice(9, 6);
+        return blocks.join(ROW);
+      };
       const { observations, error, warnings, listed, details } = await harvest(
-        await stayingShort(),
+        await stayingShort("/kia/16/", sixGone),
         "full",
         {},
         undefined,
         ["kia", "mazda"],
       );
-      expect(warnings).toContain(short);
+      expect(warnings).toContain(
+        "Bazoš list page has 14 rows, its header 20: https://auto.bazos.cz/kia/16/",
+      );
       expect(warnings).toContain(unmatched);
       // The Kia walk is redone once, then the Mazda census runs as usual.
       expect(listed.filter((path) => path === "/kia/")).toHaveLength(4);
