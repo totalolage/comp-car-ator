@@ -130,7 +130,8 @@ class Run {
    * after their removal, or not yet reached by the census), newest first, up to `budget`.
    * Past it the run fails once it has yielded what it read, so `lastRunAt` stays and the next
    * run walks from the same point, skipping the listings now known. Nothing moved up is
-   * dropped: it is read, or the run fails.
+   * dropped: it is read, or the run fails. (A first run has no last run to hold: what it
+   * leaves, like what moved before its day, waits for the census.)
    */
   async *incremental(budget: number): AsyncIterable<Observation> {
     const { checkpoint, now } = this.ctx;
@@ -175,9 +176,14 @@ class Run {
    * Search items sorted since `since`, newest first, with repeats. A query whose order holds
    * more than the 10,000-result window above `since` is walked again in price halves, each
    * with a window of its own (listings without a price drop out, as they are skipped anyway).
+   * Pages overlap by a twentieth: a listing removed meanwhile shifts the rest up, and the
+   * overlap keeps the one shifted onto a page already read. A page that does not repeat the
+   * last listing of the one before has lost its place, so the walk fails rather than skip.
    */
   private async *moved(since: string, band?: Band): AsyncIterable<Item> {
-    for (let offset = 0; ; offset += this.pageSize) {
+    const overlap = Math.floor(this.pageSize / 20);
+    let last: string | undefined;
+    for (let offset = 0; ; offset += this.pageSize - overlap) {
       if (offset + this.pageSize > WINDOW) {
         const halves = band ? halve(band) : [{ from: 0, to: PRICE_TOP }, { from: PRICE_TOP }];
         if (!halves) {
@@ -189,6 +195,9 @@ class Run {
         return;
       }
       const page = await this.search({ conditions: CONDITION_SEOS, band, offset });
+      if (overlap > 0 && last !== undefined && !page.items.some((i) => refOf(i) === last)) {
+        throw new Error(`Sauto incremental lost its place in the order at offset ${offset}`);
+      }
       let more = false;
       for (const item of page.items) {
         // Skipped listings never become known, so only their timestamp keeps the walk going.
@@ -198,6 +207,7 @@ class Run {
       }
       if (!more || page.items.length < this.pageSize || offset + this.pageSize >= page.total)
         return;
+      last = refOf(page.items[page.items.length - 1] ?? {});
     }
   }
 

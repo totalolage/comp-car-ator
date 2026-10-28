@@ -379,6 +379,28 @@ describe("sauto source", () => {
     expect(prices(second.out).map(([ref]) => ref)).toEqual(["211187061", "210518621", "211264902"]);
   });
 
+  it("incremental run pages overlap, so a removal between pages skips no listing, and fails when it loses its place", async () => {
+    const walk = async (removed: number) => {
+      let list = Array.from({ length: 300 }, (_, i) => car(i + 1));
+      let calls = 0;
+      const search = (q: URLSearchParams) => {
+        // Listings removed from the top of the order after the first page was served.
+        if (calls++ === 1) list = list.slice(removed);
+        const offset = Number(q.get("offset"));
+        return { total: list.length, results: list.slice(offset, offset + 100) };
+      };
+      return harvestSite("incremental", search, {
+        checkpoint: { lastRunAt: new Date("2026-10-24T00:00:00Z") },
+        source: { pageSize: 100 },
+      });
+    };
+    const shifted = await walk(1);
+    expect(shifted.error).toBeUndefined();
+    expect(listings(shifted.observations)).toHaveLength(300);
+    const lost = await walk(10);
+    expect(String(lost.error)).toMatch(/lost its place in the order at offset 95/);
+  });
+
   it("incremental run prices known listings and reads no detail for them, however recently changed", async () => {
     const known = { isKnown: () => true };
     const longAgo = await harvest("incremental", known);
@@ -583,7 +605,8 @@ describe("sauto source", () => {
         source: { pageSize: 100 },
       });
       expect(error).toBeUndefined();
-      expect(searches(urls)).toHaveLength(102);
+      // 105 overlapping pages up to the window, then one page per half.
+      expect(searches(urls)).toHaveLength(107);
       expect(listings(observations).map((o) => o.ref)).toEqual(["1", "2", "3"]);
     }
   });
