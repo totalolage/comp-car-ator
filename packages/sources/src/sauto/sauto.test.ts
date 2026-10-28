@@ -22,6 +22,8 @@ import { sautoSource } from "./sauto.ts";
 const fixture = new URL("./fixtures/dacia-spring.cassette.json", import.meta.url);
 const now = new Date("2026-10-25T13:27:00Z");
 const OPTIONS = { manufacturerModel: "dacia:spring", pageSize: 4, sliceLimit: 8 };
+/** A last run before every listing of the fixture: an incremental run yields all it does not know. */
+const LONG_AGO = new Date("2020-01-01T00:00:00Z");
 
 async function harvest(
   mode: HarvestMode,
@@ -42,7 +44,7 @@ async function harvest(
   const ctx: HarvestContext = {
     http,
     mode,
-    checkpoint: { ...emptyCheckpoint, ...checkpoint },
+    checkpoint: { ...emptyCheckpoint, lastRunAt: LONG_AGO, ...checkpoint },
     now,
     log: silentLogger,
     signal,
@@ -88,6 +90,7 @@ function replaceResponse(
 const car = (id: number, fields: ApiItem = {}): ApiItem => ({
   id,
   price: 100000,
+  create_date: "2026-10-25T09:00:00",
   sorting_date: "2026-10-25T10:00:00",
   manufacturing_date: "2021-01-01",
   manufacturer_cb: { name: "Dacia", seo_name: "dacia", value: 15 },
@@ -186,7 +189,7 @@ describe("sauto source", () => {
     expect(requests).toBe(0);
   });
 
-  it("first incremental run pages newest-first through new, demo and used listings", async () => {
+  it("incremental run pages newest-first through new, demo and used listings", async () => {
     const { observations, urls } = await harvest("incremental");
     const seen = listings(observations);
     expect(seen.length).toBeGreaterThan(OPTIONS.pageSize);
@@ -256,45 +259,48 @@ describe("sauto source", () => {
     });
   });
 
-  it("incremental run stops at the first page whose listings are all known and unchanged", async () => {
-    const first = listings((await harvest("incremental")).observations);
-    const pageOne = new Set(first.slice(0, OPTIONS.pageSize).map((o) => o.ref));
-    const { observations, urls } = await harvest("incremental", {
-      lastRunAt: null,
-      isKnown: (ref) => !pageOne.has(ref),
-    });
-    expect(listings(observations).map((o) => o.ref)).toEqual([...pageOne]);
-    expect(searches(urls)).toHaveLength(2);
+  // Pages of 4 by sorting_date (created): 10-24 (09-29), 10-19 (05-30), 10-14 (05-09),
+  // 10-13 (09-14) | 10-13 (10-13) 211264902, 10-05 (10-05), 10-05 (04-22), 09-14 (09-14) | ...
+  const LAST_RUN = new Date("2026-10-12T00:00:00Z"); // less the margin, 10-12 00:00 in Prague
+
+  it("incremental run after a last run reads down to it and fetches only listings created since", async () => {
+    const { observations, urls } = await harvest("incremental", { lastRunAt: LAST_RUN });
+    // The 3rd page is wholly older than the last run.
+    expect(searches(urls)).toHaveLength(3);
+    // Page 1 was moved up by edits and top-ups: older listings, left to the census.
+    expect(urls.filter((u) => !u.includes("/items/search?"))).toEqual([
+      "https://www.sauto.cz/api/v1/items/211264902",
+    ]);
+    expect(listings(observations).map((o) => o.ref)).toEqual(["211264902"]);
   });
 
-  it("incremental run after a last run ends at the first page older than it", async () => {
-    // Pages of 4 by sorting_date: 10-24, 10-19, 10-14 07:37, 10-13 | 10-13, 10-05, ...
-    const { observations, urls } = await harvest("incremental", {
-      lastRunAt: new Date("2026-10-14T12:00:00Z"),
-    });
-    expect(searches(urls)).toHaveLength(2);
-    expect(listings(observations)).toHaveLength(8);
+  it("first incremental run reads back a day", async () => {
+    // Nothing moved within the day before the recording (the newest is 10-24 11:22).
+    const { observations, urls } = await harvest("incremental", { lastRunAt: null });
+    expect(searches(urls)).toHaveLength(1);
+    expect(observations).toEqual([]);
   });
 
   it("incremental run keeps walking past a page of recent listings without a price", async () => {
     const { observations, urls } = await harvest(
       "incremental",
-      { lastRunAt: new Date("2026-10-14T12:00:00Z") },
+      { lastRunAt: LAST_RUN },
       (cassette) =>
         editBodies(cassette, firstSearchPage, (body) => {
           for (const item of body.results)
             Object.assign(item, { price: null, price_by_agreement: true });
         }),
     );
-    expect(searches(urls)).toHaveLength(2);
-    expect(listings(observations)).toHaveLength(4);
+    expect(searches(urls)).toHaveLength(3);
+    expect(listings(observations).map((o) => o.ref)).toEqual(["211264902"]);
   });
 
-  it("incremental run re-yields known listings changed since the last run", async () => {
-    const all = listings((await harvest("incremental")).observations);
+  it("incremental run leaves known listings to the census, however recently changed", async () => {
     const known = { isKnown: () => true };
-    const longAgo = await harvest("incremental", { ...known, lastRunAt: new Date("2020-01-01") });
-    expect(listings(longAgo.observations)).toHaveLength(all.length);
+    const longAgo = await harvest("incremental", known);
+    expect(longAgo.observations).toEqual([]);
+    expect(longAgo.urls.every((u) => u.includes("/items/search?"))).toBe(true);
+    expect(searches(longAgo.urls)).toHaveLength(4);
     const justNow = await harvest("incremental", { ...known, lastRunAt: now });
     expect(justNow.observations).toEqual([]);
     expect(searches(justNow.urls)).toHaveLength(1);
@@ -335,6 +341,21 @@ describe("sauto source", () => {
       }
     }
     expect(open).toEqual([]);
+  });
+
+  it("full run halves a band over 2,000 results by default, so a slice's details fit in a run", async () => {
+    // At 1 request a second a 9,500-result slice took near 3 hours: a run cut off in one
+    // lost it all.
+    const whole = (q: URLSearchParams) => newLow(q) && q.get("price_to") === "134217727";
+    const { observations, error } = await harvestSite("full", (q) =>
+      whole(q) ? { total: 2_001, results: [] } : empty,
+    );
+    expect(error).toBeUndefined();
+    expect(slices(observations)).toEqual([
+      "new/0-67108864",
+      "new/67108864-134217728",
+      ...ALL_SLICES.filter((s) => s !== NEW_LOW),
+    ]);
   });
 
   it("full run resumes a census: slices done earlier are skipped", async () => {
@@ -461,10 +482,11 @@ describe("sauto source", () => {
   });
 
   it("incremental run fails at the 10,000-result window after a last run, but not on a first run", async () => {
-    // Every page repeats one recently changed listing, so only its detail is needed.
+    // Every page repeats one new listing, so only its detail is needed.
     const item = {
       id: 1,
       price: 100000,
+      create_date: "2026-10-25T13:00:00",
       sorting_date: "2026-10-25T14:00:00",
       manufacturer_cb: { name: "Dacia", seo_name: "dacia", value: 15 },
       model_cb: { name: "Spring", seo_name: "spring", value: 9057 },
@@ -506,18 +528,6 @@ describe("sauto source", () => {
     };
     await expect(run({ lastRunAt: new Date("2026-10-25T12:00:00Z") })).rejects.toThrow(/window/);
     expect(listings(await run({}))).toHaveLength(1);
-  });
-
-  it("first incremental run walks past a page where nothing has a price", async () => {
-    const { observations, urls } = await harvest("incremental", {}, (cassette) =>
-      editBodies(cassette, firstSearchPage, (body) => {
-        for (const item of body.results) {
-          Object.assign(item, { price: null, price_by_agreement: true });
-        }
-      }),
-    );
-    expect(searches(urls).length).toBeGreaterThan(1);
-    expect(listings(observations)).toHaveLength(9);
   });
 
   it("full run leaves a band whose pages hold fewer results than its total not done, and fails", async () => {
@@ -577,7 +587,7 @@ describe("sauto source", () => {
     expect(slices(shrunk.observations)).not.toContain(NEW_LOW);
   });
 
-  it("first incremental run judges a listing known as it was before the run yielded it", async () => {
+  it("incremental run yields each new listing once, though the order repeats it", async () => {
     // The second page repeats the first (the order moved); the third holds unseen listings.
     const pages: Record<string, ApiItem[]> = {
       0: cars(1, 2, 3, 4),
@@ -590,7 +600,7 @@ describe("sauto source", () => {
       "incremental",
       (q) => ({ total: 12, results: pages[q.get("offset") ?? ""] ?? [] }),
       {
-        checkpoint: { isKnown: (ref) => recorded.has(ref) },
+        checkpoint: { lastRunAt: LONG_AGO, isKnown: (ref) => recorded.has(ref) },
         consume: (o) => {
           if (o.kind === "ListingSeen") recorded.add(o.ref);
         },

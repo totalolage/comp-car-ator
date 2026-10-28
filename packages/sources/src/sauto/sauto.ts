@@ -9,11 +9,14 @@
  *   drive, seats, VAT deductibility, condition, every photo); 404 once the listing is removed.
  *   The Ledger stores each ListingSeen whole, so every listing yielded carries its detail.
  *
- * incremental: walks the newest-first order and yields listings that are unknown or changed
- *   since the last run (`sorting_date` after it), down to the last run (see `incremental`).
+ * incremental: walks the newest-first order down to the last run (a day back on a first run)
+ *   and yields the listings created since then that the Ledger does not know (see
+ *   `incremental`); listings moved up by an edit or top-up wait for the census.
  * full: a census sliced by condition and price band; a band over `sliceLimit` results is
- *   halved until each fits under the 10,000 cap. Each band yields SliceDone once one pass
- *   over it reaches the band's total; a band that stays short fails the run at its end.
+ *   halved until each fits (2,000 by default: some 40 minutes of detail pages, well within
+ *   one run). Slices done earlier in the census are skipped before any split. Each band
+ *   yields SliceDone once one pass over it reaches the band's total; a band that stays
+ *   short fails the run at its end.
  *
  * In scope: priced listings (not price by agreement) made in 2000 or later. Searches filter
  * the year (`vehicle_age_from`); listings that slip through are skipped.
@@ -40,6 +43,13 @@ const CATEGORY = 838;
 const WINDOW = 10_000;
 /** Incremental runs re-check listings changed this long before the last run's start. */
 const SINCE_MARGIN_MS = 2 * 3_600_000;
+/** How far back an incremental run without a last run looks: a day, as a daily run would. */
+const FIRST_RUN_LOOKBACK_MS = 24 * 3_600_000;
+/**
+ * Most results in one full-run slice, by default: its detail pages take about 40 minutes
+ * (1 request a second), so a run cut off at its time limit loses little of a slice.
+ */
+const SLICE_LIMIT = 2_000;
 /** Upper bound of the bisected price bands, CZK; one open band above it. */
 const PRICE_TOP = 2 ** 27;
 /** Earliest year in scope, of manufacture or else first registration (`vehicle_age_from`). */
@@ -60,13 +70,13 @@ export interface SautoOptions {
   manufacturerModel?: string;
   /** Results per search page. Default 100. */
   pageSize?: number;
-  /** A full-run slice with more results than this is halved by price. Default 9,500. */
+  /** A full-run slice with more results than this is halved by price. Default 2,000. */
   sliceLimit?: number;
 }
 
 export function sautoSource(options: SautoOptions = {}): Source {
   const pageSize = options.pageSize ?? 100;
-  const sliceLimit = Math.min(options.sliceLimit ?? 9_500, WINDOW - pageSize);
+  const sliceLimit = Math.min(options.sliceLimit ?? SLICE_LIMIT, WINDOW - pageSize);
   const filter = options.manufacturerModel;
   return {
     id: "sauto",
@@ -93,8 +103,6 @@ interface Query {
 class Run {
   /** Refs already yielded in this run: pages overlap and bumped listings shift between them. */
   private readonly done = new Set<string>();
-  /** `checkpoint.isKnown` as it was before this run yielded the listing. */
-  private readonly knownBefore = new Map<string, boolean>();
   private readonly ctx: HarvestContext;
   private readonly filter: string | undefined;
   private readonly pageSize: number;
@@ -106,51 +114,49 @@ class Run {
   }
 
   /**
-   * `sorting_date` is never earlier than a listing's creation, so everything new or changed
-   * since the last run sits above it in the order: with a last run the walk ends at the first
-   * page older than it; on a first run, at the first page of known listings. Reaching the
-   * 10,000-result window after a last run means changes went unseen, so the run fails rather
-   * than complete and move `lastRunAt` past them; a full run catches up.
+   * New listings: those created since the last run (a day back on a first run) that the
+   * Ledger does not know. `sorting_date` is never earlier than a listing's creation, so they
+   * all sit above the last run in the order, and the walk ends at the first page older than
+   * it. The listings above it are mostly not new: top-ups move some 5,000 older listings a
+   * day up the order (95 of the newest 100 on 2026-10-28), and a detail page each would take
+   * longer than the hour the run may have. Those, known or not, wait for the census.
+   * Reaching the 10,000-result window after a last run means new listings may have gone
+   * unseen, so the run fails rather than complete and move `lastRunAt` past them; a full
+   * run catches up.
    */
   async *incremental(): AsyncIterable<Observation> {
-    const { checkpoint } = this.ctx;
-    const since = checkpoint.lastRunAt
-      ? pragueLocal(new Date(checkpoint.lastRunAt.getTime() - SINCE_MARGIN_MS))
-      : undefined;
+    const { checkpoint, now } = this.ctx;
+    const from = checkpoint.lastRunAt
+      ? checkpoint.lastRunAt.getTime() - SINCE_MARGIN_MS
+      : now.getTime() - FIRST_RUN_LOOKBACK_MS;
+    const since = pragueLocal(new Date(from));
+    let older = 0;
     for (let offset = 0; offset + this.pageSize <= WINDOW; offset += this.pageSize) {
       const page = await this.search({ conditions: CONDITION_SEOS, offset });
-      // A first run stops at a page of known listings; a page with none in scope proves nothing.
-      let more = since === undefined && page.items.every(isSkipped);
+      let more = false;
       for (const item of page.items) {
-        const ref = refOf(item);
         // Skipped listings never become known, so only their timestamp keeps the walk going.
-        const skipped = isSkipped(item);
-        // Known as of the run's start: a page repeated after its listings were yielded (and
-        // recorded) must not read as a page of known ones.
-        const known = ref !== undefined && this.wasKnown(ref);
-        const changed = since !== undefined && text(item.sorting_date) >= since;
-        if (since !== undefined ? changed : !known && !skipped) more = true;
-        if (!skipped && (!known || changed)) yield* this.listing(item);
+        if (text(item.sorting_date) < since) continue;
+        more = true;
+        if (isSkipped(item)) continue;
+        const ref = refOf(item);
+        if (ref !== undefined && this.ctx.checkpoint.isKnown(ref)) continue;
+        if (text(item.create_date) >= since) yield* this.listing(item);
+        else older++;
       }
       if (!more || page.items.length < this.pageSize || offset + this.pageSize >= page.total) {
+        this.ctx.log.info("sauto incremental left changed older listings to the census", {
+          older,
+        });
         return;
       }
     }
-    if (since !== undefined) {
+    if (checkpoint.lastRunAt) {
       throw new Error(
         `Sauto incremental reached the ${WINDOW}-result window before the last run; run a full harvest`,
       );
     }
     this.ctx.log.warn("sauto first incremental run stopped at the 10,000-result window");
-  }
-
-  private wasKnown(ref: string): boolean {
-    let known = this.knownBefore.get(ref);
-    if (known === undefined) {
-      known = this.ctx.checkpoint.isKnown(ref);
-      this.knownBefore.set(ref, known);
-    }
-    return known;
   }
 
   /** The census: every band, then a failure naming the bands that came out short. */
