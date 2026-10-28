@@ -8,7 +8,13 @@ import {
 } from "@cca/bundle";
 import { openCatalog } from "@cca/catalog";
 import { type Ledger, openLedger } from "@cca/ledger";
-import type { ListingSeen, ListPrice, Market, Observation } from "@cca/vocabulary";
+import type {
+  ListingSeen,
+  ListPrice,
+  Market,
+  Observation,
+  OpenpilotSupport,
+} from "@cca/vocabulary";
 import { afterEach, describe, expect, it } from "vitest";
 import { publish } from "./index.ts";
 import { syntheticRuns } from "./synthetic.ts";
@@ -618,6 +624,48 @@ describe("publish: determinism and scale", { timeout: 60_000 }, () => {
     const b = await synthetic(1_500, true);
     expect([...b.keys()]).toEqual([...a.keys()]);
     for (const [path, text] of a) expect(b.get(path), path).toBe(text);
+  });
+
+  it("gives each Variant its best openpilot level with that level's years, and the model all rows", async () => {
+    ledger = newLedger();
+    const row = (model: string, years: number[], level: OpenpilotSupport["level"]) =>
+      ({
+        kind: "OpenpilotSupport",
+        ref: `${model} ${years.join(",")}`,
+        make: "Volkswagen",
+        model,
+        years,
+        level,
+        market: "US",
+        url: "https://comma.ai/vehicles#volkswagen",
+      }) satisfies OpenpilotSupport;
+    await record("rsv", "2026-10-01", [golfEntry, tiguanEntry]);
+    await record("comma-openpilot", "2026-10-02", [
+      row("Golf", [2023], "dashcam"),
+      row("Golf GTI", [2021, 2022], "community"),
+      row("Golf", [2024], "upstream"),
+      row("Golf", [2021, 2022], "upstream"),
+      row("Tiguan", [2024, 2025], "community"),
+    ]);
+    const bundle = await open("2026-10-24");
+    const levels = Object.fromEntries(
+      (await bundle.catalog()).variants.map((v) => [v.id, v.openpilot]),
+    );
+    // Upstream wins; its years unite; the dashcam year is another level's and stays out.
+    expect(levels).toEqual({
+      "volkswagen/golf/mk8/hatchback-petrol-110kw": {
+        level: "upstream",
+        years: [2021, 2022, 2024],
+      },
+      [tiguanId]: { level: "community", years: [2024, 2025] },
+    });
+    const golf = await bundle.model("volkswagen/golf");
+    expect(golf?.openpilot?.map((r) => [r.model, r.years, r.level])).toEqual([
+      ["Golf", [2021, 2022], "upstream"],
+      ["Golf", [2024], "upstream"],
+      ["Golf GTI", [2021, 2022], "community"],
+      ["Golf", [2023], "dashcam"],
+    ]);
   });
 
   it("produces a Bundle the catalog query engine reads back consistently", async () => {

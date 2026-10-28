@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { emptyCheckpoint, type HarvestContext, type HarvestMode, silentLogger } from "../source.ts";
 import { commaOpenpilotSource } from "./comma-openpilot.ts";
 
-// Recorded 2026-10-28 from both CARS.md files, trimmed by hand to 22 list rows and 11 detail rows.
+// Recorded 2026-10-28 from both CARS.md files, trimmed by hand to 23 list rows and 11 detail rows.
 const fixture = new URL("./fixtures/list.cassette.json", import.meta.url);
 const now = new Date("2026-10-28T22:00:00Z");
 
@@ -43,8 +43,8 @@ function editBody(repo: "opendbc" | "openpilot", change: (body: string) => strin
 describe("comma-openpilot source", () => {
   it("full run yields every car on the list with its details", async () => {
     const rows = await harvest("full");
-    expect(rows).toHaveLength(21);
-    expect(new Set(rows.map((r) => r.ref)).size).toBe(21);
+    expect(rows).toHaveLength(22);
+    expect(new Set(rows.map((r) => r.ref)).size).toBe(22);
     // comma's own robot has no model years and is not a car.
     expect(rows.some((r) => r.make === "comma")).toBe(false);
 
@@ -148,6 +148,9 @@ describe("comma-openpilot source", () => {
     expect(fuel("Toyota|Prius Prime 2017-20|All")).toBe("phev");
     expect(fuel("Kia|Ceed Plug-in Hybrid 2021|Smart Cruise Control (SCC)")).toBe("phev");
     expect(fuel("Hyundai|Tucson Diesel 2019|Smart Cruise Control (SCC)")).toBe("diesel");
+    expect(fuel("Volkswagen|Golf GTE 2015-20|Adaptive Cruise Control (ACC) & Lane Assist")).toBe(
+      "phev",
+    );
     expect(fuel("MG|5 EV 2021|All")).toBe("bev");
     expect(
       fuel("Hyundai|Kona Electric (with HDA II, Korea only) 2023|Smart Cruise Control (SCC)"),
@@ -223,7 +226,7 @@ describe("comma-openpilot source", () => {
         "full",
         editBody("opendbc", (b) => b.replace(/^\|Toyota\|Camry 2018-20\|.*\n/m, "")),
       ),
-    ).rejects.toThrow(/22 cars declared, 21 rows/);
+    ).rejects.toThrow(/23 cars declared, 22 rows/);
     // A blank line cuts the details table short.
     await expect(
       harvest(

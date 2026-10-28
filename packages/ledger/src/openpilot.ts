@@ -44,11 +44,20 @@ const COMBUSTION: ReadonlySet<Fuel> = new Set(["petrol", "diesel", "lpg", "cng"]
 const NO_ENGINE: ReadonlySet<Fuel> = new Set(["bev", "hydrogen"]);
 
 /**
- * A Variant whose production began this many years or more before a row's first model year
- * is an earlier car the register files under the same Generation (one type approval can span
- * two designs), not the one the list rates.
+ * One design rarely runs longer than this; a Generation that does, up to a row's last year, is
+ * a register type spanning designs (Tiguan 5N 2008-2024). Its Variants that began
+ * EARLIER_CAR_YEARS or more before the row's first model year are the earlier car, not the
+ * one the list rates.
  */
+const ONE_DESIGN_YEARS = 10;
 const EARLIER_CAR_YEARS = 4;
+
+/**
+ * Register types that span designs whose Variants the rules above cannot tell apart, checked
+ * against the real catalog (ADR 0016): no row is placed on them. The Civic FK files the
+ * Civic VIII, IX and X hatchbacks (2006-2021) under one type, often at one power.
+ */
+const SPANS_DESIGNS: ReadonlySet<string> = new Set(["honda/civic/fk"]);
 
 /**
  * Places openpilot list rows on the catalog, precision first: a car wrongly shown as
@@ -87,7 +96,7 @@ export function matchOpenpilot(
     const placedOnModel = { ...unplaced, modelId };
     if (!namesSameCar(row.model, modelNames.get(modelId) ?? "")) return placedOnModel;
     const generation = generationFor(row.years, generationsOf.get(modelId) ?? []);
-    if (!generation) return placedOnModel;
+    if (!generation || SPANS_DESIGNS.has(generation.id)) return placedOnModel;
 
     const first = row.years[0] as number;
     // Electrified versions are listed under their own names ("Kona Electric", "Kuga
@@ -95,6 +104,8 @@ export function matchOpenpilot(
     // model has no engine at all (Ioniq 5). A hybrid-only Generation (the European
     // Corolla) is not the plain row's car: its hybrid is listed on its own.
     const engineless = generation.variants.every((v) => NO_ENGINE.has(v.fuel));
+    const last = row.years[row.years.length - 1] as number;
+    const spansDesigns = Math.min(generation.to, last) - generation.from > ONE_DESIGN_YEARS;
     const fits = generation.variants.filter((v) => {
       const to = v.years.to ?? Number.POSITIVE_INFINITY;
       // Two shared years at least (or all of a one-year row or Variant): a Variant that
@@ -103,7 +114,7 @@ export function matchOpenpilot(
       return (
         (row.fuel ? v.fuel === row.fuel : engineless || COMBUSTION.has(v.fuel)) &&
         shared >= Math.min(2, row.years.length, to - v.years.from + 1) &&
-        v.years.from > first - EARLIER_CAR_YEARS
+        (!spansDesigns || v.years.from > first - EARLIER_CAR_YEARS)
       );
     });
     if (fits.length === 0) return placedOnModel;
@@ -135,21 +146,26 @@ function namesSameCar(listed: string, catalog: string): boolean {
  * more than any other, more than half of them, and at least two (or the row's only year).
  * Model years run ahead of production years, so a year shared with the next Generation
  * decides nothing, and a row mostly outside the Generation the catalog has ("Golf GTI
- * 2015-21" on a catalog with only the Golf VIII) belongs to one it lacks. Generations that
- * each hold every year of a row of two or more are one register type nested in a wider one
- * ("Octavia 5E" in "Octavia SE"): the narrowest is taken.
+ * 2015-21" on a catalog with only the Golf VIII) belongs to one it lacks. When several hold
+ * every year of a row of two or more, the register has filed one type inside a wider one
+ * ("Octavia 5E" 2013-2020 inside "Octavia SE" 2000-2019): the one inside all the others,
+ * give or take a year at either end (register years are percentiles, ADR 0011), is taken if
+ * it is the only one; otherwise none.
  */
 function generationFor(years: number[], generations: Generation[]): Generation | null {
   const scored = generations
     .map((g) => ({ g, overlap: years.filter((y) => y >= g.from && y <= g.to).length }))
     .filter((s) => s.overlap > 0)
-    .sort((a, b) => b.overlap - a.overlap || a.g.to - a.g.from - (b.g.to - b.g.from));
+    .sort((a, b) => b.overlap - a.overlap);
   const [best, second] = scored;
   if (!best || best.overlap < Math.min(2, years.length) || best.overlap * 2 <= years.length) {
     return null;
   }
   if (!second || second.overlap < best.overlap) return best.g;
-  const nested = years.length >= 2 && best.overlap === years.length;
-  const narrower = best.g.to - best.g.from < second.g.to - second.g.from;
-  return nested && narrower ? best.g : null;
+  if (years.length < 2 || best.overlap < years.length) return null;
+  const tied = scored.filter((s) => s.overlap === best.overlap).map((s) => s.g);
+  const inside = (a: Generation, b: Generation) =>
+    a.from >= b.from - 1 && a.to <= b.to + 1 && (a.from > b.from || a.to < b.to);
+  const innermost = tied.filter((g) => tied.every((other) => other === g || inside(g, other)));
+  return innermost.length === 1 ? (innermost[0] as Generation) : null;
 }

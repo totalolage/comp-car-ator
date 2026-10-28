@@ -728,9 +728,39 @@ describe("Ledger", () => {
       // A Variant ending in the row's first year, an earlier car filed under the same
       // type, and the e-Golf.
       variant("Golf", mk7, "petrol", 63, { from: 2013, to: 2015 }),
-      variant("Golf", mk7, "diesel", 77, { from: 2009, to: 2016 }),
+      variant("Golf", wide, "diesel", 77, { from: 2009, to: 2016 }),
       variant("Golf", mk7, "bev", 100, { from: 2014, to: 2020 }),
       variant("Golf", wide, "petrol", 59, { from: 2004, to: 2019 }),
+      // One type over two designs: the earlier car's Variant runs on into the later one's.
+      variant(
+        "Santa Fe",
+        { slug: "tm", name: "Santa Fe TM", from: 2008, to: 2024 },
+        "petrol",
+        110,
+        {
+          from: 2008,
+          to: 2020,
+        },
+      ),
+      variant(
+        "Santa Fe",
+        { slug: "tm", name: "Santa Fe TM", from: 2008, to: 2024 },
+        "diesel",
+        147,
+        {
+          from: 2018,
+          to: 2024,
+        },
+      ),
+      // Two types that overlap without one inside the other.
+      variant("Tucson", { slug: "a", name: "Tucson A", from: 2010, to: 2020 }, "petrol", 70, {
+        from: 2010,
+        to: 2020,
+      }),
+      variant("Tucson", { slug: "b", name: "Tucson B", from: 2015, to: 2022 }, "petrol", 71, {
+        from: 2015,
+        to: 2022,
+      }),
       variant("Golf", mk8, "petrol", 110, { from: 2020 }),
       variant("Kona", kona, "petrol", 88, { from: 2017, to: 2023 }),
       variant("Kona", kona, "bev", 150, { from: 2018, to: 2023 }),
@@ -761,7 +791,7 @@ describe("Ledger", () => {
       await run("rsv", "full", "2026-10-01", catalog);
       await run("comma-openpilot", "full", "2026-10-02", [
         // Mostly Golf VII: not Golf VIII, nor a Golf VII Variant built only before 2015 or
-        // from years before, nor the e-Golf, which is listed on its own.
+        // ending in 2015, nor the e-Golf, which is listed on its own.
         row("Golf", [2015, 2016, 2017, 2018, 2019, 2020]),
         // Wholly inside both Golf VII and the wider type: the narrower one.
         row("Golf R", [2015, 2016, 2017, 2018]),
@@ -775,6 +805,9 @@ describe("Ledger", () => {
         row("Kona", [2022], { market: "China", europe: false }),
         // Mostly before the only Kona Generation the catalog has.
         row("Kona", [2015, 2016, 2017, 2018]),
+        // Wholly inside two types, neither inside the other.
+        row("Tucson", [2016, 2017]),
+        row("Santa Fe", [2019, 2020, 2021]),
         row("Golf Cabriolet", [2016]),
       ]);
       expect(placed()).toEqual({
@@ -794,6 +827,11 @@ describe("Ledger", () => {
         ],
         "Kona 2022": [null, []],
         "Kona 2015,2016,2017,2018": ["hyundai/kona", []],
+        "Tucson 2016,2017": ["hyundai/tucson", []],
+        "Santa Fe 2019,2020,2021": [
+          "hyundai/santa-fe",
+          ["hyundai/santa-fe/tm/hatchback-diesel-147kw"],
+        ],
         "Golf Cabriolet 2016": ["volkswagen/golf", []],
       });
       const kona = ledger.snapshot().openpilot.find((m) => m.row.endsWith("Kona 2020"));

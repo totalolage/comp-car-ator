@@ -225,9 +225,13 @@ function expandYears(text: string, cell: string): number[] {
   return years;
 }
 
-/** Fuel only from words in the model name; "e-tron", "eHybrid" or "GTE" stay undefined. */
+/**
+ * Fuel only from words in the model name. Volkswagen's GTE and eHybrid are its plug-in hybrid
+ * names (Golf GTE, Arteon eHybrid); "e-tron" names both a plug-in and an electric Audi, so
+ * it stays undefined.
+ */
 function parseFuel(make: string, model: string): Fuel | undefined {
-  if (/\bPlug-in Hybrid\b|\bPHEV\b/i.test(model)) return "phev";
+  if (/\bPlug-in Hybrid\b|\bPHEV\b|\bGTE\b|\beHybrid\b/i.test(model)) return "phev";
   if (make === "Toyota" && /\bPrime\b/.test(model)) return "phev";
   if (/\bHybrid\b/.test(model)) return "hev";
   if (/\bDiesel\b/.test(model)) return "diesel";
