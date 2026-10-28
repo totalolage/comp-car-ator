@@ -17,8 +17,11 @@ export const PRICE_FLOOR_CZK = 10_000;
 const FENCE_MIN_COUNT = 8;
 const FENCE_IQR_FACTOR = 3;
 
-/** Cells with fewer Listings are left out of `ModelFile.stats`. */
-const MIN_CELL_COUNT = 3;
+/**
+ * Fewer values give no quantiles (ADR 0012): no cell in `ModelFile.stats`, no quantiles in a
+ * catalog row. Otherwise a single mispriced Listing would be its Variant's median.
+ */
+const MIN_SAMPLE = 3;
 
 export interface Fences {
   /** Bounds on ln(price CZK). */
@@ -47,9 +50,9 @@ export function isOutlier(priceCzk: number, cohort: Fences | null): boolean {
   return log < cohort.low || log > cohort.high;
 }
 
-/** p10, median and p90 by linear interpolation, rounded; null for no values. */
+/** p10, median and p90 by linear interpolation, rounded; null under MIN_SAMPLE values. */
 export function quantiles(values: number[]): Quantiles | null {
-  if (values.length === 0) return null;
+  if (values.length < MIN_SAMPLE) return null;
   const sorted = Float64Array.from(values).sort();
   return {
     count: sorted.length,
@@ -106,16 +109,11 @@ export function priceCells(listings: Iterable<CellInput>): PriceCell[] {
     }
   }
   return [...cells.values()]
-    .filter((c) => c.prices.length >= MIN_CELL_COUNT)
     .sort((a, b) => compareKeys(a.key, b.key))
-    .map(({ key: [variantId, market, condition, year, band], prices }) => ({
-      variantId,
-      market,
-      condition,
-      year,
-      band,
-      ...(quantiles(prices) as Quantiles),
-    }));
+    .flatMap(({ key: [variantId, market, condition, year, band], prices }) => {
+      const q = quantiles(prices);
+      return q ? [{ variantId, market, condition, year, band, ...q }] : [];
+    });
 }
 
 type CellKey = [VariantId | null, Market, Condition, number | null, OdometerBand | null];

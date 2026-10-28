@@ -332,10 +332,6 @@ function quantile(sorted: Float64Array, p: number): number {
   return a + ((sorted[hi] as number) - a) * (i - lo);
 }
 
-/**
- * Asking price (CZK) per Variant and Market over its active used Listings, from the
- * published cells; a missing entry had fewer than 3 Listings.
- */
 /** Rows of a model page's Variants table when fewer Variants have listings or prices. */
 export const VARIANT_ROWS = 30;
 
@@ -357,6 +353,10 @@ export function listedVariants(
   return view.variants.filter((v) => listed.has(v.id) || room-- > 0);
 }
 
+/**
+ * Asking price (CZK) per Variant and Market over its active used Listings, from the
+ * published cells; a missing entry had fewer than 3 Listings.
+ */
 export function variantMedians(
   view: Pick<ModelView, "stats">,
 ): Record<string, Partial<Record<Market, number>>> {
