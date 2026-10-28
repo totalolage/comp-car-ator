@@ -469,7 +469,8 @@ main:focus {
   background: var(--panel);
 }
 
-.button-quiet:disabled {
+.button-quiet:disabled,
+.button-quiet[aria-disabled="true"] {
   color: var(--muted);
   cursor: default;
   opacity: 0.6;

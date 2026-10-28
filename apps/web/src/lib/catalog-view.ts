@@ -71,7 +71,8 @@ export function withoutScope(state: CatalogState, scope: VariantFilters = {}): C
  * same filters. Body, fuel and power come with the Variant: as listing filters they would
  * test each Listing's own fields and drop the Variant's Listings that state none. Make and
  * model are the page itself; seats, consumption and new price have no Listing counterpart.
- * A Variant without Listings is not pinned (the model page has none to show for it).
+ * A Variant without used Listings (all the catalog counts) is not pinned: most such Variants
+ * have no Listings at all, and the model page would open empty on an unnamed Variant.
  */
 export function listingStateFor(
   filters: VariantFilters,

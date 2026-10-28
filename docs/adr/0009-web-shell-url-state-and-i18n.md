@@ -83,8 +83,9 @@ and hash, so switching language keeps the view.
 - A catalog row's model link carries the view into the model page's listing state
   (2026-10-28): the row's Variant plus the catalog filters a Listing has a counterpart for
   (gearbox, country, source, years as registration years, odometer, used price as asking
-  price, the last two with condition "used", as in the catalog). A Variant without Listings
-  is not pinned. Body, fuel and power come with the Variant rather than as listing filters, which
+  price, the last two with condition "used", as in the catalog). A Variant without used
+  Listings (the only ones the catalog counts) is not pinned: most have none at all, and the
+  page would open empty on a Variant it has no name for. Body, fuel and power come with the Variant rather than as listing filters, which
   test each Listing's own fields and would drop the Variant's Listings that state none;
   make and model are the page; seats, consumption and new price stay behind. The catalog
   island only writes the link (`listingStateFor` in `lib/catalog-view.ts`, kept out of the
