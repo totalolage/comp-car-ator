@@ -422,7 +422,7 @@ function toListingSeen(raw: Raw, condition: Condition, country: "DE" | "AT"): Li
   // shows only make + version text, so that text is the model as shown.
   const model = text(v.model) || version;
   const trim = text(v.model) ? version || undefined : undefined;
-  const fuel = fuelOf(raw?.tracking?.fuelType, version);
+  const fuel = fuelOf(raw?.tracking?.fuelType, version, text(v.make));
   const consumption = details.water_drop ?? details.lightning_bolt;
   const vehicle: VehicleDescriptor = {
     make: text(v.make),
@@ -487,11 +487,15 @@ const FUELS: Record<string, Fuel> = {
   o: "other",
 };
 
-/** Hybrid codes cover HEV and PHEV; only a version text that says plug-in tells them apart. */
-function fuelOf(code: unknown, version: string): Fuel | undefined {
+/**
+ * Hybrid codes cover HEV and PHEV; only a version text that says plug-in tells them apart.
+ * "e-Hybrid" is the Volkswagen group's plug-in badge, but Jeep's 48 V mild hybrid.
+ */
+function fuelOf(code: unknown, version: string, make: string): Fuel | undefined {
   const value = text(code).toLowerCase();
   if (value === "2" || value === "3") {
-    return /plug-?in|phev|e-?hybrid/i.test(version) ? "phev" : undefined;
+    const plugIn = make.toLowerCase() === "jeep" ? /plug-?in|phev/i : /plug-?in|phev|e-?hybrid/i;
+    return plugIn.test(version) ? "phev" : undefined;
   }
   return FUELS[value];
 }

@@ -51,16 +51,18 @@ export type FuelWording = readonly [allowed: readonly Fuel[], pattern: RegExp];
 
 /**
  * Hybrid and electric wording, with the fuels each allows; a text naming several allows what
- * they share. Mild hybrids ("eTSI", "mHEV") are catalogued under their combustion fuel. One
- * make's badges ("GTE", "iV") are in aliases.ts: an Opel GTE is a petrol car.
+ * they share. Mild hybrids ("eTSI", "mHEV", "m-HEV") are catalogued under their combustion fuel. One
+ * make's badges ("GTE", "iV", "e-Hybrid") are in aliases.ts: an Opel GTE is a petrol car, a
+ * Jeep e-Hybrid a mild hybrid.
  */
 const ELECTRIFIED: FuelWording[] = [
-  [["phev"], word("plug-? ?in|phev|e-?hybrid")],
+  [["phev"], word("plug-? ?in|phev")],
   [["bev"], word("bev|ev")],
-  [["hev"], word("hev|full ?hybrid|voll-?hybrid[a-z]*|self-? ?charging")],
+  // "m-HEV" is a mild hybrid.
+  [["hev"], word("(?<!m-)hev|full ?hybrid|voll-?hybrid[a-z]*|self-? ?charging")],
   [["hev", "phev"], word("(?<!mild[- ]?)hybrid[a-z]*")],
   [["hev", "phev", "bev", "reev"], word("elektro|elektroauto|elektromotor|elektrisch")],
-  [["petrol", "diesel", "hev"], word("mhev|mild[- ]?hybrid|48 ?v|etsi")],
+  [["petrol", "diesel", "hev"], word("m-?hev|mild[- ]?hybrid|48 ?v|e-?tsi")],
 ];
 
 const TRANSMISSION: [Transmission, RegExp][] = [

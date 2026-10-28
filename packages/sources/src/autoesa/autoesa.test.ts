@@ -272,23 +272,38 @@ describe("autoesa source", () => {
     expect(listings(again)).toHaveLength(31);
   });
 
+  /** Listing 414464866 as a "hybridní" car with the given title. */
+  const hybridVehicle = async (title: string) => {
+    const hybrid = body((b) =>
+      b
+        .replace(/"title": "[^"]*"/, `"title": "${title}"`)
+        .replace("<span>benzín</span>", "<span>hybridní</span>"),
+    );
+    const cassette = edit(await loadCassette(incremental), "/414464866", hybrid);
+    const os = await harvest(cassette, { mode: "incremental", known: await known() });
+    return listings(os).find((o) => o.ref === "414464866")?.vehicle;
+  };
+
   it("a hybrid is a plug-in only when its title says so", async () => {
-    const hybrid = (title: string) =>
-      body((b) =>
-        b
-          .replace(/"title": "[^"]*"/, `"title": "${title}"`)
-          .replace("<span>benzín</span>", "<span>hybridní</span>"),
-      );
-    const fuelOf = async (title: string) => {
-      const cassette = edit(await loadCassette(incremental), "/414464866", hybrid(title));
-      const os = await harvest(cassette, { mode: "incremental", known: await known() });
-      return listings(os).find((o) => o.ref === "414464866")?.vehicle;
-    };
-    expect((await fuelOf("Škoda Fabia III 1.4 Hybrid"))?.fuel).toBeUndefined();
-    expect(await fuelOf("Škoda Fabia III 1.4 TSI iV Style")).toMatchObject({
+    expect((await hybridVehicle("Škoda Fabia III 1.4 Hybrid"))?.fuel).toBeUndefined();
+    expect(await hybridVehicle("Škoda Fabia III 1.4 TSI iV Style")).toMatchObject({
       fuel: "phev",
       trim: "1.4 TSI iV Style",
     });
+    expect((await hybridVehicle("Kia Niro 1.6 GDi Plug in Hybrid"))?.fuel).toBe("phev");
+  });
+
+  it("a mild hybrid goes under its engine's fuel, and generation IV is no iV badge", async () => {
+    const fuelOf = async (title: string) => (await hybridVehicle(title))?.fuel;
+    expect(await fuelOf("Škoda Octavia IV 1.5 TSi m-HEV Selection")).toBe("petrol");
+    expect(await fuelOf("Škoda Octavia IV 1.5 eTSI Style")).toBe("petrol");
+    expect(await fuelOf("Audi A4 2.0 TDI 48V mild hybrid")).toBe("diesel");
+    expect(await fuelOf("Škoda Octavia IV Hybrid Style")).toBeUndefined();
+    // Mild wording without one engine code, or beside a plug-in marker, says no fuel.
+    expect(await fuelOf("Jeep Renegade 1.5 48V e-Hybrid")).toBeUndefined();
+    expect(await fuelOf("Škoda Octavia 1.5 TSI 2.0 TDI m-HEV")).toBeUndefined();
+    expect(await fuelOf("Škoda Superb 1.5 eTSI PHEV")).toBeUndefined();
+    expect(await fuelOf("Škoda Octavia IV 1.4 TSI iV Style")).toBe("phev");
   });
 
   it("a sold or removed listing yields ListingGone", async () => {

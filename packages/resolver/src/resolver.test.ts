@@ -878,6 +878,22 @@ describe("Resolver", () => {
       });
     });
 
+    it("reads e-Hybrid as a Volkswagen plug-in but a Jeep mild hybrid", () => {
+      const compass = createResolver(
+        variants("Jeep", "Compass", { slug: "mp", name: "Compass II", from: 2017 }, [
+          { body: "suv", fuel: "hev", powerKw: 96, transmissions: ["automatic"] },
+          { body: "suv", fuel: "phev", powerKw: 96, transmissions: ["automatic"] },
+        ]),
+      );
+      expect(
+        compass.resolve({ make: "Jeep", model: "Compass", trim: "1.5 T4 48V e-Hybrid 96 kW" }),
+      ).toMatchObject({ status: "matched", variantId: "jeep/compass/mp/suv-hev-96kw" });
+      expect(golf.resolve({ ...vw, trim: "1.4 TSI eHybrid 150 kW DSG" })).toMatchObject({
+        status: "matched",
+        variantId: "volkswagen/golf/mk8/hatchback-phev-150kw",
+      });
+    });
+
     it("reads a plug-in hybrid from its wording, and a mild hybrid by its stated fuel", () => {
       expect(
         golf.resolve({ ...vw, model: "Golf GTE", trim: "1.4 TSI Plug-in Hybrid 150 kW DSG" }),
@@ -885,12 +901,16 @@ describe("Resolver", () => {
         status: "matched",
         variantId: "volkswagen/golf/mk8/hatchback-phev-150kw",
       });
-      expect(
-        golf.resolve({ ...vw, fuel: "petrol", trim: "1.5 eTSI Mild-Hybrid 110 kW DSG" }),
-      ).toMatchObject({
-        status: "matched",
-        variantId: "volkswagen/golf/mk8/hatchback-petrol-110kw",
-      });
+      for (const trim of [
+        "1.5 eTSI Mild-Hybrid 110 kW DSG",
+        "1.5 e-TSI 110 kW DSG",
+        "1.5 TSI m-HEV 110 kW DSG",
+      ]) {
+        expect(golf.resolve({ ...vw, fuel: "petrol", trim })).toMatchObject({
+          status: "matched",
+          variantId: "volkswagen/golf/mk8/hatchback-petrol-110kw",
+        });
+      }
     });
   });
 

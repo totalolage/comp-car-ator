@@ -330,6 +330,32 @@ describe("autoscout24 source", () => {
     expect(newHybrid?.vehicle.fuel).toBeUndefined();
   });
 
+  it("reads Jeep's e-Hybrid as a mild hybrid, the Volkswagen group's as a plug-in", async () => {
+    const fuelOf = async (make: string, version: string) => {
+      const run = await harvest(
+        deFull,
+        autoscout24Source(DE),
+        "full",
+        {},
+        editPages(
+          () => true,
+          (page) => {
+            for (const l of page.listings ?? []) {
+              if (l.id !== "ebb7bf2f-4b57-4761-bcd9-a36ad0488cce") continue;
+              l.vehicle.make = make;
+              l.vehicle.modelVersionInput = version;
+            }
+          },
+        ),
+      );
+      return listings(run).find((l) => l.ref === "ebb7bf2f-4b57-4761-bcd9-a36ad0488cce")?.vehicle
+        .fuel;
+    };
+    expect(await fuelOf("Jeep", "Avenger 1.2 48V e-Hybrid Altitude")).toBeUndefined();
+    expect(await fuelOf("Jeep", "Compass 1.3 4xe Plug-in Hybrid")).toBe("phev");
+    expect(await fuelOf("Volkswagen", "Golf 1.5 eTSI eHybrid DSG")).toBe("phev");
+  });
+
   it("maps AT listings onto ListingSeen", async () => {
     const run = await harvest(atFull, autoscout24Source(AT), "full");
     expect(run.error).toBeUndefined();

@@ -470,15 +470,33 @@ const BODY_SLUGS: Record<string, Body> = {
   "chladici-mrazici": "other",
 };
 
+const PLUG_IN = /(?<![a-z0-9])(?:plug[\s-]?in|phev)(?![a-z0-9])/i;
+/** Škoda's plug-in badge keeps its case: "Octavia IV" is the fourth generation. */
+const SKODA_IV = /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/;
+const MILD = /(?<![a-z0-9])(?:m-?hev|mild[\s-]?hybrid|e-?tsi|48\s?v)(?![a-z0-9])/i;
+const MILD_PETROL = /(?<![a-z0-9])(?:e-?tsi|tsi|tfsi)(?![a-z0-9])/i;
+const MILD_DIESEL = /(?<![a-z0-9])tdi(?![a-z0-9])/i;
+
 /**
  * The site's "Palivo" values. "hybridní" does not tell a full or mild hybrid from a plug-in,
- * so it stays undefined unless the title marks a plug-in ("PHEV", "Plug-in", Škoda "iV").
+ * so it stays undefined unless the title marks one. A plug-in says "PHEV", "Plug-in" or
+ * Škoda's "iV" (not "e-Hybrid": Jeep's is a mild hybrid); a mild hybrid ("m-HEV", "eTSI",
+ * "48V") goes under its engine's fuel, as the catalog lists it, when the engine code tells it.
  */
 function fuel(value: string, title: string): Fuel | undefined {
   const v = value.toLowerCase();
   if (v.startsWith("lpg")) return "lpg";
   if (v.startsWith("cng")) return "cng";
-  if (v.startsWith("hybrid")) return /plug-in|phev|\biV\b/i.test(title) ? "phev" : undefined;
+  if (v.startsWith("hybrid")) {
+    const plugIn = PLUG_IN.test(title) || SKODA_IV.test(title);
+    if (MILD.test(title)) {
+      const petrol = MILD_PETROL.test(title);
+      const diesel = MILD_DIESEL.test(title);
+      if (plugIn || petrol === diesel) return undefined;
+      return petrol ? "petrol" : "diesel";
+    }
+    return plugIn ? "phev" : undefined;
+  }
   return ({ benzín: "petrol", nafta: "diesel", elektro: "bev" } as Record<string, Fuel>)[v];
 }
 
