@@ -16,12 +16,22 @@ const knownRefs = new URL("./fixtures/incremental.known.json", import.meta.url);
 // /ojete?2015-2015=&262000-266000kc=, recorded 2026-10-27 (T1) and trimmed the same way, filed
 // under the URL of the slice used:2015: 14 listings in CZK and a Dubai dealer's in EUR.
 const foreign = new URL("./fixtures/foreign-currency.cassette.json", import.meta.url);
+// /ojete?2000-2000= split by price under a cap of 20 listings, recorded 2026-10-28 (T1) with
+// the real adapter and trimmed the same way, each URL's identical repeats (recounts) dropped:
+// replay serves a URL's last recording again. 62 listings, one of them "Dohodou".
+const split = new URL("./fixtures/split.cassette.json", import.meta.url);
 const now = new Date("2026-10-25T17:36:00Z");
 const FULL_SLICES = ["used:2000", "used:2001"];
 const FOREIGN_RUN = {
   mode: "full",
   options: { slices: ["used:2015"] },
   now: new Date("2026-10-27T21:40:00Z"),
+} as const;
+
+const SPLIT_RUN = {
+  mode: "full",
+  options: { slices: ["used:2000"], sliceCap: 20 },
+  now: new Date("2026-10-28T23:11:06Z"),
 } as const;
 
 interface Run {
@@ -113,6 +123,35 @@ const other = (ref: string) => (b: string) => {
     .replace(/(advertisement-name__title">\s*<h3>)[^<]*/, "$1 Ostatní ");
   return b.slice(0, start) + card + (end < 0 ? "" : b.slice(end));
 };
+
+/** Each card's markup on the list pages of `cassette`, by ref. */
+function cardsOf(cassette: Cassette): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const x of cassette.interactions) {
+    for (const chunk of x.response.body.split(CARD).slice(1)) {
+      out.set(chunk.slice(0, chunk.indexOf('"')), CARD + chunk.replace("</body></html>", ""));
+    }
+  }
+  return out;
+}
+
+/** A list page that reports `total` listings and serves the cards `refs`. */
+function listPage(cards: Map<string, string>, total: number, refs: readonly string[]): string {
+  const list = `{"@type":"ItemList","numberOfItems":${total},"itemListElement":[]}`;
+  const markup = refs.map((ref) => cards.get(ref) ?? "");
+  return `<html><head><script type="application/ld+json">${list}</script></head><body>${markup.join("")}</body></html>`;
+}
+
+/** `cassette` with `url` answered by `bodies` in turn (the last one from then on). */
+function serve(cassette: Cassette, url: string, bodies: readonly string[]): Cassette {
+  const template = cassette.interactions[0] as Cassette["interactions"][number];
+  const others = cassette.interactions.filter((x) => x.request.url !== url);
+  const answers = bodies.map((b) => ({
+    request: { url },
+    response: { ...template.response, url, body: b },
+  }));
+  return { ...cassette, interactions: [...answers, ...others] };
+}
 
 describe("tipcars source", () => {
   it("incremental run yields the listings the Ledger does not know, newest first, and stops", async () => {
@@ -309,44 +348,181 @@ describe("tipcars source", () => {
     expect(slicesDone(os)).toEqual(FULL_SLICES);
   });
 
-  it("a slice that stays short of its count is paged three times, then fails the run after the others", async () => {
-    // Drop one card from the first page of used:2000: every pass then sees one listing less
-    // than the slice reports.
-    const cassette = edit(await loadCassette(full), "/ojete?2000-2000=", body(without(1)));
+  it("a slice over the cap is split by price, dearer half first, until each part fits", async () => {
+    const cassette = await loadCassette(split);
+    const urls: string[] = [];
+    const os = await harvest(cassette, { ...SPLIT_RUN, urls });
+    const done = slicesDone(os);
+    expect(done.slice(0, 2)).toEqual(["used:2000:1000000-", "used:2000:500000-999999"]);
+    expect(done.at(-1)).toBe("used:2000");
+    expect(new Set(done).size).toBe(13); // the year and 12 price parts
+    // Each part under the cap was harvested whole on its first page, each listing once.
+    expect(urls.some((u) => u.includes("str=") && u.includes("kc="))).toBe(false);
+    const inParts = cassette.interactions
+      .filter((x) => x.request.url.includes("kc="))
+      .map((x) => Number(/"numberOfItems":\s*(\d+)/.exec(x.response.body)?.[1]))
+      .filter((n) => n <= 20)
+      .reduce((sum, n) => sum + n, 0);
+    const seen = listings(os);
+    expect(new Set(seen.map((o) => o.ref)).size).toBe(seen.length);
+    expect(seen).toHaveLength(inParts);
+    expect(seen.every((o) => o.vehicle.manufactureYear === 2000)).toBe(true);
+    // The year reports one listing more than its parts, a "Dohodou" one no price filter
+    // returns: one pass over the whole year met all 62, so it needed no proof.
+    expect(urls.filter((u) => u.includes("str=")).length).toBe(3);
+  });
+
+  it("a split slice resumes from its parts done earlier in the census", async () => {
+    const cassette = await loadCassette(split);
+    const all = slicesDone(await harvest(cassette, SPLIT_RUN));
+    const upper = cassette.interactions.find((x) => x.request.url.endsWith("&1000000-kc="));
+    const inUpper = (upper?.response.body.split(CARD).slice(1) ?? []).map((c) => c.split('"')[0]);
+    const os = await harvest(cassette, { ...SPLIT_RUN, done: ["used:2000:1000000-"] });
+    expect(slicesDone(os)).toEqual(all.slice(1));
+    // The part done earlier is paged again to tell its listings from the year's others; its
+    // used listings come out again, so one that moved into it since it was done is still met.
+    expect(inUpper).toHaveLength(2);
+    expect(listings(os).filter((o) => inUpper.includes(o.ref))).toHaveLength(2);
+  });
+
+  it("a slice short on every pass over more pages is split in two by price, each part done", async () => {
+    // Paging by offset can serve a listing on two pages and push another off both, the same
+    // way on every pass: used:2000 comes out one short twice, so it is split at 1,000,000 Kč.
+    const plain = await loadCassette(full);
+    const root = "https://www.tipcars.com/ojete?2000-2000=";
+    let cassette = edit(plain, "/ojete?2000-2000=", body(without(1)));
+    // The lower part serves the slice's recorded pages whole; the upper one is empty.
+    for (const x of plain.interactions.filter((i) => i.request.url.includes("2000-2000="))) {
+      const url = x.request.url.replace("2000-2000=", "2000-2000=&0-999999kc=");
+      cassette = serve(cassette, url, [x.response.body]);
+    }
+    cassette = serve(cassette, `${root}&1000000-kc=`, [listPage(cardsOf(plain), 0, [])]);
+    const urls: string[] = [];
+    const os = await harvest(cassette, { mode: "full", urls });
+    // Two passes, then counted before and after its halves.
+    expect(urls.filter((u) => u === root)).toHaveLength(4);
+    expect(slicesDone(os)).toEqual([
+      "used:2000:1000000-",
+      "used:2000:0-999999",
+      "used:2000",
+      "used:2001",
+    ]);
+    const whole = await harvest(plain, { mode: "full" });
+    expect(new Set(listings(os).map((o) => o.ref))).toEqual(
+      new Set(listings(whole).map((o) => o.ref)),
+    );
+  });
+
+  it("passes are never pooled: churn between two short passes does not finish a slice", async () => {
+    // The count stays 3. Pass 1 meets A and B; then A goes and D arrives; pass 2 meets B and
+    // D. Together they reach 3, yet C was never met.
+    const plain = await loadCassette(full);
+    const cards = cardsOf(plain);
+    const [a, b, , d] = [...cards.keys()] as [string, string, string, string];
+    const root = "https://www.tipcars.com/ojete?2000-2000=";
+    const cassette = serve(plain, root, [listPage(cards, 3, [a, b]), listPage(cards, 3, [b, d])]);
     const os: Observation[] = [];
     const urls: string[] = [];
     await expect(harvest(cassette, { mode: "full", urls }, os)).rejects.toThrow(
-      /fewer listings than reported: used:2000/,
+      /fewer listings than reported: used:2000$/,
     );
-    expect(urls.filter((u) => u.endsWith("/ojete?2000-2000="))).toHaveLength(3);
     expect(slicesDone(os)).toEqual(["used:2001"]);
+    // Paged twice; one page is too few to split for.
+    expect(urls.filter((u) => u === root)).toHaveLength(2);
+    expect(urls.some((u) => u.includes("kc="))).toBe(false);
   });
 
-  it("a slice is done when its passes together reach its count, though each alone falls short", async () => {
-    // Re-dated listings jump above a pass: pass 1 misses the first card of page 1, pass 2
-    // the second; both report the whole count.
-    const cassette = await loadCassette(full);
-    const interactions = cassette.interactions.flatMap((x) => {
-      if (!x.request.url.endsWith("/ojete?2000-2000=")) return [x];
-      const missing = (n: number) => {
-        const parts = x.response.body.split(CARD);
-        parts.splice(n, 1);
-        return { ...x, response: { ...x.response, body: parts.join(CARD) } };
-      };
-      return [missing(1), missing(2)];
+  describe("a year with a listing no price filter returns", () => {
+    // used:2000 reports 21 (22) listings, more than the cap of 20, so it is split. Its lower
+    // half meets 20 of them and its upper one none; a whole pass over the year serves X but
+    // the 20th listing twice, so it comes out short and X needs proving.
+    const root = "https://www.tipcars.com/ojete?2000-2000=";
+    interface Change {
+      /** X's detail page when first read, and when read again after the final recount. */
+      detail?: Partial<Response>;
+      later?: Partial<Response>;
+      /** X's price band returns X. */
+      inBand?: boolean;
+    }
+    async function year(total: number, change: Change = {}) {
+      const plain = await loadCassette(full);
+      const cards = cardsOf(plain);
+      const priced = [...cards].filter(([, markup]) => !/Dohodou/.test(markup));
+      const [x, xMarkup] = priced[20] as [string, string];
+      const r = priced.slice(0, 20).map(([ref]) => ref);
+      const price = /advertisement-name__price">([\s\S]*?)<\/section>/.exec(xMarkup)?.[1] ?? "";
+      const kc = Number(/(\d+)Kč/.exec(price.replace(/<[^>]*>|&nbsp;|\s/g, ""))?.[1]);
+      const record = /&quot;price&quot;:(\d+)/.exec(xMarkup)?.[1];
+      const path = /data-offer-listing-url-param="([^"]*)"/.exec(xMarkup)?.[1] ?? "";
+      const page = (refs: string[]) => listPage(cards, total, refs);
+      let cassette = serve(plain, root, [page([...r.slice(0, 19), x])]);
+      cassette = serve(cassette, `https://www.tipcars.com/ojete?str=2-20&2000-2000=`, [
+        page([r[18] as string]),
+      ]);
+      cassette = serve(cassette, `${root}&1000000-kc=`, [listPage(cards, 0, [])]);
+      cassette = serve(cassette, `${root}&0-999999kc=`, [listPage(cards, 20, r)]);
+      cassette = serve(cassette, `${root}&${kc - 1}-${kc + 1}kc=`, [
+        listPage(
+          cards,
+          change.inBand ? 2 : 1,
+          change.inBand ? [r[0] as string, x] : [r[0] as string],
+        ),
+      ]);
+      const product = `{"@type":"Product","offers":{"price":${record},"priceCurrency":"CZK"}}`;
+      const detail = `<script type="application/ld+json">${product}</script><div class="detail-box__info-icon">vyrobeno:</div>2000</div>`;
+      cassette = serve(cassette, new URL(path, "https://www.tipcars.com").href, [detail, detail]);
+      let read = 0;
+      const interactions = cassette.interactions.map((i) =>
+        i.request.url.endsWith(path)
+          ? { ...i, response: { ...i.response, ...(read++ === 0 ? change.detail : change.later) } }
+          : i,
+      );
+      cassette = { ...cassette, interactions };
+      const os: Observation[] = [];
+      const run = harvest(
+        cassette,
+        { mode: "full", options: { slices: ["used:2000"], sliceCap: 20 } },
+        os,
+      );
+      return { x, os, run };
+    }
+
+    it("is done when that listing is proven: online, of the year, and not in its price band", async () => {
+      const { x, os, run } = await year(21);
+      await run;
+      expect(slicesDone(os)).toEqual(["used:2000:1000000-", "used:2000:0-999999", "used:2000"]);
+      expect(listings(os).map((o) => o.ref)).toContain(x);
     });
-    const os = await harvest({ ...cassette, interactions }, { mode: "full" });
-    expect(slicesDone(os)).toEqual(FULL_SLICES);
-    const whole = await harvest(await loadCassette(full), { mode: "full" });
-    expect(
-      listings(os)
-        .map((o) => o.ref)
-        .sort(),
-    ).toEqual(
-      listings(whole)
-        .map((o) => o.ref)
-        .sort(),
-    );
+
+    it("is not done when that listing is gone by the time it is checked", async () => {
+      const { x, os, run } = await year(21, { detail: { status: 404 } });
+      await expect(run).rejects.toThrow(
+        /used:2000 \(1 listings in no price band, 0 proven; not proven: 1 gone\)/,
+      );
+      expect(slicesDone(os)).not.toContain("used:2000");
+      expect(os).toContainEqual({ kind: "ListingGone", ref: x });
+    });
+
+    it("is not done when that listing is gone by the final check, after the recount", async () => {
+      const { x, os, run } = await year(21, { later: { status: 404 } });
+      await expect(run).rejects.toThrow(
+        /used:2000 \(1 listings in no price band, 0 proven; not proven: 1 gone\)/,
+      );
+      expect(slicesDone(os)).not.toContain("used:2000");
+      expect(os).toContainEqual({ kind: "ListingGone", ref: x });
+    });
+
+    it("is not done when the band around that listing's price returns it", async () => {
+      const { run } = await year(21, { inBand: true });
+      await expect(run).rejects.toThrow(/not proven: 1 returned by their price band/);
+    });
+
+    it("is not done when fewer listings are proven than its parts miss", async () => {
+      // 22 reported: another listing outside every band was pushed off the whole pass.
+      const { os, run } = await year(22);
+      await expect(run).rejects.toThrow(/used:2000 \(2 listings in no price band, 1 proven\)/);
+      expect(slicesDone(os)).not.toContain("used:2000");
+    });
   });
 
   it("a slice short on its first pass and whole on its second is done", async () => {
@@ -371,33 +547,6 @@ describe("tipcars source", () => {
         .map((o) => o.ref)
         .sort(),
     );
-  });
-
-  it("the passes must reach the highest count reported: a listing gone meanwhile cannot fill in", async () => {
-    // Pass 1 misses card X on page 1. Before pass 2 Y is gone (every page reports one less)
-    // and pass 2 misses X and Y. Together the passes have all but X: as many as pass 2
-    // reports, one less than pass 1 did, so the slice stays not done.
-    const cassette = await loadCassette(full);
-    const fewer = (b: string) =>
-      b.replace(/"numberOfItems":\s*(\d+)/, (_, n) => `"numberOfItems": ${Number(n) - 1}`);
-    const interactions = cassette.interactions.flatMap((x) => {
-      if (!x.request.url.includes("2000-2000=")) return [x];
-      const firstPage = x.request.url.endsWith("/ojete?2000-2000=");
-      const pass1 = firstPage ? { ...x.response, body: without(1)(x.response.body) } : x.response;
-      const pass2 = {
-        ...x.response,
-        body: fewer(firstPage ? without(2)(x.response.body) : x.response.body),
-      };
-      return [
-        { ...x, response: pass1 },
-        { ...x, response: pass2 },
-      ];
-    });
-    const os: Observation[] = [];
-    await expect(harvest({ ...cassette, interactions }, { mode: "full" }, os)).rejects.toThrow(
-      /fewer listings than reported: used:2000/,
-    );
-    expect(slicesDone(os)).toEqual(["used:2001"]);
   });
 
   it("an empty slice is done", async () => {
