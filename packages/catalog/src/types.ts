@@ -1,5 +1,20 @@
-import type { BundleManifest, ListingRow, Loader, ModelFile, VariantRow } from "@cca/bundle";
-import type { Body, Condition, Fuel, Market, ModelId, Transmission } from "@cca/vocabulary";
+import type {
+  BundleManifest,
+  ListingEntry,
+  ListingRow,
+  Loader,
+  ModelFile,
+  VariantRow,
+} from "@cca/bundle";
+import type {
+  Body,
+  Condition,
+  Fuel,
+  FxTable,
+  Market,
+  ModelId,
+  Transmission,
+} from "@cca/vocabulary";
 
 export type { Loader };
 
@@ -122,12 +137,12 @@ export interface Result<Row, F> {
 }
 
 export type VariantResult = Result<VariantRow, VariantFacets>;
-export type ListingResult = Result<ListingRow, ListingFacets>;
+export type ListingResult = Result<ListingEntry, ListingFacets>;
 
 /**
  * The catalog query engine's interface. `openCatalog` loads the manifest and catalog index
  * once; `query` is then synchronous and cheap enough to run on every keystroke. `model`
- * loads a model file on first use and caches it.
+ * loads a model's listing index on first use and caches it.
  */
 export interface Catalog {
   readonly manifest: BundleManifest;
@@ -135,11 +150,24 @@ export interface Catalog {
   model(id: ModelId): Promise<ModelView | null>;
 }
 
-export interface ModelView {
+/**
+ * One model's Listings, from `openModel` without the catalog index (a model page in the
+ * browser) or from `Catalog.model`. `listings` is synchronous over the model's listing
+ * index, so filtering, counting, sorting and statistics need no further file; its rows are
+ * index entries, and `rows` loads the full rows a table shows for some of them.
+ */
+export interface ModelListings {
   model: ModelFile["model"];
   generations: ModelFile["generations"];
-  variants: VariantRow[];
   stats: ModelFile["stats"];
   history: ModelFile["history"];
+  /** The Bundle's FX rates, which every CZK figure was converted at. */
+  fx: FxTable;
   listings(query?: ListingQuery): ListingResult;
+  /** Full rows of entries a `listings` result returned, in the same order. */
+  rows(entries: readonly ListingEntry[]): Promise<ListingRow[]>;
+}
+
+export interface ModelView extends ModelListings {
+  variants: VariantRow[];
 }

@@ -1,4 +1,5 @@
 export {
+  BundleChangedError,
   type BundleFile,
   type BundleFiles,
   BundleFormatError,
@@ -7,6 +8,7 @@ export {
   encodeBundleFiles,
   fetchLoader,
   type Loader,
+  type ModelIndex,
   memoryLoader,
   openBundle,
 } from "./bundle.ts";
@@ -15,6 +17,7 @@ export {
   type BundleContent,
   type BundleManifest,
   type CatalogIndex,
+  type ListingEntry,
   type ListingRow,
   type ModelFile,
   type NewPrice,

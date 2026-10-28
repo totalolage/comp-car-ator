@@ -48,7 +48,7 @@ export default function CompareTable({ lang }: Props) {
     };
     sync();
     const off = store.subscribe(sync);
-    openCatalog(fetchLoader(new URL("/bundle/", location.href))).then(
+    openCatalog(fetchLoader(new URL("/bundle/", location.href), { gzip: true })).then(
       (c) => {
         const rows = c.query({ limit: Number.MAX_SAFE_INTEGER }).rows;
         setById(new Map(rows.map((v) => [v.id, v])));

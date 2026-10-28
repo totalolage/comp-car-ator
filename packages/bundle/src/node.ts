@@ -3,27 +3,42 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { Readable, type Writable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { createGzip, gunzipSync } from "node:zlib";
-import type { BundleFile, BundleFiles, Loader } from "./bundle.ts";
+import { createGzip, gunzipSync, gzipSync } from "node:zlib";
+import { type BundleFile, type BundleFiles, type Loader, upgradeBundleFiles } from "./bundle.ts";
 
-/** Replaces `dir` with exactly these files. */
-export async function writeBundleFiles(dir: string, files: Iterable<BundleFile>): Promise<void> {
+/**
+ * Replaces `dir` with exactly these files. `gzip`: store each file gzipped as `<path>.gz`, the
+ * form the website serves (`fetchLoader(url, { gzip: true })`), so its deployment holds
+ * compressed bytes.
+ */
+export async function writeBundleFiles(
+  dir: string,
+  files: Iterable<BundleFile>,
+  { gzip = false }: { gzip?: boolean } = {},
+): Promise<void> {
   await rm(dir, { recursive: true, force: true });
   for (const [path, text] of files) {
-    const target = join(dir, path);
+    const target = join(dir, gzip ? `${path}.gz` : path);
     await mkdir(dirname(target), { recursive: true });
-    await writeFile(target, text);
+    await writeFile(target, gzip ? gzipSync(text, { level: 9 }) : text);
   }
 }
 
+/** Reads a Bundle directory as `writeBundleFiles` stored it, plain or gzipped. */
 export function fsLoader(dir: string): Loader {
-  return async (path) => {
+  const read = async (path: string) => {
     try {
-      return await readFile(join(dir, path), "utf8");
+      return await readFile(join(dir, path));
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw error;
     }
+  };
+  return async (path) => {
+    const plain = await read(path);
+    if (plain) return plain.toString("utf8");
+    const gzipped = await read(`${path}.gz`);
+    return gzipped && gunzipSync(gzipped).toString("utf8");
   };
 }
 
@@ -56,7 +71,11 @@ function* archiveText(files: Iterable<BundleFile>): Generator<string> {
   yield `\n${TAIL}`;
 }
 
-/** Reads `packBundle`'s archive, and the single-line archives written before it streamed. */
+/**
+ * Reads `packBundle`'s archive, and the single-line archives written before it streamed.
+ * Returns the files in the current Bundle format: a format-2 archive (one file per model) is
+ * rewritten as it is read, so staging works across the format change.
+ */
 export function unpackBundle(archive: Uint8Array): BundleFiles {
   const text = gunzipSync(archive);
   const files: BundleFiles = new Map();
@@ -98,5 +117,6 @@ export function unpackBundle(archive: Uint8Array): BundleFiles {
     )
       throw new Error(`Bundle archive has an invalid file ${JSON.stringify(path)}`);
   }
+  upgradeBundleFiles(files);
   return files;
 }

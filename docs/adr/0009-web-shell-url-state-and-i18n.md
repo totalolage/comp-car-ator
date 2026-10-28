@@ -53,7 +53,9 @@ and hash, so switching language keeps the view.
 - **Prefetching**: Astro's built-in hover prefetch (`prefetchAll`) handles navigation.
   Separately, the shell script loads the category tree into the Kategorie menu on pointer or
   focus with one fetch of `/categories/`; the “Všechny modely” link opts out of Astro
-  prefetch, so the page is fetched once.
+  prefetch, so the page is fetched once. The menu in the page holds only body types and that
+  link (since 2026-10-28; the 140 makes were 13 kB on each of 3,500 pages); without
+  JavaScript the link opens the full tree.
 
 ## Consequences
 
@@ -64,6 +66,15 @@ and hash, so switching language keeps the view.
   Category tree pages (`/make/<make>/`, `/body/<body>/`) avoid that for the common entry
   points: the category is the island's fixed scope, rendered narrowed at build time and kept
   out of the query string (`withoutScope` drops a conflicting URL value).
+- Model pages carry no Listings (2026-10-28). Rendering the first 25 rows, their rail and
+  the props to hydrate them cost about 47 kB of HTML per model page with Listings, in both
+  languages: a quarter of the deployment. The island fetches the model's first page instead
+  (`/model/<id>/first.json.gz`, written once per model by the build, a few kB) and shows the
+  rail and rows when it arrives; a URL with listing state skips it and opens the listing
+  index (ADR 0004) directly, so a shared filtered link no longer flashes the unfiltered view.
+  The Variants table, price statistics and history chart stay in the page. A model without
+  Listings has no island. Without JavaScript a model page now shows no Listings (a
+  `<noscript>` note says so); before, it showed the first 25.
 - The compare list is one list per browser, in the store; everything that shows it renders
   from the store and follows it across islands and tabs. Every URL has one owner, and only
   that owner reads or writes `cmp` in it: `CatalogExplorer` on catalog pages, `CompareTable`

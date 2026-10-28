@@ -13,11 +13,14 @@ import type { Condition, Market } from "@cca/vocabulary";
 import { beforeAll, describe, expect, it } from "vitest";
 import { i18n } from "../i18n/i18n.ts";
 import {
+  firstPage,
   historySeries,
+  LISTING_FIRST,
   landedBreakdown,
   listedVariants,
   listingBands,
   listingFacetOptions,
+  listingLine,
   listingPage,
   listingQuery,
   nextListingSort,
@@ -108,7 +111,7 @@ function syntheticBundle(): BundleContent {
   });
   return {
     manifest: {
-      format: 2,
+      format: 3,
       generatedAt: "2026-10-24T16:00:00.000Z",
       fx: {},
       sources: [],
@@ -157,12 +160,12 @@ describe("listing query", () => {
   it("sorts by landed CZK by default, imports and Czech listings together, unknown last", async () => {
     const view = await sampleModel("skoda/octavia");
     const rows = view.listings(listingQuery({ filters: {} })).rows;
-    const landed = rows.map((l) => l.landed?.totalCzk ?? Number.POSITIVE_INFINITY);
+    const landed = rows.map((l) => l.landedCzk ?? Number.POSITIVE_INFINITY);
     expect(landed).toEqual([...landed].sort((a, b) => a - b));
     expect(new Set(rows.map((l) => l.market))).toEqual(new Set(["CZ", "DE", "AT"]));
     const de = rows.find((l) => l.market === "DE");
     // An import's landed price adds transport, inspection and registration to the price.
-    expect(de?.landed?.totalCzk).toBeGreaterThan(de?.priceCzk ?? 0);
+    expect(de?.landedCzk).toBeGreaterThan(de?.priceCzk ?? 0);
   });
 
   it("puts listings the outlier rule excluded after all others, whatever the sort", async () => {
@@ -181,9 +184,9 @@ describe("listing query", () => {
       ...listingQuery({ filters: {}, sort: { key: "landedCzk", dir: "desc" } }),
       limit: 500,
     }).rows;
-    const known = desc.filter((l) => l.landed).map((l) => l.landed?.totalCzk as number);
+    const known = desc.flatMap((l) => l.landedCzk ?? []);
     expect(known).toEqual([...known].sort((a, b) => b - a));
-    expect(desc.at(-1)?.landed).toBeNull();
+    expect(desc.at(-1)?.landedCzk).toBeUndefined();
     expect(nextListingSort({ key: "landedCzk", dir: "asc" }, "landedCzk")).toEqual({
       key: "landedCzk",
       dir: "desc",
@@ -224,7 +227,8 @@ describe("listing query", () => {
     for (const pick of listingBands()) {
       const rows = active(synthetic, { filters: { odometerKm: pick.range } });
       const expected = withKm.filter((l) => odometerBand(l.odometerKm as number) === pick.band);
-      expect(rows.map((l) => l.id).sort()).toEqual(expected.map((l) => l.id).sort());
+      expect(rows).toHaveLength(expected.length);
+      expect(rows.every((l) => expected.includes(l))).toBe(true);
     }
   });
 });
@@ -332,7 +336,8 @@ describe("price history", () => {
 describe("one listing", () => {
   it("breaks an imported listing's landed price into its lines, with notes and the rate", async () => {
     const view = await sampleModel("skoda/octavia");
-    const de = active(view).find((l) => l.market === "DE") as ListingRow;
+    const rows = await view.rows(active(view));
+    const de = rows.find((l) => l.market === "DE") as ListingRow;
     const fx = { EUR: { czkPerUnit: 24.335, validFor: "2026-10-23" } };
     const b = landedBreakdown(de, fx, cs);
     expect(b?.lines.map((l) => l.label)).toEqual([
@@ -347,14 +352,15 @@ describe("one listing", () => {
     const sum = de.landed?.lines.reduce((s, l) => s + l.czk, 0);
     expect(sum).toBe(de.landed?.totalCzk);
     expect(landedBreakdown(de, fx, en)?.lines[0]?.label).toBe("Car price, converted");
-    const czk = active(view).find((l) => l.market === "CZ") as ListingRow;
+    const czk = rows.find((l) => l.market === "CZ") as ListingRow;
     expect(landedBreakdown(czk, fx, en)?.rate).toBeNull();
     expect(landedBreakdown({ ...czk, landed: null }, fx, en)).toBeNull();
   });
 
   it("reports a price move since the first sighting", async () => {
     const view = await sampleModel("skoda/octavia");
-    const moved = active(view).find((l) => l.priceHistory.length > 1) as ListingRow;
+    const rows = await view.rows(active(view));
+    const moved = rows.find((l) => l.priceHistory.length > 1) as ListingRow;
     const first = moved.priceHistory[0]?.priceCzk as number;
     expect(priceChange(moved)).toEqual({
       amount: moved.priceCzk - first,
@@ -365,7 +371,7 @@ describe("one listing", () => {
 
   it("compares a listing that switched currency by value, not by the number shown", async () => {
     const view = await sampleModel("skoda/octavia");
-    const row = active(view)[0] as ListingRow;
+    const [row] = (await view.rows(active(view))) as [ListingRow];
     const switched: ListingRow = {
       ...row,
       price: { amount: 500_000, currency: "CZK" },
@@ -382,6 +388,33 @@ describe("one listing", () => {
       priceCzk: 475_000,
     };
     expect(priceChange(cheaper)).toEqual({ amount: -25_000, percent: -5 });
+  });
+});
+
+describe("first page", () => {
+  it("is the unfiltered table's first page as lines, with the facets the rail shows", async () => {
+    const first = await firstPage(synthetic);
+    const page = listingPage(synthetic, { filters: {} });
+    expect(first.total).toBe(page.total);
+    expect(first.facets).toEqual(page.facets);
+    expect(first.rows).toEqual((await synthetic.rows(page.rows)).map(listingLine));
+    expect(first.rows).toHaveLength(LISTING_FIRST);
+    // It travels as JSON: nothing in it is lost on the way.
+    expect(JSON.parse(JSON.stringify(first))).toEqual(first);
+  });
+});
+
+describe("table line", () => {
+  it("cuts a row to what its table line shows, for the first paint", async () => {
+    const view = await sampleModel("skoda/octavia");
+    const rows = await view.rows(active(view));
+    const moved = rows.find((l) => l.priceHistory.length > 1) as ListingRow;
+    const line = listingLine(moved);
+    expect(line).toMatchObject({ id: moved.id, url: moved.url, title: moved.title });
+    expect(line.change).toEqual(priceChange(moved));
+    expect(line.landedCzk).toBe(moved.landed?.totalCzk);
+    for (const detail of ["priceHistory", "photos", "landed", "seller", "location", "lastSeen"])
+      expect(Object.keys(line)).not.toContain(detail);
   });
 });
 

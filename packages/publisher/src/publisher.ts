@@ -1,4 +1,5 @@
 import {
+  BUNDLE_FORMAT,
   type BundleFile,
   type CatalogIndex,
   encodeBundleFiles,
@@ -27,7 +28,7 @@ import { type Fences, fences, isOutlier, priceCells, quantiles } from "./statist
 
 /** Gone Listings stay in model files this many days, then only feed `history`. */
 const GONE_KEPT_DAYS = 30;
-const PHOTOS_KEPT = 3;
+const PHOTOS_KEPT = 1;
 
 export interface PublishOptions {
   /** Publish time; also the valuation day for landed prices. */
@@ -123,7 +124,7 @@ export function* publish(ledger: Ledger, options: PublishOptions): Generator<Bun
     const makes = new Map(snapshot.catalog.map((v) => [v.makeId, v.make]));
     return {
       manifest: {
-        format: 2,
+        format: BUNDLE_FORMAT,
         generatedAt: now.toISOString(),
         fx,
         sources: snapshot.sources.map((s) => ({

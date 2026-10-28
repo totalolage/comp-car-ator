@@ -1,4 +1,11 @@
-import { type BundleFiles, memoryLoader, openBundle, type PriceCell } from "@cca/bundle";
+import {
+  type BundleFiles,
+  type ModelFile,
+  type ModelIndex,
+  memoryLoader,
+  openBundle,
+  type PriceCell,
+} from "@cca/bundle";
 import { openCatalog } from "@cca/catalog";
 import { type Ledger, openLedger } from "@cca/ledger";
 import type { ListingSeen, ListPrice, Market, Observation } from "@cca/vocabulary";
@@ -115,9 +122,15 @@ async function open(day: string) {
 }
 
 async function tiguanFile(day = "2026-10-24") {
-  const model = await (await open(day)).model("volkswagen/tiguan");
-  if (!model) throw new Error("no Tiguan model file");
-  return model;
+  return whole(await (await open(day)).model("volkswagen/tiguan"));
+}
+
+/** A model as the reader returns it, with every row loaded and sorted by id: the model file. */
+async function whole(index: ModelIndex | null): Promise<ModelFile> {
+  if (!index) throw new Error("no model file");
+  const { listings, rows, ...rest } = index;
+  const all = await rows(listings);
+  return { ...rest, listings: all.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)) };
 }
 
 async function tiguanRow(day = "2026-10-24") {
@@ -426,9 +439,8 @@ describe("publish: price statistics", () => {
 
     const golfView = await catalog.model("volkswagen/golf");
     expect(golfView?.stats).toEqual([]);
-    expect(golfView?.listings().rows.map((l) => [l.id, l.excluded ?? false])).toEqual([
-      ["sauto:lone", false],
-    ]);
+    const golfRows = (await golfView?.rows(golfView.listings().rows)) ?? [];
+    expect(golfRows.map((l) => [l.id, l.excluded ?? false])).toEqual([["sauto:lone", false]]);
     const tiguanStats = (await catalog.model("volkswagen/tiguan"))?.stats ?? [];
     expect(new Set(tiguanStats.map((c) => c.market))).toEqual(new Set(["CZ"]));
   });
@@ -465,18 +477,20 @@ describe("publish: model files", () => {
     expect([...files.keys()].sort()).toEqual([
       "catalog.json",
       "manifest.json",
-      "models/volkswagen/golf.json",
-      "models/volkswagen/tiguan.json",
+      "models/volkswagen/golf/0.json",
+      "models/volkswagen/golf/index.json",
+      "models/volkswagen/tiguan/0.json",
+      "models/volkswagen/tiguan/index.json",
     ]);
     const bundle = await openBundle(memoryLoader(files));
-    const tiguanListings = (await bundle.model("volkswagen/tiguan"))?.listings ?? [];
+    const tiguanListings = (await whole(await bundle.model("volkswagen/tiguan"))).listings;
     expect(tiguanListings.map((l) => [l.id, l.variantId, l.gone ?? null])).toEqual([
       ["sauto:active", tiguanId, null],
       ["sauto:model-only", null, null],
       ["sauto:recent", tiguanId, "2026-10-10"],
     ]);
-    expect(tiguanListings[0]?.photos).toEqual(photos.slice(0, 3));
-    expect((await bundle.model("volkswagen/golf"))?.listings.map((l) => l.id)).toEqual([
+    expect(tiguanListings[0]?.photos).toEqual(photos.slice(0, 1));
+    expect((await whole(await bundle.model("volkswagen/golf"))).listings.map((l) => l.id)).toEqual([
       "sauto:golf",
     ]);
     expect(bundle.manifest.counts).toMatchObject({ models: 2, listings: 4 });
@@ -517,10 +531,12 @@ describe("publish: model files", () => {
       },
     };
     const files = publish(counted, { now: at("2026-10-24") });
-    expect(files.next().value?.[0]).toBe("models/volkswagen/golf.json");
+    expect(files.next().value?.[0]).toBe("models/volkswagen/golf/index.json");
     expect(readBack).toBe(2);
-    expect(files.next().value?.[0]).toBe("models/volkswagen/tiguan.json");
+    expect(files.next().value?.[0]).toBe("models/volkswagen/golf/0.json");
+    expect(files.next().value?.[0]).toBe("models/volkswagen/tiguan/index.json");
     expect(readBack).toBe(5);
+    expect(files.next().value?.[0]).toBe("models/volkswagen/tiguan/0.json");
     expect([...files].map(([path]) => path)).toEqual(["catalog.json", "manifest.json"]);
   });
 
@@ -609,7 +625,9 @@ describe("publish: determinism and scale", { timeout: 60_000 }, () => {
     const catalog = await openCatalog(memoryLoader(files));
     const bundle = await openBundle(memoryLoader(files));
     const index = await bundle.catalog();
-    expect(files.size).toBe(2 + index.models.length);
+    expect([...files.keys()].filter((p) => p.endsWith("/index.json"))).toHaveLength(
+      index.models.length,
+    );
     expect(index.variants).toHaveLength(400);
 
     let listings = 0;

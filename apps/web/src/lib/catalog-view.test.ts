@@ -18,11 +18,15 @@ import {
   nextSort,
   odometerBands,
   RAIL,
-  rangeFromText,
   toggleValue,
   withoutScope,
 } from "./catalog-view.ts";
-import { type CatalogState, readCatalogState, writeCatalogState } from "./url-state.ts";
+import {
+  type CatalogState,
+  rangeFromText,
+  readCatalogState,
+  writeCatalogState,
+} from "./url-state.ts";
 
 // A deterministic catalog of 240 Variants over 4 makes, most with used listings in one to
 // three (market, source) groups, so every facet has several values and overlaps.
@@ -90,7 +94,7 @@ beforeAll(async () => {
   const rows = variants();
   const content: BundleContent = {
     manifest: {
-      format: 2,
+      format: 3,
       generatedAt: "2026-10-25T00:00:00Z",
       fx: {} as BundleContent["manifest"]["fx"],
       sources: [],

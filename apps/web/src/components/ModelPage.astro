@@ -2,10 +2,11 @@
 /**
  * A model page, rendered at build time from the Bundle: the model's Variants with their used
  * prices per Market, then the listings island (rail, price statistics, price history chart,
- * listings table). The first paint is the unfiltered view; the island applies the listing
- * state in the URL after hydration. What is shown is lib/listing-view.ts.
+ * listings table). The island fetches the unfiltered first page (`first.json.gz` next to the
+ * page) or, for a URL with listing state, the model's listing index; the page itself carries
+ * no Listings. What is shown is lib/listing-view.ts.
  */
-import type { FxTable, ModelId } from "@cca/vocabulary";
+import type { ModelId } from "@cca/vocabulary";
 import { MARKETS } from "@cca/vocabulary";
 import { i18n } from "../i18n/i18n.ts";
 import type { Lang } from "../i18n/messages.ts";
@@ -13,7 +14,6 @@ import Base from "../layouts/Base.astro";
 import { buildCatalog } from "../lib/catalog.ts";
 import { variantLabels } from "../lib/compare-view.ts";
 import {
-  firstPaintListing,
   listedVariants,
   listingPage,
   priceStats,
@@ -35,15 +35,11 @@ if (!view) throw new Error(`Model ${id} is in the catalog index but has no model
 const name = `${view.model.make} ${view.model.name}`;
 const names = variantNames(view.variants, t);
 const medians = variantMedians(view);
-const result = listingPage(view, { filters: {} });
-const initial = { ...result, rows: result.rows.map(firstPaintListing) };
+const result = listingPage(view, { filters: {} }, 0);
 const all = view.listings({ filters: { includeGone: true }, limit: Number.MAX_SAFE_INTEGER });
-const fx: FxTable = {};
 // The island names only the Variants its Listings (sold ones too) belong to.
 const listingNames: Record<string, string> = {};
 for (const l of all.rows) {
-  const rate = catalog.manifest.fx[l.price.currency];
-  if (rate) fx[l.price.currency] = rate;
   const name = l.variantId ? names[l.variantId] : undefined;
   if (l.variantId && name) listingNames[l.variantId] = name;
 }
@@ -148,18 +144,22 @@ const eea =
       </section>
     )
   }
-  <div id="listings">
-    <ModelExplorer
-      client:load
-      lang={lang}
-      modelId={id}
-      initial={initial}
-      initialStats={priceStats(view, { filters: {} })}
-      names={listingNames}
-      fx={fx}
-      history={view.history}
-    />
-  </div>
+  {
+    all.total > 0 && (
+      <div id="listings">
+        <noscript><p class="facet-note">{t.t("model.noScript")}</p></noscript>
+        <ModelExplorer
+          client:load
+          lang={lang}
+          modelId={id}
+          total={result.total}
+          initialStats={priceStats(view, { filters: {} })}
+          names={listingNames}
+          history={view.history}
+        />
+      </div>
+    )
+  }
   <p class="facet-note compare-status" aria-live="polite" data-full={t.t("model.compareFull", { n: COMPARE_MAX })}></p>
 </Base>
 <script>

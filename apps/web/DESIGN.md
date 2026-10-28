@@ -48,10 +48,11 @@ Sentence case everywhere; no uppercase labels.
 - Category tree: the categories page (`/categories/`) lists every make with its models (CSS
   columns) and the body types, with Variant counts. The "Kategorie" disclosure in the
   masthead opens the same index as a full-width panel, plus recently viewed models. Its HTML
-  holds makes and body types only, with a "Všechny modely" link to the categories page: 1,600
-  model links on every page would be 19 kB gzip of each page's 30 kB. The shell script
-  fetches the categories page when the pointer or focus reaches the menu (or it opens) and
-  swaps its makes-with-models tree in, keeping focus on the same link; it also closes the
+  holds body types only, with a "Všechny modely" link to the categories page: 1,600 model
+  links on every page would be 19 kB gzip of each page's 30 kB, and the 140 makes alone were
+  13 kB raw on each of 3,500 pages (a sixth of the deployment). The shell script fetches the
+  categories page when the pointer or focus reaches the menu (or it opens) and swaps its
+  makes-with-models tree in, keeping focus on the same link; it also closes the
   menu on Escape or an outside click. The menu is `<details>` and plain links, so without
   script it still opens, and the link leads to the full tree.
 - `.split` = rail + results. Below 48rem it stacks and the rail becomes a grid of facet groups.
@@ -193,37 +194,46 @@ real `<input>`s inside `<label>`s with `<fieldset>`/`<legend>` groups; result co
 
 Enforced on every build by `scripts/check-budget.mjs` (fails the build), gzipped, per page:
 
-|                                | budget | catalog page | compare page | model page | large model page |
-| ------------------------------ | ------ | ------------ | ------------ | ---------- | ---------------- |
-| HTML                           | 30 kB  | 8.0 kB       | 3.8 kB       | 9.6 kB     | 16.1 kB          |
-| CSS                            | 8 kB   | 4.3 kB       | 4.3 kB       | 4.3 kB     | 4.3 kB           |
-| JS (all chunks the page loads) | 30 kB  | 27.0 kB      | 24.4 kB      | 29.8 kB    | 29.8 kB          |
-| Total                          | 60 kB  | 39.3 kB      | 32.5 kB      | 43.7 kB    | 50.3 kB          |
+|                                | budget | catalog page | compare page | model page | largest model page |
+| ------------------------------ | ------ | ------------ | ------------ | ---------- | ------------------ |
+| HTML                           | 30 kB  | 19.0 kB      | 3.8 kB       | 8.7 kB     | 12.8 kB            |
+| CSS                            | 8 kB   | 4.3 kB       | 4.3 kB       | 4.3 kB     | 4.3 kB             |
+| JS (all chunks the page loads) | 30 kB  | 27.4 kB      | 25.1 kB      | 29.0 kB    | 29.0 kB            |
+| Total                          | 60 kB  | 50.6 kB      | 33.2 kB      | 42.0 kB    | 46.0 kB            |
 
-Measured on the sample Bundle (2026-10-27); "large model page" is the Octavia page built from
-`node apps/web/scripts/large-model-bundle.ts <dir>` (a 2.06 MB raw model file of 6,000
-Listings with two years of weekly history, about the most popular model at scale) with
-`BUNDLE_DIR=<dir>`. The catalog page's JS is Preact, its hooks, the island (with the catalog
-query engine), the shared url-state/i18n chunk, which carries both languages' messages, and
-the shell script (with the tray); category pages are the same page, and the compare page is
-the same stack with its own island. A model page adds its island (listing view, chart) and is
-the page closest to the JS budget: new messages or island code land on it first. Its HTML
-grows with the listed Variants (each with its tray name), the first 25 listing rows, the
-names of the Variants its Listings belong to and the weekly history it serializes for
-hydration; the chart's data table is built only when opened.
+Measured on the real Bundle of 2026-10-28 (1,601 models, 20k Variants, 810k Listings; 3,506
+pages), republished in Bundle format 3; "model page" is the Opel Corsa (13,774 Listings),
+"largest model page" the Mercedes-Benz E-Class. The catalog page's JS is Preact, its hooks,
+the island (with the catalog query engine), the shared url-state/i18n chunk, which carries
+both languages' messages, and the shell script (with the tray); category pages are the same
+page, and the compare page is the same stack with its own island. A model page adds its
+island (listing view, chart) and is the page closest to the JS budget: new messages or island
+code land on it first. It does not load the catalog page's view code (`RangeFilter` takes
+`rangeFromText` from url-state, not catalog-view) nor its Variant engine
+(`@cca/catalog`'s `model.ts` holds what a model page needs).
 
-On the real Bundle of 2026-10-26 (1,601 models, 20k Variants, 106k Listings; 3,506 pages)
-the largest page is a model page at 21.6 kB HTML and 55.7 kB in all, and the categories page,
-the one page with every model link, is 22.5 kB HTML. Rendering the category tree into every
-page had made that build take 22 minutes on devbox; without it, it takes 17 seconds.
+A model page's HTML grows with the listed Variants (each with its tray name), the names of
+the Variants its Listings belong to and the weekly history it serializes for hydration; it
+carries no Listings. On load the island fetches the model's first listing page
+(`/model/<id>/first.json.gz`, at most 3.5 kB gzip); the first filter, sort, "show more" or
+expanded row loads the model's listing index (at most 121 kB gzip, the Octavia; most models a
+few kB) and the rows files of the shown page (about 5 kB each). A URL with listing state loads
+the index at once.
+
+The whole build output was 220 MB in 32,016 files on that Bundle (906 MB before format 3), and
+the build took 56 seconds on devbox:
+the Bundle 126 MB gzipped as stored, HTML 92 MB, first pages 2 MB. `scripts/check-budget.mjs`
+prints the Bundle's size, its largest model index and the largest first page on every build.
+The header menu carries body types only; the makes and models load from `/categories/` when
+it is about to open (ADR 0009).
 
 Query time is measured by `node apps/web/scripts/bench-catalog.ts` on a synthetic Bundle of
 50k Variants (about 110k Variant × listing-group rows). On devbox (2026-10-25, under load):
 a facet click, range edit or sort takes 11–15 ms (median), the first query 0.2 s (the
 engine reads the rows into columns once), parsing `catalog.json` 0.4 s.
 
-Bundle data (`/bundle/*.json`) is reported, not budgeted: its size follows the catalog and
-is owned by the Bundle format and the catalog page. Rules that keep the shell inside the
+Bundle data (`/bundle/**/*.json.gz`) is reported, not budgeted: its size follows the catalog
+and is owned by the Bundle format. Rules that keep the shell inside the
 budget: no web fonts, no images in chrome except the inline mark (one path, under 0.4 kB),
 one shared CSS file, Preact islands only where state changes in place, the shell script
 stays framework-free and does not import the message catalogs (`i18n/locale.ts` holds what

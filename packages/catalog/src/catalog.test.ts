@@ -8,7 +8,7 @@ import {
 } from "@cca/bundle";
 import type { Market } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
-import { openCatalog } from "./index.ts";
+import { type ListingResult, openCatalog, openModel } from "./index.ts";
 
 /** Listing aggregates with one (market, source) group per entry, all at one price. */
 function used(median: number, groups: [Market, string, number][]): UsedStats {
@@ -108,7 +108,7 @@ const variants = [
 
 const content: BundleContent = {
   manifest: {
-    format: 2,
+    format: 3,
     generatedAt: "2026-10-24T16:00:00.000Z",
     fx: {},
     sources: [],
@@ -227,13 +227,32 @@ describe("catalog query engine", () => {
   it("opens a model with its Variants and queryable listings", async () => {
     const view = await (await open()).model("skoda/octavia");
     expect(view?.variants.map((v) => v.id)).toEqual(["skoda/octavia/a", "skoda/octavia/b"]);
-    expect(view?.listings().rows.map((l) => l.id)).toEqual(["sauto:1", "as24:2"]);
+    const ids = async (result?: ListingResult) =>
+      (await view?.rows(result?.rows ?? []))?.map((l) => l.id);
+    const priced = view?.listings({ sort: { key: "priceCzk", dir: "desc" } });
+    expect(await ids(priced)).toEqual(["sauto:1", "as24:2"]);
     expect(view?.listings({ filters: { includeGone: true } }).total).toBe(3);
     const filtered = view?.listings({
       filters: { odometerKm: { max: 100_000 }, market: ["CZ", "DE"] },
     });
-    expect(filtered?.rows.map((l) => l.id)).toEqual(["sauto:1"]);
+    expect(await ids(filtered)).toEqual(["sauto:1"]);
     expect(filtered?.facets.values.market).toEqual([{ value: "CZ", count: 1 }]);
+  });
+
+  it("opens one model's listings without the catalog index", async () => {
+    const files = encodeBundle(content);
+    const loads: string[] = [];
+    const view = await openModel(async (path) => {
+      loads.push(path);
+      return files.get(path) ?? null;
+    }, "skoda/octavia");
+    const page = view?.listings({ sort: { key: "priceCzk", dir: "asc" }, limit: 1 });
+    expect((await view?.rows(page?.rows ?? []))?.map((l) => l.url)).toEqual([
+      "https://example.test/as24:2",
+    ]);
+    expect(page?.total).toBe(2);
+    expect(loads).not.toContain("catalog.json");
+    expect(await openModel(memoryLoader(files), "lada/niva")).toBeNull();
   });
 
   it("returns null for an unknown model", async () => {

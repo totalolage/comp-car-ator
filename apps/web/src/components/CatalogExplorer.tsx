@@ -76,7 +76,7 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
     else if (store.compare().length) initial.compare = store.compare();
     setState(initial);
     setPicked(store.compare());
-    openCatalog(fetchLoader(new URL("/bundle/", location.href))).then((c) => {
+    openCatalog(fetchLoader(new URL("/bundle/", location.href), { gzip: true })).then((c) => {
       const rows = c.query({ limit: Number.MAX_SAFE_INTEGER }).rows;
       setNames(namesOf(rows));
       setCatalog(c);

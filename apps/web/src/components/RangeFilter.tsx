@@ -8,7 +8,7 @@
 import type { Range } from "@cca/catalog";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { I18n } from "../i18n/i18n.ts";
-import { rangeFromText } from "../lib/catalog-view.ts";
+import { rangeFromText } from "../lib/url-state.ts";
 
 export default function RangeFilter(props: {
   /** Engine filter key, for `data-facet`. */
