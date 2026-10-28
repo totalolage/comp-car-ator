@@ -511,6 +511,8 @@ export function openLedger(path: string): Ledger {
       });
 
       return {
+        // TODO(comma-data): match the openpilot rows.
+        openpilot: [],
         fx: latestFx(db),
         sources: (
           db

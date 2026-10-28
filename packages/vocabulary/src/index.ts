@@ -17,11 +17,14 @@ export type {
   ListPrice,
   Observation,
   ObservationKind,
+  OpenpilotLevel,
+  OpenpilotSupport,
   SellerExtras,
   SliceDone,
   VariantFactFields,
   VariantFacts,
 } from "./observation.ts";
+export { OPENPILOT_LEVELS } from "./observation.ts";
 export {
   BODIES,
   type Body,

@@ -2,6 +2,7 @@ import type { VariantSpec } from "./catalog.ts";
 import type {
   Condition,
   CurrencyCode,
+  Fuel,
   IsoDate,
   Market,
   Money,
@@ -26,6 +27,7 @@ export type Observation =
   | CatalogEntry
   | VariantFacts
   | ListPrice
+  | OpenpilotSupport
   | SliceDone;
 
 export type ObservationKind = Observation["kind"];
@@ -186,4 +188,64 @@ export interface ListPrice {
 export interface SliceDone {
   kind: "SliceDone";
   slice: string;
+}
+
+/**
+ * How well comma.ai's openpilot driver assistance works on a car, best first: `upstream` works
+ * with a comma device out of the box; `community` runs on community forks; `custom` needs
+ * development builds or unusual setup; `underReview` is merged but not yet released;
+ * `dashcam` records but never engages; `incompatible` cannot work (CAN security, FlexRay).
+ */
+export const OPENPILOT_LEVELS = [
+  "upstream",
+  "community",
+  "custom",
+  "underReview",
+  "dashcam",
+  "incompatible",
+] as const;
+export type OpenpilotLevel = (typeof OPENPILOT_LEVELS)[number];
+
+/**
+ * One row of openpilot's supported-car list: a make, a model and its model years, the package
+ * the car needs, and how well openpilot supports it. The list is a census: a full run states
+ * every row, and rows it no longer states leave the catalog. At snapshot time the Ledger
+ * matches the row to Generations and Variants by make, model, fuel and years.
+ */
+export interface OpenpilotSupport {
+  kind: "OpenpilotSupport";
+  /** Source-local row key, stable while the list keeps the row (make, model text, package). */
+  ref: string;
+  /** Make and model as listed, without years or market ("Volkswagen", "Golf GTI"). */
+  make: string;
+  model: string;
+  /** Fuel, only when the model name states it ("RAV4 Hybrid", "Kona Electric"). */
+  fuel?: Fuel;
+  /** Model years, ascending ("2018-20, 2023" is [2018, 2019, 2020, 2023]). */
+  years: number[];
+  level: OpenpilotLevel;
+  /** The trim or package the car needs, as listed; absent when the list says "All". */
+  package?: string;
+  /**
+   * The market the list refers the row to: its own qualifier ("Europe", "China") or the
+   * list's default ("US").
+   */
+  market: string;
+  /**
+   * true: the row covers cars built for Europe; false: only for other markets (China);
+   * absent: the list does not say (a US-referenced row: European versions may differ).
+   */
+  europe?: boolean;
+  /** Harness connector the install needs ("VW J533 connector"). */
+  harness?: string;
+  /**
+   * Who controls gas and brakes: `openpilot`; `optional`, openpilot behind an opt-in
+   * toggle (alpha); or the car's own `stock` ACC.
+   */
+  longitudinal?: "openpilot" | "optional" | "stock";
+  /** Below these speeds openpilot does not steer / does not engage, km/h. */
+  minSteerKmh?: number;
+  minEnableKmh?: number;
+  /** Where to check the car on the list's own site. */
+  url: string;
 }
