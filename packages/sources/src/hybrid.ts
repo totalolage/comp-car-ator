@@ -9,7 +9,7 @@ import type { Fuel } from "@cca/vocabulary";
 const word = (alternation: string) =>
   new RegExp(`(?<![A-Za-z])(?:${alternation})(?![A-Za-z])`, "i");
 
-// Runs on into other words: "Pluginhybrid", "Plug-In-Hybrid".
+// Unbounded, as sites write it: "Pluginhybrid", "2.5PHEV".
 const PLUG_IN = /plug[\s-]?in|phev/i;
 /** Škoda's plug-in badge keeps its case: "Octavia IV" is the fourth generation. */
 const SKODA_IV = /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/;
@@ -19,6 +19,7 @@ const SKODA_IV = /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/;
  */
 const E_HYBRID = /e-?hybrid/i;
 const E_HYBRID_MAKES = new Set(["volkswagen", "vw", "audi", "seat", "cupra", "porsche"]);
+const SKODA = new Set(["skoda", "škoda"]);
 const MILD = word("m-?hev|mild[\\s-]?hybrid|e-?tsi|48\\s?v(?:olt)?");
 const PETROL = word("e-?tsi|tsi|tfsi");
 const DIESEL = word("tdi");
@@ -35,10 +36,11 @@ export function hybridFuel(
   make: string,
   combustion?: "petrol" | "diesel",
 ): Fuel | undefined {
+  const key = make.trim().toLowerCase();
   const plugIn =
     PLUG_IN.test(text) ||
-    SKODA_IV.test(text) ||
-    (E_HYBRID_MAKES.has(make.trim().toLowerCase()) && E_HYBRID.test(text));
+    (SKODA.has(key) && SKODA_IV.test(text)) ||
+    (E_HYBRID_MAKES.has(key) && E_HYBRID.test(text));
   if (!MILD.test(text)) return plugIn ? "phev" : undefined;
   if (plugIn) return undefined;
   if (combustion) return combustion;

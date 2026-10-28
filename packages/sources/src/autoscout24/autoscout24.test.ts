@@ -331,7 +331,7 @@ describe("autoscout24 source", () => {
   });
 
   it("reads a hybrid's version text: e-Hybrid is a Volkswagen plug-in, a Jeep mild hybrid", async () => {
-    const fuelOf = async (make: string, version: string) => {
+    const fuelOf = async (make: string, version: string, code = "2") => {
       const run = await harvest(
         deFull,
         autoscout24Source(DE),
@@ -344,6 +344,7 @@ describe("autoscout24 source", () => {
               if (l.id !== "ebb7bf2f-4b57-4761-bcd9-a36ad0488cce") continue;
               l.vehicle.make = make;
               l.vehicle.modelVersionInput = version;
+              l.tracking.fuelType = code;
             }
           },
         ),
@@ -360,6 +361,11 @@ describe("autoscout24 source", () => {
     expect(await fuelOf("Audi", "A6 Avant TFSI e-hybrid quattro")).toBe("phev");
     expect(await fuelOf("Ford", "Kuga 2.5PHEV ST-Line")).toBe("phev");
     expect(await fuelOf("Volkswagen", "Golf 1.5eTSI 48 Volt DSG")).toBe("petrol");
+    // Code 3 is Elektro/Diesel.
+    expect(await fuelOf("Audi", "A6 Avant 2.0 TDI MHEV", "3")).toBe("diesel");
+    // Škoda's "iV" is a plug-in; another make's is just letters.
+    expect(await fuelOf("Skoda", "Superb Combi 1.4 TSI iV")).toBe("phev");
+    expect(await fuelOf("Kia", "Ceed iV Hybrid")).toBeUndefined();
     // Mild and plug-in wording at once says neither.
     expect(await fuelOf("Volkswagen", "Tiguan 1.5 eTSI eHybrid DSG")).toBeUndefined();
   });

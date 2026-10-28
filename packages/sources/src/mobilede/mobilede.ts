@@ -511,7 +511,8 @@ const FUELS: Record<string, Fuel> = {
 /** "Hybrid (Benzin/Elektro)", "Hybrid (Diesel/Elektro)": the title tells the kind of hybrid. */
 function fuelOf(label: string, title: string, make: string): Fuel | undefined {
   if (label.startsWith("Hybrid")) {
-    return hybridFuel(title, make, /Diesel/.test(label) ? "diesel" : "petrol");
+    const combustion = /Diesel/.test(label) ? "diesel" : /Benzin/.test(label) ? "petrol" : undefined;
+    return hybridFuel(title, make, combustion);
   }
   return FUELS[label];
 }
