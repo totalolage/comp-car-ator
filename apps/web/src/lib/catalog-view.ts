@@ -18,6 +18,7 @@ import type {
 import { BODIES, FUELS, MARKETS, TRANSMISSIONS } from "@cca/vocabulary";
 import { type I18n, MISSING } from "../i18n/i18n.ts";
 import type { MessageKey } from "../i18n/messages.ts";
+import { OPENPILOT_FACETS, openpilotLabel } from "./openpilot-view.ts";
 import type { CatalogState } from "./url-state.ts";
 
 export type EnumFacet = keyof VariantFacets["values"];
@@ -37,6 +38,7 @@ export const RAIL: ({ kind: "enum"; key: EnumFacet } | { kind: "range"; key: Ran
   { kind: "range", key: "odometerKm" },
   { kind: "range", key: "seats" },
   { kind: "range", key: "consumptionL100km" },
+  { kind: "enum", key: "openpilot" },
   { kind: "enum", key: "market" },
   { kind: "enum", key: "source" },
 ];
@@ -100,6 +102,7 @@ const SINGLE_VALUED: ReadonlySet<EnumFacet> = new Set([
   "body",
   "fuel",
   "transmission",
+  "openpilot",
 ]);
 
 const VOCABULARY: Partial<Record<EnumFacet, readonly string[]>> = {
@@ -107,6 +110,7 @@ const VOCABULARY: Partial<Record<EnumFacet, readonly string[]>> = {
   fuel: FUELS,
   transmission: TRANSMISSIONS,
   market: MARKETS,
+  openpilot: OPENPILOT_FACETS,
 };
 
 /**
@@ -126,7 +130,11 @@ export function facetOptions(
   const counts = new Map(result.facets.values[key].map((c) => [c.value, c.count]));
   for (const value of selected) if (!counts.has(value)) counts.set(value, 0);
   const label = (value: string) =>
-    key === "make" || key === "model" ? (names[value] ?? value) : t.label(key, value);
+    key === "make" || key === "model"
+      ? (names[value] ?? value)
+      : key === "openpilot"
+        ? openpilotLabel(value, t.lang)
+        : t.label(key, value);
   const additive = selected.size > 0 && SINGLE_VALUED.has(key);
   const options = [...counts].map(([value, count]) => ({
     value,

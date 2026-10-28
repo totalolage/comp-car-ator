@@ -7,7 +7,15 @@ import {
   type VariantRow,
 } from "@cca/bundle";
 import { type Catalog, openCatalog, type VariantFilters, type VariantResult } from "@cca/catalog";
-import { BODIES, FUELS, MARKETS, type Market, TRANSMISSIONS } from "@cca/vocabulary";
+import {
+  BODIES,
+  FUELS,
+  MARKETS,
+  type Market,
+  OPENPILOT_LEVELS,
+  type OpenpilotLevel,
+  TRANSMISSIONS,
+} from "@cca/vocabulary";
 import { beforeAll, describe, expect, it } from "vitest";
 import { i18n } from "../i18n/i18n.ts";
 import {
@@ -84,6 +92,10 @@ function variants(): VariantRow[] {
       ...(next() < 0.4
         ? { newPriceCzk: { min: price * 2, max: price * 2.4, source: "list" as const, count: 1 } }
         : {}),
+      // Every fifth Variant is on comma's list, cycling its levels; the rest are unlisted.
+      ...(i % 5 === 0
+        ? { openpilot: { level: OPENPILOT_LEVELS[(i / 5) % 6] as OpenpilotLevel, years: [from] } }
+        : {}),
       used,
     };
   });
@@ -131,6 +143,8 @@ const views: CatalogState[] = [
   { filters: { newPriceCzk: { min: 600_000 }, consumptionL100km: { max: 7.5 } } },
   { filters: { make: ["skoda", "volkswagen"], model: ["skoda/m1", "volkswagen/m2"] } },
   { filters: { market: ["CZ", "DE"], source: ["sauto", "tipcars"], body: ["wagon", "suv"] } },
+  { filters: { openpilot: ["upstream", "unlisted"] } },
+  { filters: { make: ["toyota"], openpilot: ["community"] } },
 ];
 
 describe("catalog view over the query engine", () => {
@@ -144,7 +158,14 @@ describe("catalog view over the query engine", () => {
   });
 
   it("gives every facet count the meaning the rail states for the click it labels", () => {
-    const single = new Set<EnumFacet>(["make", "model", "body", "fuel", "transmission"]);
+    const single = new Set<EnumFacet>([
+      "make",
+      "model",
+      "body",
+      "fuel",
+      "transmission",
+      "openpilot",
+    ]);
     for (const view of views) {
       const result = catalog.query(catalogQuery(view, {}, everything));
       for (const facet of enumFacets) {
@@ -294,6 +315,21 @@ describe("catalog view over the query engine", () => {
     const all = catalog.query({ limit: everything });
     const makes = facetOptions("make", all, {}, namesOf(all.rows), t);
     expect(makes.map((o) => o.label)).toEqual(["Hyundai", "Škoda", "Toyota", "Volkswagen"]);
+  });
+
+  it("offers openpilot levels best first, then unlisted, with their own labels", () => {
+    const all = catalog.query({ limit: everything });
+    const options = facetOptions("openpilot", all, {}, {}, i18n("en"));
+    expect(options.map((o) => o.label)).toEqual([
+      "Supported",
+      "Community",
+      "Custom setup",
+      "Under review",
+      "Dashcam only",
+      "Incompatible",
+      "Not listed",
+    ]);
+    expect(options.find((o) => o.value === "unlisted")?.count).toBe(192);
   });
 
   it("sorts by a clicked column, flipping on the second click", () => {

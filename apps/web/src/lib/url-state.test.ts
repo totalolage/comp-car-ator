@@ -17,6 +17,7 @@ describe("catalog URL state", () => {
       transmission: ["automatic"],
       market: ["CZ", "DE"],
       source: ["sauto"],
+      openpilot: ["community", "upstream"],
       year: { min: 2015, max: 2020 },
       powerKw: { max: 110 },
       seats: { min: 7 },
@@ -36,7 +37,8 @@ describe("catalog URL state", () => {
   it("writes one short, readable, canonical form", () => {
     expect(writeCatalogState(full)).toBe(
       "?make=skoda,volkswagen&model=skoda/octavia&body=wagon&fuel=diesel,petrol" +
-        "&gearbox=automatic&market=CZ,DE&source=sauto&year=2015-2020&power=-110&seats=7-" +
+        "&gearbox=automatic&market=CZ,DE&source=sauto&openpilot=community,upstream" +
+        "&year=2015-2020&power=-110&seats=7-" +
         "&consumption=-5.5&newPrice=500000-&usedPrice=200000-400000&km=-150000" +
         "&sort=-usedPrice" +
         "&cmp=skoda/octavia/nx/wagon-diesel-85kw,volkswagen/golf/mk8/hatchback-petrol-81kw",
@@ -86,6 +88,13 @@ describe("catalog URL state", () => {
       filters: { fuel: ["diesel"], year: { min: 2015, max: 2020 } },
       compare: ["a", "b", "c", "d"],
     });
+  });
+
+  it("keeps openpilot levels and unlisted, and drops values it does not know", () => {
+    expect(readCatalogState("?openpilot=unlisted,upstream,supported,,dashcam").filters).toEqual({
+      openpilot: ["unlisted", "upstream", "dashcam"],
+    });
+    expect(readCatalogState("?openpilot=Upstream").filters).toEqual({});
   });
 
   it("drops range ends it could not write back, so a reread URL keeps its filters", () => {

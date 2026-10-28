@@ -176,7 +176,7 @@ Sentence case everywhere; no uppercase labels.
 `range`, `bands` / `band`, `rail-toggle`, `data` (table; `.num` right-aligns;
 `.sort` header buttons), `table-scroll`, `results-more`, `subcategories`, `count`, `badge`,
 `empty`, `colophon`, `pick`, `tray` / `tray-items` / `tray-item` / `tray-remove`,
-`compare-tools`, `compare-table` / `compare-group` / `compare-detail` / `compare-gone`; model page: `variants`, `stats`, `data-auto`, `tag` / `tag-quiet`, `sub`, `change`,
+`compare-tools`, `compare-table` / `compare-group` / `compare-detail` / `compare-gone`; model page: `variants`, `openpilot` (`op-rows`, `op-title`, `op-facts`, `op-market`), `stats`, `data-auto`, `tag` / `tag-quiet` / `tag-op`, `sub`, `change`,
 `disclose`, `detail` / `detail-grid`, `breakdown`, `note`, `facts`, `photos`, `facet-flag`,
 `chart` (`chart-legend`, `chart-key`, `chart-box`, `chart-plot`, `chart-line`, `chart-point`,
 `chart-dot`, `chart-label`, `chart-x`, `chart-y`, `chart-data`), `visually-hidden`.
@@ -196,13 +196,14 @@ Enforced on every build by `scripts/check-budget.mjs` (fails the build), gzipped
 
 |                                | budget | catalog page | compare page | model page | largest model page |
 | ------------------------------ | ------ | ------------ | ------------ | ---------- | ------------------ |
-| HTML                           | 30 kB  | 19.0 kB      | 3.8 kB       | 8.7 kB     | 12.8 kB            |
-| CSS                            | 8 kB   | 4.3 kB       | 4.3 kB       | 4.3 kB     | 4.3 kB             |
-| JS (all chunks the page loads) | 30 kB  | 27.4 kB      | 25.1 kB      | 29.0 kB    | 29.0 kB            |
-| Total                          | 60 kB  | 50.6 kB      | 33.2 kB      | 42.0 kB    | 46.0 kB            |
+| HTML                           | 30 kB  | 19.3 kB      | 3.9 kB       | 8.8 kB     | 13.0 kB            |
+| CSS                            | 8 kB   | 4.5 kB       | 4.5 kB       | 4.5 kB     | 4.5 kB             |
+| JS (all chunks the page loads) | 30 kB  | 28.3 kB      | 25.4 kB      | 29.3 kB    | 29.3 kB            |
+| Total                          | 60 kB  | 52.1 kB      | 33.7 kB      | 42.5 kB    | 46.8 kB            |
 
 Measured on the real Bundle of 2026-10-28 (1,601 models, 20k Variants, 810k Listings; 3,506
-pages), republished in Bundle format 3; "model page" is the Opel Corsa (13,774 Listings),
+pages; 652 Variants with an openpilot level), republished in Bundle format 3; "model page" is
+the Opel Corsa (13,774 Listings),
 "largest model page" the Mercedes-Benz E-Class. The catalog page's JS is Preact, its hooks,
 the island (with the catalog query engine), the shared url-state/i18n chunk, which carries
 both languages' messages, and the shell script (with the tray); category pages are the same
@@ -210,7 +211,9 @@ page, and the compare page is the same stack with its own island. A model page a
 island (listing view, chart) and is the page closest to the JS budget: new messages or island
 code land on it first. It does not load the catalog page's view code (`RangeFilter` takes
 `rangeFromText` from url-state, not catalog-view) nor its Variant engine
-(`@cca/catalog`'s `model.ts` holds what a model page needs).
+(`@cca/catalog`'s `model.ts` holds what a model page needs). For the same reason the comma.ai
+openpilot strings live in `lib/openpilot-view.ts`: its facet labels and row badge ship with
+the catalog island, its model page section renders at build time (ADR 0009).
 
 A model page's HTML grows with the listed Variants (each with its tray name), the names of
 the Variants its Listings belong to and the weekly history it serializes for hydration; it

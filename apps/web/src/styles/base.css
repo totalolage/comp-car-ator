@@ -825,6 +825,7 @@ body {
 /* Model page -------------------------------------------------------------------------- */
 
 .variants,
+.openpilot,
 .stats,
 .chart {
   margin: 0 0 var(--s4);
@@ -850,6 +851,56 @@ body {
 .tag-quiet {
   border-style: dashed;
   color: var(--muted);
+}
+
+/* comma.ai openpilot level: inked when comma supports the car, dashed for community forks. */
+.tag-op[data-level="upstream"] {
+  border-color: var(--ink-strong);
+  background: var(--ink-strong);
+  color: var(--paper);
+}
+
+.tag-op[data-level="community"] {
+  border: 1px dashed var(--ink-strong);
+}
+
+.op-rows {
+  margin: 0 0 var(--s2);
+  padding: 0;
+  list-style: none;
+}
+
+.op-rows li {
+  margin-bottom: var(--s3);
+}
+
+.op-title,
+.op-market {
+  margin: 0;
+}
+
+.op-title .tag {
+  margin: 0 var(--s1) 0 0;
+}
+
+.op-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--s3);
+  margin: var(--s1) 0;
+}
+
+.op-facts div {
+  display: flex;
+  gap: var(--s1);
+}
+
+.op-facts dt {
+  color: var(--muted);
+}
+
+.op-facts dd {
+  margin: 0;
 }
 
 .sub {
