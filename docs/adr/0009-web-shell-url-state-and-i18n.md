@@ -85,7 +85,8 @@ and hash, so switching language keeps the view.
   (gearbox, country, source, years as registration years, odometer, used price as asking
   price, the last two with condition "used", as in the catalog). A Variant without used
   Listings (the only ones the catalog counts) is not pinned: most have none at all, and the
-  page would open empty on a Variant it has no name for. Body, fuel and power come with the Variant rather than as listing filters, which
+  page would open empty on a Variant it has no name for; its link then opens the model's
+  Listings under the carried filters alone. Body, fuel and power come with the Variant rather than as listing filters, which
   test each Listing's own fields and would drop the Variant's Listings that state none;
   make and model are the page; seats, consumption, new price and openpilot support stay
   behind (openpilot is a Variant fact the pinned Variant already meets). The catalog

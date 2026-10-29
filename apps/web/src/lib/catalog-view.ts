@@ -75,7 +75,9 @@ export function withoutScope(state: CatalogState, scope: VariantFilters = {}): C
  * model are the page itself; seats, consumption, new price and openpilot support have no
  * Listing counterpart (openpilot is a Variant fact, so the pinned Variant already meets it).
  * A Variant without used Listings (all the catalog counts) is not pinned: most such Variants
- * have no Listings at all, and the model page would open empty on an unnamed Variant.
+ * have no Listings at all, and the model page would open empty on an unnamed Variant. Its
+ * link then widens to the model's Listings under the carried filters, whatever their
+ * Variant's body, fuel, power or openpilot support.
  */
 export function listingStateFor(
   filters: VariantFilters,

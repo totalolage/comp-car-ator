@@ -432,7 +432,9 @@ describe("a row's model link", () => {
 
   it("pins no Variant without used Listings; asks for used ones only with used filters", () => {
     const unlisted = { id: variant, used: null } as VariantRow;
-    expect(listingStateFor({ transmission: ["manual"] }, unlisted)).toEqual({
+    expect(
+      listingStateFor({ transmission: ["manual"], openpilot: ["upstream"] }, unlisted),
+    ).toEqual({
       filters: { transmission: ["manual"] },
     });
     expect(listingStateFor({}, unlisted)).toEqual({ filters: {} });
