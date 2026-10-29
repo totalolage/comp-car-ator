@@ -13,6 +13,7 @@ import type {
   FxTable,
   Market,
   ModelId,
+  OpenpilotLevel,
   Transmission,
 } from "@cca/vocabulary";
 
@@ -38,6 +39,8 @@ export interface VariantFilters {
   transmission?: Transmission[];
   market?: Market[];
   source?: string[];
+  /** The Variant's best openpilot support level; `unlisted` when no list row matched it. */
+  openpilot?: OpenpilotFacet[];
   /** Overlap with the Variant's production years. */
   year?: Range;
   powerKw?: Range;
@@ -119,8 +122,10 @@ export interface Facets<E extends string, R extends string> {
   ranges: Record<R, { min: number; max: number } | null>;
 }
 
+export type OpenpilotFacet = OpenpilotLevel | "unlisted";
+
 export type VariantFacets = Facets<
-  "make" | "model" | "body" | "fuel" | "transmission" | "market" | "source",
+  "make" | "model" | "body" | "fuel" | "transmission" | "market" | "source" | "openpilot",
   "year" | "powerKw" | "seats" | "consumptionL100km" | "newPriceCzk" | "usedPriceCzk" | "odometerKm"
 >;
 
@@ -161,6 +166,8 @@ export interface ModelListings {
   generations: ModelFile["generations"];
   stats: ModelFile["stats"];
   history: ModelFile["history"];
+  /** openpilot list rows matched to the model, best level first; empty when none. */
+  openpilot: NonNullable<ModelFile["openpilot"]>;
   /** The Bundle's FX rates, which every CZK figure was converted at. */
   fx: FxTable;
   listings(query?: ListingQuery): ListingResult;

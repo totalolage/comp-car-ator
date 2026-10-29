@@ -19,7 +19,15 @@ import type {
   VariantFilters,
   VariantSortKey,
 } from "@cca/catalog";
-import { BODIES, CONDITIONS, FUELS, MARKETS, TRANSMISSIONS, type VariantId } from "@cca/vocabulary";
+import {
+  BODIES,
+  CONDITIONS,
+  FUELS,
+  MARKETS,
+  OPENPILOT_LEVELS,
+  TRANSMISSIONS,
+  type VariantId,
+} from "@cca/vocabulary";
 
 /** The compare tray holds at most this many Variants. */
 export const COMPARE_MAX = 4;
@@ -102,6 +110,7 @@ const VARIANT_FIELDS: Field[] = [
   list("transmission", TRANSMISSIONS, "gearbox"),
   list("market", MARKETS),
   list("source", null),
+  list("openpilot", [...OPENPILOT_LEVELS, "unlisted"]),
   range("year"),
   range("powerKw", "power"),
   range("seats"),

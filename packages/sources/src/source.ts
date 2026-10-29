@@ -5,11 +5,13 @@ import type { ListPrice, Observation } from "@cca/vocabulary";
 export type SourceId = string;
 
 /**
- * `incremental`: only what is new since the last run (newest-first, stop at known refs).
- * Existing listings' price changes are not refreshed by incremental runs; full runs do that.
+ * `incremental`: only what is new since the last run (newest-first, stop at known refs). A
+ * known listing met in list data that carries its price may come out as a ListingPriceSeen,
+ * so its price changes land daily; otherwise full runs refresh known listings' prices.
  * `full`: a census of everything the adapter covers under its `scope`. After a full run
- * completes cleanly, the Ledger treats this Source's listings in that scope that no full run
- * of the census saw as missing. A census can span runs: see `Checkpoint.sliceDoneAt`.
+ * completes cleanly, the Ledger treats this Source's listings in that scope that no run of
+ * the census saw as missing; after any full run, those of the slices it finished
+ * (`ListingSeen.slice`). A census can span runs: see `Checkpoint.sliceDoneAt`.
  */
 export type HarvestMode = "incremental" | "full";
 
@@ -24,7 +26,12 @@ export type HarvestMode = "incremental" | "full";
  * - In `full` mode it must yield a ListingSeen for every listing currently in scope, or
  *   throw. A harvest that throws is never treated as a census. An adapter that splits its
  *   scope into slices yields SliceDone after each finished slice, and may skip slices whose
- *   `ctx.checkpoint.sliceDoneAt` is set: earlier full runs of this census covered them.
+ *   `ctx.checkpoint.sliceDoneAt` is set: earlier full runs of this census covered them. If its
+ *   slices hold a listing by what it seldom changes, it names the slice on each ListingSeen
+ *   (`slice`), so the slices that finish retire listings while others never do; it then yields
+ *   the listings it meets in a slice as it meets them, finished or not (a ListingPriceSeen
+ *   will do), so a listing that moved there is not missed in the slice it left, even when the
+ *   run fails or is stopped later.
  * - It stops promptly when `ctx.signal` aborts: pass it to every `ctx.http.get` (throwing the
  *   abort reason is fine).
  * - All network access goes through `ctx.http`; it never reads the clock except via `ctx.now`.
@@ -63,8 +70,8 @@ export interface Checkpoint {
   /**
    * When a full run of the current census (full runs in this scope since the last complete
    * one) reported this slice done, or null. A full harvest skips slices with a date; it may
-   * redo old ones if it judges them stale. A complete full run ends the census, so the next
-   * one starts with every slice null.
+   * redo old ones if it judges them stale. A complete full run ends the census, and so does a
+   * stalled one (`Ledger.record`), so the next one starts with every slice null.
    */
   sliceDoneAt(slice: string): Date | null;
   /**

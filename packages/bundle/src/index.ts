@@ -23,6 +23,7 @@ export {
   type NewPrice,
   ODOMETER_BANDS,
   type OdometerBand,
+  type OpenpilotRow,
   odometerBand,
   type PriceCell,
   type Quantiles,

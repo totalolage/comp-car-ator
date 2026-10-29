@@ -87,7 +87,8 @@ and hash, so switching language keeps the view.
   Listings (the only ones the catalog counts) is not pinned: most have none at all, and the
   page would open empty on a Variant it has no name for. Body, fuel and power come with the Variant rather than as listing filters, which
   test each Listing's own fields and would drop the Variant's Listings that state none;
-  make and model are the page; seats, consumption and new price stay behind. The catalog
+  make and model are the page; seats, consumption, new price and openpilot support stay
+  behind (openpilot is a Variant fact the pinned Variant already meets). The catalog
   island only writes the link (`listingStateFor` in `lib/catalog-view.ts`, kept out of the
   shared url-state chunk the model page loads); the model page's island owns the listing URL
   from there, shows the carried filters checked in its rail and offers "clear filters" next
@@ -113,12 +114,18 @@ and hash, so switching language keeps the view.
   every other facet's filters (the engine's disjunctive counts, unchanged). Checking or
   unchecking a value never changes the counts in its own facet (clearing the last make also
   clears the model choice, so the make counts then widen with it). In a facet with a checked
-  value, unchecked make, model, body, fuel and transmission options read "+N": each Variant
-  has one such value, so checking it adds exactly N. Listing country and source keep the
+  value, unchecked make, model, body, fuel, transmission and openpilot options read "+N":
+  each Variant has one such value, so checking it adds exactly N. Listing country and source keep the
   plain count there, since their Variants overlap and a click adds at most N. The rail
   footnote and each checkbox's accessible name say which meaning a number has.
   `facetOptions` and `toggleValue` in `lib/catalog-view.ts` own this and are tested
   against the engine.
 - Message catalogs ship to islands as one shared chunk with both languages (about 3 kB
   gzipped today); the shell script imports only `i18n/locale.ts`.
+- `openpilot` is the catalog parameter for comma.ai openpilot support (ADR 0016): a list of
+  `OPENPILOT_LEVELS` plus `unlisted` (`?openpilot=community,upstream`), written after
+  `source`. Its option labels, the catalog row badge and the model page section take their
+  strings from `lib/openpilot-view.ts`, not the shared message catalog: the labels and badge
+  reach the catalog island only and the section renders at build time, so a model page, the
+  page nearest its JS budget, ships none of them.
 - A performance budget per page is enforced at build time (`apps/web/DESIGN.md`).

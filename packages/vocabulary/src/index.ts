@@ -12,15 +12,19 @@ export type {
   CatalogEntry,
   FxRate,
   ListingGone,
+  ListingPriceSeen,
   ListingSeen,
   ListPrice,
   Observation,
   ObservationKind,
+  OpenpilotLevel,
+  OpenpilotSupport,
   SellerExtras,
   SliceDone,
   VariantFactFields,
   VariantFacts,
 } from "./observation.ts";
+export { OPENPILOT_LEVELS } from "./observation.ts";
 export {
   BODIES,
   type Body,

@@ -1,0 +1,257 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=toyota%3Asienna"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=0&manufacturer_model_seo=toyota%3Asienna",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":0,\"total\":14},\"results\":[{\"additional_model_name\":\"Auto na cestě\",\"create_date\":\"2026-10-22T16:37:11\",\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211327473,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_B/nCXhmtHPUD8nezBzKIJgz08/000b.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_B/nCXhmtHPUBL8BsM5VIJg0Cy/3dbc.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_B/nCXhmtHPUBL8BsM4nIJgz1s/46d6.jpeg\"}],\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2024-01-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, Auto na cestě\",\"premise\":{\"id\":13894555},\"price\":650000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-26T11:52:40\",\"tachometer\":56921},{\"additional_model_name\":\"XSE 2,5 HEV AWD\",\"create_date\":\"2026-01-23T10:01:34\",\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":209783754,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p7_B/kBfrbpoeNBLdvLlvFkVnnh/339a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p7_B/kBfrbpoeNBP53E21FkVnoE/99db.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p7_B/kBfrbpoeNBP53E3CFkVnoi/ebc6.jpeg\"}],\"in_operation_date\":\"2026-01-01\",\"locality\":{\"region\":\"Moravskoslezský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, XSE 2,5 HEV AWD\",\"premise\":{\"id\":13319084},\"price\":1750000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-26T08:08:51\",\"tachometer\":51},{\"additional_model_name\":\"Platinum 2.5 HEV AWD\",\"create_date\":\"2026-01-09T14:45:50\",\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":209718837,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p7_A/kOzkBkwYBTDPt7SMojFcRQHz/9bc1.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p7_A/kOzkBkwYBTBLrRlM4UFcRQIY/dc08.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p7_A/nDJ4VEZEqDjvpWVweFcRQI1/6127.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2026-01-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, Platinum 2.5 HEV AWD\",\"premise\":{\"id\":13156765},\"price\":1970000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-23T20:17:50\",\"tachometer\":22},{\"additional_model_name\":\"Toyota Sienna 2022\",\"create_date\":\"2026-10-12T22:13:11\",\"fuel_cb\":{\"name\":\"Benzín\",\"seo_name\":\"benzin\",\"value\":1},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211263609,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/kcKfrMAkFnIwlssUIDywHS/d375.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLBaEbFKQIIDywc5/b412.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLBkdq1ajXIDywwv/6aea.jpeg\"}],\"in_operation_date\":\"2022-01-01\",\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2022-01-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, Toyota Sienna 2022\",\"premise\":{\"id\":13823621},\"price\":901000,\"price_by_agreement\":false,\"sorting_date\":\"2026-10-21T12:51:28\",\"tachometer\":35260}]}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=4&manufacturer_model_seo=toyota%3Asienna"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=4&manufacturer_model_seo=toyota%3Asienna",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":4,\"total\":14},\"results\":[{\"additional_model_name\":\"2.5L XLE\",\"create_date\":\"2026-09-24T11:39:19\",\"fuel_cb\":{\"name\":\"Benzín\",\"seo_name\":\"benzin\",\"value\":1},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211161582,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyDrQHrlmH3CgOh/1cf9.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyD4lWfCdcH3CgPZ/5cbe.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRBOXzTETHH3Ch3R/f0dc.jpeg\"}],\"in_operation_date\":\"2023-10-01\",\"locality\":{\"region\":\"Jihomoravský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2023-07-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 2.5L XLE\",\"premise\":{\"id\":13193431},\"price\":1199998,\"price_by_agreement\":false,\"sorting_date\":\"2026-09-24T11:44:59\",\"tachometer\":121000},{\"additional_model_name\":\"2.5L LE 8Mist\",\"create_date\":\"2026-09-24T10:59:01\",\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":211161147,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyBiPBFDQrH3Bgf7/675b.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRZSJdBtyH3Bgim/000c.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyC2Er4ofH3Bggq/cfe7.jpeg\"}],\"in_operation_date\":\"2021-07-01\",\"locality\":{\"region\":\"Jihomoravský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2021-03-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 2.5L LE 8Mist\",\"premise\":{\"id\":13193431},\"price\":1029998,\"price_by_agreement\":false,\"sorting_date\":\"2026-09-24T11:02:52\",\"tachometer\":54000},{\"additional_model_name\":\"3.5L 4x4 XLE\",\"create_date\":\"2026-04-22T22:30:07\",\"fuel_cb\":{\"name\":\"Benzín\",\"seo_name\":\"benzin\",\"value\":1},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":210301817,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_B/nCTUX1iX5bIUBBERvGaqBNR/2a80.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_B/nCTUX1iX5DwDWzBVAJGaqBLP/8f39.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_B/nCTUX1iX5bIUBBERvGaqBLp/6215.jpeg\"}],\"in_operation_date\":\"2019-12-01\",\"locality\":{\"region\":\"Jihomoravský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2019-12-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 3.5L 4x4 XLE\",\"premise\":{\"id\":13193431},\"price\":799998,\"price_by_agreement\":false,\"sorting_date\":\"2026-04-22T22:35:01\",\"tachometer\":110000},{\"additional_model_name\":\"2.5L Limited Edition\",\"create_date\":\"2026-03-18T21:49:24\",\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":210091667,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p9_B/nCTUX1iX5CoHumE2YGGNokT/f2e3.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p9_B/nCTUX1iX5BWZuTEpOGGNokv/797a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p9_B/nCTUX1iX5Do9kXEzvGGNolU/d3d4.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Jihomoravský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 2.5L Limited Edition\",\"premise\":{\"id\":13193431},\"price\":1349998,\"price_by_agreement\":false,\"sorting_date\":\"2026-03-18T21:58:57\",\"tachometer\":33000}]}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=8&manufacturer_model_seo=toyota%3Asienna"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=8&manufacturer_model_seo=toyota%3Asienna",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":8,\"total\":14},\"results\":[{\"additional_model_name\":\"2.5L Hybrid XSE\",\"create_date\":\"2026-02-14T11:00:53\",\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":209904009,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_B/kY1K2LlXQJGqrBeWFxPYfP/715c.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_B/nPVpfd5QLLEA4WVBmKFxPYg2/41ab.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_B/nPVpfd5QLLDqzReBkLFxPYh9/52f5.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Jihomoravský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 2.5L Hybrid XSE\",\"premise\":{\"id\":13193431},\"price\":1249998,\"price_by_agreement\":false,\"sorting_date\":\"2026-02-14T11:07:05\",\"tachometer\":63000},{\"additional_model_name\":\"2.5L Platinum 4x4 Full Full\",\"create_date\":\"2026-02-08T17:11:25\",\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":209866902,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_A/kBfrbpoeNCgOJyHaqFt3Nww/662b.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_A/nPXMbbUsvqBj6FAHZQFt3Nxz/2271.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_A/kBfrbpoeNCqNsf1ZFt3NzF/52c2.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Jihomoravský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 2.5L Platinum 4x4 Full Full\",\"premise\":{\"id\":13193431},\"price\":1299998,\"price_by_agreement\":false,\"sorting_date\":\"2026-02-08T17:21:41\",\"tachometer\":52000},{\"additional_model_name\":\"TOYOTA SIENNA XSE HYBRID 7 pas\",\"create_date\":\"2025-11-26T17:19:21\",\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"id\":209539998,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_A/kBfrbpoeNBP53EFQsFqWvoY/2a4b.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_A/nPXMbbUsvqB8gfpFOLFqWvo5/7121.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_A/nPXMbbUsvqDzGaHEy8FqWvpf/8d3e.jpeg\"}],\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, TOYOTA SIENNA XSE HYBRID 7 pas\",\"premise\":{\"id\":594798},\"price\":1681900,\"price_by_agreement\":false,\"sorting_date\":\"2025-11-26T17:19:21\",\"tachometer\":15},{\"additional_model_name\":\"2.5L Hybrid Platinum Full 4x4\",\"create_date\":\"2025-11-12T19:02:59\",\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":209473245,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_of_A/kPxr1WDRoICpfjhXvE4f6Qr/eee2.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_of_A/kPxr1WDRoICdnR0X4E4f6Tk/e966.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_of_A/kPxr1WDRoIDxFxiY7E4gAOm/0a48.jpeg\"}],\"in_operation_date\":\"2021-05-01\",\"locality\":{\"region\":\"Jihomoravský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2021-05-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 2.5L Hybrid Platinum Full 4x4\",\"premise\":{\"id\":13193431},\"price\":1299998,\"price_by_agreement\":false,\"sorting_date\":\"2025-11-12T20:49:28\",\"tachometer\":107000}]}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=12&manufacturer_model_seo=toyota%3Asienna"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/search?category_id=838&condition_seo=nove%2Cpredvadeci%2Cojete&operating_lease=false&vehicle_age_from=2000&limit=4&offset=12&manufacturer_model_seo=toyota%3Asienna",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"pagination\":{\"limit\":4,\"offset\":12,\"total\":14},\"results\":[{\"additional_model_name\":\"3.5i V6, automat, 4x4, STK\",\"create_date\":\"2025-01-08T14:28:34\",\"fuel_cb\":{\"name\":\"Benzín\",\"seo_name\":\"benzin\",\"value\":1},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":207786820,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_A/kPVqmweP7JC1dLSBNMHcuHb7/c600.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_A/kPVqmweP7JB25pTCTaHcuHca/1eec.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_A/nPYADvcUkmBcG9PBp1HcuHcy/fde7.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2015-01-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 3.5i V6, automat, 4x4, STK\",\"premise\":{\"id\":13233004},\"price\":349900,\"price_by_agreement\":false,\"sorting_date\":\"2025-01-08T14:28:34\",\"tachometer\":240481},{\"additional_model_name\":\"XSE AWD  2,4 iHybrid\",\"create_date\":\"2024-11-07T12:43:49\",\"fuel_cb\":{\"name\":\"Benzín\",\"seo_name\":\"benzin\",\"value\":1},\"gearbox_cb\":{\"name\":\"Automatická\",\"seo_name\":\"automaticka\",\"value\":3},\"id\":207542039,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_m3_A/nEEmzB06yDtMFlZ22hhU/1720.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_m3_A/nEEmzB06yDtMFlaF2hhW/a3d6.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_m3_A/kCbvKbaiPvVtzTL2hhY/43ff.jpeg\"}],\"in_operation_date\":\"2025-01-29\",\"locality\":{\"region\":\"Plzeňský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, XSE AWD  2,4 iHybrid\",\"premise\":{\"id\":13416842},\"price\":2081079,\"price_by_agreement\":false,\"sorting_date\":\"2024-11-07T12:43:49\",\"tachometer\":15}]}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/211327473"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/211327473",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"Auto na cestě\",\"color_cb\":{\"name\":\"Černá\",\"value\":12},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-10-22T16:37:11\",\"drive_cb\":{\"name\":\"4x4\",\"value\":2},\"engine_volume\":2500,\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":211327473,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_B/nCXhmtHPUD8nezBzKIJgz08/000b.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_B/nCXhmtHPUBL8BsM5VIJg0Cy/3dbc.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_B/nCXhmtHPUBL8BsM4nIJgz1s/46d6.jpeg\"}],\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2024-01-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, Auto na cestě\",\"premise\":{\"id\":13894555},\"price\":650000,\"price_is_vat_deductible\":null,\"price_is_without_vat\":null,\"price_original\":650000,\"sorting_date\":\"2026-10-26T11:52:40\",\"status\":\"active\",\"tachometer\":56921,\"vehicle_body_cb\":{\"name\":\"MPV\",\"seo_name\":\"mpv\",\"value\":8}}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/209783754"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/209783754",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"XSE 2,5 HEV AWD\",\"average_electric_mileage\":0.0,\"average_gas_mileage\":6.7,\"capacity\":7,\"color_cb\":{\"name\":\"Černá\",\"value\":12},\"condition_cb\":{\"name\":\"Nové\",\"value\":1},\"create_date\":\"2026-01-23T10:01:34\",\"doors\":5,\"drive_cb\":{\"name\":\"4x4\",\"value\":2},\"engine_power\":183,\"engine_volume\":2487,\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":209783754,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p7_B/kBfrbpoeNBLdvLlvFkVnnh/339a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p7_B/kBfrbpoeNBP53E21FkVnoE/99db.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p7_B/kBfrbpoeNBP53E3CFkVnoi/ebc6.jpeg\"}],\"in_operation_date\":\"2026-01-01\",\"locality\":{\"region\":\"Moravskoslezský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, XSE 2,5 HEV AWD\",\"premise\":{\"id\":13319084},\"price\":1750000,\"price_is_vat_deductible\":true,\"price_is_without_vat\":true,\"price_original\":1446281,\"price_without_vat\":1446281,\"sorting_date\":\"2026-10-26T08:08:51\",\"status\":\"active\",\"stk_date\":\"2030-01-01\",\"tachometer\":51,\"vehicle_body_cb\":{\"name\":\"MPV\",\"seo_name\":\"mpv\",\"value\":8}}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/209718837"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/209718837",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"Platinum 2.5 HEV AWD\",\"average_electric_mileage\":0.0,\"average_gas_mileage\":6.7,\"capacity\":7,\"color_cb\":{\"name\":\"Černá\",\"value\":12},\"condition_cb\":{\"name\":\"Nové\",\"value\":1},\"create_date\":\"2026-01-09T14:45:50\",\"doors\":5,\"drive_cb\":{\"name\":\"4x4\",\"value\":2},\"engine_power\":245,\"engine_volume\":2487,\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":209718837,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p7_A/kOzkBkwYBTDPt7SMojFcRQHz/9bc1.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p7_A/kOzkBkwYBTBLrRlM4UFcRQIY/dc08.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p7_A/nDJ4VEZEqDjvpWVweFcRQI1/6127.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2026-01-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, Platinum 2.5 HEV AWD\",\"premise\":{\"id\":13156765},\"price\":1970000,\"price_is_vat_deductible\":true,\"price_is_without_vat\":false,\"price_original\":1970000,\"price_without_vat\":1628099,\"sorting_date\":\"2026-10-23T20:17:50\",\"status\":\"active\",\"tachometer\":22,\"vehicle_body_cb\":{\"name\":\"MPV\",\"seo_name\":\"mpv\",\"value\":8}}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/211263609"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/211263609",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"Toyota Sienna 2022\",\"capacity\":6,\"color_cb\":{\"name\":\"Šedá\",\"value\":11},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-10-12T22:13:11\",\"doors\":4,\"drive_cb\":{\"name\":\"4x4\",\"value\":2},\"engine_volume\":2487,\"fuel_cb\":{\"name\":\"Benzín\",\"seo_name\":\"benzin\",\"value\":1},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":211263609,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/kcKfrMAkFnIwlssUIDywHS/d375.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLBaEbFKQIIDywc5/b412.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qG_A/nCR9NVflLBkdq1ajXIDywwv/6aea.jpeg\"}],\"in_operation_date\":\"2022-01-01\",\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2022-01-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, Toyota Sienna 2022\",\"premise\":{\"id\":13823621},\"price\":901000,\"price_is_vat_deductible\":null,\"price_is_without_vat\":null,\"price_original\":901000,\"sorting_date\":\"2026-10-21T12:51:28\",\"status\":\"active\",\"tachometer\":35260,\"vehicle_body_cb\":{\"name\":\"MPV\",\"seo_name\":\"mpv\",\"value\":8}}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/211161582"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/211161582",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"2.5L XLE\",\"capacity\":7,\"color_cb\":{\"name\":\"Šedá\",\"value\":11},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-09-24T11:39:19\",\"doors\":5,\"drive_cb\":{\"name\":\"Pohon předních kol\",\"value\":9},\"engine_power\":180,\"engine_volume\":2487,\"fuel_cb\":{\"name\":\"Benzín\",\"seo_name\":\"benzin\",\"value\":1},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":211161582,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyDrQHrlmH3CgOh/1cf9.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyD4lWfCdcH3CgPZ/5cbe.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRBOXzTETHH3Ch3R/f0dc.jpeg\"}],\"in_operation_date\":\"2023-10-01\",\"locality\":{\"region\":\"Jihomoravský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2023-07-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 2.5L XLE\",\"premise\":{\"id\":13193431},\"price\":1199998,\"price_is_vat_deductible\":true,\"price_is_without_vat\":null,\"price_original\":1199998,\"price_without_vat\":991734,\"sorting_date\":\"2026-09-24T11:44:59\",\"status\":\"active\",\"tachometer\":121000,\"vehicle_body_cb\":{\"name\":\"MPV\",\"seo_name\":\"mpv\",\"value\":8}}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/211161147"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/211161147",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"2.5L LE 8Mist\",\"capacity\":8,\"color_cb\":{\"name\":\"Bílá\",\"value\":1},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-09-24T10:59:01\",\"doors\":5,\"drive_cb\":{\"name\":\"Pohon předních kol\",\"value\":9},\"engine_power\":180,\"engine_volume\":2487,\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":211161147,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyBiPBFDQrH3Bgf7/675b.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/k0OqwCKRZSJdBtyH3Bgim/000c.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qF_B/nOdL4BtPEyC2Er4ofH3Bggq/cfe7.jpeg\"}],\"in_operation_date\":\"2021-07-01\",\"locality\":{\"region\":\"Jihomoravský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2021-03-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 2.5L LE 8Mist\",\"premise\":{\"id\":13193431},\"price\":1029998,\"price_is_vat_deductible\":null,\"price_is_without_vat\":null,\"price_original\":1029998,\"sorting_date\":\"2026-09-24T11:02:52\",\"status\":\"active\",\"tachometer\":54000,\"vehicle_body_cb\":{\"name\":\"MPV\",\"seo_name\":\"mpv\",\"value\":8}}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/210301817"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/210301817",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"3.5L 4x4 XLE\",\"capacity\":7,\"color_cb\":{\"name\":\"Šedá\",\"value\":11},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-04-22T22:30:07\",\"doors\":5,\"drive_cb\":{\"name\":\"4x4\",\"value\":2},\"engine_power\":220,\"engine_volume\":3456,\"fuel_cb\":{\"name\":\"Benzín\",\"seo_name\":\"benzin\",\"value\":1},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":210301817,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_B/nCTUX1iX5bIUBBERvGaqBNR/2a80.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_B/nCTUX1iX5DwDWzBVAJGaqBLP/8f39.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qA_B/nCTUX1iX5bIUBBERvGaqBLp/6215.jpeg\"}],\"in_operation_date\":\"2019-12-01\",\"locality\":{\"region\":\"Jihomoravský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2019-12-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 3.5L 4x4 XLE\",\"premise\":{\"id\":13193431},\"price\":799998,\"price_is_vat_deductible\":null,\"price_is_without_vat\":null,\"price_original\":799998,\"sorting_date\":\"2026-04-22T22:35:01\",\"status\":\"active\",\"tachometer\":110000,\"vehicle_body_cb\":{\"name\":\"MPV\",\"seo_name\":\"mpv\",\"value\":8}}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/210091667"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/210091667",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"2.5L Limited Edition\",\"capacity\":7,\"color_cb\":{\"name\":\"Bílá\",\"value\":1},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-03-18T21:49:24\",\"doors\":5,\"drive_cb\":{\"name\":\"Pohon předních kol\",\"value\":9},\"engine_power\":180,\"engine_volume\":2487,\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":210091667,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p9_B/nCTUX1iX5CoHumE2YGGNokT/f2e3.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p9_B/nCTUX1iX5BWZuTEpOGGNokv/797a.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p9_B/nCTUX1iX5Do9kXEzvGGNolU/d3d4.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Jihomoravský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 2.5L Limited Edition\",\"premise\":{\"id\":13193431},\"price\":1349998,\"price_is_vat_deductible\":null,\"price_is_without_vat\":null,\"price_original\":1349998,\"sorting_date\":\"2026-03-18T21:58:57\",\"status\":\"active\",\"tachometer\":33000,\"vehicle_body_cb\":{\"name\":\"MPV\",\"seo_name\":\"mpv\",\"value\":8}}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/209904009"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/209904009",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"2.5L Hybrid XSE\",\"capacity\":7,\"color_cb\":{\"name\":\"Šedá\",\"value\":11},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-02-14T11:00:53\",\"doors\":5,\"drive_cb\":{\"name\":\"Pohon předních kol\",\"value\":9},\"engine_power\":180,\"engine_volume\":2487,\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":209904009,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_B/kY1K2LlXQJGqrBeWFxPYfP/715c.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_B/nPVpfd5QLLEA4WVBmKFxPYg2/41ab.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_B/nPVpfd5QLLDqzReBkLFxPYh9/52f5.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Jihomoravský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 2.5L Hybrid XSE\",\"premise\":{\"id\":13193431},\"price\":1249998,\"price_is_vat_deductible\":null,\"price_is_without_vat\":null,\"price_original\":1249998,\"sorting_date\":\"2026-02-14T11:07:05\",\"status\":\"active\",\"tachometer\":63000,\"vehicle_body_cb\":{\"name\":\"MPV\",\"seo_name\":\"mpv\",\"value\":8}}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/209866902"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/209866902",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"2.5L Platinum 4x4 Full Full\",\"capacity\":7,\"color_cb\":{\"name\":\"Modrá\",\"value\":8},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2026-02-08T17:11:25\",\"doors\":5,\"drive_cb\":{\"name\":\"4x4\",\"value\":2},\"engine_power\":180,\"engine_volume\":2487,\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":209866902,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_A/kBfrbpoeNCgOJyHaqFt3Nww/662b.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_A/nPXMbbUsvqBj6FAHZQFt3Nxz/2271.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_A/kBfrbpoeNCqNsf1ZFt3NzF/52c2.jpeg\"}],\"in_operation_date\":\"2021-12-01\",\"locality\":{\"region\":\"Jihomoravský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2021-12-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 2.5L Platinum 4x4 Full Full\",\"premise\":{\"id\":13193431},\"price\":1299998,\"price_is_vat_deductible\":null,\"price_is_without_vat\":null,\"price_original\":1299998,\"sorting_date\":\"2026-02-08T17:21:41\",\"status\":\"active\",\"tachometer\":52000,\"vehicle_body_cb\":{\"name\":\"MPV\",\"seo_name\":\"mpv\",\"value\":8}}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/209539998"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/209539998",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"TOYOTA SIENNA XSE HYBRID 7 pas\",\"average_electric_mileage\":0.0,\"average_gas_mileage\":0.0,\"capacity\":7,\"color_cb\":{\"name\":\"Šedá\",\"value\":11},\"condition_cb\":{\"name\":\"Nové\",\"value\":1},\"create_date\":\"2025-11-26T17:19:21\",\"doors\":5,\"engine_power\":180,\"engine_volume\":2500,\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"id\":209539998,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_A/kBfrbpoeNBP53EFQsFqWvoY/2a4b.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_A/nPXMbbUsvqB8gfpFOLFqWvo5/7121.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_p8_A/nPXMbbUsvqDzGaHEy8FqWvpf/8d3e.jpeg\"}],\"locality\":{\"region\":\"Hlavní město Praha\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, TOYOTA SIENNA XSE HYBRID 7 pas\",\"premise\":{\"id\":594798},\"price\":1681900,\"price_is_vat_deductible\":true,\"price_is_without_vat\":true,\"price_original\":1390000,\"price_without_vat\":1390000,\"sorting_date\":\"2025-11-26T17:19:21\",\"status\":\"active\",\"tachometer\":15,\"vehicle_body_cb\":{\"name\":\"MPV\",\"seo_name\":\"mpv\",\"value\":8}}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/209473245"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/209473245",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"2.5L Hybrid Platinum Full 4x4\",\"capacity\":7,\"color_cb\":{\"name\":\"Fialová\",\"value\":7},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2025-11-12T19:02:59\",\"doors\":5,\"drive_cb\":{\"name\":\"4x4\",\"value\":2},\"engine_power\":180,\"engine_volume\":2487,\"fuel_cb\":{\"name\":\"Hybridní\",\"seo_name\":\"hybridni\",\"value\":5},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":209473245,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_of_A/kPxr1WDRoICpfjhXvE4f6Qr/eee2.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_of_A/kPxr1WDRoICdnR0X4E4f6Tk/e966.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_of_A/kPxr1WDRoIDxFxiY7E4gAOm/0a48.jpeg\"}],\"in_operation_date\":\"2021-05-01\",\"locality\":{\"region\":\"Jihomoravský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2021-05-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 2.5L Hybrid Platinum Full 4x4\",\"premise\":{\"id\":13193431},\"price\":1299998,\"price_is_vat_deductible\":null,\"price_is_without_vat\":null,\"price_original\":1299998,\"sorting_date\":\"2025-11-12T20:49:28\",\"status\":\"active\",\"tachometer\":107000,\"vehicle_body_cb\":{\"name\":\"MPV\",\"seo_name\":\"mpv\",\"value\":8}}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/207786820"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/207786820",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"3.5i V6, automat, 4x4, STK\",\"capacity\":7,\"color_cb\":{\"name\":\"Černá\",\"value\":12},\"condition_cb\":{\"name\":\"Ojeté\",\"value\":2},\"create_date\":\"2025-01-08T14:28:34\",\"drive_cb\":{\"name\":\"4x4\",\"value\":2},\"engine_power\":196,\"engine_volume\":3456,\"fuel_cb\":{\"name\":\"Benzín\",\"seo_name\":\"benzin\",\"value\":1},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":207786820,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_A/kPVqmweP7JC1dLSBNMHcuHb7/c600.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_A/kPVqmweP7JB25pTCTaHcuHca/1eec.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_qE_A/nPYADvcUkmBcG9PBp1HcuHcy/fde7.jpeg\"}],\"locality\":{\"region\":\"Středočeský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2015-01-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, 3.5i V6, automat, 4x4, STK\",\"premise\":{\"id\":13233004},\"price\":349900,\"price_is_vat_deductible\":false,\"price_is_without_vat\":false,\"price_original\":349900,\"sorting_date\":\"2025-01-08T14:28:34\",\"status\":\"active\",\"stk_date\":\"2027-11-05\",\"tachometer\":240481,\"vehicle_body_cb\":{\"name\":\"MPV\",\"seo_name\":\"mpv\",\"value\":8}}}",
+        "tier": "T0"
+      }
+    },
+    {
+      "request": {
+        "url": "https://www.sauto.cz/api/v1/items/207542039"
+      },
+      "response": {
+        "url": "https://www.sauto.cz/api/v1/items/207542039",
+        "status": 200,
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": "{\"result\":{\"additional_model_name\":\"XSE AWD  2,4 iHybrid\",\"average_gas_mileage\":0.0,\"capacity\":7,\"color_cb\":{\"name\":\"Šedá\",\"value\":11},\"condition_cb\":{\"name\":\"Předváděcí\",\"value\":4},\"create_date\":\"2024-11-07T12:43:49\",\"doors\":5,\"drive_cb\":{\"name\":\"4x4\",\"value\":2},\"engine_power\":183,\"engine_volume\":2494,\"fuel_cb\":{\"name\":\"Benzín\",\"seo_name\":\"benzin\",\"value\":1},\"gearbox_cb\":{\"name\":\"Automatická\",\"value\":3},\"id\":207542039,\"images\":[{\"url\":\"//d19-a.sdn.cz/d_19/c_img_m3_A/nEEmzB06yDtMFlZ22hhU/1720.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_m3_A/nEEmzB06yDtMFlaF2hhW/a3d6.jpeg\"},{\"url\":\"//d19-a.sdn.cz/d_19/c_img_m3_A/kCbvKbaiPvVtzTL2hhY/43ff.jpeg\"}],\"in_operation_date\":\"2025-01-29\",\"locality\":{\"region\":\"Plzeňský kraj\",\"municipality\":\"\",\"zip\":\"\"},\"manufacturer_cb\":{\"name\":\"Toyota\",\"seo_name\":\"toyota\",\"value\":99},\"manufacturing_date\":\"2025-01-01\",\"model_cb\":{\"name\":\"Sienna\",\"seo_name\":\"sienna\",\"value\":728},\"name\":\"Toyota Sienna, XSE AWD  2,4 iHybrid\",\"premise\":{\"id\":13416842},\"price\":2081079,\"price_is_vat_deductible\":true,\"price_is_without_vat\":false,\"price_original\":2081079,\"price_without_vat\":1719900,\"sorting_date\":\"2024-11-07T12:43:49\",\"status\":\"active\",\"tachometer\":15,\"vehicle_body_cb\":{\"name\":\"MPV\",\"seo_name\":\"mpv\",\"value\":8}}}",
+        "tier": "T0"
+      }
+    }
+  ]
+}

@@ -96,6 +96,60 @@ const MIGRATIONS: string[] = [
   // listing's currency from its record (2026-10-28). This only relabels currency; it never
   // deletes history points.
   relabelEur("tipcars", TIPCARS_EUR_PRICES, "2026-10-28"),
+  // Sauto listings a seller priced without VAT, recorded as `net` at the VAT-inclusive
+  // headline before the adapter labelled that headline gross (2026-10-29). The adapter wrote
+  // `net` only in this case, so every Sauto `net` is relabelled. Amounts stay, and history
+  // points carry no basis.
+  `
+  UPDATE listings SET data = json_set(data, '$.priceBasis', 'gross')
+  WHERE source = 'sauto' AND json_extract(data, '$.priceBasis') = 'net';
+  `,
+  // Absence per finished slice (ADR 0008): the slice a listing was met in, the census each
+  // full run belongs to (the id of its first full run), and the census that last counted a
+  // listing missed. A full run belonged to the census begun by the first full run after the
+  // scope's previous complete one. Listings recorded before Bazoš and TipCars named their
+  // slice get the one their adapter names: a Bazoš ad's category (its source make) and id
+  // part of ten; a TipCars listing's list, and for a used one its year (the year 2026 slice
+  // was open above).
+  `
+  ALTER TABLE listings ADD COLUMN slice TEXT;
+  ALTER TABLE listings ADD COLUMN missed_census INTEGER;
+  CREATE INDEX listings_slice ON listings (source, scope, slice);
+  ALTER TABLE runs ADD COLUMN census INTEGER;
+  UPDATE runs SET census = (
+    SELECT min(f.id) FROM runs f
+    WHERE f.source = runs.source AND f.scope = runs.scope AND f.mode = 'full'
+      AND f.id > coalesce((
+        SELECT max(c.id) FROM runs c
+        WHERE c.source = runs.source AND c.scope = runs.scope AND c.mode = 'full'
+          AND c.status = 'complete' AND c.id < runs.id), 0))
+  WHERE mode = 'full';
+  UPDATE listings
+  SET slice = json_extract(data, '$.vehicle.sourceTaxonomy.make') || ';part=' || (CAST(ref AS INTEGER) % 10) || '/10'
+  WHERE source = 'bazos' AND ref GLOB '[0-9]*' AND ref NOT GLOB '*[^0-9]*'
+    AND json_extract(data, '$.vehicle.sourceTaxonomy.make') IS NOT NULL;
+  UPDATE listings
+  SET slice = CASE
+    WHEN json_extract(data, '$.condition') IN ('new', 'demo') THEN 'new'
+    WHEN json_extract(data, '$.vehicle.manufactureYear') >= 2026 THEN 'used:2026-'
+    ELSE 'used:' || json_extract(data, '$.vehicle.manufactureYear') END
+  WHERE source = 'tipcars' AND (json_extract(data, '$.condition') IN ('new', 'demo')
+    OR json_extract(data, '$.vehicle.manufactureYear') BETWEEN 2000 AND 2100);
+  `,
+  // openpilot list rows (ADR 0016); like catalog entries, the census retires the rows no run
+  // of it stated.
+  `
+  CREATE TABLE IF NOT EXISTS openpilot_support (
+    source TEXT NOT NULL,
+    ref TEXT NOT NULL,
+    data TEXT NOT NULL,
+    updated TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    last_seen_run INTEGER NOT NULL,
+    retired TEXT,
+    PRIMARY KEY (source, ref)
+  );
+  `,
 ];
 
 /**

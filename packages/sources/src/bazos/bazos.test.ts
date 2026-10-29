@@ -5,7 +5,7 @@ import {
   type Interaction,
   loadCassette,
 } from "@cca/http";
-import type { ListingSeen, Observation } from "@cca/vocabulary";
+import type { ListingPriceSeen, ListingSeen, Observation } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
 import { type Checkpoint, emptyCheckpoint, type HarvestMode } from "../source.ts";
 import { bazosSource } from "./bazos.ts";
@@ -18,6 +18,8 @@ import { bazosSource } from "./bazos.ts";
 // bump.cassette moves 224316711 to the top during the walk; shift.cassette removes the
 // 2nd-7th rows during the walk; changed.cassette serves a maintenance page.
 const now = new Date("2026-10-25T17:00:00Z");
+/** A last run before every ad of the fixtures: an incremental run reads every page. */
+const LONG_AGO = new Date("2026-09-01T03:00:00Z");
 
 const fixture = (name: string) => new URL(`./fixtures/${name}.cassette.json`, import.meta.url);
 
@@ -123,13 +125,18 @@ async function category() {
       if (!rows.has(ref)) rows.set(ref, block.replace("</div></body></html>", ""));
     }
   }
-  const page = (list: string[], offset: number): Interaction => {
+  const page = (list: string[], offset: number, hidden: ReadonlySet<string>): Interaction => {
     const url = `https://auto.bazos.cz/kia/${offset === 0 ? "" : `${offset}/`}`;
-    const shown = list.slice(offset, offset + 20).map((id) => {
-      const row = rows.get(id.replace("*", "")) as string;
-      return ROW + (id.endsWith("*") ? row.replace(/\[\d+\.\d+\. \d{4}\]/, "[25.10. 2026]") : row);
-    });
-    const header = `Zobrazeno ${offset + 1}-${offset + shown.length} inzerátů z ${list.length}`;
+    const slots = list.slice(offset, offset + 20);
+    const shown = slots
+      .filter((id) => !hidden.has(id))
+      .map((id) => {
+        const row = rows.get(id.replace("*", "")) as string;
+        return (
+          ROW + (id.endsWith("*") ? row.replace(/\[\d+\.\d+\. \d{4}\]/, "[25.10. 2026]") : row)
+        );
+      });
+    const header = `Zobrazeno ${offset + 1}-${offset + slots.length} inzerátů z ${list.length}`;
     const body = `<html><body><div class="maincontent">\n<div class="listainzerat inzeratyflex"><div class="inzeratynadpis">${header}</div></div>\n${shown.join("")}</div></body></html>`;
     const headers = { "content-type": "text/html; charset=UTF-8" };
     return {
@@ -143,13 +150,19 @@ async function category() {
     post(ref: string, like: string) {
       rows.set(ref, (rows.get(like) as string).replaceAll(like, ref));
     },
-    /** The list pages served in request order, `[offset, list]` each, plus the ad pages. */
-    async cassette(served: [number, string[]][]): Promise<Cassette> {
+    /**
+     * The list pages served in request order, `[offset, list]` each, plus the ad pages. Ids
+     * in `hidden` hold their place and count, but no page shows them.
+     */
+    async cassette(
+      served: [number, string[]][],
+      hidden: ReadonlySet<string> = new Set(),
+    ): Promise<Cassette> {
       const details = await loadCassette(fixture("details"));
       return {
         version: 1,
         interactions: [
-          ...served.map(([offset, list]) => page(list, offset)),
+          ...served.map(([offset, list]) => page(list, offset, hidden)),
           ...details.interactions,
         ],
       };
@@ -390,7 +403,36 @@ describe("bazos source", () => {
       ),
     );
     const { observations, error } = await harvest(recorded, "full");
-    expect(String(error)).toMatch(/not harvested whole: kia/);
+    expect(String(error)).toMatch(/not harvested whole: kia \(met 59 ads of 70 counted\)$/);
+    expect(observations).toEqual([]);
+  });
+
+  it("an ad the site counts but no page shows keeps the category out of the census, by name", async () => {
+    // As on Ford and Mercedes live: the 26th place is counted (the category holds 60) and
+    // /kia/16/ shows 19 of the 20 rows its header counts, on every read.
+    const kia = await category();
+    const list = [...kia.ids.slice(0, 25), "225999999", ...kia.ids.slice(25)];
+    const { observations, error, warnings } = await harvest(
+      await kia.cassette(
+        [
+          [0, list],
+          [16, list],
+          [32, list],
+          [48, list],
+        ],
+        new Set(["225999999"]),
+      ),
+      "full",
+    );
+    expect(warnings).toContain(
+      "Bazoš list page has 19 rows, its header 20: https://auto.bazos.cz/kia/16/",
+    );
+    // The ad lacked lies mid-page, on no page next to it, and no walk meets it.
+    expect(warnings).toContain("bazos: walk met a list page whose rows do not match its header");
+    expect(warnings).toContain("bazos: walk met fewer ads than the site counts");
+    expect(String(error)).toBe(
+      "Error: bazos: categories not harvested whole: kia (pages whose rows do not match their header: /kia/16/ 19 of 20; met 59 ads of 60 counted)",
+    );
     expect(observations).toEqual([]);
   });
 
@@ -476,7 +518,7 @@ describe("bazos source", () => {
     // A full run fails at the end, so the census resumes with that part only.
     expect(String(full.error)).toMatch(/slices with unreadable ads: kia;part=0\/2/);
 
-    const incremental = await harvest(recorded, "incremental");
+    const incremental = await harvest(recorded, "incremental", { lastRunAt: LONG_AGO });
     expect(incremental.error).toBeUndefined();
     expect(listing(incremental.observations, "224899514")?.price.amount).toBeNaN();
   });
@@ -539,6 +581,117 @@ describe("bazos source", () => {
     expect(refs(observations).sort()).toEqual([...retry].sort());
   });
 
+  describe("incremental run, known ads", () => {
+    /** Sets the price cell of one ad's row in every list page, or in the one at `path`. */
+    const reprice = (c: Cassette, ref: string, shown: string, path?: string) => {
+      const cell = new RegExp(
+        `(/inzerat/${ref}/[\\s\\S]*?<div class="inzeratycena">)[\\s\\S]*?(</div>)`,
+      );
+      for (const { request, response } of c.interactions) {
+        if (request.url.includes("/inzerat/")) continue;
+        if (path && pathOf(request.url) !== path) continue;
+        response.body = response.body.replace(
+          cell,
+          `$1<b><span translate="no">  ${shown}</span></b>$2`,
+        );
+      }
+    };
+    const pricesSeen = (os: Observation[]) =>
+      os.filter((o): o is ListingPriceSeen => o.kind === "ListingPriceSeen");
+    // The last run was this morning: the walk reads /kia/ and /kia/16/, and the Ledger
+    // knows every ad on them.
+    const known = { lastRunAt: new Date("2026-10-25T03:00:00Z"), isKnown: () => true };
+
+    it("gives each known ad on the pages it reads the price its row shows, without its ad page", async () => {
+      // The seller cut 224787227's price since the last run (349 900 Kč then).
+      const recorded = await cassette("full", (c) => reprice(c, "224787227", "339 900 Kč"));
+      const { observations, error, listed, details } = await harvest(
+        recorded,
+        "incremental",
+        known,
+      );
+      expect(error).toBeUndefined();
+      expect(listed).toEqual(["/kia/", "/kia/16/"]);
+      expect(details).toEqual([]);
+      const prices = pricesSeen(observations);
+      expect(observations).toEqual(prices);
+      expect(prices.find((o) => o.ref === "224787227")?.price).toEqual({
+        amount: 339_900,
+        currency: "CZK",
+      });
+      // An unchanged price is stated too: price history is daily.
+      expect(prices.find((o) => o.ref === "225307819")?.price).toEqual({
+        amount: 219_000,
+        currency: "CZK",
+      });
+      // Each ad once, though the pages overlap; rows priced under 10 000 Kč are out of scope.
+      const priced = prices.map((o) => o.ref);
+      expect(new Set(priced).size).toBe(priced.length);
+      expect(prices.every((o) => o.price.amount >= 10_000)).toBe(true);
+    });
+
+    it("states the price the ad's ListingSeen carries", async () => {
+      // The recorded rows and ad pages, every page read: each in-scope ad's list price is the
+      // one a full run takes from its ad page.
+      const full = await harvest(await cassette("full"), "full");
+      const incremental = await harvest(await cassette("full"), "incremental", {
+        lastRunAt: LONG_AGO,
+        isKnown: () => true,
+      });
+      expect(incremental.error).toBeUndefined();
+      const seen = listings(full.observations).filter((o) => Number.isFinite(o.price.amount));
+      expect(seen.length).toBeGreaterThan(20);
+      const prices = new Map(pricesSeen(incremental.observations).map((o) => [o.ref, o.price]));
+      for (const listing of seen) expect(prices.get(listing.ref)).toEqual(listing.price);
+    });
+
+    it("gives a known ad whose row states no price, or one out of scope, nothing", async () => {
+      const recorded = await cassette("full", (c) => {
+        reprice(c, "224787227", "Dohodou");
+        reprice(c, "225307819", "V textu");
+        // Under 10 000 Kč its ListingSeen would not come either.
+        reprice(c, "224672197", "9 000 Kč");
+      });
+      const { observations, error, details } = await harvest(recorded, "incremental", known);
+      expect(error).toBeUndefined();
+      expect(details).toEqual([]);
+      expect(pricesSeen(observations).length).toBeGreaterThan(0);
+      const refsMet = observations.map((o) => ("ref" in o ? o.ref : undefined));
+      expect(refsMet).not.toContain("224787227");
+      expect(refsMet).not.toContain("225307819");
+      expect(refsMet).not.toContain("224672197");
+    });
+
+    it("takes a known ad's price from the next page when its row on one is unreadable", async () => {
+      // 224919677 is on both /kia/ and /kia/16/ (the pages overlap); retitled as a car.
+      const recorded = await cassette("full", (c) => {
+        rewrite(c, "224919677", "list", "Kia Carnival 2.9 CRDi 2008");
+        reprice(c, "224919677", "cca 120 000 Kč", "/kia/");
+        reprice(c, "224919677", "120 000 Kč", "/kia/16/");
+      });
+      const { observations, error, details } = await harvest(recorded, "incremental", known);
+      expect(error).toBeUndefined();
+      expect(details).toEqual([]);
+      expect(pricesSeen(observations).filter((o) => o.ref === "224919677")).toEqual([
+        { kind: "ListingPriceSeen", ref: "224919677", price: { amount: 120_000, currency: "CZK" } },
+      ]);
+    });
+  });
+
+  it("incremental run without a complete run yet stops at the first page older than yesterday", async () => {
+    // The Ledger knows nothing. Reading every page would take hours on the live site, so
+    // the run would never complete; it reads a day of ads, and a full run the rest.
+    const { observations, error, listed, details } = await harvest(
+      await cassette("full"),
+      "incremental",
+    );
+    expect(error).toBeUndefined();
+    // /kia/ holds today's ads; /kia/16/ is dated wholly before yesterday (2026-10-24).
+    expect(listed).toEqual(["/kia/", "/kia/16/"]);
+    expect(details.length).toBeGreaterThan(0);
+    expect(refs(observations).every((ref) => IN_SCOPE.includes(ref))).toBe(true);
+  });
+
   describe("a list page cut short", () => {
     const lastRow = (body: string) => body.slice(0, body.lastIndexOf(ROW));
     const everyRow = (body: string) => body.slice(0, body.indexOf(ROW));
@@ -597,23 +750,47 @@ describe("bazos source", () => {
     it.each([
       ["the walk", [1, 2]],
       ["the walk over today's ads", [2, 3]],
-    ])("short twice in %s, the census walk is redone and taken", async (_, reads) => {
-      const recorded = await cassette("full", (c) =>
-        cutAt(c, "/kia/16/", (read) => reads.includes(read)),
-      );
+    ])(
+      "short twice in %s, the census walk is redone and taken when the redo reads it whole",
+      async (_, reads) => {
+        // The row the page leaves out shows on the next page, which overlaps it; that does not
+        // tell it apart from an ad that moved there between the two reads.
+        const recorded = await cassette("full", (c) =>
+          cutAt(c, "/kia/16/", (read) => reads.includes(read)),
+        );
+        const { observations, error, warnings, listed } = await harvest(recorded, "full");
+        expect(error).toBeUndefined();
+        expect(warnings).toContain(short);
+        expect(warnings).toContain(unmatched);
+        expect(listed.filter((path) => path === "/kia/")).toHaveLength(4);
+        expect(refs(observations).sort()).toEqual(IN_SCOPE);
+        expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
+      },
+    );
+
+    // Counterexample from review: the row /kia/16/ leaves out shows on /kia/32/, while a
+    // different ad escapes every walk (the walk over today's ads counts 60, one more than any
+    // page shows). Lowering the count by the rows short pages lack would take the census.
+    it("a short page whose ad is met elsewhere lends no credit to an ad no walk met", async () => {
+      const recorded = await cassette("full", (c) => {
+        cutAt(c, "/kia/16/", () => true);
+        inPages(c, "inzerátů z 59", "inzerátů z 60", (url, n) => url.endsWith("/kia/") && n >= 2);
+      });
       const { observations, error, warnings, listed } = await harvest(recorded, "full");
-      expect(error).toBeUndefined();
       expect(warnings).toContain(unmatched);
       expect(listed.filter((path) => path === "/kia/")).toHaveLength(4);
-      expect(refs(observations).sort()).toEqual(IN_SCOPE);
-      expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
+      // Both walks are refused, and the count is not lowered by the row /kia/16/ lacks.
+      expect(String(error)).toBe(
+        "Error: bazos: categories not harvested whole: kia (pages whose rows do not match their header: /kia/16/ 19 of 20; met 59 ads of 60 counted)",
+      );
+      expect(observations).toEqual([]);
     });
 
     it("staying short, incremental reads the rows shown and goes on to later pages and categories", async () => {
       const { observations, error, warnings, listed } = await harvest(
         await stayingShort(),
         "incremental",
-        {},
+        { lastRunAt: LONG_AGO },
         undefined,
         ["kia", "mazda"],
       );
@@ -632,14 +809,16 @@ describe("bazos source", () => {
       ]);
       // Each category's cars, the Kia ones read from the short page included.
       expect(refs(observations).sort()).toEqual(IN_SCOPE.flatMap((ref) => [ref, ref]));
-      expect(warnings).toContain("bazos: categories not harvested whole: kia");
+      expect(warnings).toContain(
+        "bazos: categories not harvested whole: kia (page whose rows do not match its header: /kia/16/ 19 of 20)",
+      );
     });
 
     it("showing no rows, incremental gives up on that category and goes on to the next", async () => {
       const { observations, error, warnings, listed } = await harvest(
         await stayingShort("/kia/", everyRow),
         "incremental",
-        {},
+        { lastRunAt: LONG_AGO },
         undefined,
         ["kia", "mazda"],
       );
@@ -647,12 +826,20 @@ describe("bazos source", () => {
       expect(warnings).toContain("bazos: lost its place in kia at offset 0");
       expect(listed.slice(0, 3)).toEqual(["/kia/", "/kia/", "/mazda/"]);
       expect(refs(observations).sort()).toEqual(IN_SCOPE);
-      expect(warnings).toContain("bazos: categories not harvested whole: kia");
+      expect(warnings).toContain(
+        "bazos: categories not harvested whole: kia (lost its place at offset 0)",
+      );
     });
 
-    it("staying short in a full run, that category reports no slice done while the others do", async () => {
+    it("lacking an ad no page next to it shows in a full run, that category reports no slice done while the others do", async () => {
+      // A row from the middle of /kia/16/, which no other page covers.
+      const midRow = (body: string) => {
+        const blocks = body.split(ROW);
+        blocks.splice(10, 1);
+        return blocks.join(ROW);
+      };
       const { observations, error, warnings, listed, details } = await harvest(
-        await stayingShort(),
+        await stayingShort("/kia/16/", midRow),
         "full",
         {},
         undefined,
@@ -682,7 +869,172 @@ describe("bazos source", () => {
         "mazda;part=1/2",
       ]);
       // The run fails at the end, so the census resumes with Kia only.
-      expect(String(error)).toMatch(/categories not harvested whole: kia$/);
+      expect(String(error)).toMatch(
+        /categories not harvested whole: kia \(pages whose rows do not match their header: \/kia\/16\/ 19 of 20; met 58 ads of 59 counted\)$/,
+      );
+    });
+  });
+
+  describe("a census walk proves the known ads it meets live", () => {
+    // 224452818 is on /kia/, 224899514 and 224873612 on /kia/16/; both even ids are in part 0.
+    const known = new Set(["224452818", "224899514", "224873612"]);
+    const isKnown = (ref: string) => known.has(ref);
+    const prices = (os: Observation[]) =>
+      os.filter((o): o is ListingPriceSeen => o.kind === "ListingPriceSeen");
+    const failingAt32 = (c: Cassette) => {
+      c.interactions = c.interactions.filter(({ request }) => pathOf(request.url) !== "/kia/32/");
+    };
+    const unreadable = (c: Cassette) =>
+      inPages(
+        c,
+        '<span translate="no">  75 500 Kč</span>',
+        '<span translate="no">neuvedena</span>',
+        (url) => !url.includes("/inzerat/"),
+      );
+
+    it("as it meets them, so a request failing later keeps their sightings", async () => {
+      const recorded = await cassette("full", failingAt32);
+      const { observations, error, details } = await harvest(recorded, "full", { isKnown });
+      expect(String(error)).toMatch(
+        /No recorded interaction for https:\/\/auto.bazos.cz\/kia\/32\//,
+      );
+      expect(details).toEqual([]);
+      // An ad moved here from another category is not missed in the part it left.
+      expect(observations.every((o) => o.kind === "ListingPriceSeen")).toBe(true);
+      expect(prices(observations).map((o) => o.ref)).toEqual([...known]);
+      expect(prices(observations)).toContainEqual({
+        kind: "ListingPriceSeen",
+        ref: "224899514",
+        price: { amount: 75_500, currency: "CZK" },
+      });
+    });
+
+    it("in a walk not taken too", async () => {
+      const recorded = await cassette("full", (c) =>
+        inPages(
+          c,
+          "inzerátů z 59",
+          "inzerátů z 70",
+          (url, n) => n === 2 && !url.includes("/inzerat/"),
+        ),
+      );
+      const { observations, error } = await harvest(recorded, "full", { isKnown });
+      expect(String(error)).toMatch(/not harvested whole: kia/);
+      expect(prices(observations).map((o) => o.ref)).toEqual([...known]);
+      expect(observations).toHaveLength(known.size);
+    });
+
+    it("on a page read again for its rows, when that read fails", async () => {
+      // /kia/ comes out a row short, and the read again gets HTTP 503.
+      const recorded = await cassette("full", (c) => {
+        const at = ({ request }: Interaction) => pathOf(request.url) === "/kia/";
+        const first = c.interactions.find(at) as Interaction;
+        const short = first.response.body.slice(0, first.response.body.lastIndexOf(ROW));
+        c.interactions = [
+          ...c.interactions.filter((i) => !at(i)),
+          { ...first, response: { ...first.response, body: short } },
+          { ...first, response: { ...first.response, status: 503, body: "" } },
+        ];
+      });
+      const { observations, error, listed } = await harvest(recorded, "full", { isKnown });
+      expect(String(error)).toMatch(/Bazoš returned HTTP 503 for https:\/\/auto.bazos.cz\/kia\/$/);
+      expect(listed).toEqual(["/kia/", "/kia/"]);
+      expect(prices(observations).map((o) => o.ref)).toEqual(["224452818"]);
+      expect(observations).toHaveLength(1);
+    });
+
+    it("on a page the walk steps back from, when the read after it fails", async () => {
+      // The first 20 ads go during the walk: /kia/16/ shares none of /kia/'s, so the walk
+      // steps back, and that read gets HTTP 503. The known ad was only on /kia/16/.
+      const c = await category();
+      const target = c.ids.slice(36, 56).find((id) => IN_SCOPE.includes(id)) as string;
+      const recorded = await c.cassette([
+        [0, c.ids],
+        [16, c.ids.slice(20)],
+      ]);
+      const root = recorded.interactions[0] as Interaction;
+      recorded.interactions.push({
+        ...root,
+        response: { ...root.response, status: 503, body: "" },
+      });
+      const { observations, error, listed } = await harvest(recorded, "full", {
+        isKnown: (ref) => ref === target,
+      });
+      expect(String(error)).toMatch(/Bazoš returned HTTP 503 for https:\/\/auto.bazos.cz\/kia\/$/);
+      expect(listed).toEqual(["/kia/", "/kia/16/", "/kia/"]);
+      expect(prices(observations).map((o) => o.ref)).toEqual([target]);
+    });
+
+    it("in parts done earlier in the census, without their ad pages", async () => {
+      const doneAt = new Date("2026-10-24T03:00:00Z");
+      const { observations, error, details } = await harvest(await cassette("full"), "full", {
+        isKnown,
+        sliceDoneAt: (slice) => (slice === "kia;part=0/2" ? doneAt : null),
+      });
+      expect(error).toBeUndefined();
+      expect(details.every((ref) => Number(ref) % 2 === 1)).toBe(true);
+      expect(prices(observations).map((o) => o.ref)).toEqual([...known]);
+      expect(observations.at(-1)).toEqual({ kind: "SliceDone", slice: "kia;part=1/2" });
+    });
+
+    it("an ad another category lists out of scope, when this one lists it", async () => {
+      // 224899514 moved to Škoda, its price raised: Kia's list, read first, still shows it
+      // at 9 000 Kč, out of scope there.
+      const recorded = await cassette("full", (c) => {
+        const skoda = c.interactions
+          .filter(({ request }) => !request.url.includes("/inzerat/"))
+          .map(({ request, response }) => {
+            const url = request.url.replace("/kia/", "/skoda/");
+            return { request: { ...request, url }, response: { ...response, url } };
+          })
+          .filter(({ request }) => pathOf(request.url) !== "/skoda/32/");
+        inPages(
+          c,
+          '<span translate="no">  75 500 Kč</span>',
+          '<span translate="no">  9 000 Kč</span>',
+          (url) => url.includes("/kia/"),
+        );
+        c.interactions.push(...skoda);
+      });
+      const { observations, error } = await harvest(
+        recorded,
+        "full",
+        { isKnown: (ref) => ref === "224899514" },
+        undefined,
+        ["kia", "skoda"],
+      );
+      expect(String(error)).toMatch(/No recorded interaction for .*\/skoda\/32\//);
+      expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
+      expect(prices(observations)).toEqual([
+        { kind: "ListingPriceSeen", ref: "224899514", price: { amount: 75_500, currency: "CZK" } },
+      ]);
+    });
+
+    it("an unreadable row by its rejected sighting, before a later request fails", async () => {
+      const recorded = await cassette("full", (c) => {
+        unreadable(c);
+        failingAt32(c);
+      });
+      const { observations, error } = await harvest(recorded, "full", { isKnown });
+      expect(String(error)).toMatch(
+        /No recorded interaction for https:\/\/auto.bazos.cz\/kia\/32\//,
+      );
+      expect(prices(observations).map((o) => o.ref)).toEqual(["224452818", "224873612"]);
+      const bad = listing(observations, "224899514");
+      // Its part is named, so the Ledger keeps that part, not the next SliceDone, not done.
+      expect(bad).toMatchObject({ slice: "kia;part=0/2" });
+      expect(bad?.price.amount).toBeNaN();
+    });
+
+    it("an unreadable row in a part done earlier keeps the census from completing", async () => {
+      const doneAt = new Date("2026-10-24T03:00:00Z");
+      const { observations, error } = await harvest(await cassette("full", unreadable), "full", {
+        isKnown,
+        sliceDoneAt: (slice) => (slice === "kia;part=0/2" ? doneAt : null),
+      });
+      expect(listing(observations, "224899514")).toMatchObject({ slice: "kia;part=0/2" });
+      expect(observations.at(-1)).toEqual({ kind: "SliceDone", slice: "kia;part=1/2" });
+      expect(String(error)).toMatch(/slices with unreadable ads: kia;part=0\/2$/);
     });
   });
 

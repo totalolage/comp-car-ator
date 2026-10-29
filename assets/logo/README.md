@@ -21,11 +21,11 @@ All masters are SVG with filled outlines (no strokes, no live text). Each comes 
 | `cc-lockup-stacked-*.svg`                                | Mark over name, for square-ish spaces.                                                        |
 | `cc-tile-green.svg`, `cc-tile-green-dark.svg`            | App icon: white mark on a rounded tile, light- and dark-scheme green. Also `assets/icon.svg`. |
 | `cc-tile-small-green.svg`                                | The tile with the small cut; it is the site's `favicon.svg`.                                  |
-| `cc-tile-square-green.svg`, `cc-tile-maskable-green.svg` | Full-bleed sources of `apple-touch-icon.png` and `icon-maskable-512.png`.                     |
+| `cc-tile-square-green.svg`, `cc-tile-maskable-green.svg` | Full-bleed sources of `apple-touch-icon.png` and `icon-maskable-*.png`.                       |
 
 The site's raster icons (`apps/web/public/`: `favicon.ico` 16/32 small cut + 48 main,
-`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`) are
-rendered from these tiles with `rsvg-convert`; the ICO stores PNGs.
+`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `icon-maskable-192.png`,
+`icon-maskable-512.png`) are rendered from these tiles with `rsvg-convert`; the ICO stores PNGs.
 
 ## Construction
 

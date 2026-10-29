@@ -39,6 +39,7 @@ import {
   withoutScope,
 } from "../lib/catalog-view.ts";
 import { compareLabels, variantLabel, variantLabels } from "../lib/compare-view.ts";
+import { openpilotBadge } from "../lib/openpilot-view.ts";
 import { siteStore } from "../lib/store.ts";
 import {
   type CatalogState,
@@ -262,6 +263,7 @@ export default function CatalogExplorer({ lang, initial, names: initialNames, sc
                       >
                         {v.make} {v.model}
                       </a>
+                      <OpenpilotBadge v={v} lang={t.lang} />
                     </th>
                     {COLUMNS.map((col) => (
                       <td key={col.id} class={col.num ? "num" : undefined}>
@@ -314,6 +316,18 @@ function PickBox(props: { t: I18n; variant: VariantRow; picked: VariantId[] | nu
           (e.target as HTMLInputElement).checked = checked;
       }}
     />
+  );
+}
+
+/** comma.ai openpilot support on comma's list; screen readers get the badge's full title. */
+function OpenpilotBadge(props: { v: VariantRow; lang: Lang }) {
+  const badge = openpilotBadge(props.v, props.lang);
+  if (!badge) return null;
+  return (
+    <span class="tag tag-op" data-level={badge.level} title={badge.title}>
+      <span aria-hidden="true">{badge.text}</span>
+      <span class="visually-hidden">{badge.title}</span>
+    </span>
   );
 }
 

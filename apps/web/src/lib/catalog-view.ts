@@ -19,6 +19,7 @@ import type {
 import { BODIES, FUELS, MARKETS, TRANSMISSIONS } from "@cca/vocabulary";
 import { type I18n, MISSING } from "../i18n/i18n.ts";
 import type { MessageKey } from "../i18n/messages.ts";
+import { OPENPILOT_FACETS, openpilotLabel } from "./openpilot-view.ts";
 import type { CatalogState, ListingState } from "./url-state.ts";
 import { bodyLabel } from "./variant-body.ts";
 
@@ -39,6 +40,7 @@ export const RAIL: ({ kind: "enum"; key: EnumFacet } | { kind: "range"; key: Ran
   { kind: "range", key: "odometerKm" },
   { kind: "range", key: "seats" },
   { kind: "range", key: "consumptionL100km" },
+  { kind: "enum", key: "openpilot" },
   { kind: "enum", key: "market" },
   { kind: "enum", key: "source" },
 ];
@@ -70,7 +72,8 @@ export function withoutScope(state: CatalogState, scope: VariantFilters = {}): C
  * with a listing-level meaning, so the model page lists what the row stands for under the
  * same filters. Body, fuel and power come with the Variant: as listing filters they would
  * test each Listing's own fields and drop the Variant's Listings that state none. Make and
- * model are the page itself; seats, consumption and new price have no Listing counterpart.
+ * model are the page itself; seats, consumption, new price and openpilot support have no
+ * Listing counterpart (openpilot is a Variant fact, so the pinned Variant already meets it).
  * A Variant without used Listings (all the catalog counts) is not pinned: most such Variants
  * have no Listings at all, and the model page would open empty on an unnamed Variant.
  */
@@ -132,6 +135,7 @@ const SINGLE_VALUED: ReadonlySet<EnumFacet> = new Set([
   "body",
   "fuel",
   "transmission",
+  "openpilot",
 ]);
 
 const VOCABULARY: Partial<Record<EnumFacet, readonly string[]>> = {
@@ -139,6 +143,7 @@ const VOCABULARY: Partial<Record<EnumFacet, readonly string[]>> = {
   fuel: FUELS,
   transmission: TRANSMISSIONS,
   market: MARKETS,
+  openpilot: OPENPILOT_FACETS,
 };
 
 /**
@@ -158,7 +163,11 @@ export function facetOptions(
   const counts = new Map(result.facets.values[key].map((c) => [c.value, c.count]));
   for (const value of selected) if (!counts.has(value)) counts.set(value, 0);
   const label = (value: string) =>
-    key === "make" || key === "model" ? (names[value] ?? value) : t.label(key, value);
+    key === "make" || key === "model"
+      ? (names[value] ?? value)
+      : key === "openpilot"
+        ? openpilotLabel(value, t.lang)
+        : t.label(key, value);
   const additive = selected.size > 0 && SINGLE_VALUED.has(key);
   const options = [...counts].map(([value, count]) => ({
     value,
