@@ -803,6 +803,23 @@ describe("tipcars source", () => {
       expect(priced.sort()).toEqual(inScope(refs).sort());
     });
 
+    it("a sweep out of requests leaves the rest of the lists unpriced that day", async () => {
+      const { cassette, refs, inScope } = await sweepable();
+      const urls: string[] = [];
+      const os = await harvest(cassette, {
+        mode: "incremental",
+        known: new Set(refs),
+        options: { priceSweep: 3 },
+        urls,
+      });
+      // Both heads, then used pages 2-4: page 5 and the new list's page 2 go unread.
+      expect(urls).toHaveLength(2 + 3);
+      const priced = prices(os).map((o) => o.ref);
+      expect(priced.sort()).toEqual(
+        inScope([...refs.slice(0, 80), ...refs.slice(100, 120)]).sort(),
+      );
+    });
+
     it("follows a list that grows during the sweep to its new end", async () => {
       // A listing posted meanwhile pushes the used list's last one onto a page 6.
       const { cards, cassette: plain, refs, inScope } = await sweepable();

@@ -67,8 +67,9 @@
  *   stopping at a page with none in the scope; then a price sweep over both lists to their
  *   ends (`sweep`). A known listing met on either gets a ListingPriceSeen from its card's
  *   record (amount and currency as its ListingSeen carries them; on 2026-10-29 nine cards, one
- *   in EUR and seven showing "bez DPH", matched their detail pages), so every known listing's
- *   price history is daily. That is some 3,400 pages a day, which TipCars' incremental limit
+ *   in EUR and seven showing "bez DPH", matched their detail pages), so a known listing's
+ *   price history is daily, best effort: the walk pages by offset, and stops at `priceSweep`
+ *   requests. That is some 3,400 pages a day, which TipCars' incremental limit
  *   (`catchUpMinutes`, apps/ingest/src/schedule.ts) is sized for.
  *
  * Research notes: scrape-access.md (TipCars row); lists, filters and pages verified against
