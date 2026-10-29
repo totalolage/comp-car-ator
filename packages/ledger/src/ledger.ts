@@ -484,7 +484,7 @@ export function openLedger(path: string): Ledger {
             else yield next.value;
           }
         } finally {
-          if (!done) await iterator.return?.();
+          if (!done && !upstreamFailed) await iterator.return?.();
         }
       }
       try {

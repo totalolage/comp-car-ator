@@ -239,6 +239,27 @@ describe("Ledger", () => {
     ).toEqual(["3"]);
   });
 
+  it("preserves the original iterator failure without calling its throwing return", async () => {
+    ledger = openLedger(":memory:");
+    const cause = new Error("upstream failed");
+    let closed = false;
+    const observations: AsyncIterable<Observation> = {
+      [Symbol.asyncIterator]: () => ({
+        next: async () => {
+          throw cause;
+        },
+        return: async () => {
+          closed = true;
+          throw new Error("cleanup failed");
+        },
+      }),
+    };
+    await expect(run("sauto", "incremental", "2026-10-17", observations)).rejects.toMatchObject({
+      cause,
+    });
+    expect(closed).toBe(false);
+  });
+
   it.each([false, true])(
     "does not report a storage failure as a finalized upstream failure (cleanup throws: %s)",
     async (cleanupThrows) => {
