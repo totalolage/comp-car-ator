@@ -24,8 +24,9 @@
  *   pages after, each naming the slice (`ListingSeen.slice`, never a price part, as a price
  *   moves), then SliceDone; slices done earlier in the census are skipped. A known listing
  *   whose card a census reads without it coming out then (a new or demo one before its
- *   detail page, one met by a recount or a proof's pass) gets a ListingPriceSeen from its
- *   card as read (`alive`), so one moved from a slice that finishes stays live when the run
+ *   detail page, one met by a recount, a proof's pass or a done part paged again) gets a
+ *   ListingPriceSeen from its card as read (`alive`; a rejected ListingSeen when its price
+ *   does not parse), so one moved from a slice that finishes stays live when the run
  *   fails or is stopped first. A
  *   slice is done when one pass alone meets as many distinct listings as its pages report:
  *   passes are never pooled, since a listing gone and another arrived between two passes
@@ -413,14 +414,18 @@ class Harvest {
    */
   private async *again(part: Slice, harvested: Set<string>): AsyncGenerator<Observation> {
     for await (const page of this.pages(part, true)) {
-      for (const card of page.cards) {
+      // The page's sightings before any detail page, which may fail: the known new or demo
+      // ones from their cards (`alive`), then the used ones.
+      const fresh = page.cards.filter((card) => card.category === "N");
+      yield* this.alive(fresh);
+      for (const card of page.cards) if (card.category !== "N") yield* this.listing(card);
+      for (const card of fresh) {
         const read =
-          card.category === "N" &&
-          (this.detailed.has(card.ref) ||
-            (this.ctx.checkpoint.sliceDoneAt(mark(card.ref)) !== null && this.wasKnown(card.ref)));
+          this.detailed.has(card.ref) ||
+          (this.ctx.checkpoint.sliceDoneAt(mark(card.ref)) !== null && this.wasKnown(card.ref));
         if (!read) yield* this.listing(card);
-        if (!this.gone.has(card.ref)) harvested.add(card.ref);
       }
+      for (const card of page.cards) if (!this.gone.has(card.ref)) harvested.add(card.ref);
     }
   }
 
@@ -448,7 +453,7 @@ class Harvest {
   private async *recount(
     slice: Slice,
     parts: readonly Slice[],
-  ): AsyncGenerator<ListingPriceSeen, { left: number; total: number }> {
+  ): AsyncGenerator<ListingPriceSeen | ListingSeen, { left: number; total: number }> {
     const before = yield* this.count(slice);
     const counts: number[] = [];
     for (const part of parts) counts.push(yield* this.count(part));
@@ -460,7 +465,7 @@ class Harvest {
   }
 
   /** How many listings `slice` reports, by its first page, whose known cards it proves live. */
-  private async *count(slice: Slice): AsyncGenerator<ListingPriceSeen, number> {
+  private async *count(slice: Slice): AsyncGenerator<ListingPriceSeen | ListingSeen, number> {
     const page = await this.page(slice, 1);
     yield* this.alive(page.cards);
     return page.total;
@@ -521,7 +526,10 @@ class Harvest {
   }
 
   /** Null when one whole pass over `band` does not meet `ref`, else why that is no proof. */
-  private async *absent(band: Slice, ref: string): AsyncGenerator<ListingPriceSeen, string | null> {
+  private async *absent(
+    band: Slice,
+    ref: string,
+  ): AsyncGenerator<ListingPriceSeen | ListingSeen, string | null> {
     const refs = new Set<string>();
     let reported = 0;
     for await (const page of this.pages(band, true)) {
@@ -706,18 +714,22 @@ class Harvest {
    * yields it is read (a new or demo card before its detail page, a recount, a proof's pass):
    * a listing that moved here from a slice that finishes is not missed there, even when the
    * run fails or is stopped before the card comes out. The card's record price, as `prices`;
-   * none without a price, in an unknown currency or outside the scope. Its own ListingSeen, if
-   * any, still comes out later. A card whose currency is not the one the Ledger holds gets a
-   * ListingPriceSeen the Ledger rejects, which still proves it live but keeps the slice out of
-   * this run's census; its ListingSeen moves the currency for the next run.
+   * none outside the scope. One whose price or currency does not parse gets the ListingSeen
+   * the Ledger rejects that its listing would (`rejected`): that still proves it live, and
+   * keeps its slice not done. Its own ListingSeen, if any, still comes out later. A card whose
+   * currency is not the one the Ledger holds gets a ListingPriceSeen the Ledger rejects, with
+   * the same effect; its ListingSeen moves the currency for the next run.
    */
-  private *alive(cards: readonly Card[]): Iterable<ListingPriceSeen> {
+  private *alive(cards: readonly Card[]): Iterable<ListingPriceSeen | ListingSeen> {
     for (const card of cards) {
       if (!card.ref || !card.category || this.done.has(card.ref) || this.sighted.has(card.ref))
         continue;
-      if (!this.wasKnown(card.ref)) continue;
+      if (outOfScope(card) || !this.wasKnown(card.ref)) continue;
       this.sighted.add(card.ref);
-      if (outOfScope(card) || card.price === undefined || !card.currency) continue;
+      if (card.price === undefined || !card.currency) {
+        yield rejected(card);
+        continue;
+      }
       yield {
         kind: "ListingPriceSeen",
         ref: card.ref,
