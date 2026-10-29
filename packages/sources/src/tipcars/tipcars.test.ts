@@ -1010,7 +1010,8 @@ describe("tipcars source", () => {
       const cassette = await loadCassette(full);
       const response = (cassette.interactions[0] as Cassette["interactions"][number]).response;
       const cards = cardsOf(cassette);
-      const body = listPage(cards, 68_000, [...cards.keys()].slice(0, 20));
+      // One card keeps every page nonempty; the reported total controls sweep pagination.
+      const body = listPage(cards, 68_000, [...cards.keys()].slice(0, 1));
       const paged = new Set<number>();
       for (let n = 0; n < 2; n++) {
         let requests = 0;
