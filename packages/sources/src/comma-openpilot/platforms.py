@@ -124,6 +124,23 @@ def read(source, constructors, car_docs):
     raise Unreadable("class CAR is not `class CAR(Platforms):`")
   class_at = tree.body.index(cls)
 
+  # Python runs the file in order: each config and car class is bound by a top-level class
+  # statement or import before class CAR, and before any code that calls it.
+  bound_at = {}
+  for at, stmt in enumerate(tree.body):
+    if isinstance(stmt, ast.ClassDef):
+      bound_at[stmt.name] = at
+    elif isinstance(stmt, (ast.Import, ast.ImportFrom)):
+      for alias in stmt.names:
+        bound_at[alias.asname or alias.name.split(".")[0]] = at
+  for name in known - {"CAR"}:
+    if name in defined and bound_at.get(name, class_at) >= class_at:
+      raise Unreadable(f"{name} is not bound at the top level before class CAR")
+
+  def bound_before(name, before):
+    if bound_at.get(name, before) >= before:
+      raise Unreadable(f"{name} is not bound before it is called")
+
   # Top-level `NAME = …` by name: where, its target and value; a name assigned twice is none.
   assigned = {}
   for at, stmt in enumerate(tree.body):
@@ -168,6 +185,7 @@ def read(source, constructors, car_docs):
 
   def car(expr, before):
     if isinstance(expr, ast.Call) and isinstance(expr.func, ast.Name) and expr.func.id in car_docs:
+      bound_before(expr.func.id, before)
       keywords = plain(expr)
       # A name and a package: a later argument may be a flag given by position.
       if len(expr.args) > 2:
@@ -214,6 +232,7 @@ def read(source, constructors, car_docs):
     keywords = plain(call)
     func = call.func
     if isinstance(func, ast.Name) and func.id in constructors:
+      bound_before(func.id, class_at)
       if call.args and "car_docs" in keywords:
         raise Unreadable(f"cars of {platform} twice")
       cars = keywords.get("car_docs", call.args[0] if call.args else None)

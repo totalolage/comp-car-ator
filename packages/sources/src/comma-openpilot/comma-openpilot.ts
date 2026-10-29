@@ -326,7 +326,8 @@ function checkPlatforms(rows: OpenpilotSupport[]): void {
  * Read by brackets, not indents or line breaks, as Python does, and only the grammar ADR 0016
  * allows; anything else fails the run rather than place a car Python would not:
  * - `class CAR(Platforms):`, once, undecorated; CAR and the CONSTRUCTORS and CAR_DOCS names
- *   bound once, by their own class statement or an import of IMPORTS; no `import *`.
+ *   bound once, by their own class statement or an import of IMPORTS, at the top level before
+ *   `class CAR` and before any car calls them; no `import *`.
  * - Each member a bare annotation, `pass` or a platform: one of CONSTRUCTORS called with its cars first
  *   or as `car_docs=`, or an `override` of an earlier platform stating its own `car_docs=`
  *   (`NISSAN_LEAF_IC = NISSAN_LEAF.override(car_docs=[])`). No `*` or `**` arguments.
@@ -346,9 +347,10 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
   const unreadable = (member: string) =>
     new Error(`comma-openpilot: unreadable member of class CAR in ${url}: ${member}`);
 
-  // What an import binds; `*` may bind anything.
-  const imported: [name: string, from: string | undefined][] = [];
-  for (const { text } of lines) {
+  // What an import binds, and the import; `*` may bind anything.
+  const imported: [name: string, from: string | undefined, statement: Statement][] = [];
+  for (const statement of lines) {
+    const { text } = statement;
     const from = /^from\s+([.\w]+)\s+import\b([\s\S]*)$/.exec(text);
     const plain = from ? null : /^import\b([\s\S]*)$/.exec(text);
     for (const part of (from?.[2] ?? plain?.[1] ?? "").replace(/[()]/g, "").split(",")) {
@@ -357,6 +359,7 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
       imported.push([
         alias ?? name.split(".")[0] ?? "",
         alias ? undefined : `${from?.[1]}.${name}`,
+        statement,
       ]);
     }
   }
@@ -376,11 +379,24 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
   ) {
     throw fail("class CAR is not `class CAR(Platforms):`");
   }
+  // Python runs the file in order: each config and car class is bound by a top-level class
+  // statement or import before class CAR, and before any code that calls it.
+  const boundAt = new Map<string, number>();
+  for (const name of [...CONSTRUCTORS, ...CAR_DOCS]) {
+    const statement =
+      imported.find(([as]) => as === name)?.[2] ??
+      lines.find((s) => new RegExp(`^class\\s+${name}\\b`).test(s.text));
+    if (!statement && !new RegExp(`\\bclass\\s+${name}\\b`).test(code)) continue;
+    if (!statement || statement.indented || statement.from >= header.from) {
+      throw fail(`${name} not bound at the top level before class CAR`);
+    }
+    boundAt.set(name, statement.from);
+  }
   const end = lines.findIndex((s, n) => n > start && !s.indented);
   const members = lines.slice(start + 1, end < 0 ? undefined : end);
 
   // Top-level `NAME = …` of the file, by name; a name assigned twice is none.
-  const names: Names = { assigned: new Map(), reads: new Map() };
+  const names: Names = { assigned: new Map(), reads: new Map(), boundAt };
   for (const s of lines) {
     const head = s.indented ? null : /^([A-Za-z_]\w*)\s*(?::[^=\n]*)?=(?!=)/.exec(s.text);
     if (!head) continue;
@@ -404,9 +420,13 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
     const [, platform = "", config, overridden] = head;
     if (platforms.has(platform)) throw fail(`${platform} twice`);
     // A platform is built by an opendbc config or overrides one defined before it.
-    if (config ? !CONSTRUCTORS.has(config) : !platforms.has(overridden as string)) {
+    if (
+      config
+        ? !CONSTRUCTORS.has(config) || !boundAt.has(config)
+        : !platforms.has(overridden as string)
+    ) {
       throw fail(
-        `${platform} built by ${config ?? `${overridden}.override`}, not a platform config`,
+        `${platform} built by ${config ?? `${overridden}.override`}, not a platform config bound before class CAR`,
       );
     }
     platforms.add(platform);
@@ -499,8 +519,15 @@ type Statement = { from: number; to: number; text: string; indented: boolean };
 /** A top-level `NAME = …`: where it starts, and its value. */
 type Assignment = { at: number; value: Range };
 
-/** The file's top-level assignments, and where each name read for cars was read. */
-type Names = { assigned: Map<string, Assignment | null>; reads: Map<number, string> };
+/**
+ * The file's top-level assignments, where each name read for cars was read, and where each
+ * config and car class is bound.
+ */
+type Names = {
+  assigned: Map<string, Assignment | null>;
+  reads: Map<number, string>;
+  boundAt: Map<string, number>;
+};
 
 /**
  * The statements of `code`: what begins on a line outside every bracket, or after a `;` there,
@@ -603,7 +630,11 @@ function car(code: string, range: Range, before: number, names: Names): number |
   const call = /^([A-Za-z_]\w*)\s*\(/.exec(code.slice(a, b));
   if (call) {
     const open = a + call[0].length;
-    return CAR_DOCS.has(call[1] as string) && closingBracket(code, open) === b - 1
+    const at = names.boundAt.get(call[1] as string);
+    return CAR_DOCS.has(call[1] as string) &&
+      at !== undefined &&
+      at < before &&
+      closingBracket(code, open) === b - 1
       ? open
       : undefined;
   }

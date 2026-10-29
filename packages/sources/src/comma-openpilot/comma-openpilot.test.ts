@@ -1,3 +1,5 @@
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { type Cassette, createReplayHttp, loadCassette } from "@cca/http";
 import type { Observation, OpenpilotSupport } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
@@ -5,7 +7,8 @@ import { emptyCheckpoint, type HarvestContext, type HarvestMode, silentLogger } 
 import { commaOpenpilotSource } from "./comma-openpilot.ts";
 
 // Recorded 2026-10-28 from both CARS.md files, trimmed by hand to 24 list rows and 11 detail rows,
-// with each brand's values.py from opendbc 8ceee62 trimmed to the platforms of those rows.
+// with each brand's values.py from opendbc 8ceee62 trimmed to the platforms of those rows and the
+// imports and classes (bodies trimmed) that bind their configs and cars.
 const fixture = new URL("./fixtures/list.cassette.json", import.meta.url);
 const now = new Date("2026-10-28T22:00:00Z");
 
@@ -34,9 +37,17 @@ async function harvest(
  */
 function swapped(after: string) {
   return (b: string) =>
-    `X = [${DIESEL.trim().slice(0, -1)}]\nY = [HyundaiCarDocs("Kia Ceed Plug-in Hybrid 2021")]\n${after}\n${b
-      .replace(DIESEL, "      *X,\n")
-      .replace(/\[HyundaiCarDocs\("Kia Ceed Plug-in Hybrid 2021".*\],\n/, "Y,\n")}`;
+    aboveCar(
+      b
+        .replace(DIESEL, "      *X,\n")
+        .replace(/\[HyundaiCarDocs\("Kia Ceed Plug-in Hybrid 2021".*\],\n/, "Y,\n"),
+      `X = [${DIESEL.trim().slice(0, -1)}]\nY = [HyundaiCarDocs("Kia Ceed Plug-in Hybrid 2021")]\n${after}`,
+    );
+}
+
+/** `code` above the platform class: after the classes and imports its cars are built by. */
+function aboveCar(body: string, code: string): string {
+  return body.replace("class CAR(Platforms):", `${code}\nclass CAR(Platforms):`);
 }
 
 /** Tucson Diesel's line in the fixture's Hyundai definitions. */
@@ -49,17 +60,17 @@ function byRef(rows: OpenpilotSupport[], ref: string): OpenpilotSupport | undefi
 
 /**
  * Rewrites the list file (`opendbc`), the details file (`openpilot`), one brand's platform
- * definitions (`hyundai`) or every brand's (`values.py`) in the cassette.
+ * definitions (`hyundai`, `ford`) or every brand's (`values.py`) in the cassette.
  */
 function editBody(
-  file: "opendbc" | "openpilot" | "hyundai" | "values.py",
+  file: "opendbc" | "openpilot" | "hyundai" | "ford" | "values.py",
   change: (body: string) => string,
 ) {
   const path =
     file === "values.py"
       ? "/values.py"
-      : file === "hyundai"
-        ? "/opendbc/car/hyundai/values.py"
+      : file === "hyundai" || file === "ford"
+        ? `/opendbc/car/${file}/values.py`
         : `/${file}/master/docs/`;
   return (cassette: Cassette) => {
     for (const { request, response } of cassette.interactions) {
@@ -278,15 +289,21 @@ describe("comma-openpilot source", () => {
     const forms: ((body: string) => string)[] = [
       // A car under a name (a helper constant).
       (b) =>
-        `TUCSON_DIESEL_2019 = ${DIESEL.trim().slice(0, -1)}\n\n${b.replace(DIESEL, "      TUCSON_DIESEL_2019,\n")}`,
+        aboveCar(
+          b.replace(DIESEL, "      TUCSON_DIESEL_2019,\n"),
+          `TUCSON_DIESEL_2019 = ${DIESEL.trim().slice(0, -1)}\n`,
+        ),
       // A list under a name, and one spread into another.
       (b) =>
-        `TUCSON_DIESEL = [${DIESEL.trim()}]\nTUCSON_CARS: list = [*TUCSON_DIESEL]\n${b
-          .replace(DIESEL, "")
-          .replace(
-            'HyundaiPlatformConfig(\n    [\n      HyundaiCarDocs("Hyundai Tucson 2021"',
-            'HyundaiPlatformConfig(\n    [\n      *TUCSON_CARS,\n      HyundaiCarDocs("Hyundai Tucson 2021"',
-          )}`,
+        aboveCar(
+          b
+            .replace(DIESEL, "")
+            .replace(
+              'HyundaiPlatformConfig(\n    [\n      HyundaiCarDocs("Hyundai Tucson 2021"',
+              'HyundaiPlatformConfig(\n    [\n      *TUCSON_CARS,\n      HyundaiCarDocs("Hyundai Tucson 2021"',
+            ),
+          `TUCSON_DIESEL = [${DIESEL.trim()}]\nTUCSON_CARS: list = [*TUCSON_DIESEL]`,
+        ),
       // Two platforms' cars under names.
       swapped(""),
       // Cars and specs by keyword.
@@ -319,7 +336,7 @@ describe("comma-openpilot source", () => {
     const fails = (change: (body: string) => string) =>
       expect(harvest("full", editBody("hyundai", change))).rejects;
     const named = (top: string) => (b: string) =>
-      `${top}\n${b.replace(DIESEL, "      TUCSON_DIESEL_2019,\n")}`;
+      aboveCar(b.replace(DIESEL, "      TUCSON_DIESEL_2019,\n"), top);
     // A car from another file, a helper's, a name assigned twice.
     await fails(named("from .tucson import TUCSON_DIESEL_2019")).toThrow(
       /unreadable cars of HYUNDAI_TUCSON in .*hyundai\/values\.py/,
@@ -387,7 +404,9 @@ describe("comma-openpilot source", () => {
           TUCSON,
           "  HYUNDAI_TUCSON = drop_cars(",
         )}`,
-    ).toThrow(/HYUNDAI_TUCSON built by drop_cars, not a platform config in .*hyundai\/values\.py/);
+    ).toThrow(
+      /HYUNDAI_TUCSON built by drop_cars, not a platform config bound before class CAR in .*hyundai\/values\.py/,
+    );
     // A config or car class the file rebinds, plainly or under a spelling Python normalizes.
     await fails((b) => `HyundaiPlatformConfig = drop_cars\n${b}`).toThrow(
       /HyundaiPlatformConfig bound in the file/,
@@ -469,6 +488,89 @@ describe("comma-openpilot source", () => {
     ).toThrow(/hybrid of Hyundai Tucson Diesel 2019 is not True or False/);
   });
 
+  it("fails on a config or car class bound after Python calls it", async () => {
+    const fails = (file: "hyundai" | "ford", change: (body: string) => string) =>
+      expect(harvest("full", editBody(file, change))).rejects;
+    const config = (name: string) => `@dataclass\nclass ${name}(PlatformConfig):\n  pass\n\n`;
+    const CARS = "@dataclass\nclass HyundaiCarDocs(CarDocs):\n  pass\n\n";
+    // Ford's config defined after class CAR, which Python built before it: Kuga is no
+    // FORD_ESCAPE_MK4 of that file.
+    await fails(
+      "ford",
+      (b) => `${b.replace(config("FordPlatformConfig"), "")}\nclass FordPlatformConfig:\n  pass\n`,
+    ).toThrow(
+      /FordPlatformConfig not bound at the top level before class CAR in .*ford\/values\.py/,
+    );
+    await fails("ford", (b) => `${b}\nclass FordPlatformConfig:\n  pass\n`).toThrow(
+      /FordPlatformConfig twice/,
+    );
+    // Bound inside a block, or nowhere.
+    await fails("hyundai", (b) =>
+      b.replace(
+        config("HyundaiPlatformConfig"),
+        "if FULL:\n  class HyundaiPlatformConfig(PlatformConfig):\n    pass\n\n",
+      ),
+    ).toThrow(/HyundaiPlatformConfig not bound at the top level before class CAR/);
+    await fails("hyundai", (b) => b.replace(config("HyundaiPlatformConfig"), "")).toThrow(
+      /built by HyundaiPlatformConfig, not a platform config bound before class CAR/,
+    );
+    // A car under a name assigned before its class is bound.
+    await fails("hyundai", (b) =>
+      aboveCar(
+        b.replace(CARS, "").replace(DIESEL, "      TUCSON_DIESEL_2019,\n"),
+        `TUCSON_DIESEL_2019 = ${DIESEL.trim().slice(0, -1)}\n${CARS}`,
+      ),
+    ).toThrow(/unreadable cars of HYUNDAI_TUCSON/);
+
+    // Python's reading fails on each as well, on its own.
+    const python = async (change: (body: string) => string) => {
+      const cassette = await loadCassette(fixture);
+      editBody("hyundai", change)(cassette);
+      const hyundai = cassette.interactions.find(({ request }) =>
+        request.url.includes("/hyundai/values.py"),
+      );
+      const run = spawnSync(
+        "python3",
+        ["-I", fileURLToPath(new URL("./platforms.py", import.meta.url))],
+        {
+          input: JSON.stringify({
+            constructors: ["HyundaiPlatformConfig", "HyundaiCanFDPlatformConfig"],
+            carDocs: ["HyundaiCarDocs"],
+            files: { hyundai: hyundai?.response.body },
+          }),
+          encoding: "utf8",
+        },
+      );
+      return run.status ? run.stderr : run.stdout;
+    };
+    expect(await python((b) => b)).toContain('["Hyundai Tucson Diesel 2019", "HYUNDAI_TUCSON"]');
+    expect(
+      await python(
+        (b) =>
+          `${b.replace(config("HyundaiPlatformConfig"), "")}\n${config("HyundaiPlatformConfig")}`,
+      ),
+    ).toBe("hyundai: HyundaiPlatformConfig is not bound at the top level before class CAR\n");
+    expect(
+      await python((b) =>
+        b.replace(
+          config("HyundaiPlatformConfig"),
+          "if FULL:\n  class HyundaiPlatformConfig(PlatformConfig):\n    pass\n\n",
+        ),
+      ),
+    ).toBe("hyundai: HyundaiPlatformConfig is not bound at the top level before class CAR\n");
+    expect(await python((b) => b.replace(config("HyundaiPlatformConfig"), ""))).toBe(
+      "hyundai: HyundaiPlatformConfig is not bound before it is called\n",
+    );
+    expect(
+      await python((b) =>
+        aboveCar(
+          b.replace(CARS, "").replace(DIESEL, "      TUCSON_DIESEL_2019,\n"),
+          `TUCSON_DIESEL_2019 = ${DIESEL.trim().slice(0, -1)}\n${CARS}`,
+        ),
+      ),
+    ).toBe("hyundai: HyundaiCarDocs is not bound before it is called\n");
+  });
+
   it("fails on imports that may replace opendbc's names, and flags given by position", async () => {
     const fails = (change: (body: string) => string) =>
       expect(harvest("full", editBody("hyundai", change))).rejects;
@@ -478,9 +580,7 @@ describe("comma-openpilot source", () => {
     await fails((b) => `from .configs import HyundaiPlatformConfig\n${b}`).toThrow(
       /HyundaiPlatformConfig imported/,
     );
-    await fails((b) => `from opendbc.car import PlatformConfig, CarDocs\n${b}`).toThrow(
-      /CarDocs imported/,
-    );
+    await fails((b) => `from opendbc.car import CarDocs\n${b}`).toThrow(/CarDocs imported/);
     await fails(
       (b) => `from opendbc.car.docs_definitions import CarDocs\n${b}\nclass CarDocs:\n  pass\n`,
     ).toThrow(/CarDocs twice/);
