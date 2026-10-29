@@ -328,8 +328,8 @@ describe("comma-openpilot source", () => {
       ),
     ).toThrow(/unreadable cars of HYUNDAI_TUCSON_IC/);
     // Names whose cars change after they are assigned, a config call that goes on.
-    await fails(swapped("X, Y = Y, X")).toThrow(/cars under X change in .*hyundai\/values\.py/);
-    await fails(swapped("X += []")).toThrow(/cars under X change/);
+    await fails(swapped("X, Y = Y, X")).toThrow(/cars under X, which the file uses elsewhere, in .*hyundai\/values\.py/);
+    await fails(swapped("X += []")).toThrow(/cars under X, which the file uses elsewhere/);
     await fails((b) =>
       b.replace("HyundaiFlags.HYBRID,\n  )", "HyundaiFlags.HYBRID,\n  ).override(car_docs=[])"),
     ).toThrow(/unreadable member of class CAR .*: KIA_CEED_PHEV$/);
