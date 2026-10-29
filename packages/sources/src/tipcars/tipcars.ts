@@ -240,10 +240,12 @@ class Harvest {
       return;
     }
     // A listing names its year or list (ListingSeen.slice), not a price part: a price moves.
+    // A rejected card (`rejected`) names none, so the Ledger keeps the part it came out in not
+    // done, as well as the slice it holds a known listing in.
     for (const slice of this.slices()) {
       const key = sliceKey(slice);
       for await (const o of this.slice(slice))
-        yield o.kind === "ListingSeen" ? { ...o, slice: key } : o;
+        yield o.kind === "ListingSeen" && o.url !== "" ? { ...o, slice: key } : o;
     }
     if (this.short.length > 0) {
       throw new Error(

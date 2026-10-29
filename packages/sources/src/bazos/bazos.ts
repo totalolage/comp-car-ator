@@ -179,6 +179,8 @@ class Harvest {
   private readonly knownBefore = new Map<string, boolean>();
   /** Ads this run has given an Observation, or is reading the ad page of. */
   private readonly sighted = new Set<string>();
+  /** Ads this run has given a rejected sighting (`reject`). */
+  private readonly rejectedAds = new Set<string>();
   private stats: Stats = emptyStats();
 
   constructor(ctx: HarvestContext, categories: readonly string[], parts: number) {
@@ -356,9 +358,9 @@ class Harvest {
       if (row.malformed) {
         if (!this.knewBefore(row.id)) continue;
         this.sighted.add(row.id);
-        this.stats.malformed++;
+        // Out of the parts loop, so its part is marked here.
         this.unreadable.add(this.partOf(category, row));
-        yield this.rejectedRow(category, row, row.malformed);
+        yield* this.reject(category, row, row.malformed);
         continue;
       }
       if (row.price === null || !this.isCandidate(category, row) || !this.knewBefore(row.id))
@@ -508,14 +510,12 @@ class Harvest {
     const url = `${HOST}${row.path}`;
     const slice = this.partOf(category, row);
     if (row.malformed) {
-      this.stats.malformed++;
-      // A known ad's came out as the walk met it (`meet`).
-      if (!this.sighted.has(row.id)) yield this.rejectedRow(category, row, row.malformed);
       this.sighted.add(row.id);
+      yield* this.reject(category, row, row.malformed);
       return;
     }
-    this.sighted.add(row.id);
     if (!this.isCandidate(category, row)) return;
+    this.sighted.add(row.id);
     this.stats.candidates++;
     this.ctx.signal.throwIfAborted();
     const page = await this.ctx.http.get({ url, signal: this.ctx.signal });
@@ -527,8 +527,7 @@ class Harvest {
       return;
     }
     if (typeof detail === "string") {
-      this.stats.malformed++;
-      yield this.rejectedRow(category, row, detail);
+      yield* this.reject(category, row, detail);
       return;
     }
     const listing = this.toListingSeen(category, row, url, detail);
@@ -545,10 +544,16 @@ class Harvest {
     return partKey(category, Number(row.id) % this.parts, this.parts);
   }
 
-  /** An ad that cannot be read, as a ListingSeen the Ledger rejects, naming its part. */
-  private rejectedRow(category: string, row: Row, reason: string): ListingSeen {
+  /**
+   * An ad that cannot be read, as a ListingSeen the Ledger rejects, naming its part; once a
+   * run (a known ad's unreadable row comes out as the walk meets it, `meet`).
+   */
+  private *reject(category: string, row: Row, reason: string): Iterable<ListingSeen> {
+    if (this.rejectedAds.has(row.id)) return;
+    this.rejectedAds.add(row.id);
+    this.stats.malformed++;
     const url = `${HOST}${row.path}`;
-    return { ...rejected(row.id, url, reason, this.ctx), slice: this.partOf(category, row) };
+    yield { ...rejected(row.id, url, reason, this.ctx), slice: this.partOf(category, row) };
   }
 
   private toListingSeen(

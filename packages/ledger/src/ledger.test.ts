@@ -789,9 +789,10 @@ describe("Ledger absence per finished slice", () => {
     ledger = openLedger(":memory:");
     await unfinished("2026-10-04", [inSlice("a1", "A"), inSlice("b1", "B"), done("A")]);
     // Met while another slice's walk runs: a1's row, unreadable, naming A.
-    await unfinished("2026-10-11", [{ ...inSlice("a1", "A"), url: "" }, done("C")]);
+    await unfinished("2026-10-11", [{ ...inSlice("a1", "A"), url: "" }, done("C"), done("A")]);
     const checkpoint = ledger.checkpoint("bazos");
     expect(checkpoint.sliceDoneAt("C")).toEqual(day("2026-10-11"));
+    // A's SliceDone in that run is rejected; the earlier one stands.
     expect(checkpoint.sliceDoneAt("A")).toEqual(day("2026-10-04"));
     // One naming no slice still keeps the next SliceDone from counting.
     const unnamed = { ...seen("b1", 1), url: "" };

@@ -936,7 +936,40 @@ describe("bazos source", () => {
       expect(observations.at(-1)).toEqual({ kind: "SliceDone", slice: "kia;part=1/2" });
     });
 
-    it("an unreadable row by its rejected sighting, failing the run at the end", async () => {
+    it("an ad another category lists out of scope, when this one lists it", async () => {
+      // 224899514 moved to Škoda, its price raised: Kia's list, read first, still shows it
+      // at 9 000 Kč, out of scope there.
+      const recorded = await cassette("full", (c) => {
+        const skoda = c.interactions
+          .filter(({ request }) => !request.url.includes("/inzerat/"))
+          .map(({ request, response }) => {
+            const url = request.url.replace("/kia/", "/skoda/");
+            return { request: { ...request, url }, response: { ...response, url } };
+          })
+          .filter(({ request }) => pathOf(request.url) !== "/skoda/32/");
+        inPages(
+          c,
+          '<span translate="no">  75 500 Kč</span>',
+          '<span translate="no">  9 000 Kč</span>',
+          (url) => url.includes("/kia/"),
+        );
+        c.interactions.push(...skoda);
+      });
+      const { observations, error } = await harvest(
+        recorded,
+        "full",
+        { isKnown: (ref) => ref === "224899514" },
+        undefined,
+        ["kia", "skoda"],
+      );
+      expect(String(error)).toMatch(/No recorded interaction for .*\/skoda\/32\//);
+      expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
+      expect(prices(observations)).toEqual([
+        { kind: "ListingPriceSeen", ref: "224899514", price: { amount: 75_500, currency: "CZK" } },
+      ]);
+    });
+
+    it("an unreadable row by its rejected sighting, before a later request fails", async () => {
       const recorded = await cassette("full", (c) => {
         unreadable(c);
         failingAt32(c);

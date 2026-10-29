@@ -366,6 +366,13 @@ describe("tipcars source", () => {
     const os = await harvest(cassette, { mode: "full" });
     const seen = listings(os);
     expect(seen.filter((o) => o.url === "")).toHaveLength(1);
+    // It names no slice, so the Ledger keeps the part it came out in not done.
+    expect(seen.find((o) => o.url === "")?.slice).toBeUndefined();
+    expect(
+      seen
+        .filter((o) => o.url !== "")
+        .every((o) => o.slice === "used:2000" || o.slice === "used:2001"),
+    ).toBe(true);
     expect(seen.length).toBe(
       listings(await harvest(await loadCassette(full), { mode: "full" })).length,
     );
