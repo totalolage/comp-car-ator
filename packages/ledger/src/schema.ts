@@ -136,7 +136,8 @@ const MIGRATIONS: string[] = [
   WHERE source = 'tipcars' AND (json_extract(data, '$.condition') IN ('new', 'demo')
     OR json_extract(data, '$.vehicle.manufactureYear') BETWEEN 2000 AND 2100);
   `,
-  // openpilot list rows; like catalog entries, a full census retires the rows it did not state.
+  // openpilot list rows (ADR 0016); like catalog entries, the census retires the rows no run
+  // of it stated.
   `
   CREATE TABLE IF NOT EXISTS openpilot_support (
     source TEXT NOT NULL,

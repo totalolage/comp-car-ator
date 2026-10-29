@@ -56,6 +56,7 @@ afterEach(() => ledger?.close());
 
 /** Makes a current Ledger file look like schema `version`, as an older Data release carries it. */
 function downgrade(db: DatabaseSync, version: number) {
+  if (version < 7) db.exec("DROP TABLE openpilot_support");
   if (version < 6) {
     db.exec(`
       DROP INDEX listings_slice;
@@ -792,17 +793,16 @@ describe("Ledger", () => {
           .openpilot.map((m) => [`${m.model} ${m.years.join(",")}`, [m.modelId, m.variantIds]]),
       );
 
-    it("adds the openpilot table when it opens a schema v5 Ledger", async () => {
+    it("adds the openpilot table when it opens a schema v6 Ledger", async () => {
       const dir = await mkdtemp(join(tmpdir(), "cca-ledger-"));
       try {
         const file = join(dir, "ledger.sqlite");
         ledger = openLedger(file);
         await run("rsv", "full", "2026-10-01", catalog);
         ledger.close();
-        // A Ledger from before migration 6, as Data releases carry.
+        // A Ledger from before migration 7, as Data releases carry.
         const db = new DatabaseSync(file);
-        db.exec("DROP TABLE openpilot_support");
-        db.prepare("UPDATE meta SET value = '5' WHERE key = 'schema_version'").run();
+        downgrade(db, 6);
         db.close();
 
         ledger = openLedger(file);
