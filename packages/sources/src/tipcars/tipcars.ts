@@ -1023,7 +1023,8 @@ function outOfScope(card: Card): string | null {
 
 /** A card the adapter cannot map comes out without a ref, as a ListingSeen the Ledger rejects. */
 function rejected(card: Card): ListingSeen {
-  return toListingSeen({ ...card, ref: "" });
+  // Its ref stays, so the Ledger keeps the slice it holds the listing in not done too.
+  return { ...toListingSeen(card), url: "" };
 }
 
 /**

@@ -123,9 +123,12 @@ export function openLedger(path: string): Ledger {
          AND (last_missed IS NULL OR last_missed < :day)
          AND (missed_census IS NULL OR missed_census <> :census)`,
     ),
+    // Gone once the census of the last miss is over (`:ended`: the current one too), since a
+    // sighting anywhere in that census, even in a later run, clears the misses.
     goneAfterMisses: db.prepare(
       `UPDATE listings SET gone = first_missed
-       WHERE source = :source AND scope = :scope AND gone IS NULL AND missed_full_runs >= :misses`,
+       WHERE source = :source AND scope = :scope AND gone IS NULL AND missed_full_runs >= :misses
+         AND (coalesce(missed_census, 0) < :census OR :ended)`,
     ),
     upsertCatalog: db.prepare(
       `INSERT INTO catalog_entries (variant_id, source, data, updated, scope, last_seen_run)
@@ -401,7 +404,7 @@ export function openLedger(path: string): Ledger {
        * At the end of a full run, complete or failed: listings of the slices it finished that no
        * run of the census saw count a miss; at the end of a complete one without rejections, so
        * do all the scope's listings no run of the census saw (the census ends). Then listings
-       * missed twice are gone.
+       * missed by two censuses, the later one over, are gone.
        */
       const inferAbsence = (complete: boolean) => {
         if (!full) return;
@@ -411,8 +414,10 @@ export function openLedger(path: string): Ledger {
           q.countMissed.run(at);
           summary.retired = Number(q.retireCatalog.run(at).changes);
         }
+        const ended = complete ? 1 : 0;
         summary.gone += Number(
-          q.goneAfterMisses.run({ source: run.source, scope, misses: MISSES_TO_GONE }).changes,
+          q.goneAfterMisses.run({ source: run.source, scope, census, ended, misses: MISSES_TO_GONE })
+            .changes,
         );
       };
       let open = false;

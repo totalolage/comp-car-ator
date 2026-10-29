@@ -65,7 +65,8 @@ export interface Ledger {
    *
    * Absence: a listing that no run of the census saw (ListingSeen or ListingPriceSeen) is
    * counted missed, at most once per census and per day, and a listing missed by 2 censuses in
-   * a row is gone as of the first miss. When any full run ends, complete or failed, this counts
+   * a row is gone as of the first miss once the second is over (any sighting clears misses).
+   * When any full run ends, complete or failed, this counts
    * the listings of the slices it finished (`ListingSeen.slice`), so finished slices retire
    * listings while others never finish. When a complete full run without rejected
    * Observations ends, it counts every active listing of the Source in the run's scope, and

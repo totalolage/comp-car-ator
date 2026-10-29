@@ -310,8 +310,10 @@ describe("Ledger", () => {
         { kind: "SliceDone", slice: "used:2019" },
         { kind: "SliceDone", slice: "new" },
       ] as const;
+      await week("bazos", "2026-11-01", []);
       await week("tipcars", "2026-10-11", [...years]);
       await week("tipcars", "2026-10-18", [...years]);
+      await week("tipcars", "2026-10-25", []);
       expect(
         Object.fromEntries([...ledger.snapshot().listings()].map((l) => [l.id, l.gone])),
       ).toEqual({
@@ -770,6 +772,31 @@ describe("Ledger absence per finished slice", () => {
     expect(goneOf()).toEqual({ m: null, p: null });
   });
 
+  it("retires a listing missed twice only once the census of its second miss is over", async () => {
+    ledger = openLedger(":memory:");
+    await stalledWeek("2026-10-04", [inSlice("a1", "A"), inSlice("m", "A"), done("A")]);
+    await stalledWeek("2026-10-11", [inSlice("a1", "A"), done("A")]);
+    await unfinished("2026-10-18", [inSlice("a1", "A"), done("A")]);
+    // m moved to B, whose walk (not taken) a later run of this census meets it on.
+    expect(goneOf()).toEqual({ a1: null, m: null });
+    const price = { kind: "ListingPriceSeen", ref: "m", price: { amount: 1, currency: "CZK" } };
+    await unfinished("2026-10-19", [price as Observation]);
+    await unfinished("2026-10-24", []);
+    await stalledWeek("2026-10-25", [inSlice("a1", "A"), done("A")]);
+    expect(goneOf()).toEqual({ a1: null, m: null });
+  });
+
+  it("a rejected sighting keeps the slice the Ledger holds the listing in not done", async () => {
+    ledger = openLedger(":memory:");
+    await stalledWeek("2026-10-04", [inSlice("a1", "A"), inSlice("m", "A"), done("A")]);
+    // m moved to B and its card no longer parses there.
+    const broken = { ...inSlice("m", "B"), url: "" };
+    for (const sunday of ["2026-10-11", "2026-10-18", "2026-10-25"]) {
+      await stalledWeek(sunday, [inSlice("a1", "A"), done("A"), broken]);
+    }
+    expect(goneOf()).toEqual({ a1: null, m: null });
+  });
+
   it("counts at most one miss per census, even when it ends after its slices", async () => {
     ledger = openLedger(":memory:");
     await run("bazos", "full", "2026-10-04", [inSlice("a1", "A"), inSlice("x", "A")]);
@@ -811,9 +838,11 @@ describe("Ledger absence per finished slice", () => {
     await run("bazos", "incremental", "2026-10-12", [seen("a2", 2)]);
     const [, a2] = [...ledger.snapshot().listings()];
     expect(a2).not.toHaveProperty("slice");
-    // Still held in A: the next two censuses that finish A without it retire it.
+    // Still held in A: the next two censuses that finish A without it retire it, once over.
     await stalledWeek("2026-10-18", [inSlice("a1", "A"), done("A")]);
     await stalledWeek("2026-10-25", [inSlice("a1", "A"), done("A")]);
+    expect(goneOf()).toEqual({ a1: null, a2: null });
+    await unfinished("2026-11-01", []);
     expect(goneOf()).toEqual({ a1: null, a2: "2026-10-18" });
   });
 });
