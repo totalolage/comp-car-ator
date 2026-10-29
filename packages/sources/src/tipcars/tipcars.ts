@@ -240,12 +240,12 @@ class Harvest {
       return;
     }
     // A listing names its year or list (ListingSeen.slice), not a price part: a price moves.
-    // A rejected card (`rejected`) names none, so the Ledger keeps the part it came out in not
-    // done, as well as the slice it holds a known listing in.
+    // One the Ledger rejects names none, so it keeps the part it came out in not done, as
+    // well as the slice it holds a known listing in.
     for (const slice of this.slices()) {
       const key = sliceKey(slice);
       for await (const o of this.slice(slice))
-        yield o.kind === "ListingSeen" && o.url !== "" ? { ...o, slice: key } : o;
+        yield o.kind === "ListingSeen" && takeable(o) ? { ...o, slice: key } : o;
     }
     if (this.short.length > 0) {
       throw new Error(
@@ -764,9 +764,7 @@ class Harvest {
     }
     const seen = toListingSeen(card, detail);
     // Marked only when the Ledger can take it: a mark stands for the census's sighting.
-    if (Number.isFinite(seen.price.amount) && seen.price.currency && seen.vehicle.model) {
-      this.detailed.add(card.ref);
-    }
+    if (takeable(seen)) this.detailed.add(card.ref);
     yield seen;
   }
 
@@ -1033,7 +1031,21 @@ function outOfScope(card: Card): string | null {
   return null;
 }
 
-/** A card the adapter cannot map comes out without a ref, as a ListingSeen the Ledger rejects. */
+/**
+ * Whether the Ledger takes a ListingSeen: not a `rejected` card's, nor one without a price, its
+ * currency, make or model.
+ */
+function takeable(seen: ListingSeen): boolean {
+  return (
+    seen.url !== "" &&
+    Number.isFinite(seen.price.amount) &&
+    seen.price.currency !== "" &&
+    seen.vehicle.make !== "" &&
+    seen.vehicle.model !== ""
+  );
+}
+
+/** A card the adapter cannot map comes out without a url, as a ListingSeen the Ledger rejects. */
 function rejected(card: Card): ListingSeen {
   // Its ref stays, so the Ledger keeps the slice it holds the listing in not done too.
   return { ...toListingSeen(card), url: "" };

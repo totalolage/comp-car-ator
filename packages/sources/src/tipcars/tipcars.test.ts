@@ -671,7 +671,13 @@ describe("tipcars source", () => {
       ),
     );
     const seen = listings(await harvest(cassette, FOREIGN_RUN));
-    expect(seen.find((o) => o.ref === "56607021")?.price).toEqual({ amount: 10830, currency: "" });
+    const bad = seen.find((o) => o.ref === "56607021");
+    expect(bad?.price).toEqual({ amount: 10830, currency: "" });
+    // It names no slice, so the Ledger keeps the part it came out in not done.
+    expect(bad?.slice).toBeUndefined();
+    expect(seen.filter((o) => o.ref !== "56607021").every((o) => o.slice === "used:2015")).toBe(
+      true,
+    );
   });
 
   it("a changed list page fails the run", async () => {
