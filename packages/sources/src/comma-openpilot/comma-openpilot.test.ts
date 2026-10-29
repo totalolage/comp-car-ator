@@ -579,14 +579,16 @@ describe("comma-openpilot source", () => {
       await expect(harvest("full", editBody("hyundai", change))).rejects.toThrow(adapter);
       expect(await python(change)).toBe(`hyundai: ${message}\n`);
     }
-    // An import or class statement continued over lines binds as one on a line.
+    // An import or class statement continued over lines binds as one on a line; an attribute
+    // of that name is no read of it.
     const continued = await harvest(
       "full",
       editBody("hyundai", (b) =>
         b
           .replace("DbcDict, PlatformConfig", "DbcDict, \\\n  PlatformConfig")
           .replace("HYUNDAI_TUCSON = HyundaiPlatformConfig(", "HYUNDAI_TUCSON = PlatformConfig(")
-          .replace("class HyundaiCarDocs(", "class \\\n  HyundaiCarDocs("),
+          .replace("class HyundaiCarDocs(", "class \\\n  HyundaiCarDocs(")
+          .replace("flags=HyundaiFlags.TCU_GEARS,", "flags=HyundaiFlags. FordPlatformConfig,"),
       ),
     );
     expect(continued).toEqual(await harvest("full"));

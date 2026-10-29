@@ -662,7 +662,7 @@ function unboundIn(
   before: number,
   boundAt: Map<string, number>,
 ): string | undefined {
-  for (const [name] of code.slice(from, to).matchAll(/(?<![.\w])[A-Za-z_]\w*/g)) {
+  for (const [name] of code.slice(from, to).matchAll(/(?<!\.\s*)(?<!\w)[A-Za-z_]\w*/g)) {
     if (!CONSTRUCTORS.has(name) && !CAR_DOCS.has(name)) continue;
     if ((boundAt.get(name) ?? before) >= before) return name;
   }
