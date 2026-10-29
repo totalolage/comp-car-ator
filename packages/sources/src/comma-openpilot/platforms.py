@@ -14,7 +14,8 @@ import json
 import re
 import sys
 
-YEARS = re.compile(r"^(.+?) (\d{4}\S*(?:, \d{4}\S*)*)$")
+# opendbc's MODEL_YEARS_RE: where a car name's years start (docs_definitions.split_name).
+YEARS = re.compile(r"(?<= )((\d{4}-\d{2})|(\d{4}))(,|$)")
 PLATFORM = re.compile(r"^[A-Z][A-Z0-9_]*$")
 FLAGS = (("hybrid", "Hybrid"), ("plug_in_hybrid", "Plug-in Hybrid"))
 # The only imports that may bind a config or car class name.
@@ -68,6 +69,19 @@ def binds(name, node):
   if isinstance(node, (ast.alias, ast.ClassDef)):
     return False
   return not isinstance(node, (ast.Attribute, ast.keyword))
+
+
+def hybrid_name(name, word):
+  """The car Ford's configs add for a hybrid flag, as FordPlatformConfig.init names it."""
+  if " " not in name:
+    raise Unreadable(f"no make in car name {name!r}")
+  make, model = name.split(" ", 1)
+  years = ""
+  match = YEARS.search(model)
+  if match is not None:
+    years = model[match.start():]
+    model = model[:match.start() - 1]
+  return f"{make} {model} {word} {years}"
 
 
 def read(source, constructors, car_docs):
@@ -162,15 +176,14 @@ def read(source, constructors, car_docs):
       if not (isinstance(first, ast.Constant) and isinstance(first.value, str)):
         raise Unreadable(f"a car name is not a string (line {expr.lineno})")
       names = [first.value]
-      years = YEARS.match(first.value)
       for flag, word in FLAGS:
         if flag not in keywords:
           continue
         value = keywords[flag]
         if not (isinstance(value, ast.Constant) and isinstance(value.value, bool)):
           raise Unreadable(f"{flag} is not True or False (line {expr.lineno})")
-        if value.value and years:
-          names.append(f"{years[1]} {word} {years[2]}")
+        if value.value:
+          names.append(hybrid_name(first.value, word))
       return expr, names
     if isinstance(expr, ast.Name):
       at, _, value = named(expr, before)

@@ -321,7 +321,7 @@ function checkPlatforms(rows: OpenpilotSupport[]): void {
  *       [
  *         HyundaiCarDocs("Hyundai Tucson 2021", min_enable_speed=19 * CV.MPH_TO_MS, …),
  * Ford adds a Hybrid and a Plug-in Hybrid car for `hybrid=True` and `plug_in_hybrid=True`
- * ("Ford Kuga Hybrid 2020-23").
+ * ("Ford Kuga Hybrid 2020-23", hybridName).
  *
  * Read by brackets, not indents or line breaks, as Python does, and only the grammar ADR 0016
  * allows; anything else fails the run rather than place a car Python would not:
@@ -435,18 +435,17 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
       const carArgs = callArguments(code, open, close);
       const name = carArgs?.positional[0] && firstString(text, code, ...carArgs.positional[0]);
       // A name and a package: a later argument may be a flag given by position.
-      if (!carArgs || !name || name.includes("\\") || carArgs.positional.length > 2) {
+      if (!carArgs || !name || /[\\\n]/.test(name) || carArgs.positional.length > 2) {
         throw fail(`unreadable car name in ${platform}`);
       }
       out.push([name, platform]);
-      const named = /^(.+?) (\d{4}\S*(?:, \d{4}\S*)*)$/.exec(name);
       for (const [flag, word] of HYBRID_FLAGS) {
         const value = carArgs.keywords.get(flag);
         const set = value && code.slice(...value).trim();
         if (set !== undefined && set !== "True" && set !== "False") {
           throw fail(`${flag} of ${name} is not True or False`);
         }
-        if (named && set === "True") out.push([`${named[1]} ${word} ${named[2]}`, platform]);
+        if (set === "True") out.push([hybridName(name, word, url), platform]);
       }
     }
   }
@@ -460,6 +459,19 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
     }
   }
   return out;
+}
+
+/**
+ * The car Ford's configs add for a hybrid flag, named as opendbc names it: make, model, the
+ * word, then the years from the first one followed by a comma or the end (`split_name`).
+ */
+function hybridName(name: string, word: string, url: string): string {
+  const space = name.indexOf(" ");
+  if (space < 0) throw new Error(`comma-openpilot: no make in car name "${name}" in ${url}`);
+  const model = name.slice(space + 1);
+  const years = /(?<= )(?:\d{4}-\d{2}|\d{4})(?:,|$)/.exec(model);
+  const at = years ? years.index : model.length + 1;
+  return `${name.slice(0, space)} ${model.slice(0, at - 1)} ${word} ${model.slice(at)}`;
 }
 
 /**

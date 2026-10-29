@@ -225,6 +225,22 @@ describe("comma-openpilot source", () => {
         "Ford|Kuga Plug-in Hybrid 2020-23|Adaptive Cruise Control with Lane Centering",
       ),
     ).toBe("FORD_ESCAPE_MK4");
+    // The added car's years start at the first year a comma or the end follows, as opendbc
+    // splits a name, whatever the spacing after them.
+    const spaced = await harvest("full", (cassette) => {
+      editBody("values.py", (b) => b.replace('"Ford Kuga 2020-23"', '"Ford Kuga 2020-23,  2024"'))(
+        cassette,
+      );
+      editBody("opendbc", (b) =>
+        b.replace("|Kuga Plug-in Hybrid 2020-23|", "|Kuga Plug-in Hybrid 2020-23,  2024|"),
+      )(cassette);
+    });
+    expect(
+      platform(
+        spaced,
+        "Ford|Kuga Plug-in Hybrid 2020-23,  2024|Adaptive Cruise Control with Lane Centering",
+      ),
+    ).toBe("FORD_ESCAPE_MK4");
     // Defined outside the brands' platforms.
     expect(platform(rows, "Acura|Integra 2023-25|All")).toBeUndefined();
     expect(platform(rows, "Audi|A4 2016-24|All")).toBeUndefined();
