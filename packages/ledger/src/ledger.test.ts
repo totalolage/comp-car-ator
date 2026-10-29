@@ -938,6 +938,9 @@ describe("Ledger", () => {
         variant("Venue", g("h", 2017), "petrol", 97, { from: 2017 }),
         variant("Getz", g("i", 2005), "petrol", 98, { from: 2009 }),
         variant("Getz", g("j", 2015), "petrol", 99, { from: 2015 }),
+        // A long type begun earlier and overlapping the chosen one may be its predecessor.
+        variant("Accent", g("k", 2005, 2018), "petrol", 100, { from: 2005, to: 2018 }),
+        variant("Accent", g("l", 2015), "petrol", 101, { from: 2015 }),
       ]);
       await run("comma-openpilot", "full", "2026-10-02", [
         row("Elantra", [2017, 2018, 2019, 2020, 2021, 2022, 2023], { platform: "E" }),
@@ -950,6 +953,8 @@ describe("Ledger", () => {
         row("Venue", [2017], { platform: "V" }),
         row("Getz", [2010, 2011], { platform: "G" }),
         row("Getz", [2016], { platform: "G" }),
+        row("Accent", [2015], { platform: "A" }),
+        row("Accent", [2021, 2022], { platform: "A" }),
       ]);
       expect(
         Object.fromEntries(
@@ -966,6 +971,8 @@ describe("Ledger", () => {
         "Venue 2017": [],
         "Getz 2010,2011": ["hyundai/getz/i/hatchback-petrol-98kw"],
         "Getz 2016": [],
+        "Accent 2015": [],
+        "Accent 2021,2022": ["hyundai/accent/l/hatchback-petrol-101kw"],
       });
     });
 

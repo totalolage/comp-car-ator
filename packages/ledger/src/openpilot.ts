@@ -133,8 +133,7 @@ export function matchOpenpilot(
     const clear = (y: number) =>
       y >= generation.from &&
       y <= generation.to &&
-      !others.some((g) => near(y, g)) &&
-      !umbrellas.some((g) => Math.abs(y - g.to) <= 1);
+      ![...others, ...umbrellas].some((g) => near(y, g));
     if (!row.years.some(clear)) return placedOnModel;
 
     const first = years[0] as number;
@@ -186,10 +185,11 @@ function namesSameCar(listed: string, catalog: string): boolean {
 /**
  * The model's Generations that are another car than `generation` (`others`): all but types
  * nested with it and `umbrellas`, types longer than one design that began before it and run
- * alongside it for two years or more, the register's umbrella and junk types (the Golf "1H"
- * 2000-2016 beside the Golf VII). An umbrella's end may still be a changeover, so its last
- * year and the years either side decide nothing. A type that began after `generation` is a
- * rival however long it runs. An open Generation's length counts to the catalog's latest year.
+ * alongside it for two years or more, often the register's umbrella and junk types (the Golf
+ * "1H" 2000-2016 beside the Golf VII). Years in an umbrella do not make a platform two cars,
+ * but an umbrella may also be the real predecessor, so its years decide nothing either. A
+ * type that began after `generation` is a rival however long it runs. An open Generation's
+ * length counts to the catalog's latest year.
  */
 function rivals(
   generation: Generation,
