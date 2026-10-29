@@ -32,10 +32,19 @@
  *   pages), or one still short over more than one page, is split by price, dearest first:
  *   the new list into fixed bands (`new:500000-599999`), a used year at 1,000,000 Kč
  *   (`used:2017:0-999999`), an open band [from, ∞) at 2·from, a closed one in the middle at
- *   whole Kč. A split slice is done when each part is and a recount finds no listing outside
- *   them. Prices mostly drop, so a listing that drops into a part not yet harvested is still
- *   met; one that rises into a part done earlier in the census misses it, unless its year is
- *   checked as below (a used one then comes out of the repaged part).
+ *   whole Kč. A split slice is done when each part is, a recount finds no listing outside
+ *   them, and the distinct listings harvested for it (from its parts, the proofs below and
+ *   the parts done earlier in the census, paged again) are at least as many as it reports at
+ *   the end. That count is taken at the end, not at the start: a listing sold before its
+ *   part was paged leaves nothing to harvest. Prices mostly drop, so a listing that drops
+ *   into a part not yet harvested is still met; one that rises into a part already done
+ *   balances the recount without coming out, but leaves the count by ref short: a year then
+ *   gets the whole pass below, a price band stays not done. A new or demo listing of a part
+ *   done earlier in the census comes out again only if no run of the census read it whole:
+ *   a SliceDone `listing:<ref>` after its part's SliceDone marks one that was. Limit: the
+ *   count by ref is necessary, not sufficient: a used listing harvested and then sold still
+ *   counts, so it can stand in for one that rose into a part already done within the same
+ *   minutes.
  * - The price filter returns no "Dohodou" card, and on 2026-10-28 left out 177 used and 185
  *   new or demo cards with an ordinary price, not even returned by a band around their own
  *   price. So when a year's (or the new list's) parts miss listings, the slice is paged whole
@@ -43,8 +52,9 @@
  *   slice's year (or new or demo) and at the price its card showed when its detail page is
  *   read, and, after a final recount, not met by one whole pass over the band around that
  *   price (±1 Kč; ±1% for a price in another currency, filtered at its conversion), and still
- *   online after that. A "Dohodou" one must still show no price; its band is 0-1 Kč. The
- *   slice is done when the proven ones are exactly as many as that recount misses; otherwise
+ *   online and as first read (year, new or demo, price) after that. A "Dohodou" one must still
+ *   show no price; its band is 0-1 Kč. The slice is done when the proven ones are exactly as
+ *   many as that recount misses and the count by ref covers the slice; otherwise
  *   it stays not done and the run fails after the other slices, naming the slice, the
  *   shortfall and why, so it is no census. A listing gone meanwhile fails its proof, so it
  *   cannot stand in for one no pass met. Limits: a listing whose price becomes filterable
@@ -54,7 +64,12 @@
  * - Out of scope: listings without a price ("Dohodou"), and cards of the site's "Ostatní"
  *   bucket (makes it does not list) that name no model.
  * - incremental: both lists newest first, yielding the listings not known before, each list
- *   stopping at a page with none in the scope.
+ *   stopping at a page with none in the scope; then a price sweep over the day's share of
+ *   both lists (`sweep`). A known listing met on either gets a ListingPriceSeen from its
+ *   card's record (amount and currency as its ListingSeen carries them; on 2026-10-29 nine
+ *   cards, one in EUR and seven showing "bez DPH", matched their detail pages), so its price
+ *   history is daily for the listings walked. Every listing's price each day does not fit the
+ *   hour: the sweep reads each listing nominally every third day, best effort (`priceSweep`).
  *
  * Research notes: scrape-access.md (TipCars row); lists, filters and pages verified against
  * the live site 2026-10-25. Cloudflare scores clients there, so every request starts at T1.
@@ -64,6 +79,7 @@ import {
   type Condition,
   type Fuel,
   type ListingGone,
+  type ListingPriceSeen,
   type ListingSeen,
   type Observation,
   pragueDate,
@@ -76,9 +92,9 @@ import type { HarvestContext, Source } from "../source.ts";
 
 export interface TipcarsOptions {
   /**
-   * Most list pages one walk reads: per list in incremental runs, per slice in full runs,
-   * where a slice with more pages fails the run. Default unlimited. For bounded recordings
-   * and smoke runs.
+   * Most list pages one walk reads: per list in incremental runs (no page past it, price
+   * sweep included), per slice in full runs, where a slice with more pages fails the run.
+   * Default unlimited. For bounded recordings and smoke runs.
    */
   maxPages?: number;
   /**
@@ -89,6 +105,11 @@ export interface TipcarsOptions {
   slices?: readonly string[];
   /** Most listings a slice may report before it is split by price. Default 400; tests lower it. */
   sliceCap?: number;
+  /**
+   * Most requests an incremental run spends past the new listings on its price sweep
+   * (`sweep`). Default 1,200, which keeps the run near 40 minutes; 0 turns the sweep off.
+   */
+  priceSweep?: number;
 }
 
 const BASE = "https://www.tipcars.com";
@@ -109,6 +130,9 @@ const NEW_PRICE_EDGES = [
 const USED_PRICE_SPLIT = 1_000_000;
 /** An open price band from this price up is not split further. */
 const OPEN_PRICE_LIMIT = 100_000_000;
+/** Requests a day's price sweep may spend: 1,200 at about 1.7 s a list page is 35 minutes. */
+const PRICE_SWEEP = 1_200;
+const DAY_MS = 86_400_000;
 
 /** One query of the census. */
 type Response = Awaited<ReturnType<HarvestContext["http"]["get"]>>;
@@ -127,14 +151,33 @@ interface Slice {
   price?: { from: number; to?: number };
 }
 
+/** A list's head as the incremental walked it. */
+interface Head {
+  slice: Slice;
+  /** Pages the walk read from the first. */
+  read: number;
+  total: number;
+}
+
+interface Settings {
+  maxPages: number;
+  cap: number;
+  only: readonly string[] | undefined;
+  priceSweep: number;
+}
+
 export function tipcarsSource(options: TipcarsOptions = {}): Source {
   const only = options.slices && [...new Set(options.slices)].sort();
-  const cap = options.sliceCap ?? SLICE_CAP;
+  const settings: Settings = {
+    maxPages: options.maxPages ?? Number.POSITIVE_INFINITY,
+    cap: options.sliceCap ?? SLICE_CAP,
+    only,
+    priceSweep: options.priceSweep ?? PRICE_SWEEP,
+  };
   return {
     id: "tipcars",
     scope: only ? `slices:${only.join(",")}` : "all",
-    harvest: (ctx) =>
-      new Harvest(ctx, options.maxPages ?? Number.POSITIVE_INFINITY, cap, only).run(),
+    harvest: (ctx) => new Harvest(ctx, settings).run(),
   };
 }
 
@@ -145,32 +188,36 @@ class Harvest {
   private readonly knownBefore = new Map<string, boolean>();
   /** Slices this run left not done, with why when it is not plain. */
   private readonly short: string[] = [];
-  /** Refs a pass over a price part met this run. */
-  private readonly met = new Set<string>();
-  /** Slices skipped as done earlier in the census, in the order met. */
+  /** Refs that came out as ListingGone this run: no slice counts them as harvested. */
+  private readonly gone = new Set<string>();
+  /** Refs of new or demo listings that came out whole from their detail page this run. */
+  private readonly detailed = new Set<string>();
+  /** Refs whose `listing:<ref>` mark (see `marks`) this run has yielded. */
+  private readonly marked = new Set<string>();
+  /** Slices skipped as done earlier in the census, in the order met, until a split takes them. */
   private readonly skipped: Slice[] = [];
+  /** Requests this run has made. */
+  private requests = 0;
   private readonly ctx: HarvestContext;
   private readonly maxPages: number;
   private readonly cap: number;
   private readonly only: readonly string[] | undefined;
+  private readonly priceSweep: number;
 
-  constructor(
-    ctx: HarvestContext,
-    maxPages: number,
-    cap: number,
-    only: readonly string[] | undefined,
-  ) {
+  constructor(ctx: HarvestContext, settings: Settings) {
     this.ctx = ctx;
-    this.maxPages = maxPages;
-    this.cap = cap;
-    this.only = only;
+    this.maxPages = settings.maxPages;
+    this.cap = settings.cap;
+    this.only = settings.only;
+    this.priceSweep = settings.priceSweep;
   }
 
   async *run(): AsyncIterable<Observation> {
     if (this.ctx.mode === "incremental") {
       if (this.only) throw new Error("TipCars slices narrow full runs only");
-      yield* this.incremental({ list: "ojete", year: { from: FIRST_YEAR } });
-      yield* this.incremental({ list: "nove" });
+      const used = yield* this.incremental({ list: "ojete", year: { from: FIRST_YEAR } });
+      const fresh = yield* this.incremental({ list: "nove" });
+      yield* this.sweep([used, fresh]);
       return;
     }
     for (const slice of this.slices()) yield* this.slice(slice);
@@ -201,101 +248,173 @@ class Harvest {
    * Harvests one slice, or its price parts (see `split`) when it reports more than the cap
    * or when its passes come out short over more than one page. Reports SliceDone when the
    * slice, or its parts and their cover of it (`covered`), are done; a done one is skipped.
-   * Returns whether it is done.
+   * Returns the refs it harvested when done (a skipped one none: `again` pages it), else null.
    */
-  private async *slice(slice: Slice): AsyncGenerator<Observation, boolean> {
+  private async *slice(slice: Slice): AsyncGenerator<Observation, Set<string> | null> {
     const key = sliceKey(slice);
     if (this.ctx.checkpoint.sliceDoneAt(key)) {
       this.skipped.push(slice);
-      return true;
+      return new Set();
     }
     const first = await this.page(slice, 1);
     const parts = split(slice);
-    let done = false;
+    let harvested: Set<string> | null = null;
     if (parts && first.total > this.cap) {
-      done = yield* this.parts(slice, parts);
+      harvested = yield* this.parts(slice, parts);
     } else {
       // Page the slice before any detail page, so few listings move under it.
-      const { cards, complete, reported } = await this.census(slice, first);
+      const { cards, pass, reported } = await this.census(slice, first);
       for (const card of cards) yield* this.listing(card);
-      if (complete) done = true;
+      if (pass) harvested = this.live(pass);
       else if (parts && reported > PAGE_SIZE) {
         // A listing served on two pages pushes another off both, the same way on every pass;
         // other page boundaries fall elsewhere.
         this.ctx.log.warn("tipcars short slice split by price", { slice: key });
-        done = yield* this.parts(slice, parts);
+        harvested = yield* this.parts(slice, parts);
       } else this.short.push(key);
     }
-    if (done) yield { kind: "SliceDone", slice: key };
-    return done;
+    if (harvested) {
+      yield { kind: "SliceDone", slice: key };
+      yield* this.marks(harvested);
+    }
+    return harvested;
   }
 
-  /** Harvests the parts of `slice`; whether each is done and together they cover it. */
+  /** Harvests the parts of `slice`; their refs when each is done and together they cover it. */
   private async *parts(
     slice: Slice,
     parts: readonly Slice[],
-  ): AsyncGenerator<Observation, boolean> {
+  ): AsyncGenerator<Observation, Set<string> | null> {
     const from = this.skipped.length;
+    const harvested = new Set<string>();
     let done = true;
-    for (const part of parts) if (!(yield* this.slice(part))) done = false;
-    return done && (yield* this.covered(slice, parts, this.skipped.slice(from)));
+    for (const part of parts) {
+      const refs = yield* this.slice(part);
+      if (refs) for (const ref of refs) harvested.add(ref);
+      else done = false;
+    }
+    const skipped = this.skipped.splice(from);
+    if (!done) return null;
+    return yield* this.covered(slice, parts, harvested, skipped);
   }
 
   /**
-   * Whether the parts of a slice take every listing it reports, counted back to back. A
+   * Whether the parts of a slice take every listing it reports, counted back to back, and
+   * the listings harvested for it by ref are at least as many as it reports at the end. A
    * price band's halves take every whole-Kč price. A year or the new list also has listings
    * no price filter returns, "Dohodou" ones and some priced ones (the site's price filter
    * leaves out 177 used and 185 new or demo cards on 2026-10-28, not one of them returned by
    * a band around its own price); the slice is done when each of those is proven (`candidates`).
+   * The count by ref catches a listing that moved into a part done earlier (its rise balances
+   * the recount without it ever coming out); one that is short sends a year on to the whole
+   * pass, and leaves a price band not done. Returns the refs harvested when done, else null.
    */
   private async *covered(
     slice: Slice,
     parts: readonly Slice[],
+    harvested: Set<string>,
     skipped: readonly Slice[],
-  ): AsyncGenerator<Observation, boolean> {
-    if ((await this.recount(slice, parts)) <= 0) return true;
+  ): AsyncGenerator<Observation, Set<string> | null> {
+    for (const part of skipped) yield* this.again(part, harvested);
     const key = sliceKey(slice);
+    let { left, total } = await this.recount(slice, parts);
+    if (left <= 0 && this.live(harvested).size >= total) return harvested;
     if (slice.price) {
-      this.short.push(`${key} (listings in neither half)`);
-      return false;
+      const why = left > 0 ? "listings in neither half" : this.tally(harvested, total);
+      this.short.push(`${key} (${why})`);
+      return null;
     }
-    const candidates = yield* this.candidates(slice, skipped);
-    if (candidates === "whole") return true;
+    const candidates = yield* this.candidates(slice, harvested);
+    if (candidates === "whole") return harvested;
     // Counted before the band and online checks: a listing proven then was online and
     // outside every band when counted.
-    const left = Math.max(0, await this.recount(slice, parts));
+    ({ left, total } = await this.recount(slice, parts));
+    left = Math.max(0, left);
     const failed: Record<string, number> = {};
     let proven = 0;
     for (const { card, band } of candidates) {
       let reason = typeof band === "string" ? band : await this.absent(band, card.ref);
       if (reason === null) {
-        // Still online after the recount: one gone since its detail page cannot stand in.
-        const page = await this.ctx.http.get(this.request(card.url));
+        // Still online after the recount, and still as its first read showed it: one gone or
+        // changed since cannot stand in.
+        const page = await this.fetch(card.url);
         if (page.status === 404 || page.status === 410) {
           yield { kind: "ListingGone", ref: card.ref };
+          this.gone.add(card.ref);
           reason = "gone";
         } else if (page.status !== 200) {
           throw new Error(`TipCars returned HTTP ${page.status} for ${card.url}`);
-        }
+        } else reason = misfit(slice, card, parseDetailPage(page.body));
       }
-      if (reason === null) proven++;
-      else failed[reason] = (failed[reason] ?? 0) + 1;
+      if (reason === null) {
+        proven++;
+        harvested.add(card.ref);
+      } else failed[reason] = (failed[reason] ?? 0) + 1;
     }
-    if (proven === left) return true;
+    const covers = this.live(harvested).size >= total;
+    if (proven === left && covers) return harvested;
     const why = Object.entries(failed).map(([reason, n]) => `${n} ${reason}`);
     const note = why.length > 0 ? `; not proven: ${why.join(", ")}` : "";
-    this.short.push(`${key} (${left} listings in no price band, ${proven} proven${note})`);
+    const tally = covers ? "" : `; ${this.tally(harvested, total)}`;
+    this.short.push(`${key} (${left} listings in no price band, ${proven} proven${note}${tally})`);
     this.ctx.log.warn("tipcars listings in no price band unproven", { slice: key, left, proven });
-    return false;
+    return null;
+  }
+
+  /** `refs` without the ones that came out as ListingGone. */
+  private live(refs: ReadonlySet<string>): Set<string> {
+    return new Set([...refs].filter((ref) => !this.gone.has(ref)));
+  }
+
+  private tally(harvested: ReadonlySet<string>, total: number): string {
+    return `${total} reported at the end, ${this.live(harvested).size} harvested`;
   }
 
   /**
-   * How many listings `slice` reports that its parts do not. The site counts one query at a
-   * time, so the slice is counted before and after its parts, and the parts there and back
-   * (first to last, then back to the first), each keeping its lower count: a listing that
-   * moves from one part to another once meanwhile counts in one at most (ADR 0003).
+   * Pages a part done earlier in the census again, adding its listings to `harvested`. A
+   * used one comes out again from its card. A new or demo one costs a detail page, so it
+   * comes out again only when no run of this census has read it whole (its `listing:<ref>`
+   * mark, and the Ledger still knows it): one that moved into the part since it was done, or
+   * arrived.
    */
-  private async recount(slice: Slice, parts: readonly Slice[]): Promise<number> {
+  private async *again(part: Slice, harvested: Set<string>): AsyncGenerator<Observation> {
+    for await (const page of this.pages(part, true)) {
+      for (const card of page.cards) {
+        const read =
+          card.category === "N" &&
+          (this.detailed.has(card.ref) ||
+            (this.ctx.checkpoint.sliceDoneAt(mark(card.ref)) !== null && this.wasKnown(card.ref)));
+        if (!read) yield* this.listing(card);
+        if (!this.gone.has(card.ref)) harvested.add(card.ref);
+      }
+    }
+  }
+
+  /**
+   * After a slice's SliceDone, a SliceDone `listing:<ref>` for each new or demo listing it
+   * read whole that is not marked yet, so a later run of the census that pages its part again
+   * (`again`) knows the census has it without its detail page. Right after a SliceDone, as the
+   * Ledger counts a rejection towards the next SliceDone: a mark never takes a slice's.
+   */
+  private *marks(harvested: ReadonlySet<string>): Iterable<Observation> {
+    for (const ref of harvested) {
+      if (!this.detailed.has(ref) || this.marked.has(ref)) continue;
+      this.marked.add(ref);
+      yield { kind: "SliceDone", slice: mark(ref) };
+    }
+  }
+
+  /**
+   * How many listings `slice` reports that its parts do not (`left`), and the most it
+   * reported (`total`). The site counts one query at a time, so the slice is counted before
+   * and after its parts, and the parts there and back (first to last, then back to the
+   * first), each keeping its lower count: a listing that moves from one part to another once
+   * meanwhile counts in one at most (ADR 0003).
+   */
+  private async recount(
+    slice: Slice,
+    parts: readonly Slice[],
+  ): Promise<{ left: number; total: number }> {
     const count = async (s: Slice) => (await this.page(s, 1)).total;
     const before = await count(slice);
     const counts: number[] = [];
@@ -303,41 +422,31 @@ class Harvest {
     for (let i = parts.length - 2; i >= 0; i--) {
       counts[i] = Math.min(counts[i] as number, await count(parts[i] as Slice));
     }
-    const after = await count(slice);
-    return Math.max(before, after) - counts.reduce((sum, n) => sum + n, 0);
+    const total = Math.max(before, await count(slice));
+    return { left: total - counts.reduce((sum, n) => sum + n, 0), total };
   }
 
   /**
    * The listings of a year (or the new list) that might be ones no price filter returns:
-   * met by a pass over the whole slice but by no pass over its parts (those done earlier in
-   * the census are paged again for that, their used listings coming out again), each with the band around
-   * the price its card showed, or why it cannot be proven: gone, of another year (or neither
-   * new nor demo), repriced since. Each comes out as a listing. A pass that meets every
-   * listing the slice reports needs no proofs: "whole".
+   * met by a pass over the whole slice but not harvested from its parts, each with the band
+   * around the price its card showed, or why it cannot be proven: gone, of another year (or
+   * neither new nor demo), repriced since. Each comes out as a listing. A pass that meets
+   * every listing the slice reports needs no proofs: "whole", its listings then harvested.
    */
   private async *candidates(
     slice: Slice,
-    skipped: readonly Slice[],
+    harvested: Set<string>,
   ): AsyncGenerator<Observation, Candidate[] | "whole"> {
-    for (const part of skipped) {
-      for await (const page of this.pages(part, true)) {
-        for (const card of page.cards) {
-          this.met.add(card.ref);
-          // A listing that moved into the part since it was done is met only here. A used one
-          // comes from its card; a new or demo one would cost a detail page each.
-          if (card.category !== "N") yield* this.listing(card);
-        }
-      }
-    }
     const cards = new Map<string, Card>();
     let reported = 0;
     for await (const page of this.pages(slice, true)) {
       reported = Math.max(reported, page.total);
       for (const card of page.cards) if (!cards.has(card.ref)) cards.set(card.ref, card);
     }
-    const fresh = [...cards.values()].filter((card) => !this.met.has(card.ref));
+    const fresh = [...cards.values()].filter((card) => !harvested.has(card.ref));
     if (cards.size >= reported) {
       for (const card of fresh) yield* this.listing(card);
+      for (const ref of this.live(new Set(cards.keys()))) harvested.add(ref);
       return "whole";
     }
     const out: Candidate[] = [];
@@ -351,25 +460,17 @@ class Harvest {
       yield* this.listing(card);
       return "without their record";
     }
-    const response = await this.ctx.http.get(this.request(card.url));
+    const response = await this.fetch(card.url);
     if (response.status === 404 || response.status === 410) {
       if (!this.done.has(card.ref)) yield { kind: "ListingGone", ref: card.ref };
       this.done.add(card.ref);
+      this.gone.add(card.ref);
       return "gone";
     }
     yield* this.listing(card, response);
-    const detail = parseDetailPage(response.body);
-    const year = whole(detail.boxes.vyrobeno) ?? yearMonth(detail.boxes["v provozu od"])?.year;
-    const inSlice = slice.year
-      ? year !== undefined &&
-        year >= slice.year.from &&
-        (slice.year.to === undefined || year <= slice.year.to)
-      : detail.condition !== undefined;
-    if (!inSlice) return "outside the slice";
-    if (card.priceOnRequest) {
-      return detail.price === undefined ? { ...slice, price: { from: 0, to: 1 } } : "repriced";
-    }
-    if (detail.price !== card.price || detail.currency !== card.currency) return "repriced";
+    const unfit = misfit(slice, card, parseDetailPage(response.body));
+    if (unfit) return unfit;
+    if (card.priceOnRequest) return { ...slice, price: { from: 0, to: 1 } };
     const kc = card.shownKc;
     if (kc === undefined) return "without a shown price";
     // A price in another currency is filtered at its conversion to Kč, which moves with the
@@ -395,12 +496,13 @@ class Harvest {
    * as the highest total any of its pages reported; a short one is paged again from the top,
    * up to PASSES times. Passes are never pooled: between two passes a listing can go and
    * another arrive, so their union can reach the count without a listing every pass missed.
-   * The cards of every pass come out either way, with the highest total any page reported.
+   * The cards of every pass come out either way, with the refs of the complete pass, if any,
+   * and the highest total any page reported.
    */
   private async census(
     slice: Slice,
     first: ListPage,
-  ): Promise<{ cards: Card[]; complete: boolean; reported: number }> {
+  ): Promise<{ cards: Card[]; pass: Set<string> | null; reported: number }> {
     const cards = new Map<string, Card>();
     let most = 0;
     for (let pass = 1; pass <= PASSES; pass++) {
@@ -410,12 +512,11 @@ class Harvest {
         reported = Math.max(reported, page.total);
         for (const card of page.cards) {
           refs.add(card.ref);
-          if (slice.price) this.met.add(card.ref);
           if (!cards.has(card.ref)) cards.set(card.ref, card);
         }
       }
       most = Math.max(most, reported);
-      if (refs.size >= reported) return { cards: [...cards.values()], complete: true, reported };
+      if (refs.size >= reported) return { cards: [...cards.values()], pass: refs, reported };
       this.ctx.log.warn("tipcars slice came out short", {
         slice: sliceKey(slice),
         pass,
@@ -423,18 +524,94 @@ class Harvest {
         reported,
       });
     }
-    return { cards: [...cards.values()], complete: false, reported: most };
+    return { cards: [...cards.values()], pass: null, reported: most };
   }
 
   /**
    * New listings of one list, newest first, up to the first page with none in the scope: a
-   * card outside it never becomes known, so it cannot keep the walk going.
+   * card outside it never becomes known, so it cannot keep the walk going. The known
+   * listings on those pages get their price (`prices`).
    */
-  private async *incremental(slice: Slice): AsyncIterable<Observation> {
+  private async *incremental(slice: Slice): AsyncGenerator<Observation, Head> {
+    const head: Head = { slice, read: 0, total: 0 };
     for await (const page of this.pages(slice, false)) {
+      head.read++;
+      head.total = Math.max(head.total, page.total);
+      yield* this.prices(page.cards);
       const fresh = page.cards.filter((card) => !this.wasKnown(card.ref));
       for (const card of fresh) yield* this.listing(card);
-      if (!fresh.some((card) => outOfScope(card) === null)) return;
+      if (!fresh.some((card) => outOfScope(card) === null)) break;
+    }
+    return head;
+  }
+
+  /**
+   * The day's share of both lists past their heads, for prices. The site serves its lists
+   * newest first only, 20 a page, so every listing's price each day would take some 3,400
+   * pages (99 minutes at 1.7 s a page, on 2026-10-29) against the hour an incremental run
+   * has. So the lists' pages fall into as many shares as `priceSweep` requests need (three
+   * then), each list cut alike, taken in turn by Prague day: nominally a known listing's
+   * price is read every third day, a new listing's the day it appears. A share reads one page
+   * past its end, as listings drift down when new ones arrive. Known listings get their price,
+   * unknown ones in the scope come out whole (a new or demo one with its detail page): ones the
+   * census has not reached, or retired by mistake. Stops when the requests run out, and keeps
+   * no place for the next day: best effort, as a share's pages move with the counts and a day
+   * with many unknown new or demo listings spends its requests on their detail pages.
+   */
+  private async *sweep(heads: readonly Head[]): AsyncIterable<Observation> {
+    if (this.priceSweep <= 0) return;
+    const pagesOf = (head: Head) => Math.ceil(head.total / PAGE_SIZE);
+    const all = heads.reduce((sum, head) => sum + pagesOf(head), 0);
+    // Each list's share reads a page past its end.
+    const shares = Math.max(1, Math.ceil(all / Math.max(1, this.priceSweep - heads.length)));
+    const day = Math.floor(Date.parse(`${pragueDate(this.ctx.now)}T00:00:00Z`) / DAY_MS);
+    const share = day % shares;
+    const stop = this.requests + this.priceSweep;
+    for (const head of heads) {
+      const pages = pagesOf(head);
+      const from = Math.max(head.read + 1, Math.floor((pages * share) / shares) + 1);
+      const to = Math.min(pages, Math.floor((pages * (share + 1)) / shares) + 1, this.maxPages);
+      for (let n = from; n <= to; n++) {
+        if (this.requests >= stop) {
+          this.ctx.log.warn("tipcars price sweep ran out of requests", {
+            slice: sliceKey(head.slice),
+            page: n,
+          });
+          return;
+        }
+        const page = await this.page(head.slice, n);
+        if (page.cards.length === 0) break;
+        yield* this.prices(page.cards);
+        for (const card of page.cards) {
+          if (this.wasKnown(card.ref)) continue;
+          if (card.category === "N" && this.requests >= stop) {
+            this.ctx.log.warn("tipcars price sweep ran out of requests", { ref: card.ref });
+            return;
+          }
+          yield* this.listing(card);
+        }
+      }
+    }
+  }
+
+  /**
+   * A ListingPriceSeen for each listing among `cards` the Ledger knew before the run, once a
+   * run: the card's record price and currency, the ones its ListingSeen carries (a new or demo
+   * one's too), so a price lands the day it changes without a detail page. None without a
+   * price, in an unknown currency or outside the scope.
+   */
+  private *prices(cards: readonly Card[]): Iterable<ListingPriceSeen> {
+    for (const card of cards) {
+      if (!card.ref || !card.category || this.done.has(card.ref) || !this.wasKnown(card.ref)) {
+        continue;
+      }
+      this.done.add(card.ref);
+      if (outOfScope(card) || card.price === undefined || !card.currency) continue;
+      yield {
+        kind: "ListingPriceSeen",
+        ref: card.ref,
+        price: { amount: card.price, currency: card.currency },
+      };
     }
   }
 
@@ -502,9 +679,10 @@ class Harvest {
       yield toListingSeen(card);
       return;
     }
-    const page = response ?? (await this.ctx.http.get(this.request(card.url)));
+    const page = response ?? (await this.fetch(card.url));
     if (page.status === 404 || page.status === 410) {
       yield { kind: "ListingGone", ref: card.ref };
+      this.gone.add(card.ref);
       return;
     }
     if (page.status !== 200)
@@ -515,18 +693,29 @@ class Harvest {
       yield rejected(card);
       return;
     }
-    yield toListingSeen(card, detail);
+    const seen = toListingSeen(card, detail);
+    // Marked only when the Ledger can take it: a mark stands for the census's sighting.
+    if (Number.isFinite(seen.price.amount) && seen.price.currency && seen.vehicle.model) {
+      this.detailed.add(card.ref);
+    }
+    yield seen;
   }
 
   private async get(url: string): Promise<string> {
     this.ctx.signal.throwIfAborted();
-    const page = await this.ctx.http.get(this.request(url));
+    const page = await this.fetch(url);
     if (page.status !== 200) throw new Error(`TipCars returned HTTP ${page.status} for ${url}`);
     return page.body;
   }
 
-  private request(url: string) {
-    return { url, minTier: "T1" as const, locale: "cs" as const, signal: this.ctx.signal };
+  private fetch(url: string): Promise<Response> {
+    this.requests++;
+    return this.ctx.http.get({
+      url,
+      minTier: "T1",
+      locale: "cs",
+      signal: this.ctx.signal,
+    });
   }
 }
 
@@ -579,6 +768,28 @@ function split(slice: Slice): Slice[] | null {
   if (price.from >= price.to) return null;
   const mid = Math.floor((price.from + price.to) / 2);
   return [at(mid + 1, price.to), at(price.from, mid)];
+}
+
+/** The SliceDone that marks a new or demo listing read whole in this census (see `marks`). */
+function mark(ref: string): string {
+  return `listing:${ref}`;
+}
+
+/**
+ * Why a candidate's detail page does not show it in `slice` as its card did, or null: of the
+ * slice's year (a used slice), new or demo (the new list), and at the card's price and
+ * currency, or still without a price ("Dohodou").
+ */
+function misfit(slice: Slice, card: Card, detail: Detail): string | null {
+  const year = whole(detail.boxes.vyrobeno) ?? yearMonth(detail.boxes["v provozu od"])?.year;
+  const inSlice = slice.year
+    ? year !== undefined &&
+      year >= slice.year.from &&
+      (slice.year.to === undefined || year <= slice.year.to)
+    : detail.condition !== undefined;
+  if (!inSlice) return "outside the slice";
+  if (card.priceOnRequest) return detail.price === undefined ? null : "repriced";
+  return detail.price === card.price && detail.currency === card.currency ? null : "repriced";
 }
 
 // ---------------------------------------------------------------------------------------

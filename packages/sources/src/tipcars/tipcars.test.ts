@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { type Cassette, createReplayHttp, HttpBlockedError, loadCassette } from "@cca/http";
-import type { ListingGone, ListingSeen, Observation } from "@cca/vocabulary";
+import type { ListingGone, ListingPriceSeen, ListingSeen, Observation } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
 import { emptyCheckpoint, type HarvestMode, silentLogger } from "../source.ts";
 import { type TipcarsOptions, tipcarsSource } from "./tipcars.ts";
@@ -55,7 +55,10 @@ async function harvest(
 ): Promise<Observation[]> {
   const replay = createReplayHttp(cassette);
   const at = run.now ?? now;
-  const source = tipcarsSource(run.options ?? (run.mode === "full" ? { slices: FULL_SLICES } : {}));
+  // Incremental runs sweep no prices unless a test asks: the cassettes hold two pages a list.
+  const source = tipcarsSource(
+    run.options ?? (run.mode === "full" ? { slices: FULL_SLICES } : { priceSweep: 0 }),
+  );
   for await (const o of source.harvest({
     http: {
       get(request) {
@@ -103,6 +106,8 @@ const body = (f: (body: string) => string) => (r: Response) => ({ ...r, body: f(
 
 const listings = (os: Observation[]) =>
   os.filter((o): o is ListingSeen => o.kind === "ListingSeen");
+const prices = (os: Observation[]) =>
+  os.filter((o): o is ListingPriceSeen => o.kind === "ListingPriceSeen");
 const slicesDone = (os: Observation[]) =>
   os.flatMap((o) => (o.kind === "SliceDone" ? [o.slice] : []));
 const CARD = 'data-listing-item-id-value="';
@@ -443,6 +448,8 @@ describe("tipcars source", () => {
       later?: Partial<Response>;
       /** X's price band returns X. */
       inBand?: boolean;
+      /** X rises from its card's price into the upper half after that half is harvested. */
+      rises?: boolean;
     }
     async function year(total: number, change: Change = {}) {
       const plain = await loadCassette(full);
@@ -459,7 +466,16 @@ describe("tipcars source", () => {
       cassette = serve(cassette, `https://www.tipcars.com/ojete?str=2-20&2000-2000=`, [
         page([r[18] as string]),
       ]);
-      cassette = serve(cassette, `${root}&1000000-kc=`, [listPage(cards, 0, [])]);
+      const risen = new Map(cards).set(
+        x,
+        xMarkup
+          .replace(/(advertisement-name__price">)[\s\S]*?(<\/section>)/, "$1 1 100 000 Kč$2")
+          .replace(/(&quot;price&quot;:)\d+/, (_, field) => `${field}1100000`),
+      );
+      cassette = serve(cassette, `${root}&1000000-kc=`, [
+        listPage(cards, 0, []),
+        ...(change.rises ? [listPage(risen, 1, [x])] : []),
+      ]);
       cassette = serve(cassette, `${root}&0-999999kc=`, [listPage(cards, 20, r)]);
       cassette = serve(cassette, `${root}&${kc - 1}-${kc + 1}kc=`, [
         listPage(
@@ -494,10 +510,38 @@ describe("tipcars source", () => {
       expect(listings(os).map((o) => o.ref)).toContain(x);
     });
 
+    it("is not done when a listing rises into the upper half after it is harvested", async () => {
+      // The recount balances (the upper half now holds X), but X never came out of a part:
+      // 21 reported, 20 harvested. The whole pass meets X, which then counts towards no band.
+      const { x, os, run } = await year(21, { rises: true });
+      await expect(run).rejects.toThrow(/used:2000 \(0 listings in no price band, 1 proven\)/);
+      expect(slicesDone(os)).toEqual(["used:2000:1000000-", "used:2000:0-999999"]);
+      expect(listings(os).map((o) => o.ref)).toContain(x);
+    });
+
+    it("is not done when that listing leaves the year by its final check", async () => {
+      const { os, run } = await year(21, {
+        later: { body: '<div class="detail-box__info-icon">vyrobeno:</div>2001</div>' },
+      });
+      await expect(run).rejects.toThrow(
+        /used:2000 \(1 listings in no price band, 0 proven; not proven: 1 outside the slice; 21 reported at the end, 20 harvested\)/,
+      );
+      expect(slicesDone(os)).not.toContain("used:2000");
+    });
+
+    it("is not done when that listing is repriced by its final check", async () => {
+      const { run } = await year(21, {
+        later: {
+          body: '<script type="application/ld+json">{"@type":"Product","offers":{"price":1,"priceCurrency":"CZK"}}</script><div class="detail-box__info-icon">vyrobeno:</div>2000</div>',
+        },
+      });
+      await expect(run).rejects.toThrow(/not proven: 1 repriced/);
+    });
+
     it("is not done when that listing is gone by the time it is checked", async () => {
       const { x, os, run } = await year(21, { detail: { status: 404 } });
       await expect(run).rejects.toThrow(
-        /used:2000 \(1 listings in no price band, 0 proven; not proven: 1 gone\)/,
+        /used:2000 \(1 listings in no price band, 0 proven; not proven: 1 gone; 21 reported at the end, 20 harvested\)/,
       );
       expect(slicesDone(os)).not.toContain("used:2000");
       expect(os).toContainEqual({ kind: "ListingGone", ref: x });
@@ -506,7 +550,7 @@ describe("tipcars source", () => {
     it("is not done when that listing is gone by the final check, after the recount", async () => {
       const { x, os, run } = await year(21, { later: { status: 404 } });
       await expect(run).rejects.toThrow(
-        /used:2000 \(1 listings in no price band, 0 proven; not proven: 1 gone\)/,
+        /used:2000 \(1 listings in no price band, 0 proven; not proven: 1 gone; 21 reported at the end, 20 harvested\)/,
       );
       expect(slicesDone(os)).not.toContain("used:2000");
       expect(os).toContainEqual({ kind: "ListingGone", ref: x });
@@ -520,7 +564,9 @@ describe("tipcars source", () => {
     it("is not done when fewer listings are proven than its parts miss", async () => {
       // 22 reported: another listing outside every band was pushed off the whole pass.
       const { os, run } = await year(22);
-      await expect(run).rejects.toThrow(/used:2000 \(2 listings in no price band, 1 proven\)/);
+      await expect(run).rejects.toThrow(
+        /used:2000 \(2 listings in no price band, 1 proven; 22 reported at the end, 21 harvested\)/,
+      );
       expect(slicesDone(os)).not.toContain("used:2000");
     });
   });
@@ -648,6 +694,223 @@ describe("tipcars source", () => {
         options: { slices: ["used:2000"] },
       }),
     ).rejects.toThrow(/full runs only/);
+  });
+
+  describe("daily prices", () => {
+    const usedHead = "https://www.tipcars.com/ojete?2000-=";
+    const day = (n: number) => new Date(now.getTime() + n * 86_400_000);
+
+    it("incremental run prices the known listings it walks past, from their cards", async () => {
+      const knownBefore = await known();
+      const urls: string[] = [];
+      const os = await harvest(await loadCassette(incremental), {
+        mode: "incremental",
+        known: knownBefore,
+        urls,
+      });
+      const priced = prices(os);
+      // Pages 1-2 of both lists, less the 8 new listings and any "Dohodou" card.
+      expect(priced.length).toBeGreaterThan(60);
+      expect(priced.every((o) => knownBefore.has(o.ref) && o.price.currency === "CZK")).toBe(true);
+      expect(new Set(priced.map((o) => o.ref)).size).toBe(priced.length);
+      // New and demo ones too, without their detail pages: only the 3 new listings' are read.
+      expect(urls.filter((u) => u.endsWith(".html"))).toHaveLength(3);
+      const listed = new Set(listings(os).map((o) => o.ref));
+      expect(priced.some((o) => listed.has(o.ref))).toBe(false);
+    });
+
+    it("a known listing's price change shows in the next day's incremental run", async () => {
+      const knownBefore = await known();
+      const plain = await loadCassette(incremental);
+      const ref = "100171421"; // leads page 2 of the used list
+      const priceOf = (os: Observation[]) => prices(os).find((o) => o.ref === ref)?.price;
+      const before = priceOf(await harvest(plain, { mode: "incremental", known: knownBefore }));
+      expect(before?.currency).toBe("CZK");
+      const repriced = edit(
+        plain,
+        "/ojete?str=2-20&2000-=",
+        body((b) => {
+          const start = b.indexOf(`${CARD}${ref}"`);
+          const end = b.indexOf(CARD, start + CARD.length);
+          const card = b
+            .slice(start, end)
+            .replace(
+              /(&quot;price&quot;:)\d+/,
+              (_, field) => `${field}${(before?.amount ?? 0) - 10000}`,
+            );
+          return b.slice(0, start) + card + b.slice(end);
+        }),
+      );
+      const after = await harvest(repriced, {
+        mode: "incremental",
+        known: knownBefore,
+        now: day(1),
+      });
+      expect(priceOf(after)).toEqual({ amount: (before?.amount ?? 0) - 10000, currency: "CZK" });
+    });
+
+    it("prices a listing in the seller's currency, as its ListingSeen does", async () => {
+      const page = (await loadCassette(foreign)).interactions[0]?.response.body ?? "";
+      const refs = page
+        .split(CARD)
+        .slice(1)
+        .map((c) => c.split('"')[0] as string);
+      let cassette = serve(await loadCassette(foreign), usedHead, [page]);
+      cassette = serve(cassette, "https://www.tipcars.com/nove", [listPage(new Map(), 0, [])]);
+      const os = await harvest(cassette, { mode: "incremental", known: new Set(refs) });
+      expect(prices(os).find((o) => o.ref === "56607021")?.price).toEqual({
+        amount: 10830,
+        currency: "EUR",
+      });
+      expect(listings(os)).toEqual([]);
+    });
+
+    it("sweeps a share of each list a day, so every known listing is priced within the shares", async () => {
+      // 100 used listings on 5 pages, no new ones; 4 requests a day make 3 shares.
+      const cards = cardsOf(await loadCassette(full));
+      const refs = [...cards.keys()].slice(0, 100);
+      let cassette = serve(await loadCassette(full), "https://www.tipcars.com/nove", [
+        listPage(cards, 0, []),
+      ]);
+      for (let n = 1; n <= 5; n++) {
+        const url = n === 1 ? usedHead : `https://www.tipcars.com/ojete?str=${n}-20&2000-=`;
+        cassette = serve(cassette, url, [listPage(cards, 100, refs.slice((n - 1) * 20, n * 20))]);
+      }
+      const all = new Set(refs);
+      const priced = new Set<string>();
+      for (const n of [0, 1, 2]) {
+        const urls: string[] = [];
+        const os = await harvest(cassette, {
+          mode: "incremental",
+          known: all,
+          options: { priceSweep: 4 },
+          now: day(n),
+          urls,
+        });
+        expect(urls.length).toBeLessThanOrEqual(2 + 4);
+        expect(listings(os)).toEqual([]);
+        for (const o of prices(os)) priced.add(o.ref);
+      }
+      const inScope = refs.filter((ref) => !/Dohodou/.test(cards.get(ref) ?? ""));
+      expect([...priced].sort()).toEqual(inScope.sort());
+    });
+
+    it("a listing the sweep meets that the Ledger does not know comes out whole", async () => {
+      const cards = cardsOf(await loadCassette(full));
+      const refs = [...cards.keys()].slice(0, 40);
+      let cassette = serve(await loadCassette(full), "https://www.tipcars.com/nove", [
+        listPage(cards, 0, []),
+      ]);
+      cassette = serve(cassette, usedHead, [listPage(cards, 40, refs.slice(0, 20))]);
+      cassette = serve(cassette, "https://www.tipcars.com/ojete?str=2-20&2000-=", [
+        listPage(cards, 40, refs.slice(20)),
+      ]);
+      const unknown = refs.slice(20).find((ref) => !/Dohodou/.test(cards.get(ref) ?? "")) ?? "";
+      const os = await harvest(cassette, {
+        mode: "incremental",
+        known: new Set(refs.filter((ref) => ref !== unknown)),
+        options: { priceSweep: 10 },
+      });
+      expect(listings(os).map((o) => o.ref)).toEqual([unknown]);
+      expect(prices(os).map((o) => o.ref)).not.toContain(unknown);
+    });
+  });
+
+  it("a new or demo listing of a part done earlier in the census is read again only if no run of it read the listing whole", async () => {
+    // The new list (3 listings, cap 2) splits into its price bands; two hold the listings.
+    const plain = await loadCassette(incremental);
+    const cards = cardsOf(plain);
+    const [a, b, c] = ["9120302", "9120263", "12770757"];
+    const edges = [
+      0, 500_000, 600_000, 700_000, 800_000, 900_000, 1_000_000, 1_200_000, 1_500_000, 2_000_000,
+      3_000_000,
+    ];
+    let cassette = serve(plain, "https://www.tipcars.com/nove", [listPage(cards, 3, [a, b, c])]);
+    edges.forEach((from, i) => {
+      const to = edges[i + 1];
+      const refs = from === 0 ? [a, b] : from === 500_000 ? [c] : [];
+      cassette = serve(
+        cassette,
+        `https://www.tipcars.com/nove?${from}-${to === undefined ? "" : to - 1}kc=`,
+        [listPage(cards, refs.length, refs)],
+      );
+    });
+    const run = { mode: "full", options: { slices: ["new"], sliceCap: 2 } } as const;
+    const first = await harvest(cassette, run);
+    const done = slicesDone(first);
+    expect(done.at(-1)).toBe("new");
+    // Each band's marks follow its SliceDone.
+    const cheapest = done.indexOf("new:0-499999");
+    expect(done.slice(cheapest + 1, cheapest + 3)).toEqual([`listing:${a}`, `listing:${b}`]);
+    expect(done[done.indexOf("new:500000-599999") + 1]).toBe(`listing:${c}`);
+    // A later run of the census: both bands done, only a's listing read whole.
+    const urls: string[] = [];
+    const later = done.filter((d) => d !== "new" && d !== `listing:${b}` && d !== `listing:${c}`);
+    const resumed = await harvest(cassette, {
+      ...run,
+      done: later,
+      known: new Set([a, b, c]),
+      urls,
+    });
+    expect(urls.filter((u) => u.endsWith(".html"))).toEqual(
+      expect.arrayContaining([expect.stringContaining(b), expect.stringContaining(c)]),
+    );
+    expect(urls.some((u) => u.endsWith(`-${a}.html`))).toBe(false);
+    expect(
+      listings(resumed)
+        .map((o) => o.ref)
+        .sort(),
+    ).toEqual([b, c].sort());
+    const marks = slicesDone(resumed);
+    expect(marks[0]).toBe("new");
+    expect(marks.slice(1).sort()).toEqual([`listing:${b}`, `listing:${c}`].sort());
+    // A marked listing the Ledger no longer knows (gone since) is read again.
+    const revived = await harvest(cassette, { ...run, done: later, known: new Set([b, c]) });
+    expect(listings(revived).map((o) => o.ref)).toContain(a);
+  });
+
+  it("a new or demo listing the Ledger would reject gets no mark", async () => {
+    const plain = await loadCassette(incremental);
+    const cards = cardsOf(plain);
+    const a = "9120302";
+    const odd = (cards.get(a) ?? "").replace(/(price_currency&quot;:&quot;)\w+/, "$1X");
+    expect(odd).not.toBe(cards.get(a));
+    cards.set(a, odd);
+    const cassette = serve(plain, "https://www.tipcars.com/nove", [listPage(cards, 1, [a])]);
+    const os = await harvest(cassette, { mode: "full", options: { slices: ["new"] } });
+    expect(listings(os).map((o) => o.price.currency)).toEqual([""]);
+    expect(slicesDone(os)).toEqual(["new"]);
+  });
+
+  it("the price sweep stops before a detail page past its requests", async () => {
+    // The new list's page 2 holds three unknown new or demo listings; 3 requests make 2
+    // shares, and on a day of the second the sweep reads page 2 and two detail pages.
+    const plain = await loadCassette(incremental);
+    const cards = cardsOf(plain);
+    const page2 = plain.interactions.find((x) => x.request.url.endsWith("/nove?str=2-20"));
+    const known = (page2?.response.body.split(CARD).slice(1) ?? []).map(
+      (c) => c.split('"')[0] as string,
+    );
+    const fresh = ["9120302", "9120263", "12770757"];
+    let cassette = serve(plain, "https://www.tipcars.com/ojete?2000-=", [listPage(cards, 0, [])]);
+    cassette = serve(cassette, "https://www.tipcars.com/nove", [listPage(cards, 40, known)]);
+    cassette = serve(cassette, "https://www.tipcars.com/nove?str=2-20", [
+      listPage(cards, 40, fresh),
+    ]);
+    const dayOf = (d: Date) => Math.floor(Date.parse(d.toISOString().slice(0, 10)) / 86_400_000);
+    const at = [0, 1]
+      .map((n) => new Date(now.getTime() + n * 86_400_000))
+      .find((d) => dayOf(d) % 2 === 1);
+    const urls: string[] = [];
+    const os = await harvest(cassette, {
+      mode: "incremental",
+      known: new Set(known),
+      options: { priceSweep: 3 },
+      now: at,
+      urls,
+    });
+    expect(listings(os).map((o) => o.ref)).toEqual(fresh.slice(0, 2));
+    expect(urls.filter((u) => u.endsWith(".html"))).toHaveLength(2);
   });
 
   it("names its scope after the slices it is limited to", () => {
