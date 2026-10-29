@@ -53,7 +53,7 @@
         "headers": {
           "content-type": "text/plain; charset=utf-8"
         },
-        "body": "class CAR(Platforms):\n",
+        "body": "class CAR(Platforms):\n  pass\n",
         "tier": "T0"
       }
     },
@@ -81,7 +81,7 @@
         "headers": {
           "content-type": "text/plain; charset=utf-8"
         },
-        "body": "class CAR(Platforms):\n",
+        "body": "class CAR(Platforms):\n  pass\n",
         "tier": "T0"
       }
     },
@@ -123,7 +123,7 @@
         "headers": {
           "content-type": "text/plain; charset=utf-8"
         },
-        "body": "class CAR(Platforms):\n",
+        "body": "class CAR(Platforms):\n  pass\n",
         "tier": "T0"
       }
     },
@@ -151,7 +151,7 @@
         "headers": {
           "content-type": "text/plain; charset=utf-8"
         },
-        "body": "class CAR(Platforms):\n",
+        "body": "class CAR(Platforms):\n  pass\n",
         "tier": "T0"
       }
     },
@@ -165,7 +165,7 @@
         "headers": {
           "content-type": "text/plain; charset=utf-8"
         },
-        "body": "class CAR(Platforms):\n",
+        "body": "class CAR(Platforms):\n  pass\n",
         "tier": "T0"
       }
     },
@@ -179,7 +179,7 @@
         "headers": {
           "content-type": "text/plain; charset=utf-8"
         },
-        "body": "class CAR(Platforms):\n",
+        "body": "class CAR(Platforms):\n  pass\n",
         "tier": "T0"
       }
     },

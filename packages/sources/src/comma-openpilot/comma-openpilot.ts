@@ -14,9 +14,12 @@
  *
  * The list is a census and small (a few requests), so incremental and full runs both read it
  * whole. A changed table header, an unknown support level, a definition the parser cannot
- * read (parsePlatforms), or an upstream or dashcam row without a platform (checkPlatforms)
- * fails the run.
+ * read (parsePlatforms), one Python's own parser reads otherwise (platforms.py, which needs
+ * `python3` on PATH), or an upstream or dashcam row without a platform (checkPlatforms) fails
+ * the run.
  */
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import type { Fuel, OpenpilotLevel, OpenpilotSupport } from "@cca/vocabulary";
 import type { HarvestContext, Source } from "../source.ts";
 
@@ -46,6 +49,73 @@ const BRANDS: Record<string, string[]> = {
   toyota: ["Lexus", "Toyota"],
   volkswagen: ["Audi", "CUPRA", "MAN", "Porsche", "SEAT", "Škoda", "Volkswagen"],
 };
+
+/**
+ * The platform configs of opendbc 8ceee62's `class CAR` members. Another callable may build
+ * anything (a helper that drops the cars it is given), so it fails the run: a config comma
+ * adds is added here.
+ */
+const CONSTRUCTORS = new Set([
+  "PlatformConfig",
+  "BydPlatformConfig",
+  "ChryslerPlatformConfig",
+  "FordCANFDPlatformConfig",
+  "FordF150LightningPlatform",
+  "FordPlatformConfig",
+  "GMASCMPlatformConfig",
+  "GMPlatformConfig",
+  "GMSDGMPlatformConfig",
+  "HondaBoschCANFDPlatformConfig",
+  "HondaBoschPlatformConfig",
+  "HondaNidecPlatformConfig",
+  "HyundaiCanFDPlatformConfig",
+  "HyundaiPlatformConfig",
+  "MazdaPlatformConfig",
+  "MgPlatformConfig",
+  "NissanPlatformConfig",
+  "PSAPlatformConfig",
+  "RivianPlatformConfig",
+  "SubaruGen2PlatformConfig",
+  "SubaruPlatformConfig",
+  "TeslaPlatformConfig",
+  "ToyotaSecOCPlatformConfig",
+  "ToyotaTSS2PlatformConfig",
+  "VolkswagenMEBPlatformConfig",
+  "VolkswagenMLBPlatformConfig",
+  "VolkswagenMQBPlatformConfig",
+  "VolkswagenPQPlatformConfig",
+]);
+
+/** The car classes of opendbc 8ceee62's platforms, likewise. */
+const CAR_DOCS = new Set([
+  "CarDocs",
+  "BydCarDocs",
+  "ChryslerCarDocs",
+  "FordCarDocs",
+  "GMCarDocs",
+  "HondaCarDocs",
+  "HyundaiCarDocs",
+  "MazdaCarDocs",
+  "MgCarDocs",
+  "NissanCarDocs",
+  "PSACarDocs",
+  "RivianCarDocs",
+  "SubaruCarDocs",
+  "TeslaCarDocsHW3",
+  "TeslaCarDocsHW4",
+  "ToyotaCarDocs",
+  "ToyotaSecOcCarDocs",
+  "VWCarDocs",
+]);
+
+/** A car's flags that add a car of the same name with a word before the years. */
+const HYBRID_FLAGS = [
+  ["hybrid", "Hybrid"],
+  ["plug_in_hybrid", "Plug-in Hybrid"],
+] as const;
+
+/** Python's own reading of the definitions, the cross-check of parsePlatforms. */
+const PYTHON_READER = fileURLToPath(new URL("./platforms.py", import.meta.url));
 
 /** Levels comma lists from the platforms' own car definitions: every such row has a platform. */
 const PLATFORM_LEVELS = new Set<OpenpilotLevel>(["upstream", "dashcam"]);
@@ -89,10 +159,28 @@ export function commaOpenpilotSource(): Source {
     async *harvest(ctx: HarvestContext): AsyncIterable<OpenpilotSupport> {
       const list = await getOk(ctx, LIST_URL);
       const details = await getOk(ctx, DETAILS_URL);
-      const platforms = new Map<string, string | null>();
+      const definitions: Record<string, string> = {};
       for (const brand of Object.keys(BRANDS)) {
         const url = `${DEFINITIONS_URL}/${brand}/values.py`;
-        for (const [name, platform] of parsePlatforms(await getOk(ctx, url), url)) {
+        definitions[url] = await getOk(ctx, url);
+      }
+      const read = Object.entries(definitions).map(
+        ([url, text]) => [url, parsePlatforms(text, url)] as const,
+      );
+      const python = await pythonPlatforms(definitions, ctx.signal);
+      const platforms = new Map<string, string | null>();
+      for (const [url, cars] of read) {
+        const theirs = python[url] ?? [];
+        const at = cars.findIndex(
+          (car, n) => car[0] !== theirs[n]?.[0] || car[1] !== theirs[n]?.[1],
+        );
+        if (at >= 0 || cars.length !== theirs.length) {
+          const n = at >= 0 ? at : Math.min(cars.length, theirs.length);
+          throw new Error(
+            `comma-openpilot: Python reads ${JSON.stringify(theirs[n] ?? null)} where the parser reads ${JSON.stringify(cars[n] ?? null)} in ${url}`,
+          );
+        }
+        for (const [name, platform] of cars) {
           // A name two platforms claim says nothing about which car it is.
           platforms.set(
             name,
@@ -113,6 +201,40 @@ async function getOk(ctx: HarvestContext, url: string): Promise<string> {
   if (page.status !== 200) throw new Error(`comma-openpilot: HTTP ${page.status} for ${url}`);
   ctx.log.info("comma-openpilot fetched", { url });
   return page.body;
+}
+
+/**
+ * Car names by platform of each file, read by Python's parser (`ast`, no import or execution of
+ * the files); fails when Python cannot read one within the grammar.
+ */
+async function pythonPlatforms(
+  files: Record<string, string>,
+  signal: AbortSignal,
+): Promise<Record<string, [string, string][]>> {
+  const child = spawn("python3", ["-I", PYTHON_READER], { signal });
+  const stdout: Buffer[] = [];
+  const stderr: Buffer[] = [];
+  child.stdout.on("data", (chunk: Buffer) => stdout.push(chunk));
+  child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk));
+  const exit = new Promise<number | null>((resolve, reject) => {
+    child.on("error", reject);
+    child.on("close", resolve);
+  });
+  // A Python that exits early closes its input; its exit code tells why.
+  child.stdin.on("error", () => {});
+  child.stdin.end(
+    JSON.stringify({ constructors: [...CONSTRUCTORS], carDocs: [...CAR_DOCS], files }),
+  );
+  const code = await exit.catch((error: Error) => {
+    signal.throwIfAborted();
+    throw new Error(`comma-openpilot: python3 cross-checks the definitions: ${error.message}`);
+  });
+  if (code !== 0) {
+    throw new Error(
+      `comma-openpilot: Python cannot read ${Buffer.concat(stderr).toString().trim()}`,
+    );
+  }
+  return JSON.parse(Buffer.concat(stdout).toString("utf8"));
 }
 
 type Details = Pick<OpenpilotSupport, "longitudinal" | "minSteerKmh" | "minEnableKmh" | "harness">;
@@ -198,124 +320,167 @@ function checkPlatforms(rows: OpenpilotSupport[]): void {
  * Ford adds a Hybrid and a Plug-in Hybrid car for `hybrid=True` and `plug_in_hybrid=True`
  * ("Ford Kuga Hybrid 2020-23").
  *
- * Read by brackets, not indents or line breaks, as Python does. Every member of the class is a
- * bare annotation or a platform whose cars (the config's first argument, or `car_docs=`, which
- * an `override` of another platform must state: `NISSAN_LEAF_IC = NISSAN_LEAF.override(
- * car_docs=[])`) are a list of `…CarDocs(…)` calls; the list, a `*` part of it or a car may be
- * a name the file assigns once at its top level. Anything else (an imported platform or car, a
- * helper call, a list built by `+`) fails the run rather than lose the cars it holds.
+ * Read by brackets, not indents or line breaks, as Python does, and only the grammar ADR 0016
+ * allows; anything else fails the run rather than place a car Python would not:
+ * - `class CAR(Platforms):`, once, undecorated; CAR and the CONSTRUCTORS and CAR_DOCS names
+ *   bound by nothing in the file but their own class statement or a plain import.
+ * - Each member a bare annotation, `pass` or a platform: one of CONSTRUCTORS called with its cars first
+ *   or as `car_docs=`, or an `override` of an earlier platform stating its own `car_docs=`
+ *   (`NISSAN_LEAF_IC = NISSAN_LEAF.override(car_docs=[])`). No `*` or `**` arguments.
+ * - Cars: a list whose items are cars or `*` lists; a car is a call of one of CAR_DOCS with
+ *   its name as one string first and `hybrid=` and `plug_in_hybrid=` True or False. A list or
+ *   car may be a name the file assigns once at its top level before it is read, and uses for
+ *   nothing else.
  */
 function parsePlatforms(text: string, url: string): [name: string, platform: string][] {
   // Strings and comments blanked out, offsets kept: brackets and keywords are code only.
   const code = blankStringsAndComments(text);
   const lines = statements(code, url);
+  const fail = (what: string) => new Error(`comma-openpilot: ${what} in ${url}`);
+  const unreadable = (member: string) =>
+    new Error(`comma-openpilot: unreadable member of class CAR in ${url}: ${member}`);
+
+  for (const name of ["CAR", ...CONSTRUCTORS, ...CAR_DOCS]) {
+    if ((code.match(new RegExp(`\\bclass\\s+${name}\\b`, "g")) ?? []).length > 1) {
+      throw fail(`class ${name} twice`);
+    }
+    if (bound(code, name)) throw fail(`${name} bound in the file`);
+  }
   const start = lines.findIndex((s) => !s.indented && /^class\s+CAR\b/.test(s.text));
-  if (start < 0) throw new Error(`comma-openpilot: no platform class in ${url}`);
+  if (start < 0) throw fail("no platform class");
+  const header = lines[start] as Statement;
+  if (
+    !/^classCAR\(Platforms,?\):$/.test(header.text.replace(/\s+/g, "")) ||
+    lines[start - 1]?.text.startsWith("@")
+  ) {
+    throw fail("class CAR is not `class CAR(Platforms):`");
+  }
   const end = lines.findIndex((s, n) => n > start && !s.indented);
   const members = lines.slice(start + 1, end < 0 ? undefined : end);
 
   // Top-level `NAME = …` of the file, by name; a name assigned twice is none.
-  const assigned = new Map<string, Assignment | null>();
+  const names: Names = { assigned: new Map(), reads: new Map() };
   for (const s of lines) {
     const head = s.indented ? null : /^([A-Za-z_]\w*)\s*(?::[^=\n]*)?=(?!=)/.exec(s.text);
     if (!head) continue;
     const name = head[1] as string;
-    assigned.set(
+    names.assigned.set(
       name,
-      assigned.has(name) ? null : { at: s.from, value: [s.from + head[0].length, s.to] },
+      names.assigned.has(name) ? null : { at: s.from, value: [s.from + head[0].length, s.to] },
     );
   }
 
   const out: [string, string][] = [];
   const platforms = new Set<string>();
-  // Where each name read for cars was read.
-  const reads = new Map<number, string>();
   for (const { from, to, text: member } of members) {
-    // A bare annotation (`config: VolkswagenMQBPlatformConfig | …`) assigns nothing.
-    if (/^[A-Za-z_]\w*\s*:[^=]*$/.test(member)) continue;
-    // A platform is `NAME = Config(…)`, or `NAME = OTHER.override(…)` with cars of its own.
+    // A bare annotation (`config: VolkswagenMQBPlatformConfig | …`) or `pass` assigns nothing.
+    if (/^[A-Za-z_]\w*\s*:[^=]*$/.test(member) || member === "pass") continue;
     const head =
-      /^([A-Z][A-Z0-9_]*)\s*(?::[^=\n]*)?=\s*(?:\w+|[A-Z][A-Z0-9_]*\s*\.\s*(override))\s*\(/.exec(
+      /^([A-Z][A-Z0-9_]*)\s*(?::[^=\n]*)?=\s*(?:([A-Za-z_]\w*)|([A-Z][A-Z0-9_]*)\s*\.\s*override)\s*\(/.exec(
         member,
       );
-    if (!head) {
-      throw new Error(
-        `comma-openpilot: unreadable member of class CAR in ${url}: ${member.split("\n")[0]}`,
+    if (!head) throw unreadable(member.split("\n")[0] as string);
+    const [, platform = "", config, overridden] = head;
+    if (platforms.has(platform)) throw fail(`${platform} twice`);
+    // A platform is built by an opendbc config or overrides one defined before it.
+    if (config ? !CONSTRUCTORS.has(config) : !platforms.has(overridden as string)) {
+      throw fail(
+        `${platform} built by ${config ?? `${overridden}.override`}, not a platform config`,
       );
     }
-    const platform = head[1] as string;
-    if (platforms.has(platform)) throw new Error(`comma-openpilot: ${platform} twice in ${url}`);
     platforms.add(platform);
     const open = from + head[0].length;
     // The config call is the whole member: `Config(…).override(…)` would replace its cars.
     if (closingBracket(code, open) !== to - 1) {
-      throw new Error(`comma-openpilot: unreadable member of class CAR in ${url}: ${platform}`);
+      throw unreadable(platform);
     }
-    const args = items(code, open, to - 1);
-    const keyword = args.find(([a, b]) => /^\s*car_docs\s*=/.test(code.slice(a, b)));
-    const first = args[0] && !/^\s*\w+\s*=(?!=)/.test(code.slice(...args[0])) ? args[0] : undefined;
-    const cars: Range | undefined = keyword
-      ? [code.indexOf("=", keyword[0]) + 1, keyword[1]]
-      : head[2]
-        ? undefined
-        : first;
-    const calls = cars && carDocs(code, cars, assigned, reads);
-    if (!calls) throw new Error(`comma-openpilot: unreadable cars of ${platform} in ${url}`);
+    const args = callArguments(code, open, to - 1);
+    if (!args) throw fail(`unreadable cars of ${platform}`);
+    const cars = args.keywords.get("car_docs");
+    // An override takes keywords only; a config takes its cars once.
+    if (args.positional.length && (cars || overridden))
+      throw fail(`unreadable cars of ${platform}`);
+    const list = cars ?? args.positional[0];
+    const calls = list && carList(code, list, header.from, names);
+    if (!calls) throw fail(`unreadable cars of ${platform}`);
     // A car named elsewhere in the member is one the platform's cars do not hold.
     for (const call of code.slice(from, to).matchAll(/\b\w*CarDocs\w*\s*\(/g)) {
       if (!calls.includes(from + call.index + call[0].length)) {
-        throw new Error(`comma-openpilot: a car outside the cars of ${platform} in ${url}`);
+        throw fail(`a car outside the cars of ${platform}`);
       }
     }
     for (const open of calls) {
       const close = closingBracket(code, open);
-      const name = firstString(text, code, open, close);
-      if (!name) throw new Error(`comma-openpilot: unreadable car name in ${platform} in ${url}`);
-      const flags = code.slice(open, close);
+      const carArgs = callArguments(code, open, close);
+      const name = carArgs?.positional[0] && firstString(text, code, ...carArgs.positional[0]);
+      if (!carArgs || !name || name.includes("\\")) {
+        throw fail(`unreadable car name in ${platform}`);
+      }
       out.push([name, platform]);
       const named = /^(.+?) (\d{4}\S*(?:, \d{4}\S*)*)$/.exec(name);
-      if (named && /\bhybrid\s*=\s*True\b/.test(flags)) {
-        out.push([`${named[1]} Hybrid ${named[2]}`, platform]);
-      }
-      if (named && /\bplug_in_hybrid\s*=\s*True\b/.test(flags)) {
-        out.push([`${named[1]} Plug-in Hybrid ${named[2]}`, platform]);
+      for (const [flag, word] of HYBRID_FLAGS) {
+        const value = carArgs.keywords.get(flag);
+        const set = value && code.slice(...value).trim();
+        if (set !== undefined && set !== "True" && set !== "False") {
+          throw fail(`${flag} of ${name} is not True or False`);
+        }
+        if (named && set === "True") out.push([`${named[1]} ${word} ${named[2]}`, platform]);
       }
     }
   }
   // A name read for cars holds them as assigned only if nothing else uses it: another use may
   // rebind or change it (`X, Y = Y, X`, `X += […]`, `X.append(…)`).
-  for (const name of new Set(reads.values())) {
+  for (const name of new Set(names.reads.values())) {
     for (const use of code.matchAll(new RegExp(`\\b${name}\\b`, "g"))) {
-      if (use.index !== assigned.get(name)?.at && reads.get(use.index) !== name) {
-        throw new Error(
-          `comma-openpilot: cars under ${name}, which the file uses elsewhere, in ${url}`,
-        );
+      if (use.index !== names.assigned.get(name)?.at && names.reads.get(use.index) !== name) {
+        throw fail(`cars under ${name}, which the file uses elsewhere,`);
       }
     }
   }
   return out;
 }
 
+/**
+ * Whether `code` binds `name` other than by a class statement or a plain import: `def`, `as`,
+ * an assignment or `:=` (a keyword argument of that name too), `global`, `del`, a `for` target;
+ * not an annotation (`HYUNDAI_TUCSON: HyundaiPlatformConfig = …`) or an attribute.
+ */
+function bound(code: string, name: string): boolean {
+  const word = new RegExp(`\\b${name}\\b`);
+  const binding = new RegExp(
+    `\\b(?:def|as)\\s+${name}\\b|(?:^|[;,([=*])\\s*${name}\\s*(?::[^=\\n]*)?(?:[-+*/%&|^@]|\\*\\*|//|>>|<<)?=(?!=)|\\b(?:global|nonlocal|del)\\b[^\\n;]*\\b${name}\\b`,
+    "m",
+  );
+  if (binding.test(code)) return true;
+  for (const loop of code.matchAll(/\bfor\s+((?:(?!\bin\b)[^:\n])*)\bin\b/g)) {
+    if (word.test(loop[1] as string)) return true;
+  }
+  return false;
+}
+
 type Range = [from: number, to: number];
 
-/** A top-level `NAME = value`: where it starts, and its value. */
+type Statement = { from: number; to: number; text: string; indented: boolean };
+
+/** A top-level `NAME = …`: where it starts, and its value. */
 type Assignment = { at: number; value: Range };
+
+/** The file's top-level assignments, and where each name read for cars was read. */
+type Names = { assigned: Map<string, Assignment | null>; reads: Map<number, string> };
 
 /**
  * The statements of `code`: what begins on a line outside every bracket, or after a `;` there,
- * with its text trimmed and whether its line is indented.
+ * with its text trimmed and whether its line is indented. A `\` ending a line continues it.
  */
-function statements(
-  code: string,
-  url: string,
-): { from: number; to: number; text: string; indented: boolean }[] {
-  const out: { from: number; to: number; text: string; indented: boolean }[] = [];
+function statements(code: string, url: string): Statement[] {
+  const out: Statement[] = [];
   let depth = 0;
   let from = 0;
   let indented = /^[ \t]/.test(code);
   for (let i = 0; i <= code.length; i++) {
     const char = code[i] ?? "\n";
-    if (depth === 0 && (char === "\n" || char === ";")) {
+    if (char === "\\" && code[i + 1] === "\n") i++;
+    else if (depth === 0 && (char === "\n" || char === ";")) {
       const raw = code.slice(from, i);
       const text = raw.trim();
       const lead = raw.length - raw.trimStart().length;
@@ -348,47 +513,97 @@ function items(code: string, from: number, to: number): Range[] {
 }
 
 /**
- * Where the arguments of each `…CarDocs(` call open, for an expression that is one such call,
- * a list of them (`*` parts too), or a name `assigned` to either, noting where it `reads` each
- * name; undefined for anything else.
+ * The arguments of a call in `code[from, to)`: positional ones in order, keyword values by
+ * name; undefined with a `*` or `**` argument, a keyword given twice or a positional after one.
  */
-function carDocs(
+function callArguments(
   code: string,
-  [from, to]: Range,
-  assigned: Map<string, Assignment | null>,
-  reads: Map<number, string>,
-  seen = new Set<string>(),
-): number[] | undefined {
-  const text = code.slice(from, to);
-  const a = from + (text.length - text.trimStart().length);
-  const b = from + text.trimEnd().length;
-  const expr = code.slice(a, b);
-  if (expr.startsWith("[")) {
+  from: number,
+  to: number,
+): { positional: Range[]; keywords: Map<string, Range> } | undefined {
+  const positional: Range[] = [];
+  const keywords = new Map<string, Range>();
+  for (const [a, b] of items(code, from, to)) {
+    const item = code.slice(a, b);
+    if (/^\s*\*/.test(item)) return undefined;
+    const keyword = /^\s*([A-Za-z_]\w*)\s*=(?!=)/.exec(item);
+    if (!keyword) {
+      if (keywords.size) return undefined;
+      positional.push([a, b]);
+    } else if (keywords.has(keyword[1] as string)) return undefined;
+    else keywords.set(keyword[1] as string, [a + keyword[0].length, b]);
+  }
+  return { positional, keywords };
+}
+
+/**
+ * Where the arguments of each car's call open, for a list of cars (`*` lists among them) or a
+ * name assigned to one; undefined for anything else.
+ */
+function carList(code: string, range: Range, before: number, names: Names): number[] | undefined {
+  const [a, b] = trimmed(code, range);
+  if (code[a] === "[") {
     if (closingBracket(code, a + 1) !== b - 1) return undefined;
     const out: number[] = [];
     for (const [x, y] of items(code, a + 1, b - 1)) {
-      const star = /^\s*\*/.exec(code.slice(x, y))?.[0].length ?? 0;
-      const calls = carDocs(code, [x + star, y], assigned, reads, seen);
-      if (!calls) return undefined;
-      out.push(...calls);
+      const star = /^\s*\*/.exec(code.slice(x, y))?.[0].length;
+      if (star) {
+        const calls = carList(code, [x + star, y], before, names);
+        if (!calls) return undefined;
+        out.push(...calls);
+      } else {
+        const open = car(code, [x, y], before, names);
+        if (open === undefined) return undefined;
+        out.push(open);
+      }
     }
     return out;
   }
-  const call = /^\w*CarDocs\w*\s*\(/.exec(expr);
+  const named = assignedBefore(code, [a, b], before, names);
+  return named && carList(code, named.value, named.at, names);
+}
+
+/** Where the arguments of a car's call open, for one call or a name assigned to one. */
+function car(code: string, range: Range, before: number, names: Names): number | undefined {
+  const [a, b] = trimmed(code, range);
+  const call = /^([A-Za-z_]\w*)\s*\(/.exec(code.slice(a, b));
   if (call) {
     const open = a + call[0].length;
-    return closingBracket(code, open) === b - 1 ? [open] : undefined;
+    return CAR_DOCS.has(call[1] as string) && closingBracket(code, open) === b - 1
+      ? open
+      : undefined;
   }
-  const named = /^[A-Za-z_]\w*$/.test(expr) && !seen.has(expr) ? assigned.get(expr) : undefined;
-  if (!named) return undefined;
-  reads.set(a, expr);
-  return carDocs(code, named.value, assigned, reads, new Set([...seen, expr]));
+  const named = assignedBefore(code, [a, b], before, names);
+  return named && car(code, named.value, named.at, names);
+}
+
+/**
+ * The assignment of the name `code[a, b)` is, if the file assigns it once at its top level
+ * before `before` (Python runs it in order), noting the read.
+ */
+function assignedBefore(
+  code: string,
+  [a, b]: Range,
+  before: number,
+  names: Names,
+): Assignment | undefined {
+  const name = code.slice(a, b);
+  const named = /^[A-Za-z_]\w*$/.test(name) ? names.assigned.get(name) : undefined;
+  if (!named || named.at >= before) return undefined;
+  names.reads.set(a, name);
+  return named;
+}
+
+/** `range` without the whitespace around it. */
+function trimmed(code: string, [from, to]: Range): Range {
+  const text = code.slice(from, to);
+  return [from + (text.length - text.trimStart().length), from + text.trimEnd().length];
 }
 
 /** Python source with the contents of strings and comments replaced by spaces, newlines kept. */
 function blankStringsAndComments(text: string): string {
   return text.replace(
-    /#[^\n]*|("""|''')[\s\S]*?\1|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'/g,
+    /#[^\n]*|("""|''')[\s\S]*?\1|"(?:[^"\\\n]|\\[\s\S])*"|'(?:[^'\\\n]|\\[\s\S])*'/g,
     (token) =>
       token.startsWith("#")
         ? " ".repeat(token.length)

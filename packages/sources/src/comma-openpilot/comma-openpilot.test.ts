@@ -359,6 +359,121 @@ describe("comma-openpilot source", () => {
     ).toThrow(/unreadable member of class CAR .*: HYUNDAI_IONIQ_5 = configs\./);
   });
 
+  it("reads only the grammar it knows: opendbc's own configs and cars, in Python's order", async () => {
+    const fails = (change: (body: string) => string) =>
+      expect(harvest("full", editBody("hyundai", change))).rejects;
+    const TUCSON = "  HYUNDAI_TUCSON = HyundaiPlatformConfig(";
+    const car = DIESEL.trim().slice(0, -1);
+    // A helper that builds a config from the cars it is given, or drops them.
+    await fails(
+      (b) =>
+        `def drop_cars(cars, specs, **kwargs):\n  return HyundaiPlatformConfig([], specs, **kwargs)\n\n${b.replace(
+          TUCSON,
+          "  HYUNDAI_TUCSON = drop_cars(",
+        )}`,
+    ).toThrow(/HYUNDAI_TUCSON built by drop_cars, not a platform config in .*hyundai\/values\.py/);
+    // A config or car class the file rebinds, plainly or under a spelling Python normalizes.
+    await fails((b) => `HyundaiPlatformConfig = drop_cars\n${b}`).toThrow(
+      /HyundaiPlatformConfig bound in the file/,
+    );
+    await fails((b) => `from .helpers import drop as HyundaiCarDocs\n${b}`).toThrow(
+      /HyundaiCarDocs bound in the file/,
+    );
+    await fails((b) => `def HyundaiCarDocs(name, **kwargs):\n  return None\n${b}`).toThrow(
+      /HyundaiCarDocs bound in the file/,
+    );
+    await fails((b) => `ＨyundaiPlatformConfig = drop_cars\n${b}`).toThrow(
+      /Python cannot read .*hyundai\/values\.py: HyundaiPlatformConfig is bound in the file/,
+    );
+    // A list in the cars, unspread; a car spread as if it were a list; cars by `*` arguments.
+    await fails((b) => b.replace(DIESEL, `      [${car}],\n`)).toThrow(
+      /unreadable cars of HYUNDAI_TUCSON/,
+    );
+    await fails((b) => b.replace(DIESEL, `      *${car},\n`)).toThrow(
+      /unreadable cars of HYUNDAI_TUCSON/,
+    );
+    await fails(
+      (b) =>
+        `TUCSON = [[${car}], CarSpecs(mass=1)]\n${b.replace(/HYUNDAI_TUCSON = HyundaiPlatformConfig\([\s\S]*?\n {2}\)\n/, "HYUNDAI_TUCSON = HyundaiPlatformConfig(*TUCSON)\n")}`,
+    ).toThrow(/unreadable cars of HYUNDAI_TUCSON/);
+    // Cars under a name assigned after the class or after the name that reads it: Python has
+    // not assigned it yet when it reads it.
+    await fails(
+      (b) =>
+        `${b.replace(DIESEL, "      *TUCSON_DIESEL_CARS,\n")}\nTUCSON_DIESEL_CARS = [${car}]\n`,
+    ).toThrow(/unreadable cars of HYUNDAI_TUCSON/);
+    await fails(
+      (b) =>
+        `TUCSON = [*DIESEL_CARS]\nDIESEL_CARS = [${car}]\n${b.replace(DIESEL, "      *TUCSON,\n")}`,
+    ).toThrow(/unreadable cars of HYUNDAI_TUCSON/);
+    // Cars given twice, an override of a platform not yet defined.
+    await fails((b) => b.replace(TUCSON, `${TUCSON}car_docs=[], `)).toThrow(
+      /unreadable cars of HYUNDAI_TUCSON/,
+    );
+    await fails((b) =>
+      b.replace(TUCSON, `  HYUNDAI_TUCSON_IC = HYUNDAI_IONIQ_5.override(car_docs=[])\n${TUCSON}`),
+    ).toThrow(/HYUNDAI_TUCSON_IC built by HYUNDAI_IONIQ_5\.override, not a platform config/);
+    // A decorated or otherwise built platform class.
+    await fails((b) =>
+      b.replace("class CAR(Platforms):", "@unique\nclass CAR(Platforms):"),
+    ).toThrow(/class CAR is not `class CAR\(Platforms\):` in .*hyundai\/values\.py/);
+    await fails((b) =>
+      b.replace("class CAR(Platforms):", "class CAR(Platforms, metaclass=Dropping):"),
+    ).toThrow(/class CAR is not `class CAR\(Platforms\):`/);
+    // Conditional expressions, for the cars or the platform.
+    await fails((b) => b.replace(/(Diesel 2019.*\n\s*\])/, "$1 if FULL else []")).toThrow(
+      /unreadable cars of HYUNDAI_TUCSON/,
+    );
+    await fails((b) =>
+      b.replace(
+        "flags=HyundaiFlags.TCU_GEARS,\n  )",
+        "flags=HyundaiFlags.TCU_GEARS,\n  ) if FULL else None",
+      ),
+    ).toThrow(/unreadable member of class CAR .*: HYUNDAI_TUCSON$/);
+    // A walrus, for a car or to rebind cars under a name.
+    await fails((b) => b.replace(DIESEL, `      (DIESEL := ${car}),\n`)).toThrow(
+      /unreadable cars of HYUNDAI_TUCSON/,
+    );
+    await fails(swapped("print(X := [])")).toThrow(/cars under X, which the file uses elsewhere/);
+    // A lambda, for a car or the platform.
+    await fails((b) => b.replace(DIESEL, `      (lambda: ${car})(),\n`)).toThrow(
+      /unreadable cars of HYUNDAI_TUCSON/,
+    );
+    await fails((b) =>
+      b
+        .replace(TUCSON, "  HYUNDAI_TUCSON = (lambda: HyundaiPlatformConfig(")
+        .replace("flags=HyundaiFlags.TCU_GEARS,\n  )", "flags=HyundaiFlags.TCU_GEARS,\n  ))()"),
+    ).toThrow(/unreadable member of class CAR .*: HYUNDAI_TUCSON = \(lambda/);
+    // A hybrid flag that is not a literal: whether it adds a car is not in the file.
+    await fails((b) =>
+      b.replace(
+        'HyundaiCarDocs("Hyundai Tucson Diesel 2019", ',
+        'HyundaiCarDocs("Hyundai Tucson Diesel 2019", hybrid=HYBRID, ',
+      ),
+    ).toThrow(/hybrid of Hyundai Tucson Diesel 2019 is not True or False/);
+  });
+
+  it("fails when Python's own parser reads the definitions otherwise, or cannot run", async () => {
+    // A form feed indents a line for Python, not for the parser, which ends the class there.
+    await expect(
+      harvest(
+        "full",
+        editBody("hyundai", (b) => b.replace("  HYUNDAI_TUCSON = ", "\f  HYUNDAI_TUCSON = ")),
+      ),
+    ).rejects.toThrow(
+      /Python reads \["Hyundai Tucson 2021","HYUNDAI_TUCSON"\] where the parser reads null in .*hyundai\/values\.py/,
+    );
+    const path = process.env.PATH;
+    process.env.PATH = "/nonexistent";
+    try {
+      await expect(harvest("full")).rejects.toThrow(
+        /python3 cross-checks the definitions: spawn python3 ENOENT/,
+      );
+    } finally {
+      process.env.PATH = path;
+    }
+  });
+
   it("reads platforms however the definitions are indented, wrapped or quoted", async () => {
     const reformatted = await harvest(
       "full",
@@ -399,7 +514,7 @@ describe("comma-openpilot source", () => {
           b.replace(/^class CAR\(Platforms\):[\s\S]*/m, "class CAR(Platforms):\n  pass\n"),
         ),
       ),
-    ).rejects.toThrow(/unreadable member of class CAR in .*: pass$/);
+    ).rejects.toThrow(/19 upstream or dashcam cars have no platform/);
     await expect(
       harvest(
         "full",
@@ -428,7 +543,7 @@ describe("comma-openpilot source", () => {
           b.replace(/^(\s+)[A-Z][A-Z0-9_]* = (\w+PlatformConfig\()/gm, "$1CAR = $2"),
         ),
       ),
-    ).rejects.toThrow(/CAR twice in .*\/values\.py/);
+    ).rejects.toThrow(/CAR bound in the file in .*\/values\.py/);
     await expect(
       harvest(
         "full",
