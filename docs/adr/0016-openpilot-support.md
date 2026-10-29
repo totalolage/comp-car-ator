@@ -13,7 +13,7 @@ The `comma-openpilot` Source reads two generated Markdown files over plain HTTPS
 
 There is no JSON form and no per-car link. comma.ai/vehicles embeds its data in a hashed script bundle, so each row links to its make's section of that page.
 
-The list is a census, like the register: every run reads the whole list, and a full run's rows replace the previous ones. The Ledger stores the rows in their own table and retires the ones a full census no longer states, as it does catalog entries. It runs weekly, since comma regenerates the list every few weeks.
+The list is a census, like the register: every run reads the whole list, and a full run's rows replace the previous ones. The Ledger stores the rows in their own table (`openpilot_support`, migration 6) and retires the ones a full census no longer states, as it does catalog entries. It runs weekly, since comma regenerates the list every few weeks.
 
 ## Observation
 

@@ -792,6 +792,27 @@ describe("Ledger", () => {
           .openpilot.map((m) => [`${m.model} ${m.years.join(",")}`, [m.modelId, m.variantIds]]),
       );
 
+    it("adds the openpilot table when it opens a schema v5 Ledger", async () => {
+      const dir = await mkdtemp(join(tmpdir(), "cca-ledger-"));
+      try {
+        const file = join(dir, "ledger.sqlite");
+        ledger = openLedger(file);
+        await run("rsv", "full", "2026-10-01", catalog);
+        ledger.close();
+        // A Ledger from before migration 6, as Data releases carry.
+        const db = new DatabaseSync(file);
+        db.exec("DROP TABLE openpilot_support");
+        db.prepare("UPDATE meta SET value = '5' WHERE key = 'schema_version'").run();
+        db.close();
+
+        ledger = openLedger(file);
+        await run("comma-openpilot", "full", "2026-10-02", [row("Kona", [2020])]);
+        expect(placed()).toEqual({ "Kona 2020": ["hyundai/kona", expect.any(Array)] });
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+    });
+
     it("places a row on the Generation its model years fall in and the Variants that fit", async () => {
       ledger = openLedger(":memory:");
       await run("rsv", "full", "2026-10-01", catalog);
