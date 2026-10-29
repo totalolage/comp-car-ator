@@ -231,14 +231,15 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
   // Strings and comments blanked out, offsets kept: brackets and keywords are code only.
   const code = blankStringsAndComments(source);
 
-  // Statements of the class: the lines that begin outside every bracket. It ends at the
-  // first such line at the left margin.
+  // Statements of the class: the lines that begin outside every bracket, and what follows a
+  // `;` there. It ends at the first such line at the left margin.
   const statements: number[] = [];
   let depth = 0;
   let end = code.length;
   for (let i = 0; i < code.length; i++) {
     const char = code[i] as string;
-    if (char === "\n" && depth === 0) {
+    if (char === ";" && depth === 0) statements.push(i + 1);
+    else if (char === "\n" && depth === 0) {
       const line = /^[^\n]*/.exec(code.slice(i + 1))?.[0] ?? "";
       if (!line.trim()) continue;
       if (!/^\s/.test(line)) {
@@ -263,8 +264,8 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
     for (const call of code.slice(from, to).matchAll(/\b\w*CarDocs\w*\s*\(/g)) {
       const open = from + call.index + call[0].length;
       const close = closingBracket(code, open);
-      const name = /^\s*(["'])(.*?)\1/s.exec(source.slice(open, close))?.[2];
-      if (!name) continue;
+      const name = firstString(source, code, open, close);
+      if (!name) throw new Error(`comma-openpilot: unreadable car name in ${platform} in ${url}`);
       const flags = code.slice(open, close);
       out.push([name, platform]);
       const named = /^(.+?) (\d{4}\S*(?:, \d{4}\S*)*)$/.exec(name);
@@ -288,6 +289,27 @@ function blankStringsAndComments(text: string): string {
         ? " ".repeat(token.length)
         : `${token[0]}${token.slice(1, -1).replace(/[^\n]/g, " ")}${token.at(-1)}`,
   );
+}
+
+/**
+ * The string literal that opens `code[from, to)`, with adjacent literals joined as Python
+ * joins them; undefined when the first argument is not a literal. `code` locates the quotes
+ * (comments blanked), `source` gives their text.
+ */
+function firstString(source: string, code: string, from: number, to: number): string | undefined {
+  let name: string | undefined;
+  let i = from;
+  for (;;) {
+    while (i < to && /\s/.test(code[i] as string)) i++;
+    const literal = /^[rRuU]?("""|'''|"|')/.exec(code.slice(i, i + 4));
+    if (!literal) return name;
+    const quote = literal[1] as string;
+    i += literal[0].length - quote.length;
+    const close = code.indexOf(quote, i + quote.length);
+    if (close < 0 || close >= to) return name;
+    name = (name ?? "") + source.slice(i + quote.length, close);
+    i = close + quote.length;
+  }
 }
 
 /** The index of the bracket closing the one just before `open`. */

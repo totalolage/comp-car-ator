@@ -229,6 +229,18 @@ describe("comma-openpilot source", () => {
     ).toBeUndefined();
   });
 
+  it("reads two platforms on one line as two", async () => {
+    const rows = await harvest(
+      "full",
+      editBody("hyundai", (b) =>
+        b.replace(/\n\s*\)\n\s*HYUNDAI_TUCSON = /, "\n  ); HYUNDAI_TUCSON = "),
+      ),
+    );
+    expect(byRef(rows, "Hyundai|Tucson Diesel 2019|Smart Cruise Control (SCC)")?.platform).toBe(
+      "HYUNDAI_TUCSON",
+    );
+  });
+
   it("gives no platform to cars after a member it cannot read", async () => {
     const rows = await harvest(
       "full",
@@ -261,7 +273,14 @@ describe("comma-openpilot source", () => {
           // Four spaces per level, a car's name on its own line, single quotes, a type.
           .replace(/^( +)/gm, (indent) => indent + indent)
           .replace(/^(\s*\w*CarDocs\w*\()"([^"]*)"/gm, "$1\n            '$2'")
-          .replace("HYUNDAI_TUCSON = ", "HYUNDAI_TUCSON: HyundaiPlatformConfig = "),
+          .replace("HYUNDAI_TUCSON = ", "HYUNDAI_TUCSON: HyundaiPlatformConfig = ")
+          // A comment before a name, a name split in two literals, a raw string.
+          .replace(
+            "CarDocs(\n            'Toyota Camry",
+            "CarDocs(  # 8th gen\n            'Toyota Camry",
+          )
+          .replace("'Hyundai Tucson Diesel 2019'", "'Hyundai Tucson' ' Diesel 2019'")
+          .replace("'Kia Ceed Plug-in Hybrid 2021'", "r'Kia Ceed Plug-in Hybrid 2021'"),
       ),
     );
     const tabs = await harvest(
@@ -324,6 +343,15 @@ describe("comma-openpilot source", () => {
         editBody("hyundai", (b) => b.replace("HyundaiPlatformConfig(", "HyundaiPlatformConfig((")),
       ),
     ).rejects.toThrow(/unbalanced brackets in .*hyundai\/values\.py/);
+    // A car whose name is not a string literal.
+    await expect(
+      harvest(
+        "full",
+        editBody("hyundai", (b) =>
+          b.replace('CarDocs("Hyundai Tucson 2021"', "CarDocs(TUCSON_NAME"),
+        ),
+      ),
+    ).rejects.toThrow(/unreadable car name in HYUNDAI_TUCSON in .*hyundai\/values\.py/);
   });
 
   it("fails on platform definitions without their platform class", async () => {
