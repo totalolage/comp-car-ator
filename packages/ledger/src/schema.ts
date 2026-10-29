@@ -96,6 +96,14 @@ const MIGRATIONS: string[] = [
   // listing's currency from its record (2026-10-28). This only relabels currency; it never
   // deletes history points.
   relabelEur("tipcars", TIPCARS_EUR_PRICES, "2026-10-28"),
+  // Sauto listings a seller priced without VAT, recorded as `net` at the VAT-inclusive
+  // headline before the adapter labelled that headline gross (2026-10-29). The adapter wrote
+  // `net` only in this case, so every Sauto `net` is relabelled. Amounts stay, and history
+  // points carry no basis.
+  `
+  UPDATE listings SET data = json_set(data, '$.priceBasis', 'gross')
+  WHERE source = 'sauto' AND json_extract(data, '$.priceBasis') = 'net';
+  `,
 ];
 
 /**
