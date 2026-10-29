@@ -280,7 +280,8 @@ describe("comma-openpilot source", () => {
             "CarDocs(  # 8th gen\n            'Toyota Camry",
           )
           .replace("'Hyundai Tucson Diesel 2019'", "'Hyundai Tucson' ' Diesel 2019'")
-          .replace("'Kia Ceed Plug-in Hybrid 2021'", "r'Kia Ceed Plug-in Hybrid 2021'"),
+          .replace("'Kia Ceed Plug-in Hybrid 2021'", "r'Kia Ceed Plug-in Hybrid 2021'")
+          .replace("'Toyota RAV4 Hybrid 2019-21'", '"""Toyota RAV4 Hybrid 2019-21"""'),
       ),
     );
     const tabs = await harvest(
@@ -352,6 +353,14 @@ describe("comma-openpilot source", () => {
         ),
       ),
     ).rejects.toThrow(/unreadable car name in HYUNDAI_TUCSON in .*hyundai\/values\.py/);
+    await expect(
+      harvest(
+        "full",
+        editBody("hyundai", (b) =>
+          b.replace('CarDocs("Hyundai Tucson 2021"', 'CarDocs("Hyundai " + TUCSON'),
+        ),
+      ),
+    ).rejects.toThrow(/unreadable car name in HYUNDAI_TUCSON/);
   });
 
   it("fails on platform definitions without their platform class", async () => {

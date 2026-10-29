@@ -287,14 +287,20 @@ function blankStringsAndComments(text: string): string {
     (token) =>
       token.startsWith("#")
         ? " ".repeat(token.length)
-        : `${token[0]}${token.slice(1, -1).replace(/[^\n]/g, " ")}${token.at(-1)}`,
+        : blankInside(token, /^("""|''')/.test(token) ? 3 : 1),
   );
 }
 
+/** `literal` with all but its `quote`-long delimiters blanked. */
+function blankInside(literal: string, quote: number): string {
+  const inside = literal.slice(quote, -quote).replace(/[^\n]/g, " ");
+  return literal.slice(0, quote) + inside + literal.slice(-quote);
+}
+
 /**
- * The string literal that opens `code[from, to)`, with adjacent literals joined as Python
- * joins them; undefined when the first argument is not a literal. `code` locates the quotes
- * (comments blanked), `source` gives their text.
+ * The first argument in `code[from, to)` when it is a string literal, adjacent literals joined
+ * as Python joins them; undefined when it is anything else ("Toyota " + MODEL). `code`
+ * locates the quotes (comments blanked), `source` gives their text.
  */
 function firstString(source: string, code: string, from: number, to: number): string | undefined {
   let name: string | undefined;
@@ -302,7 +308,7 @@ function firstString(source: string, code: string, from: number, to: number): st
   for (;;) {
     while (i < to && /\s/.test(code[i] as string)) i++;
     const literal = /^[rRuU]?("""|'''|"|')/.exec(code.slice(i, i + 4));
-    if (!literal) return name;
+    if (!literal) return i >= to || code[i] === "," ? name : undefined;
     const quote = literal[1] as string;
     i += literal[0].length - quote.length;
     const close = code.indexOf(quote, i + quote.length);
