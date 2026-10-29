@@ -404,9 +404,7 @@ describe("comma-openpilot source", () => {
           TUCSON,
           "  HYUNDAI_TUCSON = drop_cars(",
         )}`,
-    ).toThrow(
-      /HYUNDAI_TUCSON built by drop_cars, not a platform config bound before class CAR in .*hyundai\/values\.py/,
-    );
+    ).toThrow(/HYUNDAI_TUCSON built by drop_cars, not a platform config in .*hyundai\/values\.py/);
     // A config or car class the file rebinds, plainly or under a spelling Python normalizes.
     await fails((b) => `HyundaiPlatformConfig = drop_cars\n${b}`).toThrow(
       /HyundaiPlatformConfig bound in the file/,
@@ -488,41 +486,32 @@ describe("comma-openpilot source", () => {
     ).toThrow(/hybrid of Hyundai Tucson Diesel 2019 is not True or False/);
   });
 
-  it("fails on a config or car class bound after Python calls it", async () => {
-    const fails = (file: "hyundai" | "ford", change: (body: string) => string) =>
-      expect(harvest("full", editBody(file, change))).rejects;
+  it("fails on a config or car class Python reads before it is bound", async () => {
     const config = (name: string) => `@dataclass\nclass ${name}(PlatformConfig):\n  pass\n\n`;
     const CARS = "@dataclass\nclass HyundaiCarDocs(CarDocs):\n  pass\n\n";
     // Ford's config defined after class CAR, which Python built before it: Kuga is no
     // FORD_ESCAPE_MK4 of that file.
-    await fails(
-      "ford",
-      (b) => `${b.replace(config("FordPlatformConfig"), "")}\nclass FordPlatformConfig:\n  pass\n`,
-    ).toThrow(
+    await expect(
+      harvest(
+        "full",
+        editBody(
+          "ford",
+          (b) =>
+            `${b.replace(config("FordPlatformConfig"), "")}\nclass FordPlatformConfig:\n  pass\n`,
+        ),
+      ),
+    ).rejects.toThrow(
       /FordPlatformConfig not bound at the top level before class CAR in .*ford\/values\.py/,
     );
-    await fails("ford", (b) => `${b}\nclass FordPlatformConfig:\n  pass\n`).toThrow(
-      /FordPlatformConfig twice/,
-    );
-    // Bound inside a block, or nowhere.
-    await fails("hyundai", (b) =>
-      b.replace(
-        config("HyundaiPlatformConfig"),
-        "if FULL:\n  class HyundaiPlatformConfig(PlatformConfig):\n    pass\n\n",
+    await expect(
+      harvest(
+        "full",
+        editBody("ford", (b) => `${b}\nclass FordPlatformConfig:\n  pass\n`),
       ),
-    ).toThrow(/HyundaiPlatformConfig not bound at the top level before class CAR/);
-    await fails("hyundai", (b) => b.replace(config("HyundaiPlatformConfig"), "")).toThrow(
-      /built by HyundaiPlatformConfig, not a platform config bound before class CAR/,
-    );
-    // A car under a name assigned before its class is bound.
-    await fails("hyundai", (b) =>
-      aboveCar(
-        b.replace(CARS, "").replace(DIESEL, "      TUCSON_DIESEL_2019,\n"),
-        `TUCSON_DIESEL_2019 = ${DIESEL.trim().slice(0, -1)}\n${CARS}`,
-      ),
-    ).toThrow(/unreadable cars of HYUNDAI_TUCSON/);
+    ).rejects.toThrow(/FordPlatformConfig twice/);
 
-    // Python's reading fails on each as well, on its own.
+    // Each case fails both readings on its own: the adapter's through harvest, Python's (which
+    // harvest runs only after the adapter's) on the Hyundai definitions alone.
     const python = async (change: (body: string) => string) => {
       const cassette = await loadCassette(fixture);
       editBody("hyundai", change)(cassette);
@@ -534,7 +523,11 @@ describe("comma-openpilot source", () => {
         ["-I", fileURLToPath(new URL("./platforms.py", import.meta.url))],
         {
           input: JSON.stringify({
-            constructors: ["HyundaiPlatformConfig", "HyundaiCanFDPlatformConfig"],
+            constructors: [
+              "HyundaiPlatformConfig",
+              "HyundaiCanFDPlatformConfig",
+              "FordPlatformConfig",
+            ],
             carDocs: ["HyundaiCarDocs"],
             files: { hyundai: hyundai?.response.body },
           }),
@@ -543,32 +536,60 @@ describe("comma-openpilot source", () => {
       );
       return run.status ? run.stderr : run.stdout;
     };
-    expect(await python((b) => b)).toContain('["Hyundai Tucson Diesel 2019", "HYUNDAI_TUCSON"]');
-    expect(
-      await python(
+    const cases: [change: (body: string) => string, adapter: RegExp, python: string][] = [
+      // Bound after class CAR, inside a block, or nowhere.
+      [
         (b) =>
           `${b.replace(config("HyundaiPlatformConfig"), "")}\n${config("HyundaiPlatformConfig")}`,
+        /HyundaiPlatformConfig not bound at the top level before class CAR/,
+        "HyundaiPlatformConfig is not bound at the top level before class CAR",
+      ],
+      [
+        (b) =>
+          b.replace(
+            config("HyundaiPlatformConfig"),
+            "if FULL:\n  class HyundaiPlatformConfig(PlatformConfig):\n    pass\n\n",
+          ),
+        /HyundaiPlatformConfig not bound at the top level before class CAR/,
+        "HyundaiPlatformConfig is not bound at the top level before class CAR",
+      ],
+      [
+        (b) => b.replace(config("HyundaiPlatformConfig"), ""),
+        /HyundaiPlatformConfig not bound before class CAR/,
+        "HyundaiPlatformConfig is not bound before it is used",
+      ],
+      // Read anywhere in a platform, not only as its config or cars.
+      [
+        (b) => b.replace("flags=HyundaiFlags.TCU_GEARS,", "flags=FordPlatformConfig(),"),
+        /FordPlatformConfig not bound before class CAR/,
+        "FordPlatformConfig is not bound before it is used",
+      ],
+      // A car under a name assigned before its class is bound.
+      [
+        (b) =>
+          aboveCar(
+            b.replace(CARS, "").replace(DIESEL, "      TUCSON_DIESEL_2019,\n"),
+            `TUCSON_DIESEL_2019 = ${DIESEL.trim().slice(0, -1)}\n${CARS}`,
+          ),
+        /unreadable cars of HYUNDAI_TUCSON/,
+        "HyundaiCarDocs is not bound before it is used",
+      ],
+    ];
+    for (const [change, adapter, message] of cases) {
+      await expect(harvest("full", editBody("hyundai", change))).rejects.toThrow(adapter);
+      expect(await python(change)).toBe(`hyundai: ${message}\n`);
+    }
+    // An import or class statement continued over lines binds as one on a line.
+    const continued = await harvest(
+      "full",
+      editBody("hyundai", (b) =>
+        b
+          .replace("DbcDict, PlatformConfig", "DbcDict, \\\n  PlatformConfig")
+          .replace("HYUNDAI_TUCSON = HyundaiPlatformConfig(", "HYUNDAI_TUCSON = PlatformConfig(")
+          .replace("class HyundaiCarDocs(", "class \\\n  HyundaiCarDocs("),
       ),
-    ).toBe("hyundai: HyundaiPlatformConfig is not bound at the top level before class CAR\n");
-    expect(
-      await python((b) =>
-        b.replace(
-          config("HyundaiPlatformConfig"),
-          "if FULL:\n  class HyundaiPlatformConfig(PlatformConfig):\n    pass\n\n",
-        ),
-      ),
-    ).toBe("hyundai: HyundaiPlatformConfig is not bound at the top level before class CAR\n");
-    expect(await python((b) => b.replace(config("HyundaiPlatformConfig"), ""))).toBe(
-      "hyundai: HyundaiPlatformConfig is not bound before it is called\n",
     );
-    expect(
-      await python((b) =>
-        aboveCar(
-          b.replace(CARS, "").replace(DIESEL, "      TUCSON_DIESEL_2019,\n"),
-          `TUCSON_DIESEL_2019 = ${DIESEL.trim().slice(0, -1)}\n${CARS}`,
-        ),
-      ),
-    ).toBe("hyundai: HyundaiCarDocs is not bound before it is called\n");
+    expect(continued).toEqual(await harvest("full"));
   });
 
   it("fails on imports that may replace opendbc's names, and flags given by position", async () => {

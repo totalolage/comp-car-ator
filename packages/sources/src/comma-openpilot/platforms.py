@@ -137,9 +137,11 @@ def read(source, constructors, car_docs):
     if name in defined and bound_at.get(name, class_at) >= class_at:
       raise Unreadable(f"{name} is not bound at the top level before class CAR")
 
-  def bound_before(name, before):
-    if bound_at.get(name, before) >= before:
-      raise Unreadable(f"{name} is not bound before it is called")
+  def bound_before(expr, before):
+    """Fails unless each config and car class `expr` names is bound before statement `before`."""
+    for node in ast.walk(expr):
+      if isinstance(node, ast.Name) and node.id in known - {"CAR"} and bound_at.get(node.id, before) >= before:
+        raise Unreadable(f"{node.id} is not bound before it is used")
 
   # Top-level `NAME = …` by name: where, its target and value; a name assigned twice is none.
   assigned = {}
@@ -162,6 +164,7 @@ def read(source, constructors, car_docs):
     if not found or found[0] >= before:
       raise Unreadable(f"{expr.id} is not assigned once at the top level before it is read")
     reads[expr] = expr.id
+    bound_before(found[2], found[0])
     return found
 
   def plain(call):
@@ -185,7 +188,6 @@ def read(source, constructors, car_docs):
 
   def car(expr, before):
     if isinstance(expr, ast.Call) and isinstance(expr.func, ast.Name) and expr.func.id in car_docs:
-      bound_before(expr.func.id, before)
       keywords = plain(expr)
       # A name and a package: a later argument may be a flag given by position.
       if len(expr.args) > 2:
@@ -223,6 +225,7 @@ def read(source, constructors, car_docs):
     else:
       raise Unreadable(f"unreadable member of class CAR (line {member.lineno})")
     heads.add(target)
+    bound_before(member, class_at)
     platform = target.id
     if not PLATFORM.match(platform) or not isinstance(call, ast.Call):
       raise Unreadable(f"unreadable member of class CAR: {platform}")
@@ -232,7 +235,6 @@ def read(source, constructors, car_docs):
     keywords = plain(call)
     func = call.func
     if isinstance(func, ast.Name) and func.id in constructors:
-      bound_before(func.id, class_at)
       if call.args and "car_docs" in keywords:
         raise Unreadable(f"cars of {platform} twice")
       cars = keywords.get("car_docs", call.args[0] if call.args else None)

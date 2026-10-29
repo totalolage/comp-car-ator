@@ -350,7 +350,7 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
   // What an import binds, and the import; `*` may bind anything.
   const imported: [name: string, from: string | undefined, statement: Statement][] = [];
   for (const statement of lines) {
-    const { text } = statement;
+    const text = statement.text.replace(/\\\n/g, " ");
     const from = /^from\s+([.\w]+)\s+import\b([\s\S]*)$/.exec(text);
     const plain = from ? null : /^import\b([\s\S]*)$/.exec(text);
     for (const part of (from?.[2] ?? plain?.[1] ?? "").replace(/[()]/g, "").split(",")) {
@@ -385,7 +385,7 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
   for (const name of [...CONSTRUCTORS, ...CAR_DOCS]) {
     const statement =
       imported.find(([as]) => as === name)?.[2] ??
-      lines.find((s) => new RegExp(`^class\\s+${name}\\b`).test(s.text));
+      lines.find((s) => new RegExp(`^class\\s+${name}\\b`).test(s.text.replace(/\\\n/g, " ")));
     if (!statement && !new RegExp(`\\bclass\\s+${name}\\b`).test(code)) continue;
     if (!statement || statement.indented || statement.from >= header.from) {
       throw fail(`${name} not bound at the top level before class CAR`);
@@ -420,15 +420,13 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
     const [, platform = "", config, overridden] = head;
     if (platforms.has(platform)) throw fail(`${platform} twice`);
     // A platform is built by an opendbc config or overrides one defined before it.
-    if (
-      config
-        ? !CONSTRUCTORS.has(config) || !boundAt.has(config)
-        : !platforms.has(overridden as string)
-    ) {
+    if (config ? !CONSTRUCTORS.has(config) : !platforms.has(overridden as string)) {
       throw fail(
-        `${platform} built by ${config ?? `${overridden}.override`}, not a platform config bound before class CAR`,
+        `${platform} built by ${config ?? `${overridden}.override`}, not a platform config`,
       );
     }
+    const unbound = unboundIn(code, [from, to], header.from, boundAt);
+    if (unbound) throw fail(`${unbound} not bound before class CAR`);
     platforms.add(platform);
     const open = from + head[0].length;
     // The config call is the whole member: `Config(…).override(…)` would replace its cars.
@@ -630,11 +628,7 @@ function car(code: string, range: Range, before: number, names: Names): number |
   const call = /^([A-Za-z_]\w*)\s*\(/.exec(code.slice(a, b));
   if (call) {
     const open = a + call[0].length;
-    const at = names.boundAt.get(call[1] as string);
-    return CAR_DOCS.has(call[1] as string) &&
-      at !== undefined &&
-      at < before &&
-      closingBracket(code, open) === b - 1
+    return CAR_DOCS.has(call[1] as string) && closingBracket(code, open) === b - 1
       ? open
       : undefined;
   }
@@ -654,9 +648,25 @@ function assignedBefore(
 ): Assignment | undefined {
   const name = code.slice(a, b);
   const named = /^[A-Za-z_]\w*$/.test(name) ? names.assigned.get(name) : undefined;
-  if (!named || named.at >= before) return undefined;
+  if (!named || named.at >= before || unboundIn(code, named.value, named.at, names.boundAt)) {
+    return undefined;
+  }
   names.reads.set(a, name);
   return named;
+}
+
+/** The first config or car class `code[from, to)` names that is not bound before `before`. */
+function unboundIn(
+  code: string,
+  [from, to]: Range,
+  before: number,
+  boundAt: Map<string, number>,
+): string | undefined {
+  for (const [name] of code.slice(from, to).matchAll(/(?<![.\w])[A-Za-z_]\w*/g)) {
+    if (!CONSTRUCTORS.has(name) && !CAR_DOCS.has(name)) continue;
+    if ((boundAt.get(name) ?? before) >= before) return name;
+  }
+  return undefined;
 }
 
 /** `range` without the whitespace around it. */
