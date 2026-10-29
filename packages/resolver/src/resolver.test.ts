@@ -935,6 +935,27 @@ describe("Resolver", () => {
       expect(r.resolve(octavia)).not.toMatchObject({
         variantId: "skoda/octavia/nx/wagon-phev-110kw",
       });
+      // Glued on, as sites write it.
+      expect(
+        r.resolve({ make: "Audi", model: "Q5", trim: "55 TFSI eHybridS line 220 kW" }),
+      ).toMatchObject({ status: "matched", variantId: "audi/q5/fy/suv-phev-220kw" });
+    });
+
+    it("reads another make's e-Hybrid as some hybrid, not its engine code's fuel", () => {
+      const sportage = createResolver(
+        variants("Kia", "Sportage", { slug: "nq5", name: "Sportage V", from: 2021 }, [
+          { body: "suv", fuel: "petrol", powerKw: 132, transmissions: ["automatic"] },
+          { body: "suv", fuel: "phev", powerKw: 132, transmissions: ["automatic"] },
+        ]),
+      );
+      const kia = { make: "Kia", model: "Sportage" } as const;
+      expect(sportage.resolve({ ...kia, trim: "1.6 T-GDI 132 kW" })).toMatchObject({
+        status: "matched",
+        variantId: "kia/sportage/nq5/suv-petrol-132kw",
+      });
+      expect(sportage.resolve({ ...kia, trim: "1.6 T-GDI e-Hybrid 132 kW" })).toMatchObject({
+        status: "model",
+      });
     });
 
     it("reads a plug-in hybrid from its wording, and a mild hybrid by its stated fuel", () => {

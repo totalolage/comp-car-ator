@@ -152,6 +152,9 @@ export const CHASSIS_CODES: Readonly<Record<string, RegExp>> = {
 
 const badge = (word: string) => new RegExp(`(?<![a-z0-9])${word}(?![a-z0-9])`, "i");
 
+// "Multivan 1,5eHybrid", "TFSI eHybridS line", as sites write it.
+const E_HYBRID = /(?<![a-z])e-?hybrid/i;
+
 /** A mild hybrid is catalogued under its combustion fuel (hints.ts). */
 const MILD: readonly Fuel[] = ["petrol", "diesel", "hev"];
 
@@ -165,25 +168,25 @@ const MILD: readonly Fuel[] = ["petrol", "diesel", "hev"];
 export const FUEL_BADGES: Readonly<Record<string, readonly FuelWording[]>> = {
   volkswagen: [
     [["phev"], badge("gte")],
-    [["phev"], badge("e-?hybrid")],
+    [["phev"], E_HYBRID],
   ],
-  seat: [[["phev"], badge("e-?hybrid")]],
-  cupra: [[["phev"], badge("e-?hybrid")]],
-  porsche: [[["phev"], badge("e-?hybrid")]],
+  seat: [[["phev"], E_HYBRID]],
+  cupra: [[["phev"], E_HYBRID]],
+  porsche: [[["phev"], E_HYBRID]],
   skoda: [
     [["phev", "bev"], /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/],
-    [["phev"], badge("e-?hybrid")],
+    [["phev"], E_HYBRID],
     [MILD, badge("e-?tec")],
   ],
   audi: [
     [["hev", "phev", "bev", "reev"], badge("e-?tron")],
-    [["phev"], badge("e-?hybrid")],
+    [["phev"], E_HYBRID],
     [["phev"], badge("tfsi ?e")],
   ],
   byd: [[["phev"], badge("dm-?[ip]")]],
-  jeep: [[MILD, badge("e-?hybrid")]],
-  "alfa-romeo": [[MILD, badge("e-?hybrid")]],
-  fiat: [[MILD, badge("e-?hybrid")]],
+  jeep: [[MILD, E_HYBRID]],
+  "alfa-romeo": [[MILD, E_HYBRID]],
+  fiat: [[MILD, E_HYBRID]],
   renault: [[["hev", "phev", "bev", "reev"], badge("e-?tech")]],
 };
 

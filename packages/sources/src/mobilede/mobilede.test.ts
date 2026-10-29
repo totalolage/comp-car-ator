@@ -291,7 +291,9 @@ describe("mobile-de source", () => {
           }
         },
       );
-      return listings(run).find((l) => l.ref === "52835669852448")?.vehicle.fuel;
+      const listing = listings(run).find((l) => l.ref === "52835669852448");
+      expect(listing).toBeDefined();
+      return listing?.vehicle.fuel;
     };
     expect(await fuelOf("Lexus NX 450h+ E-FOUR BUSINESS")).toBeUndefined();
     expect(await fuelOf("Lexus NX 450h+ Plug-in-Hybrid")).toBe("phev");

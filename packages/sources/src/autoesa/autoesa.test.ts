@@ -282,7 +282,9 @@ describe("autoesa source", () => {
     );
     const cassette = edit(await loadCassette(incremental), "/414464866", hybrid);
     const os = await harvest(cassette, { mode: "incremental", known: await known() });
-    return listings(os).find((o) => o.ref === "414464866")?.vehicle;
+    const vehicle = listings(os).find((o) => o.ref === "414464866")?.vehicle;
+    expect(vehicle).toBeDefined();
+    return vehicle;
   };
 
   it("a hybrid is a plug-in only when its title says so", async () => {

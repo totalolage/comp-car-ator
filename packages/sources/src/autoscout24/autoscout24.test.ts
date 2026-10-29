@@ -349,8 +349,10 @@ describe("autoscout24 source", () => {
           },
         ),
       );
-      return listings(run).find((l) => l.ref === "ebb7bf2f-4b57-4761-bcd9-a36ad0488cce")?.vehicle
-        .fuel;
+      expect(run.error).toBeUndefined();
+      const listing = listings(run).find((l) => l.ref === "ebb7bf2f-4b57-4761-bcd9-a36ad0488cce");
+      expect(listing?.vehicle.make).toBe(make);
+      return listing?.vehicle.fuel;
     };
     // The listing's fuel code is 2, Elektro/Benzin: a mild hybrid is a petrol car.
     expect(await fuelOf("Jeep", "Avenger 1.2 48V e-Hybrid Altitude")).toBe("petrol");
