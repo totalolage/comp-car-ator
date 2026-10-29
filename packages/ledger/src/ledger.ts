@@ -96,7 +96,7 @@ export function openLedger(path: string): Ledger {
     // A price-only sighting proves the listing live: no census it falls in misses it.
     aliveListing: db.prepare(
       `UPDATE listings SET last_seen_run = ?, missed_full_runs = 0, first_missed = NULL, last_missed = NULL
-       WHERE id = ?`,
+       WHERE id = ? AND gone IS NULL`,
     ),
     upsertHistory: db.prepare(
       `INSERT INTO price_history (listing_id, date, amount, currency) VALUES (?, ?, ?, ?)
@@ -379,21 +379,21 @@ export function openLedger(path: string): Ledger {
       let rejectedInSlice = false;
       const tainted = new Set<string>();
       /**
-       * A rejected sighting of a listing in a slice keeps the slice not done for the rest of the
-       * run, and undoes its SliceDone if it came earlier, so no census counts the listing missed
-       * there: the slice it names, and the one the Ledger holds the live listing in.
+       * A rejected sighting of a listing still proves a live one live, and keeps the slices it
+       * may be in not done for the rest of the run, undoing a SliceDone that came earlier: the
+       * slice it names, and the one the Ledger holds the live listing in.
        */
-      const taintSlicesOf = (o: Observation) => {
+      const rejectedSighting = (o: Observation) => {
         const slices = new Set<string>();
         if (o?.kind === "ListingSeen" && typeof o.slice === "string") slices.add(o.slice);
         if (
           (o?.kind === "ListingSeen" || o?.kind === "ListingPriceSeen") &&
           typeof o.ref === "string"
         ) {
-          const held = q.liveSliceOf.get(`${run.source}:${o.ref}`) as
-            | { slice: string | null }
-            | undefined;
+          const id = `${run.source}:${o.ref}`;
+          const held = q.liveSliceOf.get(id) as { slice: string | null } | undefined;
           if (held?.slice) slices.add(held.slice);
+          if (held) q.aliveListing.run(runId, id);
         }
         for (const slice of slices) {
           tainted.add(slice);
@@ -401,29 +401,33 @@ export function openLedger(path: string): Ledger {
         }
       };
       /**
-       * At the end of a full run, complete or failed: listings of the slices it finished that no
-       * run of the census saw count a miss; at the end of a complete one without rejections, so
-       * do all the scope's listings no run of the census saw (the census ends). Then listings
-       * missed by two censuses, the later one over, are gone.
+       * At the end of a full run, complete or failed: listings missed by two censuses, the later
+       * one over, are gone; listings of the slices it finished that no run of the census saw
+       * count a miss; at the end of a complete one without rejections, so do all the scope's
+       * listings no run of the census saw. A complete run ends its census, so its second misses
+       * are gone too.
        */
       const inferAbsence = (complete: boolean) => {
         if (!full) return;
         const at = { day, source: run.source, scope, census };
+        const goneAfterMisses = (ended: boolean) => {
+          const params = {
+            source: run.source,
+            scope,
+            census,
+            ended: ended ? 1 : 0,
+            misses: MISSES_TO_GONE,
+          };
+          summary.gone += Number(q.goneAfterMisses.run(params).changes);
+        };
+        // Before this census counts its misses, which would make an earlier one's look current.
+        goneAfterMisses(false);
         q.countSliceMissed.run({ ...at, run: runId });
         if (complete && rejectedTotal === 0) {
           q.countMissed.run(at);
           summary.retired = Number(q.retireCatalog.run(at).changes);
         }
-        const ended = complete ? 1 : 0;
-        summary.gone += Number(
-          q.goneAfterMisses.run({
-            source: run.source,
-            scope,
-            census,
-            ended,
-            misses: MISSES_TO_GONE,
-          }).changes,
-        );
+        if (complete) goneAfterMisses(true);
       };
       let open = false;
       let pending = 0;
@@ -457,7 +461,7 @@ export function openLedger(path: string): Ledger {
             if (summary.rejected.length < MAX_REJECTIONS_REPORTED) {
               summary.rejected.push({ kind: String(observation?.kind), reason });
             }
-            taintSlicesOf(observation);
+            rejectedSighting(observation);
             continue;
           }
           begin();

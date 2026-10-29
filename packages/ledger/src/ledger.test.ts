@@ -786,6 +786,18 @@ describe("Ledger absence per finished slice", () => {
     expect(goneOf()).toEqual({ a1: null, m: null });
   });
 
+  it("a rejected sighting in a later run of the census clears a pending second miss", async () => {
+    ledger = openLedger(":memory:");
+    await stalledWeek("2026-10-04", [inSlice("a1", "A"), inSlice("x", "A"), done("A")]);
+    await stalledWeek("2026-10-11", [inSlice("a1", "A"), done("A")]);
+    await unfinished("2026-10-18", [inSlice("a1", "A"), done("A")]);
+    // The census ends the next day; x is met there, but its page no longer parses.
+    const broken = { ...inSlice("x", "B"), url: "" };
+    const end = await run("bazos", "full", "2026-10-19", [broken, done("B")]);
+    expect(end).toMatchObject({ census: "skipped-rejections", gone: 0 });
+    expect(goneOf()).toEqual({ a1: null, x: null });
+  });
+
   it("a rejected sighting keeps the slice the Ledger holds the listing in not done", async () => {
     ledger = openLedger(":memory:");
     await stalledWeek("2026-10-04", [inSlice("a1", "A"), inSlice("m", "A"), done("A")]);
