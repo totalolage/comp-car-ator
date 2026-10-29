@@ -1,4 +1,4 @@
-# comp-car-ator: agent guide
+# Car DB: agent guide
 
 Domain words (Variant, Listing, Observation, Ledger, Bundle, landed price…) are defined in `CONTEXT.md`; use them exactly. Decisions and the alternatives behind them are in `docs/adr/`; read the ADR for a module before changing its interface.
 

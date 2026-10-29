@@ -3,7 +3,7 @@ import { worker } from "../scripts/service-worker.mjs";
 
 // The worker runs here against an in-memory Cache API and a scripted network, through the
 // events a browser sends it (install, activate, fetch).
-const ORIGIN = "https://cars.f8y.dev";
+const ORIGIN = "https://cardb.f8y.dev";
 const PRECACHE = ["/", "/en/", "/offline/", "/en/offline/", "/_astro/shell.js"];
 
 type Handler = (event: unknown) => void;

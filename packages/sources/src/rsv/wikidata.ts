@@ -52,7 +52,7 @@ export async function wikidataGenerations(ctx: HarvestContext): Promise<Wikidata
     // Wikidata asks for an identifying User-Agent (https://meta.wikimedia.org/wiki/User-Agent_policy).
     headers: {
       accept: "application/sparql-results+json",
-      "user-agent": "comp-car-ator/0.1 (https://github.com/totalolage/comp-car-ator)",
+      "user-agent": "car-db/0.1 (https://github.com/totalolage/comp-car-ator)",
     },
     signal: ctx.signal,
   });
