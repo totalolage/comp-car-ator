@@ -115,8 +115,8 @@ a:hover {
 }
 
 /* The tyre stack (assets/logo/README.md), cropped to its 212 × 224 ink: 24px tall at every
-   width (the symbol's minimum size; 2.2 × the 15px name's cap height), so it does not shrink
-   with the narrow-screen name. The gap is the lockup's, 60 units of the 224-unit mark. */
+   width (the symbol's minimum size; about 2.3 × the 15px name's cap height), so it does not
+   shrink with the narrow-screen name. The gap is the lockup's, 60 units of the 224-unit mark. */
 .wordmark svg {
   width: calc(1.5rem * 212 / 224);
   height: 1.5rem;
