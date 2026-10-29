@@ -27,8 +27,9 @@
  *   reconciled reports no part done and fails the run at the end; the other categories
  *   still run.
  * - incremental: per category, from the top, ad pages for the ads on each page read that are
- *   not in the Ledger, stopping after the first page dated wholly before the last run's day
- *   (yesterday, without a complete run yet).
+ *   not in the Ledger and a ListingPriceSeen from the list row for those it knows, stopping
+ *   after the first page dated wholly before the last run's day (yesterday, without a
+ *   complete run yet).
  * - A list page can show fewer rows than its header counts, twice running: seen in Citroën
  *   mid-list, where the same page and its neighbours read later showed every row, so the
  *   site served it short; Ford and Mercedes pages lack an ad the site counts but never lists.
@@ -41,13 +42,14 @@
  *   the site moves into a category already walked, and one bumped twice within one walk
  *   (behind the walk, then behind the top-up) when an older ad met and removed before a
  *   count rose again makes up the number; the next census sees them again. Edits that do
- *   not bump an ad wait for a full run. An ad whose text stops stating year or odometer
- *   leaves the scope and is retired like a removed one.
+ *   not bump an ad wait for a full run, a price change too. An ad whose text stops stating
+ *   year or odometer leaves the scope and is retired like a removed one.
  *
  * Research notes: scrape-access.md (Bazoš row); behaviour verified live 2026-10-25.
  */
 import {
   type IsoDate,
+  type ListingPriceSeen,
   type ListingSeen,
   type Observation,
   pragueDate,
@@ -151,6 +153,8 @@ interface Stats {
   gone: number;
   outOfScope: number;
   malformed: number;
+  /** Known ads given a ListingPriceSeen from their list row. */
+  prices: number;
 }
 
 class Harvest {
@@ -327,14 +331,22 @@ class Harvest {
   /**
    * New ads, from the top: every candidate on a page read that the Ledger did not know before
    * this run gets its ad page, whatever its date, so an ad the last run could not read is
-   * tried again. The walk ends after the first page dated wholly before the last run's day:
-   * that run listed those ads, so the ones below are known, out of scope, or left for the
-   * next full run. Known-ness alone cannot end it: TOP ads, known and re-bumped daily, fill
-   * the first pages, and out-of-scope ads never become known, so the pages read each time
-   * cost a few repeat ad pages for those. Without a last run the walk ends after the first
-   * page dated wholly before yesterday: reading every page of every category takes hours,
-   * so that run would never complete and give the next one its day, and a full run reads
-   * the ads below anyway.
+   * tried again. Every candidate it knew gets a ListingPriceSeen with its row's price (a row
+   * stating none gets nothing), so the price of every ad bumped since the last run lands
+   * daily without an ad page. The walk ends after the first page dated wholly before the last
+   * run's day: that run listed those ads, so the ones below are known, out of scope, or left
+   * for the next full run. Known-ness alone cannot end it: TOP ads, known and re-bumped daily,
+   * fill the first pages, and out-of-scope ads never become known, so the pages read each
+   * time cost a few repeat ad pages for those. Without a last run the walk ends after the
+   * first page dated wholly before yesterday: reading every page of every category takes
+   * hours, so that run would never complete and give the next one its day, and a full run
+   * reads the ads below anyway.
+   *
+   * The walk goes no deeper for the prices of ads not bumped: the 145,390 ads listed on
+   * 2026-10-29 are some 9,100 pages at 16 new rows a page, about 175 minutes at the 1.15 s a
+   * request takes, more than the 150 minutes the run may have (apps/ingest schedule) before
+   * the ad pages for new ads. Their prices come from the weekly census. Whether editing an
+   * ad's price bumps it is unverified (no older row in a 2026-10-29 sample was comparable).
    */
   private async *incremental(category: string): AsyncGenerator<Observation> {
     const { lastRunAt } = this.ctx.checkpoint;
@@ -344,17 +356,32 @@ class Harvest {
     try {
       for await (const page of this.pages(category)) {
         // Known means known before this run; taken for every row before any is yielded.
-        const fresh = page.rows.filter((row) => {
-          if (handled.has(row.id)) return false;
-          if (!row.malformed && !this.isCandidate(category, row)) return false;
-          if (this.knewBefore(row.id)) return false;
-          handled.add(row.id);
-          return true;
-        });
+        const fresh: Row[] = [];
+        const prices: ListingPriceSeen[] = [];
+        for (const row of page.rows) {
+          if (handled.has(row.id)) continue;
+          if (!row.malformed && !this.isCandidate(category, row)) continue;
+          if (!this.knewBefore(row.id)) {
+            handled.add(row.id);
+            fresh.push(row);
+          } else if (row.price !== null) {
+            // A candidate's list price is the one its ad page shows, which its ListingSeen
+            // carries, so a known ad's price is kept daily without its ad page. A malformed
+            // row has none; the same ad on the next page may.
+            handled.add(row.id);
+            prices.push({
+              kind: "ListingPriceSeen",
+              ref: row.id,
+              price: { amount: row.price, currency: "CZK" },
+            });
+          }
+        }
         this.stats.rows += page.rows.length;
         // The rows shown are read; one left out may wait for the next full run.
         if (page.uneven)
           this.unfinish(category, `page whose rows do not match its header: ${rowsOf(page)}`);
+        this.stats.prices += prices.length;
+        yield* prices;
         for (const row of fresh) yield* this.observe(category, row);
         if (page.rows.every(isOld)) return;
       }
@@ -567,7 +594,16 @@ function rejected(ref: string, url: string, reason: string, ctx: HarvestContext)
 }
 
 function emptyStats(): Stats {
-  return { rows: 0, candidates: 0, details: 0, seen: 0, gone: 0, outOfScope: 0, malformed: 0 };
+  return {
+    rows: 0,
+    candidates: 0,
+    details: 0,
+    seen: 0,
+    gone: 0,
+    outOfScope: 0,
+    malformed: 0,
+    prices: 0,
+  };
 }
 
 // --- parsing ----------------------------------------------------------------------------

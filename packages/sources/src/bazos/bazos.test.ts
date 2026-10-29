@@ -5,7 +5,7 @@ import {
   type Interaction,
   loadCassette,
 } from "@cca/http";
-import type { ListingSeen, Observation } from "@cca/vocabulary";
+import type { ListingPriceSeen, ListingSeen, Observation } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
 import { type Checkpoint, emptyCheckpoint, type HarvestMode } from "../source.ts";
 import { bazosSource } from "./bazos.ts";
@@ -579,6 +579,103 @@ describe("bazos source", () => {
     expect(listed).toEqual(["/kia/", "/kia/16/"]);
     expect(details.sort()).toEqual([...retry].sort());
     expect(refs(observations).sort()).toEqual([...retry].sort());
+  });
+
+  describe("incremental run, known ads", () => {
+    /** Sets the price cell of one ad's row in every list page, or in the one at `path`. */
+    const reprice = (c: Cassette, ref: string, shown: string, path?: string) => {
+      const cell = new RegExp(
+        `(/inzerat/${ref}/[\\s\\S]*?<div class="inzeratycena">)[\\s\\S]*?(</div>)`,
+      );
+      for (const { request, response } of c.interactions) {
+        if (request.url.includes("/inzerat/")) continue;
+        if (path && pathOf(request.url) !== path) continue;
+        response.body = response.body.replace(
+          cell,
+          `$1<b><span translate="no">  ${shown}</span></b>$2`,
+        );
+      }
+    };
+    const pricesSeen = (os: Observation[]) =>
+      os.filter((o): o is ListingPriceSeen => o.kind === "ListingPriceSeen");
+    // The last run was this morning: the walk reads /kia/ and /kia/16/, and the Ledger
+    // knows every ad on them.
+    const known = { lastRunAt: new Date("2026-10-25T03:00:00Z"), isKnown: () => true };
+
+    it("gives each known ad on the pages it reads the price its row shows, without its ad page", async () => {
+      // The seller cut 224787227's price since the last run (349 900 Kč then).
+      const recorded = await cassette("full", (c) => reprice(c, "224787227", "339 900 Kč"));
+      const { observations, error, listed, details } = await harvest(
+        recorded,
+        "incremental",
+        known,
+      );
+      expect(error).toBeUndefined();
+      expect(listed).toEqual(["/kia/", "/kia/16/"]);
+      expect(details).toEqual([]);
+      const prices = pricesSeen(observations);
+      expect(observations).toEqual(prices);
+      expect(prices.find((o) => o.ref === "224787227")?.price).toEqual({
+        amount: 339_900,
+        currency: "CZK",
+      });
+      // An unchanged price is stated too: price history is daily.
+      expect(prices.find((o) => o.ref === "225307819")?.price).toEqual({
+        amount: 219_000,
+        currency: "CZK",
+      });
+      // Each ad once, though the pages overlap; rows priced under 10 000 Kč are out of scope.
+      const priced = prices.map((o) => o.ref);
+      expect(new Set(priced).size).toBe(priced.length);
+      expect(prices.every((o) => o.price.amount >= 10_000)).toBe(true);
+    });
+
+    it("states the price the ad's ListingSeen carries", async () => {
+      // The recorded rows and ad pages, every page read: each in-scope ad's list price is the
+      // one a full run takes from its ad page.
+      const full = await harvest(await cassette("full"), "full");
+      const incremental = await harvest(await cassette("full"), "incremental", {
+        lastRunAt: LONG_AGO,
+        isKnown: () => true,
+      });
+      expect(incremental.error).toBeUndefined();
+      const seen = listings(full.observations).filter((o) => Number.isFinite(o.price.amount));
+      expect(seen.length).toBeGreaterThan(20);
+      const prices = new Map(pricesSeen(incremental.observations).map((o) => [o.ref, o.price]));
+      for (const listing of seen) expect(prices.get(listing.ref)).toEqual(listing.price);
+    });
+
+    it("gives a known ad whose row states no price, or one out of scope, nothing", async () => {
+      const recorded = await cassette("full", (c) => {
+        reprice(c, "224787227", "Dohodou");
+        reprice(c, "225307819", "V textu");
+        // Under 10 000 Kč its ListingSeen would not come either.
+        reprice(c, "224672197", "9 000 Kč");
+      });
+      const { observations, error, details } = await harvest(recorded, "incremental", known);
+      expect(error).toBeUndefined();
+      expect(details).toEqual([]);
+      expect(pricesSeen(observations).length).toBeGreaterThan(0);
+      const refsMet = observations.map((o) => ("ref" in o ? o.ref : undefined));
+      expect(refsMet).not.toContain("224787227");
+      expect(refsMet).not.toContain("225307819");
+      expect(refsMet).not.toContain("224672197");
+    });
+
+    it("takes a known ad's price from the next page when its row on one is unreadable", async () => {
+      // 224919677 is on both /kia/ and /kia/16/ (the pages overlap); retitled as a car.
+      const recorded = await cassette("full", (c) => {
+        rewrite(c, "224919677", "list", "Kia Carnival 2.9 CRDi 2008");
+        reprice(c, "224919677", "cca 120 000 Kč", "/kia/");
+        reprice(c, "224919677", "120 000 Kč", "/kia/16/");
+      });
+      const { observations, error, details } = await harvest(recorded, "incremental", known);
+      expect(error).toBeUndefined();
+      expect(details).toEqual([]);
+      expect(pricesSeen(observations).filter((o) => o.ref === "224919677")).toEqual([
+        { kind: "ListingPriceSeen", ref: "224919677", price: { amount: 120_000, currency: "CZK" } },
+      ]);
+    });
   });
 
   it("incremental run without a complete run yet stops at the first page older than yesterday", async () => {
