@@ -946,6 +946,9 @@ describe("Ledger", () => {
         // A type built in one year only, the year after the chosen one ends, follows it.
         variant("i20", g("o", 2015, 2020), "petrol", 104, { from: 2015, to: 2020 }),
         variant("i20", g("p", 2021, 2021), "petrol", 105, { from: 2021, to: 2021 }),
+        // A short type crossing the chosen one's end by a year may be the next car.
+        variant("Staria", g("q", 2015, 2020), "petrol", 106, { from: 2015, to: 2020 }),
+        variant("Staria", g("r", 2019, 2021), "petrol", 107, { from: 2019, to: 2021 }),
       ]);
       await run("comma-openpilot", "full", "2026-10-02", [
         row("Elantra", [2017, 2018, 2019, 2020, 2021, 2022, 2023], { platform: "E" }),
@@ -965,6 +968,9 @@ describe("Ledger", () => {
         row("i10", [2015], { platform: "T" }),
         row("i10", [2021, 2022, 2023], { platform: "T" }),
         row("i20", [2020], { platform: "U" }),
+        row("Staria", [2017], { platform: "S" }),
+        row("Staria", [2018], { platform: "S" }),
+        row("Staria", [2020], { platform: "S" }),
       ]);
       expect(
         Object.fromEntries(
@@ -987,6 +993,9 @@ describe("Ledger", () => {
         "i10 2015": [],
         "i10 2021,2022,2023": [],
         "i20 2020": [],
+        "Staria 2017": ["hyundai/staria/q/hatchback-petrol-106kw"],
+        "Staria 2018": [],
+        "Staria 2020": [],
       });
     });
 

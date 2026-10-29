@@ -207,14 +207,17 @@ function generationFor(years: number[], generations: Generation[]): Generation |
 }
 
 /**
- * `a` lies inside `b`, give or take a year at either end, sharing two years at least, and is
- * not `b`'s span. Two open Generations are two starts, not one inside the other, and a type
- * built only in the year after `b` ends follows it.
+ * `a` lies inside `b` and is not `b`'s span: wholly, or give or take a year at either end
+ * when they share four years at least (register years are percentiles, ADR 0011). A shorter
+ * type crossing `b`'s edge by a year may be the car before or after it, and two open
+ * Generations are two starts, not one inside the other.
  */
 function nested(a: Generation, b: Generation): boolean {
   if (a.to === Number.POSITIVE_INFINITY && b.to === Number.POSITIVE_INFINITY) return false;
+  if (a.from === b.from && a.to === b.to) return false;
+  if (a.from >= b.from && a.to <= b.to) return true;
   const shared = Math.min(a.to, b.to) - Math.max(a.from, b.from) + 1;
   return (
-    a.from >= b.from - 1 && a.to <= b.to + 1 && shared >= 2 && (a.from > b.from || a.to < b.to)
+    a.from >= b.from - 1 && a.to <= b.to + 1 && shared >= 4 && (a.from > b.from || a.to < b.to)
   );
 }
