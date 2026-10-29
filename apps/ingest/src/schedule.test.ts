@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { plan } from "./schedule.ts";
+import { catchUpMs, plan } from "./schedule.ts";
 
 describe("schedule", () => {
+  it("gives the incremental Run before a census an hour, Bazoš two and a half", () => {
+    expect(catchUpMs("sauto")).toBe(60 * 60_000);
+    expect(catchUpMs("bazos")).toBe(150 * 60_000);
+  });
+
   const ids = ["cnb", "sauto"];
   const census = (iso: string) => ({ sauto: iso });
 

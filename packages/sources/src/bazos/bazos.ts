@@ -27,24 +27,29 @@
  *   reconciled reports no part done and fails the run at the end; the other categories
  *   still run.
  * - incremental: per category, from the top, ad pages for the ads on each page read that are
- *   not in the Ledger, stopping after the first page dated wholly before the last run's day.
+ *   not in the Ledger and a ListingPriceSeen from the list row for those it knows, stopping
+ *   after the first page dated wholly before the last run's day (yesterday, without a
+ *   complete run yet).
  * - A list page can show fewer rows than its header counts, twice running: seen in Citroën
  *   mid-list, where the same page and its neighbours read later showed every row, so the
- *   site served it short. Incremental reads the rows shown and goes on; a census walk that
- *   met such a page is not reconciled.
+ *   site served it short; Ford and Mercedes pages lack an ad the site counts but never lists.
+ *   Incremental reads the rows shown and goes on. A census walk cannot tell which ad such a
+ *   page lacks, so it does not take the walk (see `collect`): a category where the site
+ *   counts an ad it never lists stays out of the census, and the run fails naming it.
  * - robots.txt disallows search, sort and price-filter parameters; the adapter reads only
  *   category pages and ad pages.
  * - Limits: the count check is a sanity check, not proof. A census still misses an ad that
  *   the site moves into a category already walked, and one bumped twice within one walk
  *   (behind the walk, then behind the top-up) when an older ad met and removed before a
  *   count rose again makes up the number; the next census sees them again. Edits that do
- *   not bump an ad wait for a full run. An ad whose text stops stating year or odometer
- *   leaves the scope and is retired like a removed one.
+ *   not bump an ad wait for a full run, a price change too. An ad whose text stops stating
+ *   year or odometer leaves the scope and is retired like a removed one.
  *
  * Research notes: scrape-access.md (Bazoš row); behaviour verified live 2026-10-25.
  */
 import {
   type IsoDate,
+  type ListingPriceSeen,
   type ListingSeen,
   type Observation,
   pragueDate,
@@ -70,6 +75,9 @@ const HOST = "https://auto.bazos.cz";
 const STRIDE = 16;
 /** Times one walk may step back before it gives up on keeping its place. */
 const MAX_STEPS_BACK = 20;
+/** Short pages a failure reason names before it only counts the rest. */
+const PAGES_NAMED = 5;
+const DAY_MS = 86_400_000;
 const MIN_PRICE = 10_000;
 const MAX_PRICE = 50_000_000;
 const MIN_YEAR = 2000;
@@ -111,11 +119,15 @@ interface Row {
 }
 
 interface ListPage {
+  /** `/<category>/<offset>/` */
+  path: string;
   /** Ads in the category, as the page header counts them. */
   total: number;
   /** 1-based positions of the page's first and last row, as the header states them. */
   from: number;
   to: number;
+  /** Rows the header counts on this page. */
+  expected: number;
   rows: Row[];
   /** Row blocks without an ad id. */
   idless: number;
@@ -125,9 +137,11 @@ interface ListPage {
 
 /** The list moved under a walk more than it can follow. */
 class LostPlace extends Error {
+  readonly reason: string;
   constructor(category: string, offset: number) {
     super(`bazos: lost its place in ${category} at offset ${offset}`);
     this.name = "LostPlace";
+    this.reason = `lost its place at offset ${offset}`;
   }
 }
 
@@ -139,6 +153,8 @@ interface Stats {
   gone: number;
   outOfScope: number;
   malformed: number;
+  /** Known ads given a ListingPriceSeen from their list row. */
+  prices: number;
 }
 
 class Harvest {
@@ -148,7 +164,8 @@ class Harvest {
   private readonly full: boolean;
   private readonly today: IsoDate;
   private readonly thisYear: number;
-  private readonly unfinished = new Set<string>();
+  /** Categories not harvested whole, each with why. */
+  private readonly unfinished = new Map<string, string[]>();
   /** Full runs: slices with an ad the parser could not read. */
   private readonly unreadable = new Set<string>();
   /** Whether each ad this run has met was known before the run, as first met. */
@@ -173,7 +190,9 @@ class Harvest {
     }
     const problems = [
       this.unfinished.size > 0 &&
-        `categories not harvested whole: ${[...this.unfinished].join(" ")}`,
+        `categories not harvested whole: ${[...this.unfinished]
+          .map(([category, reasons]) => `${category} (${reasons.join("; ")})`)
+          .join(", ")}`,
       this.unreadable.size > 0 && `slices with unreadable ads: ${[...this.unreadable].join(" ")}`,
     ].filter(Boolean);
     if (problems.length === 0) return;
@@ -190,8 +209,8 @@ class Harvest {
     );
     if (parts.length === 0) return;
     const rows = await this.collect(category);
-    if (!rows) {
-      this.unfinished.add(category);
+    if (typeof rows === "string") {
+      this.unfinish(category, rows);
       return;
     }
     for (const part of parts) {
@@ -209,8 +228,16 @@ class Harvest {
   /**
    * Every ad in a category, by id: one walk over all pages, then one over today's ads,
    * which catches ads bumped from below the walk to above it. A walk that loses its place,
-   * meets a page whose rows do not match its header, or whose ads do not reconcile with the
-   * site's counts is redone once. Null when the category cannot be harvested whole.
+   * meets a page whose rows do not match its header (when fetched again too), or whose ads
+   * do not reconcile with the site's counts is redone once. Otherwise, why the category
+   * cannot be harvested whole.
+   *
+   * A page short of its header lacks an ad, and nothing tells which: the ad a neighbouring
+   * page shows at a place the short page claims may have moved there between the two reads,
+   * and an ad the site counts but never lists (seen live 2026-10-28 on Ford and Mercedes
+   * pages, 19 of 20 rows) lies on no page. Taking the count lower by the rows such pages
+   * lack would let an ad met on a neighbour stand in for one the walk missed, so no walk
+   * with such a page is taken. A page with more rows than its header is not taken either.
    *
    * An ad met and removed later in the walk must not stand in for one the walk missed, so
    * - the ads met must cover the highest count any page reported, which includes an ad
@@ -221,13 +248,15 @@ class Harvest {
    * An ad removed before a count rose again is not caught by either, so the check narrows
    * the gap without closing it (see Limits).
    */
-  private async collect(category: string): Promise<Map<string, Row> | null> {
+  private async collect(category: string): Promise<Map<string, Row> | string> {
+    let reason = "";
     for (let attempt = 1; attempt <= 2; attempt++) {
       const rows = new Map<string, Row>();
       const datedToday = new Set<string>();
       const toppedUp = new Set<string>();
+      /** Pages whose rows did not match their header, when fetched again too. */
+      const uneven: ListPage[] = [];
       let idless = 0;
-      let uneven = false;
       let highest = 0;
       let final = 0;
       try {
@@ -238,7 +267,7 @@ class Harvest {
             if (row.date === this.today) datedToday.add(row.id);
           }
           idless += page.idless;
-          uneven ||= page.uneven;
+          if (page.uneven) uneven.push(page);
         }
         let first = true;
         for await (const page of this.pages(category)) {
@@ -250,78 +279,123 @@ class Harvest {
             toppedUp.add(row.id);
           }
           idless += page.idless;
-          uneven ||= page.uneven;
+          if (page.uneven) uneven.push(page);
           if (page.rows.every((row) => row.date !== undefined && row.date < this.today)) break;
         }
       } catch (error) {
         if (!(error instanceof LostPlace)) throw error;
         this.ctx.log.warn(error.message, { attempt });
+        reason = error.reason;
         continue;
       }
       if (idless > 0) {
         // An ad without an id cannot be told apart from a gone one, so no census here.
         this.ctx.log.warn("bazos: list rows without an ad id", { category, idless });
-        return null;
-      }
-      if (uneven) {
-        // A row the page left out may be an ad no other page shows.
-        this.ctx.log.warn("bazos: walk met a list page whose rows do not match its header", {
-          category,
-          attempt,
-        });
-        continue;
+        return `${idless} list rows without an ad id`;
       }
       const gone = [...datedToday].filter((id) => !toppedUp.has(id)).length;
-      if (rows.size >= highest && rows.size - gone >= final) {
+      const covered = rows.size >= highest && rows.size - gone >= final;
+      if (uneven.length === 0 && covered) {
         this.stats.rows = rows.size;
         return rows;
       }
-      this.ctx.log.warn("bazos: walk met fewer ads than the site counts", {
-        category,
-        met: rows.size,
-        gone,
-        highest,
-        final,
-        attempt,
-      });
+      const reasons: string[] = [];
+      if (uneven.length > 0) {
+        this.ctx.log.warn("bazos: walk met a list page whose rows do not match its header", {
+          category,
+          pages: uneven.map(rowsOf),
+          attempt,
+        });
+        reasons.push(`pages whose rows do not match their header: ${named(uneven)}`);
+      }
+      if (!covered) {
+        this.ctx.log.warn("bazos: walk met fewer ads than the site counts", {
+          category,
+          met: rows.size,
+          gone,
+          highest,
+          final,
+          attempt,
+        });
+        reasons.push(
+          rows.size < highest
+            ? `met ${rows.size} ads of ${highest} counted`
+            : `met ${rows.size} ads, ${gone} since gone, of ${final} counted`,
+        );
+      }
+      reason = reasons.join("; ");
     }
-    return null;
+    return reason;
   }
 
   /**
    * New ads, from the top: every candidate on a page read that the Ledger did not know before
    * this run gets its ad page, whatever its date, so an ad the last run could not read is
-   * tried again. The walk ends after the first page dated wholly before the last run's day:
-   * that run listed those ads, so the ones below are known, out of scope, or left for the
-   * next full run. Known-ness alone cannot end it: TOP ads, known and re-bumped daily, fill
-   * the first pages, and out-of-scope ads never become known, so the pages read each time
-   * cost a few repeat ad pages for those. Without a last run every page is read.
+   * tried again. Every candidate it knew gets a ListingPriceSeen with its row's price (a row
+   * stating none gets nothing), so the price of every ad bumped since the last run lands
+   * daily without an ad page. The walk ends after the first page dated wholly before the last
+   * run's day: that run listed those ads, so the ones below are known, out of scope, or left
+   * for the next full run. Known-ness alone cannot end it: TOP ads, known and re-bumped daily,
+   * fill the first pages, and out-of-scope ads never become known, so the pages read each
+   * time cost a few repeat ad pages for those. Without a last run the walk ends after the
+   * first page dated wholly before yesterday: reading every page of every category takes
+   * hours, so that run would never complete and give the next one its day, and a full run
+   * reads the ads below anyway.
+   *
+   * The walk goes no deeper for the prices of ads not bumped: the 145,390 ads listed on
+   * 2026-10-29 are some 9,100 pages at 16 new rows a page, about 175 minutes at the 1.15 s a
+   * request takes, more than the 150 minutes the run may have (apps/ingest schedule) before
+   * the ad pages for new ads. Their prices come from the weekly census. Whether editing an
+   * ad's price bumps it is unverified (no older row in a 2026-10-29 sample was comparable).
    */
   private async *incremental(category: string): AsyncGenerator<Observation> {
-    const cutoff = this.ctx.checkpoint.lastRunAt && pragueDate(this.ctx.checkpoint.lastRunAt);
-    const isOld = (row: Row) => cutoff !== null && row.date !== undefined && row.date < cutoff;
+    const { lastRunAt } = this.ctx.checkpoint;
+    const cutoff = pragueDate(lastRunAt ?? new Date(this.ctx.now.getTime() - DAY_MS));
+    const isOld = (row: Row) => row.date !== undefined && row.date < cutoff;
     const handled = new Set<string>();
     try {
       for await (const page of this.pages(category)) {
         // Known means known before this run; taken for every row before any is yielded.
-        const fresh = page.rows.filter((row) => {
-          if (handled.has(row.id)) return false;
-          if (!row.malformed && !this.isCandidate(category, row)) return false;
-          if (this.knewBefore(row.id)) return false;
-          handled.add(row.id);
-          return true;
-        });
+        const fresh: Row[] = [];
+        const prices: ListingPriceSeen[] = [];
+        for (const row of page.rows) {
+          if (handled.has(row.id)) continue;
+          if (!row.malformed && !this.isCandidate(category, row)) continue;
+          if (!this.knewBefore(row.id)) {
+            handled.add(row.id);
+            fresh.push(row);
+          } else if (row.price !== null) {
+            // A candidate's list price is the one its ad page shows, which its ListingSeen
+            // carries, so a known ad's price is kept daily without its ad page. A malformed
+            // row has none; the same ad on the next page may.
+            handled.add(row.id);
+            prices.push({
+              kind: "ListingPriceSeen",
+              ref: row.id,
+              price: { amount: row.price, currency: "CZK" },
+            });
+          }
+        }
         this.stats.rows += page.rows.length;
         // The rows shown are read; one left out may wait for the next full run.
-        if (page.uneven) this.unfinished.add(category);
+        if (page.uneven)
+          this.unfinish(category, `page whose rows do not match its header: ${rowsOf(page)}`);
+        this.stats.prices += prices.length;
+        yield* prices;
         for (const row of fresh) yield* this.observe(category, row);
         if (page.rows.every(isOld)) return;
       }
     } catch (error) {
       if (!(error instanceof LostPlace)) throw error;
-      this.unfinished.add(category);
+      this.unfinish(category, error.reason);
       this.ctx.log.warn(error.message);
     }
+  }
+
+  private unfinish(category: string, reason: string): void {
+    const reasons = this.unfinished.get(category) ?? [];
+    reasons.push(reason);
+    this.unfinished.set(category, reasons);
   }
 
   /**
@@ -363,9 +437,8 @@ class Harvest {
         throw new Error(`Bazoš returned HTTP ${response.status} for ${url}`);
       }
       const page = parseListPage(response.body, url);
-      const expected = Math.max(0, Math.min(page.to, page.total) - page.from + 1);
-      if (page.rows.length + page.idless === expected) return page;
-      const message = `Bazoš list page has ${page.rows.length + page.idless} rows, its header ${expected}: ${url}`;
+      if (page.rows.length + page.idless === page.expected) return page;
+      const message = `Bazoš list page has ${page.rows.length + page.idless} rows, its header ${page.expected}: ${url}`;
       this.ctx.log.warn(message);
       if (attempt === 2) return { ...page, uneven: true };
     }
@@ -475,6 +548,18 @@ class Harvest {
   }
 }
 
+/** A page by its rows shown and its header's: `/ford/960/ 19 of 20`. */
+function rowsOf(page: ListPage): string {
+  return `${page.path} ${page.rows.length + page.idless} of ${page.expected}`;
+}
+
+/** The first few pages, each once (both walks read some), then how many more. */
+function named(pages: readonly ListPage[]): string {
+  const shown = [...new Set(pages.map(rowsOf))];
+  const more = shown.length - PAGES_NAMED;
+  return shown.slice(0, PAGES_NAMED).join(", ") + (more > 0 ? ` and ${more} more` : "");
+}
+
 function partKey(category: string, part: number, parts: number): string {
   return `${category};part=${part}/${parts}`;
 }
@@ -509,7 +594,16 @@ function rejected(ref: string, url: string, reason: string, ctx: HarvestContext)
 }
 
 function emptyStats(): Stats {
-  return { rows: 0, candidates: 0, details: 0, seen: 0, gone: 0, outOfScope: 0, malformed: 0 };
+  return {
+    rows: 0,
+    candidates: 0,
+    details: 0,
+    seen: 0,
+    gone: 0,
+    outOfScope: 0,
+    malformed: 0,
+    prices: 0,
+  };
 }
 
 // --- parsing ----------------------------------------------------------------------------
@@ -522,13 +616,16 @@ function parseListPage(html: string, url: string): ListPage {
   if (!header) throw new Error(`Bazoš list page changed (no result count): ${url}`);
   const [, from, to, total] = header as unknown as [string, string, string, string];
   const page: ListPage = {
+    path: url.slice(HOST.length),
     total: Number(total.replace(/\D/g, "")),
     from: Number(from),
     to: Number(to),
+    expected: 0,
     rows: [],
     idless: 0,
     uneven: false,
   };
+  page.expected = Math.max(0, Math.min(page.to, page.total) - page.from + 1);
   const blocks = html.split(ROW_START).slice(1);
   for (const block of blocks) {
     const row = parseRow(block);
