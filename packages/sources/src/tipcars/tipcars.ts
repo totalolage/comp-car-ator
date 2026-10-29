@@ -19,8 +19,9 @@
  *   page, in every mode: the Ledger keeps a listing's latest ListingSeen whole, so a ref must
  *   come out with the same fields every run.
  * - full: a census of slices `used:<year>` (the current year's slice is open above) and
- *   `new` (the new list). A slice is paged to its end before any of its detail pages, then
- *   its listings come out, naming it (`ListingSeen.slice`, never a price part, as a price
+ *   `new` (the new list). A slice is paged to its end before any of its detail pages, its
+ *   used listings coming out as they are met and its new or demo ones from their detail
+ *   pages after, each naming the slice (`ListingSeen.slice`, never a price part, as a price
  *   moves), then SliceDone; slices done earlier in the census are skipped. A
  *   slice is done when one pass alone meets as many distinct listings as its pages report:
  *   passes are never pooled, since a listing gone and another arrived between two passes
@@ -286,8 +287,9 @@ class Harvest {
       harvested = yield* this.parts(slice, parts);
     } else {
       // Page the slice before any detail page, so few listings move under it.
-      const { cards, pass, reported } = await this.census(slice, first);
-      for (const card of cards) yield* this.listing(card);
+      const { cards, pass, reported } = yield* this.census(slice, first);
+      // The others came out as met.
+      for (const card of cards) if (card.category === "N") yield* this.listing(card);
       if (pass) harvested = this.live(pass);
       else if (parts && reported > PAGE_SIZE) {
         // A listing served on two pages pushes another off both, the same way on every pass;
@@ -520,12 +522,18 @@ class Harvest {
    * up to PASSES times. Passes are never pooled: between two passes a listing can go and
    * another arrive, so their union can reach the count without a listing every pass missed.
    * The cards of every pass come out either way, with the refs of the complete pass, if any,
-   * and the highest total any page reported.
+   * and the highest total any page reported. A card that needs no detail page (any but a new
+   * or demo one) comes out as a listing as it is met, so a pass or detail page that fails
+   * later keeps none of them from proving a listing live (one moved here from a slice that
+   * finishes).
    */
-  private async census(
+  private async *census(
     slice: Slice,
     first: ListPage,
-  ): Promise<{ cards: Card[]; pass: Set<string> | null; reported: number }> {
+  ): AsyncGenerator<
+    ListingSeen | ListingGone,
+    { cards: Card[]; pass: Set<string> | null; reported: number }
+  > {
     const cards = new Map<string, Card>();
     let most = 0;
     for (let pass = 1; pass <= PASSES; pass++) {
@@ -535,7 +543,9 @@ class Harvest {
         reported = Math.max(reported, page.total);
         for (const card of page.cards) {
           refs.add(card.ref);
-          if (!cards.has(card.ref)) cards.set(card.ref, card);
+          if (cards.has(card.ref)) continue;
+          cards.set(card.ref, card);
+          if (card.category !== "N") yield* this.listing(card);
         }
       }
       most = Math.max(most, reported);

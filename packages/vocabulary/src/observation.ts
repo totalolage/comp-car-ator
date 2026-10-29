@@ -176,10 +176,12 @@ export interface ListPrice {
  * adapter's own stable key. Full runs report slices so a census that fails part way resumes:
  * the next full run reads `Checkpoint.sliceDoneAt` and skips slices already done.
  * Harvest slices one after another: Observations since the previous SliceDone (or the run's
- * start) belong to this one, and a rejected one among them keeps the slice not done, as does a
- * rejected sighting of a listing in the slice anywhere in the run (a ListingSeen naming it in
- * `ListingSeen.slice`, or a ListingPriceSeen of a listing the Ledger holds in it). Listings
- * in the slice that no run of the census saw count a miss when it is done.
+ * start) belong to this one, but for a ListingSeen naming its own (`ListingSeen.slice`, which
+ * an adapter may yield while another slice is harvested), and a rejected one among them keeps
+ * the slice not done, as does a rejected sighting of a listing in the slice anywhere in the
+ * run (a ListingSeen naming it in `ListingSeen.slice`, or a ListingPriceSeen of a listing the
+ * Ledger holds in it). Listings in the slice that no run of the census saw count a miss when
+ * it is done.
  */
 export interface SliceDone {
   kind: "SliceDone";

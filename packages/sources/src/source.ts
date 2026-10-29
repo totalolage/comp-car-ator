@@ -29,8 +29,9 @@ export type HarvestMode = "incremental" | "full";
  *   `ctx.checkpoint.sliceDoneAt` is set: earlier full runs of this census covered them. If its
  *   slices hold a listing by what it seldom changes, it names the slice on each ListingSeen
  *   (`slice`), so the slices that finish retire listings while others never do; it then yields
- *   the listings it met in a slice it could not finish too (a ListingPriceSeen will do), so a
- *   listing that moved there is not missed in the slice it left.
+ *   the listings it meets in a slice as it meets them, finished or not (a ListingPriceSeen
+ *   will do), so a listing that moved there is not missed in the slice it left, even when the
+ *   run fails or is stopped later.
  * - It stops promptly when `ctx.signal` aborts: pass it to every `ctx.http.get` (throwing the
  *   abort reason is fine).
  * - All network access goes through `ctx.http`; it never reads the clock except via `ctx.now`.

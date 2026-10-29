@@ -374,8 +374,9 @@ export function openLedger(path: string): Ledger {
           : `price currency ${o.price.currency} differs from the listing's ${live.price_currency}`;
       };
       let rejectedTotal = 0;
-      // Observations since the previous SliceDone belong to the next one. A slice that had a
-      // rejection stays not done for the rest of the run, even if its SliceDone repeats.
+      // Observations since the previous SliceDone belong to the next one, unless they name
+      // theirs (ListingSeen.slice). A slice that had a rejection stays not done for the rest
+      // of the run, even if its SliceDone repeats.
       let rejectedInSlice = false;
       const tainted = new Set<string>();
       /**
@@ -453,7 +454,8 @@ export function openLedger(path: string): Ledger {
               reason = "slice had rejected observations, so it is not done";
             }
             rejectedInSlice = false;
-          } else if (reason) {
+          } else if (reason && !namesSlice(observation)) {
+            // One naming its slice keeps that one not done (`rejectedSighting`), wherever it is.
             rejectedInSlice = true;
           }
           if (reason) {
@@ -592,4 +594,9 @@ function latestFx(db: DatabaseSync): FxTable {
 
 function defined<T extends object>(value: T): Partial<T> {
   return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Partial<T>;
+}
+
+/** A ListingSeen naming the census slice it was met in, valid or not. */
+function namesSlice(o: Observation): boolean {
+  return o?.kind === "ListingSeen" && typeof o.slice === "string";
 }

@@ -332,6 +332,23 @@ describe("tipcars source", () => {
     );
   });
 
+  it("full run yields the listings a pass meets as it meets them, so a later failure keeps them", async () => {
+    const all = listings(await harvest(await loadCassette(full), { mode: "full" }));
+    const cassette = await loadCassette(full);
+    cassette.interactions = cassette.interactions.filter(
+      ({ request }) => !request.url.includes("str=3-20&2000-2000="),
+    );
+    const out: Observation[] = [];
+    await expect(harvest(cassette, { mode: "full" }, out)).rejects.toThrow(
+      /No recorded interaction for .*str=3-20&2000-2000=/,
+    );
+    // Pages 1 and 2 of used:2000: a listing moved here from a slice that finishes stays live.
+    expect(out.length).toBeGreaterThan(20);
+    expect(out.every((o) => o.kind === "ListingSeen" && o.slice === "used:2000")).toBe(true);
+    const in2000 = all.filter((o) => o.slice === "used:2000");
+    expect(listings(out)).toEqual(in2000.slice(0, out.length));
+  });
+
   it("full run skips slices the census already has", async () => {
     const all = await harvest(await loadCassette(full), { mode: "full" });
     const resumed = await harvest(await loadCassette(full), { mode: "full", done: ["used:2000"] });

@@ -772,6 +772,33 @@ describe("Ledger absence per finished slice", () => {
     expect(goneOf()).toEqual({ m: null, p: null });
   });
 
+  it("keeps a listing live that a failing run met before its failure", async () => {
+    ledger = openLedger(":memory:");
+    await stalledWeek("2026-10-04", [inSlice("m", "A"), done("A")]);
+    // m moved to B. Bazos meets it in B's walk and gives it a price there, as met; a later
+    // request fails the run before B finishes.
+    const price = { kind: "ListingPriceSeen", ref: "m", price: { amount: 1, currency: "CZK" } };
+    await stalledWeek("2026-10-11", [done("A"), price as Observation]);
+    await stalledWeek("2026-10-18", [done("A"), price as Observation]);
+    // The next census fails before reaching B.
+    await unfinished("2026-10-25", [done("A")]);
+    expect(goneOf()).toEqual({ m: null });
+  });
+
+  it("a rejected sighting naming its slice keeps that one not done, not the next SliceDone", async () => {
+    ledger = openLedger(":memory:");
+    await unfinished("2026-10-04", [inSlice("a1", "A"), inSlice("b1", "B"), done("A")]);
+    // Met while another slice's walk runs: a1's row, unreadable, naming A.
+    await unfinished("2026-10-11", [{ ...inSlice("a1", "A"), url: "" }, done("C")]);
+    const checkpoint = ledger.checkpoint("bazos");
+    expect(checkpoint.sliceDoneAt("C")).toEqual(day("2026-10-11"));
+    expect(checkpoint.sliceDoneAt("A")).toEqual(day("2026-10-04"));
+    // One naming no slice still keeps the next SliceDone from counting.
+    const unnamed = { ...seen("b1", 1), url: "" };
+    await unfinished("2026-10-12", [unnamed, done("D")]);
+    expect(ledger.checkpoint("bazos").sliceDoneAt("D")).toBeNull();
+  });
+
   it("retires a listing missed twice only once the census of its second miss is over", async () => {
     ledger = openLedger(":memory:");
     await stalledWeek("2026-10-04", [inSlice("a1", "A"), inSlice("m", "A"), done("A")]);
