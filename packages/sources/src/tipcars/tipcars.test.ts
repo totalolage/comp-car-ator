@@ -47,6 +47,8 @@ interface Run {
   now?: Date;
   /** Receives the run's warnings. */
   warn?: Logger["warn"];
+  /** Simulates a failed request after the earlier observations have been retained. */
+  failAt?: string;
 }
 
 /** Collects into `out`, so a run that fails still shows what it yielded. */
@@ -65,6 +67,9 @@ async function harvest(
     http: {
       get(request) {
         run.urls?.push(typeof request === "string" ? request : request.url);
+        if ((typeof request === "string" ? request : request.url) === run.failAt) {
+          throw new Error("planned interruption");
+        }
         return replay.get(request);
       },
     },
@@ -432,12 +437,27 @@ describe("tipcars source", () => {
     expect(prices(out).some((o) => o.ref === ref)).toBe(false);
   });
 
-  it("full run skips slices the census already has", async () => {
-    const all = await harvest(await loadCassette(full), { mode: "full" });
-    const resumed = await harvest(await loadCassette(full), { mode: "full", done: ["used:2000"] });
+  it("an interrupted full run retains its finished slices and the next run finishes the census", async () => {
+    const cassette = await loadCassette(full);
+    const all = await harvest(cassette, { mode: "full" });
+    const partial: Observation[] = [];
+    const nextSlice = "https://www.tipcars.com/ojete?2001-2001=";
+    await expect(harvest(cassette, { mode: "full", failAt: nextSlice }, partial)).rejects.toThrow(
+      "planned interruption",
+    );
+    expect(slicesDone(partial)).toEqual(["used:2000"]);
+
+    const urls: string[] = [];
+    const resumed = await harvest(cassette, {
+      mode: "full",
+      known: new Set(listings(partial).map((o) => o.ref)),
+      done: slicesDone(partial),
+      urls,
+    });
+    expect(urls.every((url) => url.includes("2001-2001="))).toBe(true);
     expect(slicesDone(resumed)).toEqual(["used:2001"]);
-    const in2001 = listings(all).filter((o) => o.vehicle.manufactureYear === 2001);
-    expect(listings(resumed).map((o) => o.ref)).toEqual(in2001.map((o) => o.ref));
+    expect([...slicesDone(partial), ...slicesDone(resumed)]).toEqual(FULL_SLICES);
+    expect(listings([...partial, ...resumed])).toEqual(listings(all));
   });
 
   it("a malformed card comes out as a ListingSeen the Ledger rejects; the run goes on", async () => {
@@ -925,6 +945,98 @@ describe("tipcars source", () => {
       const inScope = (refs: string[]) => refs.filter((r) => !/Dohodou/.test(cards.get(r) ?? ""));
       return { cards, cassette, refs: [...used, ...fresh], inScope };
     }
+
+    it("bounds both heads even when every page holds an unknown listing, reserving the price sweep", async () => {
+      const { cassette, refs, inScope } = await sweepable();
+      const unknown = new Set([0, 20, 40, 60, 80, 100, 120].map((i) => refs[i] as string));
+      const known = new Set(refs.filter((ref) => !unknown.has(ref)));
+      const urls: string[] = [];
+      const warnings: string[] = [];
+      const os = await harvest(cassette, {
+        mode: "incremental",
+        known,
+        options: { headRequests: 1, priceSweep: 2 },
+        urls,
+        warn: (message) => warnings.push(message),
+      });
+      expect(urls).toHaveLength(4);
+      expect(urls.slice(0, 2)).toEqual([usedHead, "https://www.tipcars.com/nove"]);
+      expect(warnings).toContain("tipcars incremental head ran out of requests");
+      expect(prices(os).length).toBeGreaterThan(35);
+      expect(listings(os).map((o) => o.ref)).toContain(inScope(refs)[0]);
+      expect(slicesDone(os)).toEqual([]);
+    });
+
+    it("bounds unknown new/demo detail requests and advances on the next incremental runs", async () => {
+      const plain = await loadCassette(incremental);
+      const cards = cardsOf(plain);
+      const fresh = ["9120302", "9120263", "12770757"];
+      let cassette = serve(plain, usedHead, [listPage(cards, 0, [])]);
+      cassette = serve(cassette, "https://www.tipcars.com/nove", [listPage(cards, 3, fresh)]);
+      const known = new Set<string>();
+      const seen: ListingSeen[] = [];
+      for (let n = 0; n < fresh.length; n++) {
+        const urls: string[] = [];
+        const os = await harvest(cassette, {
+          mode: "incremental",
+          known,
+          options: { headRequests: 2, priceSweep: 0 },
+          now: day(n),
+          urls,
+        });
+        expect(urls).toHaveLength(3); // Both heads and one detail page.
+        expect(listings(os)).toHaveLength(1);
+        expect(prices(os)).toHaveLength(n);
+        expect(slicesDone(os)).toEqual([]);
+        for (const o of listings(os)) {
+          known.add(o.ref);
+          seen.push(o);
+        }
+      }
+      expect(seen.map((o) => o.ref)).toEqual(fresh);
+      expect(seen.every((o) => o.condition === "new" || o.condition === "demo")).toBe(true);
+      expect(seen).toEqual(listings(await harvest(cassette, { mode: "incremental" })));
+      const urls: string[] = [];
+      const swept = await harvest(cassette, {
+        mode: "incremental",
+        options: { headRequests: 2, priceSweep: 2 },
+        urls,
+      });
+      expect(urls).toHaveLength(5);
+      expect(listings(swept).map((o) => o.ref)).toEqual(fresh);
+    });
+
+    it("the default sweep bounds requests and covers 3,400 pages over two completed days", async () => {
+      const cassette = await loadCassette(full);
+      const response = (cassette.interactions[0] as Cassette["interactions"][number]).response;
+      const cards = cardsOf(cassette);
+      // One card keeps every page nonempty; the reported total controls sweep pagination.
+      const body = listPage(cards, 68_000, [...cards.keys()].slice(0, 1));
+      const paged = new Set<number>();
+      for (let n = 0; n < 2; n++) {
+        let requests = 0;
+        for await (const _ of tipcarsSource().harvest({
+          mode: "incremental",
+          checkpoint: { ...emptyCheckpoint, isKnown: () => true },
+          now: day(n),
+          signal: new AbortController().signal,
+          log: silentLogger,
+          http: {
+            async get(request) {
+              requests++;
+              const url = typeof request === "string" ? request : request.url;
+              const used = url.includes("/ojete");
+              if (used) paged.add(Number(new URL(url).searchParams.get("str")?.split("-")[0] ?? 1));
+              return { ...response, url, body: used ? body : listPage(cards, 0, []) };
+            },
+          },
+        })) {
+          // Consume the real harvest; prices deduplicate repeated cards independently of pages.
+        }
+        expect(requests).toBe(2_002);
+      }
+      expect(paged.size).toBe(3_400);
+    });
 
     it("sweeps both lists to their ends, so every known listing is priced in one run", async () => {
       const { cassette, refs, inScope } = await sweepable();

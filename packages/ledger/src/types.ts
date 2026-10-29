@@ -37,10 +37,14 @@ export interface RunSummary {
    * They are skipped; the rest of the run is recorded.
    */
   rejected: { kind: string; reason: string }[];
+  /** All rejected Observations, including those beyond the capped examples above. */
+  rejectedTotal: number;
   newListings: number;
   priceChanges: number;
   /** Listings marked gone by this run (explicit ListingGone, or missed by 2 censuses). */
   gone: number;
+  /** Listings newly counted missed by this run, at most once per census and day. */
+  missed: number;
   /**
    * Catalog entries and openpilot list rows of this Source retired by this run's census
    * (stated by none of its runs).
@@ -50,7 +54,17 @@ export interface RunSummary {
    * Whether this run counted as a census: only complete full runs without rejected
    * Observations do, since rejections may mean the parser broke on part of the site.
    */
-  census: "applied" | "skipped-rejections" | "not-full";
+  census: "applied" | "skipped-rejections" | "incomplete" | "not-full";
+}
+
+/** An upstream failure after the Ledger durably finalized the accepted prefix of the run. */
+export class RunFailedError extends Error {
+  readonly summary: RunSummary;
+
+  constructor(cause: unknown, summary: RunSummary) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause });
+    this.summary = summary;
+  }
 }
 
 /**
@@ -82,9 +96,10 @@ export interface Ledger {
    *
    * When the iterable throws, what was recorded stays (each SliceDone is durable once
    * recorded), the run is marked failed, only its finished slices are inferred on, and
-   * `record` rejects with that error. A SliceDone is rejected after a rejected Observation in
-   * its slice or a rejected sighting of a listing in it (see `SliceDone`), so the slice is
-   * harvested again.
+   * `record` rejects with RunFailedError carrying the partial summary and the original cause.
+   * Storage/processing failures reject without a publishable summary. A SliceDone is rejected
+   * after a rejected Observation in its slice or a rejected sighting of a listing in it
+   * (see `SliceDone`), so the slice is harvested again.
    */
   record(
     run: RunInfo,

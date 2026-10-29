@@ -21,6 +21,7 @@ import {
 import { matchOpenpilot } from "./openpilot.ts";
 import { migrate } from "./schema.ts";
 import type { Ledger, LedgerListing, LedgerSnapshot, RunInfo, RunSummary } from "./types.ts";
+import { RunFailedError } from "./types.ts";
 import { invalidReason } from "./validate.ts";
 
 const BATCH = 500;
@@ -376,11 +377,13 @@ export function openLedger(path: string): Ledger {
       const summary: RunSummary = {
         recorded: {},
         rejected: [],
+        rejectedTotal: 0,
         newListings: 0,
         priceChanges: 0,
         gone: 0,
+        missed: 0,
         retired: 0,
-        census: "not-full",
+        census: full ? "incomplete" : "not-full",
       };
       /** Why a price-only sighting cannot apply: only a ListingSeen adds a listing or moves its currency. */
       const repriceReason = (o: ListingPriceSeen): string | null => {
@@ -392,7 +395,6 @@ export function openLedger(path: string): Ledger {
           ? null
           : `price currency ${o.price.currency} differs from the listing's ${live.price_currency}`;
       };
-      let rejectedTotal = 0;
       // Observations since the previous SliceDone belong to the next one, unless they name
       // theirs (ListingSeen.slice). A slice that had a rejection stays not done for the rest
       // of the run, even if its SliceDone repeats.
@@ -442,9 +444,9 @@ export function openLedger(path: string): Ledger {
         };
         // Before this census counts its misses, which would make an earlier one's look current.
         goneAfterMisses(false);
-        q.countSliceMissed.run({ ...at, run: runId });
-        if (complete && rejectedTotal === 0) {
-          q.countMissed.run(at);
+        summary.missed += Number(q.countSliceMissed.run({ ...at, run: runId }).changes);
+        if (complete && summary.rejectedTotal === 0) {
+          summary.missed += Number(q.countMissed.run(at).changes);
           summary.retired =
             Number(q.retireCatalog.run(at).changes) + Number(q.retireOpenpilot.run(at).changes);
         }
@@ -462,8 +464,31 @@ export function openLedger(path: string): Ledger {
         pending = 0;
       };
 
+      let upstreamFailed = false;
+      async function* upstream() {
+        const iterator =
+          Symbol.asyncIterator in observations
+            ? observations[Symbol.asyncIterator]()
+            : observations[Symbol.iterator]();
+        let done = false;
+        try {
+          while (!done) {
+            let next: IteratorResult<Observation>;
+            try {
+              next = await iterator.next();
+            } catch (error) {
+              upstreamFailed = true;
+              throw error;
+            }
+            if (next.done) done = true;
+            else yield next.value;
+          }
+        } finally {
+          if (!done && !upstreamFailed) await iterator.return?.();
+        }
+      }
       try {
-        for await (const observation of observations) {
+        for await (const observation of upstream()) {
           let reason = invalidReason(observation);
           if (!reason && observation.kind === "ListingPriceSeen") {
             reason = repriceReason(observation);
@@ -479,7 +504,7 @@ export function openLedger(path: string): Ledger {
             rejectedInSlice = true;
           }
           if (reason) {
-            rejectedTotal++;
+            summary.rejectedTotal++;
             if (summary.rejected.length < MAX_REJECTIONS_REPORTED) {
               summary.rejected.push({ kind: String(observation?.kind), reason });
             }
@@ -500,11 +525,12 @@ export function openLedger(path: string): Ledger {
           q.finishRun.run("failed", runId);
           commit();
         }
+        if (upstreamFailed) throw new RunFailedError(error, summary);
         throw error;
       }
 
       begin();
-      if (full) summary.census = rejectedTotal > 0 ? "skipped-rejections" : "applied";
+      if (full) summary.census = summary.rejectedTotal > 0 ? "skipped-rejections" : "applied";
       inferAbsence(true);
       q.finishRun.run("complete", runId);
       commit();

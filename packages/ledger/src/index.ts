@@ -7,3 +7,4 @@ export type {
   RunInfo,
   RunSummary,
 } from "./types.ts";
+export { RunFailedError } from "./types.ts";

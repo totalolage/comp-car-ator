@@ -12,7 +12,7 @@ import { once } from "node:events";
 import { createReadStream, createWriteStream } from "node:fs";
 import { createInterface } from "node:readline";
 import type { Http } from "@cca/http";
-import type { Ledger, RunInfo, RunSummary } from "@cca/ledger";
+import { type Ledger, RunFailedError, type RunInfo, type RunSummary } from "@cca/ledger";
 import { type HarvestMode, type Logger, type Source, silentLogger } from "@cca/sources";
 import type { Observation } from "@cca/vocabulary";
 
@@ -101,8 +101,17 @@ export async function harvestToLog(options: HarvestToLogOptions): Promise<Harves
 /** Records a run log into the Ledger as one run. Rejects like `Ledger.record` when the run failed. */
 export async function recordLog(ledger: Ledger, path: string): Promise<RunSummary> {
   const log = await openLog(path);
-  return ledger.record(log.info, log.observations());
+  try {
+    return await ledger.record(log.info, log.observations());
+  } catch (error) {
+    // Broken JSON and file reads are release failures, not failed harvests to publish.
+    if (error instanceof RunFailedError && !(error.cause instanceof HarvestFailedError))
+      throw error.cause;
+    throw error;
+  }
 }
+
+class HarvestFailedError extends Error {}
 
 /** The run a log describes, without reading past its first line. */
 export async function readLogInfo(path: string): Promise<RunInfo> {
@@ -132,9 +141,11 @@ async function openLog(path: string): Promise<{
         const line = JSON.parse(next.value) as Line;
         if ("observation" in line) yield line.observation;
         else if ("end" in line && line.end === "complete") return;
-        else if ("end" in line) throw new Error(`harvest failed: ${line.error}`);
+        else if ("end" in line && line.end === "failed")
+          throw new HarvestFailedError(`harvest failed: ${line.error}`);
+        else throw new Error(`malformed run log ${path}: invalid record`);
       }
-      throw new Error(`run log ${path} is truncated (no end line)`);
+      throw new HarvestFailedError(`run log ${path} is truncated (no end line)`);
     } finally {
       await lines.return?.();
     }

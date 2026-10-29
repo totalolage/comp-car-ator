@@ -344,7 +344,20 @@ describe.each([
   });
 
   it("records a failed harvest as a failed run, so the census resumes the next day", async () => {
-    await ingestDay(day("2026-10-10"), [census({ A: ["a1", "a2"], B: ["b1"] }, "B")], true);
+    const failed = await ingestDay(
+      day("2026-10-10"),
+      [census({ A: ["a1", "a2"], B: ["b1"] }, "B")],
+      true,
+    );
+    expect(failed.runs[0]).toMatchObject({
+      error: expect.stringContaining("HTTP 503"),
+      summary: {
+        recorded: { ListingSeen: 3, SliceDone: 1 },
+        newListings: 3,
+        census: "incomplete",
+      },
+    });
+    expect((await findRelease(h.store))?.manifest.runs).toEqual(failed.runs);
     const after = await restored();
     const checkpoint = after.checkpoint("autoscout24-de", "de");
     expect(checkpoint.sliceDoneAt("A")).toEqual(day("2026-10-10"));
@@ -379,6 +392,28 @@ describe.each([
       "autoscout24-de": "2026-10-11T03:00:00.000Z",
     });
   });
+
+  it.each(["{broken", '{"end":"invalid"}'])(
+    "refuses to publish a malformed run log as a failed harvest (%s)",
+    async (tail) => {
+      const out = join(dir, "broken.ndjson");
+      await writeFile(
+        out,
+        `${JSON.stringify({ run: { source: "sauto", mode: "full", startedAt: day("2026-10-10") } })}\n${tail}\n`,
+      );
+      await expect(
+        releaseRuns({
+          store: h.store,
+          logs: [out],
+          work: join(dir, "work"),
+          now: day("2026-10-10"),
+          base: null,
+          init: true,
+        }),
+      ).rejects.toThrow();
+      expect(await findRelease(h.store)).toBeNull();
+    },
+  );
 
   it("leaves the previous release as the latest when an upload fails midway", async () => {
     const first = await ingestDay(SAMPLE.now, [cnbSource()], true);

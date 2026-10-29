@@ -33,10 +33,12 @@
  * - incremental: per category, from the top, ad pages for the ads on each page read that are
  *   not in the Ledger and a ListingPriceSeen from the list row for those it knows, stopping
  *   after the first page dated wholly before the last run's day (yesterday, without a
- *   complete run yet).
+ *   complete run yet), or after 100 Http.get calls in that category. The limit includes
+ *   list rereads, backsteps and ad pages, so a category that stays unresolved leaves time
+ *   for later categories. Ads below that bound wait for the full run.
  * - A list page can show fewer rows than its header counts, twice running: seen in Citroën
  *   mid-list, where the same page and its neighbours read later showed every row, so the
- *   site served it short; Ford and Mercedes pages lack an ad the site counts but never lists.
+ *   site served it short; Ford and Mercedes also repeatedly showed 19 of 20 rows.
  *   Incremental reads the rows shown and goes on. A census walk cannot tell which ad such a
  *   page lacks, so it does not take the walk (see `collect`): a category where the site
  *   counts an ad it never lists stays out of the census, and the run fails naming it.
@@ -82,6 +84,8 @@ const HOST = "https://auto.bazos.cz";
 const STRIDE = 16;
 /** Times one walk may step back before it gives up on keeping its place. */
 const MAX_STEPS_BACK = 20;
+/** At most 2,500 Http.get calls over the 25 categories, including out-of-scope ad pages. */
+const INCREMENTAL_REQUESTS = 100;
 /** Short pages a failure reason names before it only counts the rest. */
 const PAGES_NAMED = 5;
 const DAY_MS = 86_400_000;
@@ -155,6 +159,14 @@ class LostPlace extends Error {
   }
 }
 
+class IncrementalLimit extends Error {
+  readonly url: string;
+  constructor(url: string) {
+    super("bazos: incremental request limit reached");
+    this.url = url;
+  }
+}
+
 interface Stats {
   rows: number;
   candidates: number;
@@ -184,6 +196,7 @@ class Harvest {
   private readonly sighted = new Set<string>();
   /** Ads this run has given a rejected sighting (`reject`). */
   private readonly rejectedAds = new Set<string>();
+  private requests = 0;
   private stats: Stats = emptyStats();
 
   constructor(ctx: HarvestContext, categories: readonly string[], parts: number) {
@@ -198,9 +211,10 @@ class Harvest {
   async *run(): AsyncIterable<Observation> {
     for (const category of this.categories) {
       this.stats = emptyStats();
+      this.requests = 0;
       if (this.full) yield* this.census(category);
       else yield* this.incremental(category);
-      this.ctx.log.info("bazos category", { category, ...this.stats });
+      this.ctx.log.info("bazos category", { category, requests: this.requests, ...this.stats });
     }
     const problems = [
       this.unfinished.size > 0 &&
@@ -248,9 +262,9 @@ class Harvest {
    *
    * A page short of its header lacks an ad, and nothing tells which: the ad a neighbouring
    * page shows at a place the short page claims may have moved there between the two reads,
-   * and an ad the site counts but never lists (seen live 2026-10-28 on Ford and Mercedes
-   * pages, 19 of 20 rows) lies on no page. Taking the count lower by the rows such pages
-   * lack would let an ad met on a neighbour stand in for one the walk missed, so no walk
+   * and an ad the site counts but never lists would lie on no page. Ford and Mercedes
+   * repeatedly showed 19 of 20 rows live on 2026-10-28. Lowering the count by their missing
+   * rows would let an ad met on a neighbour stand in for one the walk missed, so no walk
    * with such a page is taken. A page with more rows than its header is not taken either.
    *
    * An ad met and removed later in the walk must not stand in for one the walk missed, so
@@ -338,6 +352,10 @@ class Harvest {
           gone,
           highest,
           final,
+          countDrift: highest - final,
+          highestShortfall: Math.max(0, highest - rows.size),
+          finalShortfall: Math.max(0, final - (rows.size - gone)),
+          requests: this.requests,
           attempt,
         });
         reasons.push(
@@ -443,6 +461,15 @@ class Harvest {
         if (page.rows.every(isOld)) return;
       }
     } catch (error) {
+      if (error instanceof IncrementalLimit) {
+        this.ctx.log.warn(error.message, {
+          category,
+          requests: this.requests,
+          cutoff,
+          url: error.url,
+        });
+        return;
+      }
       if (!(error instanceof LostPlace)) throw error;
       this.unfinish(category, error.reason);
       this.ctx.log.warn(error.message);
@@ -490,8 +517,7 @@ class Harvest {
   private async *listPage(category: string, offset: number): AsyncGenerator<Sighting, ListPage> {
     const url = offset === 0 ? `${HOST}/${category}/` : `${HOST}/${category}/${offset}/`;
     for (let attempt = 1; ; attempt++) {
-      this.ctx.signal.throwIfAborted();
-      const response = await this.ctx.http.get({ url, signal: this.ctx.signal });
+      const response = await this.get(url);
       // Offsets off the 20-grid answer 404 with the normal page; the header tells them apart.
       if (response.status !== 200 && response.status !== 404) {
         throw new Error(`Bazoš returned HTTP ${response.status} for ${url}`);
@@ -500,7 +526,17 @@ class Harvest {
       if (this.full) yield* this.meet(category, page.rows);
       if (page.rows.length + page.idless === page.expected) return page;
       const message = `Bazoš list page has ${page.rows.length + page.idless} rows, its header ${page.expected}: ${url}`;
-      this.ctx.log.warn(message);
+      this.ctx.log.warn(message, {
+        category,
+        offset,
+        status: response.status,
+        from: page.from,
+        to: page.to,
+        total: page.total,
+        idless: page.idless,
+        refs: page.rows.map((row) => row.id),
+        attempt,
+      });
       if (attempt === 2) return { ...page, uneven: true };
     }
   }
@@ -531,8 +567,7 @@ class Harvest {
     if (!this.isCandidate(category, row)) return;
     this.sighted.add(row.id);
     this.stats.candidates++;
-    this.ctx.signal.throwIfAborted();
-    const page = await this.ctx.http.get({ url, signal: this.ctx.signal });
+    const page = await this.get(url);
     this.stats.details++;
     const detail = parseDetail(page, row.id);
     if (detail === "gone") {
@@ -624,6 +659,13 @@ class Harvest {
       this.knownBefore.set(ref, known);
     }
     return known;
+  }
+
+  private get(url: string) {
+    this.ctx.signal.throwIfAborted();
+    if (!this.full && this.requests >= INCREMENTAL_REQUESTS) throw new IncrementalLimit(url);
+    this.requests++;
+    return this.ctx.http.get({ url, signal: this.ctx.signal });
   }
 }
 

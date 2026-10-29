@@ -71,13 +71,14 @@
  * - Out of scope: listings without a price ("Dohodou"), and cards of the site's "Ostatní"
  *   bucket (makes it does not list) that name no model.
  * - incremental: both lists newest first, yielding the listings not known before, each list
- *   stopping at a page with none in the scope; then a price sweep over both lists to their
- *   ends (`sweep`). A known listing met on either gets a ListingPriceSeen from its card's
+ *   stopping at a page with none in the scope or after `headRequests` requests, detail pages
+ *   included; then a bounded price sweep over both lists (`sweep`). A known listing met on
+ *   either gets a ListingPriceSeen from its card's
  *   record (amount and currency as its ListingSeen carries them; on 2026-10-29 nine cards, one
  *   in EUR and seven showing "bez DPH", matched their detail pages), so a known listing's
- *   price history is daily: some 3,400 pages a day, which `priceSweep` requests and TipCars'
- *   incremental limit (`catchUpMinutes`, apps/ingest/src/schedule.ts) are sized for. Should
- *   the lists outgrow `priceSweep`, the sweep rotates instead (logged with the days it needs):
+ *   price is refreshed without a detail page. Some 3,400 list pages take longer than TipCars'
+ *   incremental limit (`catchUpMinutes`, apps/ingest/src/schedule.ts), so `priceSweep` rotates
+ *   over them (logged with the days it needs):
  *   each day starts at the next share of the pages, so as many days in a row as the pages need
  *   sweeps read every page while the lists' page counts hold and the Runs complete; a failed
  *   day or a change in the page counts can make a page wait longer. A listing's own wait is
@@ -118,10 +119,12 @@ export interface TipcarsOptions {
   slices?: readonly string[];
   /** Most listings a slice may report before it is split by price. Default 400; tests lower it. */
   sliceCap?: number;
+  /** Most requests per list's incremental head, including detail pages. Default 100. */
+  headRequests?: number;
   /**
    * Most requests an incremental run spends past the new listings on its price sweep
-   * (`sweep`), which rotates over the lists' pages when they need more. Default 3,800, about
-   * 108 minutes; 0 turns the sweep off.
+   * (`sweep`), which rotates over the lists' pages when they need more. Default 2,000;
+   * 0 turns the sweep off. Head requests have their own fixed allowance.
    */
   priceSweep?: number;
 }
@@ -145,12 +148,13 @@ const USED_PRICE_SPLIT = 1_000_000;
 /** An open price band from this price up is not split further. */
 const OPEN_PRICE_LIMIT = 100_000_000;
 /**
- * Requests a day's price sweep may spend: 3,800 at about 1.7 s a list page is 108 minutes,
- * which leaves the lists' heads and new listings' detail pages some 12 minutes of TipCars'
- * 120-minute incremental limit (apps/ingest/src/schedule.ts). Both lists took 3,410 pages on
- * 2026-10-29, so the cap leaves them room to grow by a tenth.
+ * The 2026-10-29 incremental hit its 120-minute limit after 3,244 list pages; logged page
+ * gaps had median 2.126 s and p90 2.829 s, above the earlier 1.7 s estimate. At that p90,
+ * 2,000 sweep requests plus both 100-request heads take about 104 minutes. This leaves
+ * headroom, not a wall-clock guarantee; the runner still enforces its deadline.
  */
-const PRICE_SWEEP = 3_800;
+const PRICE_SWEEP = 2_000;
+const HEAD_REQUESTS = 100;
 /**
  * A rotating sweep's share takes this much of its requests, so the rest reads on past it: a
  * listing that moved down a few pages since yesterday's share is still met.
@@ -181,6 +185,8 @@ interface Head {
   /** Pages the walk read from the first. */
   read: number;
   total: number;
+  /** Unknown new/demo cards whose detail pages did not fit the head's allowance. */
+  details: Card[];
 }
 
 interface Settings {
@@ -188,6 +194,7 @@ interface Settings {
   cap: number;
   only: readonly string[] | undefined;
   priceSweep: number;
+  headRequests: number;
 }
 
 export function tipcarsSource(options: TipcarsOptions = {}): Source {
@@ -197,6 +204,7 @@ export function tipcarsSource(options: TipcarsOptions = {}): Source {
     cap: options.sliceCap ?? SLICE_CAP,
     only,
     priceSweep: options.priceSweep ?? PRICE_SWEEP,
+    headRequests: options.headRequests ?? HEAD_REQUESTS,
   };
   return {
     id: "tipcars",
@@ -229,6 +237,7 @@ class Harvest {
   private readonly cap: number;
   private readonly only: readonly string[] | undefined;
   private readonly priceSweep: number;
+  private readonly headRequests: number;
 
   constructor(ctx: HarvestContext, settings: Settings) {
     this.ctx = ctx;
@@ -236,6 +245,7 @@ class Harvest {
     this.cap = settings.cap;
     this.only = settings.only;
     this.priceSweep = settings.priceSweep;
+    this.headRequests = settings.headRequests;
   }
 
   async *run(): AsyncIterable<Observation> {
@@ -589,17 +599,32 @@ class Harvest {
   /**
    * New listings of one list, newest first, up to the first page with none in the scope: a
    * card outside it never becomes known, so it cannot keep the walk going. The known
-   * listings on those pages get their price (`prices`).
+   * listings on those pages get their price (`prices`). Each list has a fixed request
+   * allowance, details included, so a Ledger backlog cannot consume the sweep's allowance.
    */
   private async *incremental(slice: Slice): AsyncGenerator<Observation, Head> {
-    const head: Head = { slice, read: 0, total: 0 };
+    const head: Head = { slice, read: 0, total: 0, details: [] };
+    if (this.headRequests <= 0) throw new Error("TipCars headRequests must be positive");
+    const stop = this.requests + this.headRequests;
     for await (const page of this.pages(slice, false)) {
       head.read++;
       head.total = Math.max(head.total, page.total);
       yield* this.prices(page.cards);
       const fresh = page.cards.filter((card) => !this.wasKnown(card.ref));
-      for (const card of fresh) yield* this.listing(card);
+      for (const card of fresh) {
+        if (card.category === "N" && outOfScope(card) === null && this.requests >= stop) {
+          head.details.push(card);
+        } else yield* this.listing(card);
+      }
       if (!fresh.some((card) => outOfScope(card) === null)) break;
+      if (this.requests >= stop) {
+        this.ctx.log.warn("tipcars incremental head ran out of requests", {
+          slice: sliceKey(slice),
+          pages: head.read,
+          details: head.details.length,
+        });
+        break;
+      }
     }
     return head;
   }
@@ -607,7 +632,7 @@ class Harvest {
   /**
    * Both lists past their heads, for prices: every known listing's price each day when the
    * pages fit `priceSweep` requests. The site serves its lists newest first only, 20 a page,
-   * so that is some 3,400 pages (97 minutes at 1.7 s a page, on 2026-10-29). Known listings
+   * so that is some 3,400 pages, more than fit the 120-minute limit on 2026-10-29. Known listings
    * get their price, unknown ones in the scope come out whole: ones the census has not
    * reached, or retired by mistake. A new or demo one's detail page waits until the list pages
    * are read and takes the requests left, so detail pages never cost a list page; one left
@@ -646,7 +671,9 @@ class Harvest {
       });
     }
     const stop = this.requests + this.priceSweep;
-    const details = new Map<string, Card>();
+    const details = new Map(
+      heads.flatMap((head) => head.details.map((card) => [card.ref, card] as const)),
+    );
     for (const run of runs(pages, first)) {
       const head = heads[run.list] as Head;
       let to = run.to;
