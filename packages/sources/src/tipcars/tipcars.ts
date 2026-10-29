@@ -72,10 +72,10 @@
  *   incremental limit (`catchUpMinutes`, apps/ingest/src/schedule.ts) are sized for. Should
  *   the lists outgrow `priceSweep`, the sweep rotates instead (logged with the days it needs):
  *   each day starts at the next share of the pages, so as many days in a row as the pages need
- *   sweeps read every page. That bounds a known listing's wait while the page count holds and
- *   the Runs complete; a listing that moves between shares, a failed day, or a change in the
- *   number of shares can make it wait longer (ADR 0014). The walk pages by offset, so a
- *   listing can also slip between two pages on a day.
+ *   sweeps read every page while the lists' page counts hold and the Runs complete; a failed
+ *   day or a change in the page counts can make a page wait longer. A listing's own wait is
+ *   best effort beyond that: the walk pages by offset, so a listing can slip between two
+ *   pages on a day (ADR 0014).
  *
  * Research notes: scrape-access.md (TipCars row); lists, filters and pages verified against
  * the live site 2026-10-25. Cloudflare scores clients there, so every request starts at T1.
@@ -578,8 +578,8 @@ class Harvest {
    * first, fall into as many shares as need nine tenths of `priceSweep` each, and the sweep
    * starts at the share of the Prague day (day number modulo shares) and reads on, wrapping
    * from the new list's end to the used list's start, until its requests are spent. So that
-   * many days in a row read every page while the number of shares holds; a failed day, a
-   * change in that number, or a listing moving between shares can delay a listing further.
+   * many days in a row read every page while the page counts hold and the Runs complete; a
+   * failed day or a change in the page counts can delay a page further.
    * The day picks the share, as the Source seam keeps no place for an incremental run.
    */
   private async *sweep(heads: readonly Head[]): AsyncIterable<Observation> {
