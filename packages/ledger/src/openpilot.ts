@@ -48,8 +48,7 @@ const NO_ENGINE: ReadonlySet<Fuel> = new Set(["bev", "hydrogen"]);
  * One design rarely runs longer than this; a Generation that does, up to a platform's last
  * year, is a register type spanning designs (Tiguan 5N 2008-2024, Mazda 3 BL 2009-2018). Its
  * Variants that began EARLIER_CAR_YEARS or more before the platform's first model year are
- * the earlier car, not the one the list rates, or run across both. Such a type marks no
- * changeover either.
+ * the earlier car, not the one the list rates, or run across both.
  */
 const ONE_DESIGN_YEARS = 8;
 const EARLIER_CAR_YEARS = 2;
@@ -75,11 +74,8 @@ export function matchOpenpilot(
   resolver: Resolver,
 ): OpenpilotMatch[] {
   const generationsOf = new Map<string, Generation[]>();
-  // The catalog's latest year stands for "now": how long an open Generation has run.
-  let latest = 0;
   const modelNames = new Map<string, string>();
   for (const variant of variants) {
-    latest = Math.max(latest, variant.years.from, variant.years.to ?? 0);
     modelNames.set(variant.modelId, variant.model);
     const generations = generationsOf.get(variant.modelId) ?? [];
     generationsOf.set(variant.modelId, generations);
@@ -123,17 +119,18 @@ export function matchOpenpilot(
     const generations = generationsOf.get(modelId) ?? [];
     const generation = generationFor(years, generations);
     if (!generation || SPANS_DESIGNS.has(generation.id)) return placedOnModel;
-    // A year within a year of a rival Generation could be either car (the US Tucson 2021 is
-    // the old one though the register's new one starts in 2021): only the row's other years
-    // say it is this one. A platform with years in a rival, away from this one, is both.
-    const { others, umbrellas } = rivals(generation, generations, latest);
+    // Any other Generation not nested with this one may be another car, junk register types
+    // included: a year within a year of one could be either (the US Tucson 2021 is the old
+    // car though the register's new one starts in 2021), so only the row's other years say
+    // it is this one. A platform with years in one, away from this one, is both.
+    const rivals = generations.filter(
+      (g) => g !== generation && !nested(g, generation) && !nested(generation, g),
+    );
     const near = (y: number, g: Generation) => y >= g.from - 1 && y <= g.to + 1;
-    const inRival = (y: number) => others.some((g) => y >= g.from && y <= g.to);
+    const inRival = (y: number) => rivals.some((g) => y >= g.from && y <= g.to);
     if (years.some((y) => inRival(y) && !near(y, generation))) return placedOnModel;
     const clear = (y: number) =>
-      y >= generation.from &&
-      y <= generation.to &&
-      ![...others, ...umbrellas].some((g) => near(y, g));
+      y >= generation.from && y <= generation.to && !rivals.some((g) => near(y, g));
     if (!row.years.some(clear)) return placedOnModel;
 
     const first = years[0] as number;
@@ -180,32 +177,6 @@ function namesSameCar(listed: string, catalog: string): boolean {
   return slugify(listed)
     .split("-")
     .every((word) => own.has(word) || SAME_CAR_WORDS.has(word));
-}
-
-/**
- * The model's Generations that are another car than `generation` (`others`): all but types
- * nested with it and `umbrellas`, types longer than one design that began before it and run
- * alongside it for two years or more, often the register's umbrella and junk types (the Golf
- * "1H" 2000-2016 beside the Golf VII). Years in an umbrella do not make a platform two cars,
- * but an umbrella may also be the real predecessor, so its years decide nothing either. A
- * type that began after `generation` is a rival however long it runs. An open Generation's
- * length counts to the catalog's latest year.
- */
-function rivals(
-  generation: Generation,
-  generations: Generation[],
-  latest: number,
-): { others: Generation[]; umbrellas: Generation[] } {
-  const others: Generation[] = [];
-  const umbrellas: Generation[] = [];
-  for (const other of generations) {
-    if (other === generation || nested(other, generation) || nested(generation, other)) continue;
-    const long = Math.min(other.to, latest) - other.from > ONE_DESIGN_YEARS;
-    const alongside =
-      Math.min(other.to, generation.to) - Math.max(other.from, generation.from) >= 1;
-    (long && alongside && other.from < generation.from ? umbrellas : others).push(other);
-  }
-  return { others, umbrellas };
 }
 
 /**

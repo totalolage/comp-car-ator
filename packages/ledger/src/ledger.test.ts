@@ -914,7 +914,7 @@ describe("Ledger", () => {
       });
     });
 
-    it("places no platform that is two cars, whatever the catalog's latest year", async () => {
+    it("places no platform that is two cars, and no row on a changeover", async () => {
       const g = (slug: string, from: number, to?: number) => ({
         slug,
         name: slug,
@@ -941,6 +941,8 @@ describe("Ledger", () => {
         // A long type begun earlier and overlapping the chosen one may be its predecessor.
         variant("Accent", g("k", 2005, 2018), "petrol", 100, { from: 2005, to: 2018 }),
         variant("Accent", g("l", 2015), "petrol", 101, { from: 2015 }),
+        variant("i10", g("m", 2005, 2018), "petrol", 102, { from: 2005, to: 2018 }),
+        variant("i10", g("n", 2015), "petrol", 103, { from: 2015 }),
       ]);
       await run("comma-openpilot", "full", "2026-10-02", [
         row("Elantra", [2017, 2018, 2019, 2020, 2021, 2022, 2023], { platform: "E" }),
@@ -955,6 +957,10 @@ describe("Ledger", () => {
         row("Getz", [2016], { platform: "G" }),
         row("Accent", [2015], { platform: "A" }),
         row("Accent", [2021, 2022], { platform: "A" }),
+        // Years clear in that earlier type too: two cars.
+        row("i10", [2012, 2013], { platform: "T" }),
+        row("i10", [2015], { platform: "T" }),
+        row("i10", [2021, 2022, 2023], { platform: "T" }),
       ]);
       expect(
         Object.fromEntries(
@@ -973,6 +979,9 @@ describe("Ledger", () => {
         "Getz 2016": [],
         "Accent 2015": [],
         "Accent 2021,2022": ["hyundai/accent/l/hatchback-petrol-101kw"],
+        "i10 2012,2013": [],
+        "i10 2015": [],
+        "i10 2021,2022,2023": [],
       });
     });
 
