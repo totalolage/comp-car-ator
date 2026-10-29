@@ -914,6 +914,45 @@ describe("Ledger", () => {
       });
     });
 
+    it("places no platform that is two cars, whatever the catalog's latest year", async () => {
+      const g = (slug: string, from: number, to?: number) => ({
+        slug,
+        name: slug,
+        from,
+        ...(to ? { to } : {}),
+      });
+      ledger = openLedger(":memory:");
+      await run("rsv", "full", "2026-10-01", [
+        // Most of the platform's years in one Generation, the rest clear in the next.
+        variant("Elantra", g("a", 2015, 2020), "petrol", 90, { from: 2015, to: 2020 }),
+        variant("Elantra", g("b", 2021), "petrol", 91, { from: 2021 }),
+        // Two Generations still built: two starts, not one inside the other.
+        variant("Ioniq", g("c", 2015), "petrol", 92, { from: 2015 }),
+        variant("Ioniq", g("d", 2021), "petrol", 93, { from: 2021 }),
+        // A successor that has run longer than one design is still a changeover.
+        variant("Bayon", g("e", 2010, 2016), "petrol", 94, { from: 2010, to: 2016 }),
+        variant("Bayon", g("f", 2017), "petrol", 95, { from: 2017, to: 2026 }),
+      ]);
+      await run("comma-openpilot", "full", "2026-10-02", [
+        row("Elantra", [2017, 2018, 2019, 2020, 2021, 2022, 2023], { platform: "E" }),
+        row("Ioniq", [2018, 2019], { platform: "I" }),
+        row("Ioniq", [2021], { platform: "I" }),
+        row("Bayon", [2015], { platform: "B" }),
+        row("Bayon", [2016], { platform: "B" }),
+      ]);
+      expect(
+        Object.fromEntries(
+          ledger.snapshot().openpilot.map((m) => [`${m.model} ${m.years.join(",")}`, m.variantIds]),
+        ),
+      ).toEqual({
+        "Elantra 2017,2018,2019,2020,2021,2022,2023": [],
+        "Ioniq 2018,2019": ["hyundai/ioniq/c/hatchback-petrol-92kw"],
+        "Ioniq 2021": [],
+        "Bayon 2015": ["hyundai/bayon/e/hatchback-petrol-94kw"],
+        "Bayon 2016": [],
+      });
+    });
+
     it("a census retires the rows the list no longer states", async () => {
       ledger = openLedger(":memory:");
       await run("rsv", "full", "2026-10-01", catalog);

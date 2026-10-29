@@ -221,6 +221,30 @@ describe("comma-openpilot source", () => {
     ).toBeUndefined();
   });
 
+  it("gives no platform to cars after a member it cannot read", async () => {
+    const rows = await harvest(
+      "full",
+      editBody("hyundai", (b) =>
+        b
+          // A comment at the left margin does not end the class.
+          .replace("  HYUNDAI_TUCSON = ", "# Tucson\n  HYUNDAI_TUCSON = ")
+          .replace(
+            "  HYUNDAI_IONIQ_5 = HyundaiCanFDPlatformConfig(",
+            "  HYUNDAI_IONIQ_5: HyundaiCanFDPlatformConfig = HyundaiCanFDPlatformConfig(",
+          ),
+      ),
+    );
+    expect(byRef(rows, "Hyundai|Tucson Diesel 2019|Smart Cruise Control (SCC)")?.platform).toBe(
+      "HYUNDAI_TUCSON",
+    );
+    expect(
+      byRef(rows, "Hyundai|Ioniq 5 (Southeast Asia and Europe only) 2022-24|All")?.platform,
+    ).toBeUndefined();
+    expect(byRef(rows, "Kia|Ceed Plug-in Hybrid 2021|Smart Cruise Control (SCC)")?.platform).toBe(
+      "KIA_CEED_PHEV",
+    );
+  });
+
   it("fails on platform definitions without their platform class", async () => {
     await expect(
       harvest(

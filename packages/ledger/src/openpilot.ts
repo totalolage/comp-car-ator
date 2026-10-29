@@ -123,11 +123,15 @@ export function matchOpenpilot(
     const generations = generationsOf.get(modelId) ?? [];
     const generation = generationFor(years, generations);
     if (!generation || SPANS_DESIGNS.has(generation.id)) return placedOnModel;
-    // A year within a year of another Generation could be either car (the US Tucson 2021 is
+    // A year within a year of a rival Generation could be either car (the US Tucson 2021 is
     // the old one though the register's new one starts in 2021): only the row's other years
-    // say it is this one.
-    const changeover = changeoverNear(generation, generations, latest);
-    const clear = (y: number) => y >= generation.from && y <= generation.to && !changeover(y);
+    // say it is this one. A platform with years in a rival, away from this one, is both.
+    const others = rivals(generation, generations, latest);
+    const near = (y: number, g: Generation) => y >= g.from - 1 && y <= g.to + 1;
+    const inRival = (y: number) => others.some((g) => y >= g.from && y <= g.to);
+    if (years.some((y) => inRival(y) && !near(y, generation))) return placedOnModel;
+    const clear = (y: number) =>
+      y >= generation.from && y <= generation.to && !others.some((g) => near(y, g));
     if (!row.years.some(clear)) return placedOnModel;
 
     const first = years[0] as number;
@@ -177,6 +181,25 @@ function namesSameCar(listed: string, catalog: string): boolean {
 }
 
 /**
+ * The model's Generations that are another car than `generation`: all but types nested with
+ * it and types longer than one design running alongside it for two years or more, the
+ * register's umbrella and junk types (the Golf "1H" 2000-2016 beside the Golf VII). A type
+ * before or after it is a rival however long it runs. An open Generation's length counts to
+ * the catalog's latest year.
+ */
+function rivals(generation: Generation, generations: Generation[], latest: number): Generation[] {
+  return generations.filter((other) => {
+    if (other === generation || nested(other, generation) || nested(generation, other)) {
+      return false;
+    }
+    const long = Math.min(other.to, latest) - other.from > ONE_DESIGN_YEARS;
+    const alongside =
+      Math.min(other.to, generation.to) - Math.max(other.from, generation.from) >= 1;
+    return !(long && alongside);
+  });
+}
+
+/**
  * The Generation a platform's model years fall in: the one holding most of them, when it
  * holds more than any other, more than half of them, and at least two (or the only year).
  * Model years run ahead of production years, so a year shared with the next Generation
@@ -187,28 +210,6 @@ function namesSameCar(listed: string, catalog: string): boolean {
  * give or take a year at either end (register years are percentiles, ADR 0011), is taken if
  * it is the only one; otherwise none.
  */
-/**
- * Whether a model year lies on a changeover between `generation` and another of the model's
- * Generations: within a year of the other's production years. Model years run a year ahead
- * of production, and the US often keeps the old car a year after Europe has the new one: the
- * US Tucson 2021 is the old car, though the register's Tucson NX4 starts in 2021. Types
- * nested with `generation` and types longer than one design mark no changeover.
- */
-function changeoverNear(
-  generation: Generation,
-  generations: Generation[],
-  latest: number,
-): (year: number) => boolean {
-  const others = generations.filter(
-    (other) =>
-      other !== generation &&
-      !nested(other, generation) &&
-      !nested(generation, other) &&
-      Math.min(other.to, latest) - other.from <= ONE_DESIGN_YEARS,
-  );
-  return (year) => others.some((other) => year >= other.from - 1 && year <= other.to + 1);
-}
-
 function generationFor(years: number[], generations: Generation[]): Generation | null {
   const scored = generations
     .map((g) => ({ g, overlap: years.filter((y) => y >= g.from && y <= g.to).length }))
@@ -225,7 +226,11 @@ function generationFor(years: number[], generations: Generation[]): Generation |
   return innermost.length === 1 ? (innermost[0] as Generation) : null;
 }
 
-/** `a` lies inside `b`, give or take a year at either end, and is not `b`'s span. */
+/**
+ * `a` lies inside `b`, give or take a year at either end, and is not `b`'s span. Two open
+ * Generations are two starts, not one inside the other.
+ */
 function nested(a: Generation, b: Generation): boolean {
+  if (a.to === Number.POSITIVE_INFINITY && b.to === Number.POSITIVE_INFINITY) return false;
   return a.from >= b.from - 1 && a.to <= b.to + 1 && (a.from > b.from || a.to < b.to);
 }

@@ -172,14 +172,16 @@ function parseSupportList(
 function parsePlatforms(text: string, url: string): [name: string, platform: string][] {
   const start = /^class CAR\(.*$/m.exec(text);
   if (!start) throw new Error(`comma-openpilot: no platform class in ${url}`);
-  // The class runs to the next line that is not indented.
+  // The class runs to the next line that is not indented and not a comment.
   const rest = text.slice(start.index + start[0].length);
-  const end = rest.search(/\n\S/);
+  const end = rest.search(/\n[^\s#]/);
   const body = end < 0 ? rest : rest.slice(0, end);
   const out: [string, string][] = [];
   let platform: string | undefined;
   for (const line of body.split("\n")) {
-    platform = /^ {2}([A-Z][A-Z0-9_]*) = \w+\(/.exec(line)?.[1] ?? platform;
+    // Every line at the class's own indent starts a member or ends one: a platform's cars
+    // follow its `NAME = Config(` line, and any other form gives the cars after it none.
+    if (/^ {2}\S/.test(line)) platform = /^ {2}([A-Z][A-Z0-9_]*) = \w+\(/.exec(line)?.[1];
     if (!platform) continue;
     for (const [, name = ""] of line.matchAll(/\b\w*CarDocs\w*\(\s*"([^"]+)"/g)) {
       out.push([name, platform]);
