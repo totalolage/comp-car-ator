@@ -13,8 +13,9 @@
  *   outside a brand's platforms (most incompatible and community rows) get none.
  *
  * The list is a census and small (a few requests), so incremental and full runs both read it
- * whole. A changed table header, an unknown support level or a definitions file without its
- * platform class fails the run.
+ * whole. A changed table header, an unknown support level, a definitions file without its
+ * platform class, or upstream and dashcam rows that mostly find no platform (checkPlatforms)
+ * fail the run.
  */
 import type { Fuel, OpenpilotLevel, OpenpilotSupport } from "@cca/vocabulary";
 import type { HarvestContext, Source } from "../source.ts";
@@ -24,24 +25,40 @@ const DETAILS_URL = "https://raw.githubusercontent.com/commaai/openpilot/master/
 const VEHICLES_URL = "https://comma.ai/vehicles";
 const DEFINITIONS_URL = "https://raw.githubusercontent.com/commaai/opendbc/master/opendbc/car";
 
-/** opendbc's brand directories whose `values.py` defines the platforms of listed cars. */
-const BRANDS = [
-  "byd",
-  "chrysler",
-  "ford",
-  "gm",
-  "honda",
-  "hyundai",
-  "mazda",
-  "mg",
-  "nissan",
-  "psa",
-  "rivian",
-  "subaru",
-  "tesla",
-  "toyota",
-  "volkswagen",
-];
+/**
+ * opendbc's brand directories whose `values.py` defines the platforms of listed cars, with the
+ * makes each one names its cars under.
+ */
+const BRANDS: Record<string, string[]> = {
+  byd: ["BYD"],
+  chrysler: ["Chrysler", "Dodge", "Jeep", "Ram"],
+  ford: ["Ford", "Lincoln"],
+  gm: ["Buick", "Cadillac", "Chevrolet", "GMC", "Holden"],
+  honda: ["Acura", "Honda"],
+  hyundai: ["Genesis", "Hyundai", "Kia"],
+  mazda: ["Mazda"],
+  mg: ["MG"],
+  nissan: ["Nissan"],
+  psa: ["Peugeot"],
+  rivian: ["Rivian"],
+  subaru: ["Subaru"],
+  tesla: ["Tesla"],
+  toyota: ["Lexus", "Toyota"],
+  volkswagen: ["Audi", "CUPRA", "MAN", "Porsche", "SEAT", "Škoda", "Volkswagen"],
+};
+
+/** Levels comma lists from the platforms' own car definitions: every such row has a platform. */
+const PLATFORM_LEVELS = new Set<OpenpilotLevel>(["upstream", "dashcam"]);
+
+/**
+ * How many rows of PLATFORM_LEVELS may go without a platform (a name the list and the
+ * definitions spell differently, one two platforms claim) before the definitions count as
+ * unreadable: 2, or 2% of them.
+ */
+const UNPLACED_ROWS = { min: 2, share: 0.02 };
+
+/** Fewer platforms than one per this many rows that have one means the parser merged them. */
+const ROWS_PER_PLATFORM = 4;
 
 const LIST_HEADER = "|Make|Model|Package|Support Level|";
 const DETAILS_HEADER =
@@ -83,7 +100,7 @@ export function commaOpenpilotSource(): Source {
       const list = await getOk(ctx, LIST_URL);
       const details = await getOk(ctx, DETAILS_URL);
       const platforms = new Map<string, string | null>();
-      for (const brand of BRANDS) {
+      for (const brand of Object.keys(BRANDS)) {
         const url = `${DEFINITIONS_URL}/${brand}/values.py`;
         for (const [name, platform] of parsePlatforms(await getOk(ctx, url), url)) {
           // A name two platforms claim says nothing about which car it is.
@@ -93,7 +110,9 @@ export function commaOpenpilotSource(): Source {
           );
         }
       }
-      yield* parseSupportList(list, parseDetails(details), platforms);
+      const rows = parseSupportList(list, parseDetails(details), platforms);
+      checkPlatforms(rows);
+      yield* rows;
     },
   };
 }
@@ -160,6 +179,38 @@ function parseSupportList(
 }
 
 /**
+ * Fails the run when the platforms look unread rather than absent: a make on the list with
+ * none of the brands' definitions, a brand whose listed cars found no platform, more unplaced
+ * rows than UNPLACED_ROWS allows, or far fewer platforms than rows placed on them.
+ */
+function checkPlatforms(rows: OpenpilotSupport[]): void {
+  const defined = rows.filter((row) => PLATFORM_LEVELS.has(row.level));
+  for (const [brand, makes] of Object.entries(BRANDS)) {
+    const listed = defined.filter((row) => makes.includes(row.make));
+    if (listed.length && !listed.some((row) => row.platform)) {
+      throw new Error(
+        `comma-openpilot: none of ${listed.length} listed ${makes.join("/")} cars has a platform in ${DEFINITIONS_URL}/${brand}/values.py`,
+      );
+    }
+  }
+  const makes = new Set(Object.values(BRANDS).flat());
+  const unknown = defined.find((row) => !makes.has(row.make));
+  if (unknown) throw new Error(`comma-openpilot: no platform definitions for ${unknown.ref}`);
+
+  const unplaced = defined.filter((row) => !row.platform);
+  if (unplaced.length > Math.max(UNPLACED_ROWS.min, UNPLACED_ROWS.share * defined.length)) {
+    throw new Error(
+      `comma-openpilot: ${unplaced.length} of ${defined.length} cars have no platform, e.g. ${unplaced[0]?.ref}`,
+    );
+  }
+  const placed = defined.length - unplaced.length;
+  const count = new Set(defined.map((row) => row.platform).filter(Boolean)).size;
+  if (count * ROWS_PER_PLATFORM < placed) {
+    throw new Error(`comma-openpilot: ${placed} cars on only ${count} platforms`);
+  }
+}
+
+/**
  * Car names by platform from a brand's definitions: each platform of `class CAR` lists its
  * cars by the name the list shows ("Hyundai Tucson 2021" is Make plus the Model cell):
  *   class CAR(Platforms):
@@ -168,32 +219,85 @@ function parseSupportList(
  *         HyundaiCarDocs("Hyundai Tucson 2021", min_enable_speed=19 * CV.MPH_TO_MS, …),
  * Ford adds a Hybrid and a Plug-in Hybrid car for `hybrid=True` and `plug_in_hybrid=True`
  * ("Ford Kuga Hybrid 2020-23").
+ *
+ * Read by brackets, not indents or line breaks, as Python does: a member is a statement of
+ * the class (a line outside every bracket), a car is a `…CarDocs(` call anywhere inside it.
  */
 function parsePlatforms(text: string, url: string): [name: string, platform: string][] {
-  const start = /^class CAR\(.*$/m.exec(text);
+  const start = /^class\s+CAR\b.*$/m.exec(text);
   if (!start) throw new Error(`comma-openpilot: no platform class in ${url}`);
-  // The class runs to the next line that is not indented and not a comment.
-  const rest = text.slice(start.index + start[0].length);
-  const end = rest.search(/\n[^\s#]/);
-  const body = end < 0 ? rest : rest.slice(0, end);
+  const offset = start.index + start[0].length;
+  const source = text.slice(offset);
+  // Strings and comments blanked out, offsets kept: brackets and keywords are code only.
+  const code = blankStringsAndComments(source);
+
+  // Statements of the class: the lines that begin outside every bracket. It ends at the
+  // first such line at the left margin.
+  const statements: number[] = [];
+  let depth = 0;
+  let end = code.length;
+  for (let i = 0; i < code.length; i++) {
+    const char = code[i] as string;
+    if (char === "\n" && depth === 0) {
+      const line = /^[^\n]*/.exec(code.slice(i + 1))?.[0] ?? "";
+      if (!line.trim()) continue;
+      if (!/^\s/.test(line)) {
+        end = i;
+        break;
+      }
+      statements.push(i + 1);
+    } else if ("([{".includes(char)) depth++;
+    else if (")]}".includes(char)) depth--;
+    if (depth < 0) throw new Error(`comma-openpilot: unbalanced brackets in ${url}`);
+  }
+  if (depth !== 0) throw new Error(`comma-openpilot: unbalanced brackets in ${url}`);
+
   const out: [string, string][] = [];
-  let platform: string | undefined;
-  for (const line of body.split("\n")) {
-    // Every line at the class's own indent starts a member or ends one: a platform's cars
-    // follow its `NAME = Config(` line, and any other form gives the cars after it none.
-    if (/^ {2}\S/.test(line)) platform = /^ {2}([A-Z][A-Z0-9_]*) = \w+\(/.exec(line)?.[1];
+  for (const [n, from] of statements.entries()) {
+    const to = statements[n + 1] ?? end;
+    // A platform is `NAME = Config(…)`; any other statement holds no cars of a platform.
+    const platform = /^\s*([A-Z][A-Z0-9_]*)\s*(?::[^=\n]*)?=\s*\w+\s*\(/.exec(
+      code.slice(from, to),
+    )?.[1];
     if (!platform) continue;
-    for (const [, name = ""] of line.matchAll(/\b\w*CarDocs\w*\(\s*"([^"]+)"/g)) {
+    for (const call of code.slice(from, to).matchAll(/\b\w*CarDocs\w*\s*\(/g)) {
+      const open = from + call.index + call[0].length;
+      const close = closingBracket(code, open);
+      const name = /^\s*(["'])(.*?)\1/s.exec(source.slice(open, close))?.[2];
+      if (!name) continue;
+      const flags = code.slice(open, close);
       out.push([name, platform]);
       const named = /^(.+?) (\d{4}\S*(?:, \d{4}\S*)*)$/.exec(name);
-      if (named && /\bhybrid=True\b/.test(line))
+      if (named && /\bhybrid\s*=\s*True\b/.test(flags)) {
         out.push([`${named[1]} Hybrid ${named[2]}`, platform]);
-      if (named && /\bplug_in_hybrid=True\b/.test(line)) {
+      }
+      if (named && /\bplug_in_hybrid\s*=\s*True\b/.test(flags)) {
         out.push([`${named[1]} Plug-in Hybrid ${named[2]}`, platform]);
       }
     }
   }
   return out;
+}
+
+/** Python source with the contents of strings and comments replaced by spaces, newlines kept. */
+function blankStringsAndComments(text: string): string {
+  return text.replace(
+    /#[^\n]*|("""|''')[\s\S]*?\1|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'/g,
+    (token) =>
+      token.startsWith("#")
+        ? " ".repeat(token.length)
+        : `${token[0]}${token.slice(1, -1).replace(/[^\n]/g, " ")}${token.at(-1)}`,
+  );
+}
+
+/** The index of the bracket closing the one just before `open`. */
+function closingBracket(code: string, open: number): number {
+  let depth = 1;
+  for (let i = open; i < code.length; i++) {
+    if ("([{".includes(code[i] as string)) depth++;
+    else if (")]}".includes(code[i] as string) && --depth === 0) return i;
+  }
+  return code.length;
 }
 
 /**

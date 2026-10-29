@@ -33,11 +33,19 @@ function byRef(rows: OpenpilotSupport[], ref: string): OpenpilotSupport | undefi
 }
 
 /**
- * Rewrites the list file (`opendbc`), the details file (`openpilot`) or a brand's platform
- * definitions (`hyundai`) in the cassette.
+ * Rewrites the list file (`opendbc`), the details file (`openpilot`), one brand's platform
+ * definitions (`hyundai`) or every brand's (`values.py`) in the cassette.
  */
-function editBody(file: "opendbc" | "openpilot" | "hyundai", change: (body: string) => string) {
-  const path = file === "hyundai" ? "/opendbc/car/hyundai/values.py" : `/${file}/master/docs/`;
+function editBody(
+  file: "opendbc" | "openpilot" | "hyundai" | "values.py",
+  change: (body: string) => string,
+) {
+  const path =
+    file === "values.py"
+      ? "/values.py"
+      : file === "hyundai"
+        ? "/opendbc/car/hyundai/values.py"
+        : `/${file}/master/docs/`;
   return (cassette: Cassette) => {
     for (const { request, response } of cassette.interactions) {
       if (request.url.includes(path)) response.body = change(response.body);
@@ -230,7 +238,7 @@ describe("comma-openpilot source", () => {
           .replace("  HYUNDAI_TUCSON = ", "# Tucson\n  HYUNDAI_TUCSON = ")
           .replace(
             "  HYUNDAI_IONIQ_5 = HyundaiCanFDPlatformConfig(",
-            "  HYUNDAI_IONIQ_5: HyundaiCanFDPlatformConfig = HyundaiCanFDPlatformConfig(",
+            "  HYUNDAI_IONIQ_5 = configs.HyundaiCanFDPlatformConfig(",
           ),
       ),
     );
@@ -243,6 +251,79 @@ describe("comma-openpilot source", () => {
     expect(byRef(rows, "Kia|Ceed Plug-in Hybrid 2021|Smart Cruise Control (SCC)")?.platform).toBe(
       "KIA_CEED_PHEV",
     );
+  });
+
+  it("reads platforms however the definitions are indented, wrapped or quoted", async () => {
+    const reformatted = await harvest(
+      "full",
+      editBody("values.py", (b) =>
+        b
+          // Four spaces per level, a car's name on its own line, single quotes, a type.
+          .replace(/^( +)/gm, (indent) => indent + indent)
+          .replace(/^(\s*\w*CarDocs\w*\()"([^"]*)"/gm, "$1\n            '$2'")
+          .replace("HYUNDAI_TUCSON = ", "HYUNDAI_TUCSON: HyundaiPlatformConfig = "),
+      ),
+    );
+    const tabs = await harvest(
+      "full",
+      editBody("values.py", (b) =>
+        b.replace(/^( +)/gm, (indent) => "\t".repeat(indent.length / 2)),
+      ),
+    );
+    const rows = await harvest("full");
+    expect(rows.filter((r) => r.platform)).toHaveLength(20);
+    expect(reformatted).toEqual(rows);
+    expect(tabs).toEqual(rows);
+  });
+
+  it("fails rather than drop the platforms of a brand, a make or many cars", async () => {
+    // No definitions read at all.
+    await expect(
+      harvest(
+        "full",
+        editBody("values.py", (b) =>
+          b.replace(/^class CAR\(Platforms\):[\s\S]*/m, "class CAR(Platforms):\n  pass\n"),
+        ),
+      ),
+    ).rejects.toThrow(/none of \d+ listed .* cars has a platform/);
+    // One brand's cars all unplaced.
+    await expect(
+      harvest(
+        "full",
+        editBody("hyundai", (b) => b.replaceAll("CarDocs(", "CarInfo(")),
+      ),
+    ).rejects.toThrow(
+      /none of 5 listed Genesis\/Hyundai\/Kia cars has a platform in .*hyundai\/values\.py/,
+    );
+    // Three of 19 cars unplaced.
+    await expect(
+      harvest(
+        "full",
+        editBody("hyundai", (b) => b.replaceAll('CarDocs("Hyundai ', 'CarDocs("HYUNDAI ')),
+      ),
+    ).rejects.toThrow(/3 of 19 cars have no platform/);
+    // A make no brand's definitions are read for.
+    await expect(
+      harvest(
+        "full",
+        editBody("opendbc", (b) => b.replace("|Subaru|Ascent", "|Volvo|Ascent")),
+      ),
+    ).rejects.toThrow(/no platform definitions for Volvo\|Ascent 2019-21\|All/);
+    // Every platform read as one.
+    await expect(
+      harvest(
+        "full",
+        editBody("values.py", (b) =>
+          b.replace(/^(\s+)[A-Z][A-Z0-9_]* = (\w+PlatformConfig\()/gm, "$1CAR = $2"),
+        ),
+      ),
+    ).rejects.toThrow(/\d+ cars on only \d+ platforms/);
+    await expect(
+      harvest(
+        "full",
+        editBody("hyundai", (b) => b.replace("HyundaiPlatformConfig(", "HyundaiPlatformConfig((")),
+      ),
+    ).rejects.toThrow(/unbalanced brackets in .*hyundai\/values\.py/);
   });
 
   it("fails on platform definitions without their platform class", async () => {
