@@ -12,6 +12,7 @@ export type {
   Loader,
   ModelListings,
   ModelView,
+  OpenpilotFacet,
   Range,
   Sort,
   VariantFacets,

@@ -33,6 +33,7 @@ export function modelListings(file: ModelIndex, manifest: BundleManifest): Model
     generations: file.generations,
     stats: file.stats,
     history: file.history,
+    openpilot: file.openpilot ?? [],
     fx: manifest.fx,
     listings(query = {}) {
       const { filters = {}, sort, offset, limit } = query;

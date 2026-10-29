@@ -15,6 +15,8 @@ import type {
   Market,
   ModelId,
   Money,
+  OpenpilotLevel,
+  OpenpilotSupport,
   Seller,
   Transmission,
   VariantId,
@@ -73,6 +75,12 @@ export interface VariantRow {
   newPriceCzk?: NewPrice;
   /** Aggregates over active used listings matched to this Variant; null when none. */
   used: UsedStats | null;
+  /**
+   * The best openpilot support level among the list rows matched to this Variant, and the
+   * model years the list gives that level for (a Variant can span years the list rates
+   * differently); absent when no row matched.
+   */
+  openpilot?: { level: OpenpilotLevel; years: number[] };
 }
 
 /**
@@ -146,6 +154,15 @@ export interface ModelFile {
    * without a point had no active Listings (a gap, not zero).
    */
   history: { market: Market; points: { date: IsoDate; count: number; medianCzk: number }[] }[];
+  /** openpilot list rows matched to the model's Variants, best level first; absent: none. */
+  openpilot?: OpenpilotRow[];
+}
+
+/** One openpilot list row as a model page shows it; `make`/`model` are the list's own names. */
+export interface OpenpilotRow extends Omit<OpenpilotSupport, "kind" | "ref"> {
+  /** The Generations and Variants of this model the row was matched to. */
+  generationIds: string[];
+  variantIds: VariantId[];
 }
 
 /**

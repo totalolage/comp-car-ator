@@ -4,15 +4,19 @@ import type {
   CatalogVariant,
   Condition,
   FxTable,
+  GenerationId,
   IsoDate,
   ListPrice,
   Market,
+  ModelId,
   Money,
   Observation,
   ObservationKind,
+  OpenpilotSupport,
   PriceBasis,
   Seller,
   SellerExtras,
+  VariantId,
   VehicleDescriptor,
   YearMonth,
 } from "@cca/vocabulary";
@@ -37,7 +41,10 @@ export interface RunSummary {
   priceChanges: number;
   /** Listings marked gone by this run (explicit ListingGone, or missed by 2 censuses). */
   gone: number;
-  /** Catalog entries of this Source retired by this run's census (stated by none of its runs). */
+  /**
+   * Catalog entries and openpilot list rows of this Source retired by this run's census
+   * (stated by none of its runs).
+   */
   retired: number;
   /**
    * Whether this run counted as a census: only complete full runs without rejected
@@ -99,6 +106,8 @@ export interface LedgerSnapshot {
    * unless that edition's `validTo` is before the day (then it has none).
    */
   listPrices: (Omit<ListPrice, "kind" | "ref"> & { offer: string; resolution: Resolution })[];
+  /** Every current openpilot list row, matched to the catalog; see OpenpilotMatch. */
+  openpilot: OpenpilotMatch[];
   /**
    * All listings, active and gone, with history, in id order. Given `ids`, only those, in
    * that order (unknown ids are skipped): a reader that groups listings by something the
@@ -135,4 +144,18 @@ export interface LedgerListing {
   priceHistory: { date: IsoDate; price: Money }[];
   /** Resolved against the current catalog at snapshot time. */
   resolution: Resolution;
+}
+
+/**
+ * A current openpilot list row (OpenpilotSupport) and where it lands in the catalog,
+ * precision first: a wrong match is worse than none. `row` is `<source>:<ref>`.
+ * `modelId` is null when the Resolver cannot place make and model. `generationIds` are the
+ * model's Generations the row's years fall in (empty when they do not single one out), and
+ * `variantIds` their Variants whose fuel and production years fit the row.
+ */
+export interface OpenpilotMatch extends Omit<OpenpilotSupport, "kind" | "ref"> {
+  row: string;
+  modelId: ModelId | null;
+  generationIds: GenerationId[];
+  variantIds: VariantId[];
 }
