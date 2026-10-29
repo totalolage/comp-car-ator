@@ -25,7 +25,11 @@
  *   ("skoda;part=3/10"), each fetched and reported done in turn, so a census of the large
  *   categories (Škoda: ~31,000 ads) resumes part by part. A category whose walk cannot be
  *   reconciled reports no part done and fails the run at the end; the other categories
- *   still run.
+ *   still run. Each ad names its part (`ListingSeen.slice`, in both modes), so the parts that
+ *   finish retire the ads they no longer list while Ford never finishes. A walk gives each
+ *   known ad a ListingPriceSeen as it meets it on any page read, so one moved into another
+ *   category stays live even when that walk is not taken, the page is read again or stepped
+ *   back from, or the run fails or is stopped later.
  * - incremental: per category, from the top, ad pages for the ads on each page read that are
  *   not in the Ledger and a ListingPriceSeen from the list row for those it knows, stopping
  *   after the first page dated wholly before the last run's day (yesterday, without a
@@ -42,8 +46,11 @@
  *   the site moves into a category already walked, and one bumped twice within one walk
  *   (behind the walk, then behind the top-up) when an older ad met and removed before a
  *   count rose again makes up the number; the next census sees them again. Edits that do
- *   not bump an ad wait for a full run, a price change too. An ad whose text stops stating
- *   year or odometer leaves the scope and is retired like a removed one.
+ *   not bump an ad wait for a full run, a price change too. A known ad stays live while its
+ *   list row is a candidate: a census walk proves it from the row (`meet`), so one whose ad
+ *   page alone puts it out of scope (its text stops stating year or odometer, it is sold for
+ *   parts) keeps the fields of its last ListingSeen until it is removed or its row leaves
+ *   the scope.
  *
  * Research notes: scrape-access.md (Bazoš row); behaviour verified live 2026-10-25.
  */
@@ -135,6 +142,9 @@ interface ListPage {
   uneven: boolean;
 }
 
+/** A census's proof that a known ad is live, from its list row (`meet`). */
+type Sighting = ListingPriceSeen | ListingSeen;
+
 /** The list moved under a walk more than it can follow. */
 class LostPlace extends Error {
   readonly reason: string;
@@ -170,6 +180,10 @@ class Harvest {
   private readonly unreadable = new Set<string>();
   /** Whether each ad this run has met was known before the run, as first met. */
   private readonly knownBefore = new Map<string, boolean>();
+  /** Ads this run has given an Observation, or is reading the ad page of. */
+  private readonly sighted = new Set<string>();
+  /** Ads this run has given a rejected sighting (`reject`). */
+  private readonly rejectedAds = new Set<string>();
   private stats: Stats = emptyStats();
 
   constructor(ctx: HarvestContext, categories: readonly string[], parts: number) {
@@ -208,7 +222,7 @@ class Harvest {
       (part) => this.ctx.checkpoint.sliceDoneAt(partKey(category, part, this.parts)) === null,
     );
     if (parts.length === 0) return;
-    const rows = await this.collect(category);
+    const rows = yield* this.collect(category);
     if (typeof rows === "string") {
       this.unfinish(category, rows);
       return;
@@ -246,9 +260,10 @@ class Harvest {
    *   count when that walk began. Gone: ads met dated today that it did not meet (every ad
    *   dated today is above its end).
    * An ad removed before a count rose again is not caught by either, so the check narrows
-   * the gap without closing it (see Limits).
+   * the gap without closing it (see Limits). The known ads on every page read go out as
+   * read (`listPage`).
    */
-  private async collect(category: string): Promise<Map<string, Row> | string> {
+  private async *collect(category: string): AsyncGenerator<Sighting, Map<string, Row> | string> {
     let reason = "";
     for (let attempt = 1; attempt <= 2; attempt++) {
       const rows = new Map<string, Row>();
@@ -261,6 +276,10 @@ class Harvest {
       let final = 0;
       try {
         for await (const page of this.pages(category)) {
+          if ("kind" in page) {
+            yield page;
+            continue;
+          }
           highest = Math.max(highest, page.total);
           for (const row of page.rows) {
             rows.set(row.id, row);
@@ -271,6 +290,10 @@ class Harvest {
         }
         let first = true;
         for await (const page of this.pages(category)) {
+          if ("kind" in page) {
+            yield page;
+            continue;
+          }
           if (first) final = page.total;
           first = false;
           highest = Math.max(highest, page.total);
@@ -329,6 +352,38 @@ class Harvest {
   }
 
   /**
+   * Proof that the known ads among the list rows a census reads are live, as it reads them,
+   * once a run: a ListingPriceSeen from a candidate's row, or for an unreadable row the
+   * rejected sighting it would get in its part (which keeps that part out of the census, as
+   * there). So an ad that moved here from a part that finishes is not missed there, even when
+   * the walk does not take the page or is not taken, or the run fails or is stopped later.
+   * Whether the ad is still in scope its ad page tells after the walk, in the parts not done
+   * yet, so a known ad listed as a candidate stays live (see Limits).
+   */
+  private *meet(category: string, rows: readonly Row[]): Iterable<Sighting> {
+    for (const row of rows) {
+      if (this.sighted.has(row.id)) continue;
+      if (row.malformed) {
+        if (!this.knewBefore(row.id)) continue;
+        this.sighted.add(row.id);
+        // Out of the parts loop, so its part is marked here.
+        this.unreadable.add(this.partOf(category, row));
+        yield* this.reject(category, row, row.malformed);
+        continue;
+      }
+      if (row.price === null || !this.isCandidate(category, row) || !this.knewBefore(row.id))
+        continue;
+      this.sighted.add(row.id);
+      this.stats.prices++;
+      yield {
+        kind: "ListingPriceSeen",
+        ref: row.id,
+        price: { amount: row.price, currency: "CZK" },
+      };
+    }
+  }
+
+  /**
    * New ads, from the top: every candidate on a page read that the Ledger did not know before
    * this run gets its ad page, whatever its date, so an ad the last run could not read is
    * tried again. Every candidate it knew gets a ListingPriceSeen with its row's price (a row
@@ -355,6 +410,8 @@ class Harvest {
     const handled = new Set<string>();
     try {
       for await (const page of this.pages(category)) {
+        // A census's sighting only (`listPage`).
+        if ("kind" in page) continue;
         // Known means known before this run; taken for every row before any is yielded.
         const fresh: Row[] = [];
         const prices: ListingPriceSeen[] = [];
@@ -402,13 +459,14 @@ class Harvest {
    * A category's pages from the top, each overlapping the one before by a few rows. Ends
    * at the page whose header reaches the count. Throws LostPlace when ads keep moving up
    * past the overlap faster than the walk can step back, or a page shows none of its rows.
+   * A census's sightings from each read come out before its page (`listPage`).
    */
-  private async *pages(category: string): AsyncGenerator<ListPage> {
+  private async *pages(category: string): AsyncGenerator<ListPage | Sighting> {
     let offset = 0;
     let previous: Set<string> | null = null;
     let stepsBack = 0;
     for (;;) {
-      const page = await this.listPage(category, offset);
+      const page = yield* this.listPage(category, offset);
       // A page showing none of its rows leaves the walk nowhere to go on from.
       if (page.uneven && page.rows.length === 0) throw new LostPlace(category, offset);
       if (previous && !page.rows.some((row) => previous?.has(row.id))) {
@@ -425,9 +483,11 @@ class Harvest {
 
   /**
    * A list page; one whose rows do not match its header is fetched once more, then taken as
-   * it is, marked uneven.
+   * it is, marked uneven. In a census each read first proves the known ads it lists (`meet`),
+   * whether the walk takes the page, reads it again or steps back from it, and before a read
+   * after it fails.
    */
-  private async listPage(category: string, offset: number): Promise<ListPage> {
+  private async *listPage(category: string, offset: number): AsyncGenerator<Sighting, ListPage> {
     const url = offset === 0 ? `${HOST}/${category}/` : `${HOST}/${category}/${offset}/`;
     for (let attempt = 1; ; attempt++) {
       this.ctx.signal.throwIfAborted();
@@ -437,6 +497,7 @@ class Harvest {
         throw new Error(`Bazoš returned HTTP ${response.status} for ${url}`);
       }
       const page = parseListPage(response.body, url);
+      if (this.full) yield* this.meet(category, page.rows);
       if (page.rows.length + page.idless === page.expected) return page;
       const message = `Bazoš list page has ${page.rows.length + page.idless} rows, its header ${page.expected}: ${url}`;
       this.ctx.log.warn(message);
@@ -461,12 +522,14 @@ class Harvest {
   /** The Observation for one listed ad, from its detail page; nothing when out of scope. */
   private async *observe(category: string, row: Row): AsyncGenerator<Observation> {
     const url = `${HOST}${row.path}`;
+    const slice = this.partOf(category, row);
     if (row.malformed) {
-      this.stats.malformed++;
-      yield rejected(row.id, url, row.malformed, this.ctx);
+      this.sighted.add(row.id);
+      yield* this.reject(category, row, row.malformed);
       return;
     }
     if (!this.isCandidate(category, row)) return;
+    this.sighted.add(row.id);
     this.stats.candidates++;
     this.ctx.signal.throwIfAborted();
     const page = await this.ctx.http.get({ url, signal: this.ctx.signal });
@@ -478,17 +541,33 @@ class Harvest {
       return;
     }
     if (typeof detail === "string") {
-      this.stats.malformed++;
-      yield rejected(row.id, url, detail, this.ctx);
+      yield* this.reject(category, row, detail);
       return;
     }
     const listing = this.toListingSeen(category, row, url, detail);
     if (listing) {
       this.stats.seen++;
-      yield listing;
+      yield { ...listing, slice };
     } else {
       this.stats.outOfScope++;
     }
+  }
+
+  /** The part a census harvests an ad in, in both modes (ListingSeen.slice). */
+  private partOf(category: string, row: Row): string {
+    return partKey(category, Number(row.id) % this.parts, this.parts);
+  }
+
+  /**
+   * An ad that cannot be read, as a ListingSeen the Ledger rejects, naming its part; once a
+   * run (a known ad's unreadable row comes out as the walk meets it, `meet`).
+   */
+  private *reject(category: string, row: Row, reason: string): Iterable<ListingSeen> {
+    if (this.rejectedAds.has(row.id)) return;
+    this.rejectedAds.add(row.id);
+    this.stats.malformed++;
+    const url = `${HOST}${row.path}`;
+    yield { ...rejected(row.id, url, reason, this.ctx), slice: this.partOf(category, row) };
   }
 
   private toListingSeen(

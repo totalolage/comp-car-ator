@@ -39,6 +39,7 @@ export function invalidReason(o: Observation): string | null {
         return "odometerKm must be >= 0";
       }
       if (!Array.isArray(o.photos)) return "photos must be an array";
+      if (o.slice !== undefined && !nonEmpty(o.slice)) return "slice is empty";
       return vehicleReason(o.vehicle);
     case "ListingPriceSeen":
       if (!nonEmpty(o.ref)) return "ref is empty";

@@ -59,6 +59,15 @@ export interface ListingSeen {
   listedAt?: IsoDate;
   /** Last month the origin country's periodic inspection (DE "HU") is valid, if shown. */
   inspectionValidUntil?: YearMonth;
+  /**
+   * The census slice (`SliceDone.slice`) this listing was met in, for an adapter whose
+   * slices hold a listing by what it seldom changes (a category and its ad id, a year), never
+   * by price. A census that finishes the slice without seeing the listing counts it missed even
+   * when other slices never finish. Leave it out where slices are price bands: a listing
+   * repriced into another band would be missed in the one it left. The Ledger keeps it
+   * between sightings that carry none; it is not part of the published listing.
+   */
+  slice?: string;
 }
 
 export interface SellerExtras extends Money {
@@ -70,7 +79,8 @@ export interface SellerExtras extends Money {
  * A listing the Ledger knows was visible at the source during this run with this price, read
  * from list data that lacks the rest of its ListingSeen (an incremental run's search page). The
  * Ledger updates only the listing's price and its price history; every other field, and when
- * the listing was last seen, stays as the last ListingSeen left it, `priceBasis` included.
+ * the listing was last seen, stays as the last ListingSeen left it, `priceBasis` included. It
+ * still proves the listing live: a census it falls in does not count the listing missed.
  * `price` must be the amount the source's ListingSeen would carry, from the same field and in
  * the same currency, or the history records a change that did not happen. A ref the Ledger has no live listing for, or a
  * price in another currency, is rejected: only a ListingSeen can add or change those.
@@ -166,7 +176,12 @@ export interface ListPrice {
  * adapter's own stable key. Full runs report slices so a census that fails part way resumes:
  * the next full run reads `Checkpoint.sliceDoneAt` and skips slices already done.
  * Harvest slices one after another: Observations since the previous SliceDone (or the run's
- * start) belong to this one, and a rejected one among them keeps the slice not done.
+ * start) belong to this one, but for a ListingSeen naming its own (`ListingSeen.slice`, which
+ * an adapter may yield while another slice is harvested), and a rejected one among them keeps
+ * the slice not done, as does a rejected sighting of a listing in the slice anywhere in the
+ * run (a ListingSeen naming it in `ListingSeen.slice`, or a ListingPriceSeen of a listing the
+ * Ledger holds in it). Listings in the slice that no run of the census saw count a miss when
+ * it is done.
  */
 export interface SliceDone {
   kind: "SliceDone";

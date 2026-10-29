@@ -875,6 +875,169 @@ describe("bazos source", () => {
     });
   });
 
+  describe("a census walk proves the known ads it meets live", () => {
+    // 224452818 is on /kia/, 224899514 and 224873612 on /kia/16/; both even ids are in part 0.
+    const known = new Set(["224452818", "224899514", "224873612"]);
+    const isKnown = (ref: string) => known.has(ref);
+    const prices = (os: Observation[]) =>
+      os.filter((o): o is ListingPriceSeen => o.kind === "ListingPriceSeen");
+    const failingAt32 = (c: Cassette) => {
+      c.interactions = c.interactions.filter(({ request }) => pathOf(request.url) !== "/kia/32/");
+    };
+    const unreadable = (c: Cassette) =>
+      inPages(
+        c,
+        '<span translate="no">  75 500 Kč</span>',
+        '<span translate="no">neuvedena</span>',
+        (url) => !url.includes("/inzerat/"),
+      );
+
+    it("as it meets them, so a request failing later keeps their sightings", async () => {
+      const recorded = await cassette("full", failingAt32);
+      const { observations, error, details } = await harvest(recorded, "full", { isKnown });
+      expect(String(error)).toMatch(
+        /No recorded interaction for https:\/\/auto.bazos.cz\/kia\/32\//,
+      );
+      expect(details).toEqual([]);
+      // An ad moved here from another category is not missed in the part it left.
+      expect(observations.every((o) => o.kind === "ListingPriceSeen")).toBe(true);
+      expect(prices(observations).map((o) => o.ref)).toEqual([...known]);
+      expect(prices(observations)).toContainEqual({
+        kind: "ListingPriceSeen",
+        ref: "224899514",
+        price: { amount: 75_500, currency: "CZK" },
+      });
+    });
+
+    it("in a walk not taken too", async () => {
+      const recorded = await cassette("full", (c) =>
+        inPages(
+          c,
+          "inzerátů z 59",
+          "inzerátů z 70",
+          (url, n) => n === 2 && !url.includes("/inzerat/"),
+        ),
+      );
+      const { observations, error } = await harvest(recorded, "full", { isKnown });
+      expect(String(error)).toMatch(/not harvested whole: kia/);
+      expect(prices(observations).map((o) => o.ref)).toEqual([...known]);
+      expect(observations).toHaveLength(known.size);
+    });
+
+    it("on a page read again for its rows, when that read fails", async () => {
+      // /kia/ comes out a row short, and the read again gets HTTP 503.
+      const recorded = await cassette("full", (c) => {
+        const at = ({ request }: Interaction) => pathOf(request.url) === "/kia/";
+        const first = c.interactions.find(at) as Interaction;
+        const short = first.response.body.slice(0, first.response.body.lastIndexOf(ROW));
+        c.interactions = [
+          ...c.interactions.filter((i) => !at(i)),
+          { ...first, response: { ...first.response, body: short } },
+          { ...first, response: { ...first.response, status: 503, body: "" } },
+        ];
+      });
+      const { observations, error, listed } = await harvest(recorded, "full", { isKnown });
+      expect(String(error)).toMatch(/Bazoš returned HTTP 503 for https:\/\/auto.bazos.cz\/kia\/$/);
+      expect(listed).toEqual(["/kia/", "/kia/"]);
+      expect(prices(observations).map((o) => o.ref)).toEqual(["224452818"]);
+      expect(observations).toHaveLength(1);
+    });
+
+    it("on a page the walk steps back from, when the read after it fails", async () => {
+      // The first 20 ads go during the walk: /kia/16/ shares none of /kia/'s, so the walk
+      // steps back, and that read gets HTTP 503. The known ad was only on /kia/16/.
+      const c = await category();
+      const target = c.ids.slice(36, 56).find((id) => IN_SCOPE.includes(id)) as string;
+      const recorded = await c.cassette([
+        [0, c.ids],
+        [16, c.ids.slice(20)],
+      ]);
+      const root = recorded.interactions[0] as Interaction;
+      recorded.interactions.push({
+        ...root,
+        response: { ...root.response, status: 503, body: "" },
+      });
+      const { observations, error, listed } = await harvest(recorded, "full", {
+        isKnown: (ref) => ref === target,
+      });
+      expect(String(error)).toMatch(/Bazoš returned HTTP 503 for https:\/\/auto.bazos.cz\/kia\/$/);
+      expect(listed).toEqual(["/kia/", "/kia/16/", "/kia/"]);
+      expect(prices(observations).map((o) => o.ref)).toEqual([target]);
+    });
+
+    it("in parts done earlier in the census, without their ad pages", async () => {
+      const doneAt = new Date("2026-10-24T03:00:00Z");
+      const { observations, error, details } = await harvest(await cassette("full"), "full", {
+        isKnown,
+        sliceDoneAt: (slice) => (slice === "kia;part=0/2" ? doneAt : null),
+      });
+      expect(error).toBeUndefined();
+      expect(details.every((ref) => Number(ref) % 2 === 1)).toBe(true);
+      expect(prices(observations).map((o) => o.ref)).toEqual([...known]);
+      expect(observations.at(-1)).toEqual({ kind: "SliceDone", slice: "kia;part=1/2" });
+    });
+
+    it("an ad another category lists out of scope, when this one lists it", async () => {
+      // 224899514 moved to Škoda, its price raised: Kia's list, read first, still shows it
+      // at 9 000 Kč, out of scope there.
+      const recorded = await cassette("full", (c) => {
+        const skoda = c.interactions
+          .filter(({ request }) => !request.url.includes("/inzerat/"))
+          .map(({ request, response }) => {
+            const url = request.url.replace("/kia/", "/skoda/");
+            return { request: { ...request, url }, response: { ...response, url } };
+          })
+          .filter(({ request }) => pathOf(request.url) !== "/skoda/32/");
+        inPages(
+          c,
+          '<span translate="no">  75 500 Kč</span>',
+          '<span translate="no">  9 000 Kč</span>',
+          (url) => url.includes("/kia/"),
+        );
+        c.interactions.push(...skoda);
+      });
+      const { observations, error } = await harvest(
+        recorded,
+        "full",
+        { isKnown: (ref) => ref === "224899514" },
+        undefined,
+        ["kia", "skoda"],
+      );
+      expect(String(error)).toMatch(/No recorded interaction for .*\/skoda\/32\//);
+      expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
+      expect(prices(observations)).toEqual([
+        { kind: "ListingPriceSeen", ref: "224899514", price: { amount: 75_500, currency: "CZK" } },
+      ]);
+    });
+
+    it("an unreadable row by its rejected sighting, before a later request fails", async () => {
+      const recorded = await cassette("full", (c) => {
+        unreadable(c);
+        failingAt32(c);
+      });
+      const { observations, error } = await harvest(recorded, "full", { isKnown });
+      expect(String(error)).toMatch(
+        /No recorded interaction for https:\/\/auto.bazos.cz\/kia\/32\//,
+      );
+      expect(prices(observations).map((o) => o.ref)).toEqual(["224452818", "224873612"]);
+      const bad = listing(observations, "224899514");
+      // Its part is named, so the Ledger keeps that part, not the next SliceDone, not done.
+      expect(bad).toMatchObject({ slice: "kia;part=0/2" });
+      expect(bad?.price.amount).toBeNaN();
+    });
+
+    it("an unreadable row in a part done earlier keeps the census from completing", async () => {
+      const doneAt = new Date("2026-10-24T03:00:00Z");
+      const { observations, error } = await harvest(await cassette("full", unreadable), "full", {
+        isKnown,
+        sliceDoneAt: (slice) => (slice === "kia;part=0/2" ? doneAt : null),
+      });
+      expect(listing(observations, "224899514")).toMatchObject({ slice: "kia;part=0/2" });
+      expect(observations.at(-1)).toEqual({ kind: "SliceDone", slice: "kia;part=1/2" });
+      expect(String(error)).toMatch(/slices with unreadable ads: kia;part=0\/2$/);
+    });
+  });
+
   it("an ad page redirecting off the site fails the run instead of retiring the ad", async () => {
     const recorded = await cassette("full", (c) => {
       const ad = c.interactions.find(({ request }) => request.url.includes("/inzerat/224334060/"));

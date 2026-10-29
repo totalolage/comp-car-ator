@@ -48,6 +48,19 @@ const octavia: CatalogEntry = {
 let ledger: Ledger;
 afterEach(() => ledger?.close());
 
+/** Makes a current Ledger file look like schema `version`, as an older Data release carries it. */
+function downgrade(db: DatabaseSync, version: number) {
+  if (version < 6) {
+    db.exec(`
+      DROP INDEX listings_slice;
+      ALTER TABLE listings DROP COLUMN slice;
+      ALTER TABLE listings DROP COLUMN missed_census;
+      ALTER TABLE runs DROP COLUMN census;
+    `);
+  }
+  db.prepare("UPDATE meta SET value = ? WHERE key = 'schema_version'").run(String(version));
+}
+
 async function run(
   source: string,
   mode: "incremental" | "full",
@@ -123,12 +136,13 @@ describe("Ledger", () => {
         { date: "2026-10-12", price: { amount: 479_000, currency: "CZK" } },
       ],
     });
-    // A price-only sighting is not a census sighting: two full runs that miss it still retire it.
+    // A price-only sighting is a census sighting: a listing full runs miss stays live by it.
     await run("sauto", "full", "2026-10-17", [seen("2", 1)]);
     await run("sauto", "incremental", "2026-10-18", [price("1", 479_000)]);
-    const twice = await run("sauto", "full", "2026-10-24", [seen("2", 1)]);
+    expect((await run("sauto", "full", "2026-10-24", [seen("2", 1)])).gone).toBe(0);
+    const twice = await run("sauto", "full", "2026-10-31", [seen("2", 1)]);
     expect(twice.gone).toBe(1);
-    const gone = await run("sauto", "incremental", "2026-10-25", [price("1", 1)]);
+    const gone = await run("sauto", "incremental", "2026-11-01", [price("1", 1)]);
     expect(gone.rejected).toHaveLength(1);
   });
 
@@ -232,13 +246,82 @@ describe("Ledger", () => {
       const noGeneration = { ...v, generation: { ...v.generation, slug: "-" } };
       insert.run("skoda/octavia//wagon-diesel-110kw", JSON.stringify(noGeneration));
       insert.run("skoda/octavia/mk4/wagon-diesel-110kw", JSON.stringify(v));
-      db.prepare("UPDATE meta SET value = '2' WHERE key = 'schema_version'").run();
+      downgrade(db, 2);
       db.close();
 
       ledger = openLedger(file);
       expect(ledger.snapshot().catalog.map((c) => c.id)).toEqual([
         "skoda/octavia/mk4/wagon-diesel-110kw",
       ]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("names the slice of the Bazoš and TipCars listings and the census of the runs an older Ledger holds", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "cca-ledger-"));
+    try {
+      const file = join(dir, "ledger.sqlite");
+      ledger = openLedger(file);
+      const bazos = (ref: string) =>
+        seen(ref, 1, {
+          vehicle: { make: "Škoda", model: "Octavia", sourceTaxonomy: { make: "skoda" } },
+        });
+      const used2019 = seen("u", 1, {
+        vehicle: { make: "Škoda", model: "Fabia", manufactureYear: 2019 },
+      });
+      const fresh = seen("n", 1, { condition: "new" });
+      await run("bazos", "full", "2026-10-04", [bazos("13"), bazos("23")]);
+      await run("tipcars", "full", "2026-10-04", [used2019, fresh]);
+      // The next census's first day finished part 3 without ad 23, before the upgrade.
+      async function* failing() {
+        yield bazos("13");
+        yield { kind: "SliceDone", slice: "skoda;part=3/10" } as const;
+        throw new Error("Ford never finishes");
+      }
+      await expect(run("bazos", "full", "2026-10-11", failing())).rejects.toThrow();
+      ledger.close();
+      // A schema v5 Ledger, from before listings named their slice and runs their census.
+      const db = new DatabaseSync(file);
+      downgrade(db, 5);
+      db.exec("UPDATE listings SET missed_full_runs = 0, first_missed = NULL, last_missed = NULL");
+      db.close();
+
+      ledger = openLedger(file);
+      // The census carries on: part 3 stays done.
+      expect(ledger.checkpoint("bazos").sliceDoneAt("skoda;part=3/10")).toEqual(day("2026-10-11"));
+      /** A census week where some slice never finishes: Sunday, then retries that finish none. */
+      const week = async (source: string, sunday: string, obs: Observation[]) => {
+        const days = [sunday, `${sunday.slice(0, 8)}${Number(sunday.slice(8)) + 1}`];
+        days.push(`${sunday.slice(0, 8)}${Number(sunday.slice(8)) + 6}`);
+        for (const [i, date] of days.entries()) {
+          async function* failing() {
+            if (i === 0) yield* obs;
+            throw new Error("never finishes");
+          }
+          await expect(run(source, "full", date, failing())).rejects.toThrow();
+        }
+      };
+      const part3 = { kind: "SliceDone", slice: "skoda;part=3/10" } as const;
+      await week("bazos", "2026-10-18", [bazos("13"), part3]);
+      await week("bazos", "2026-10-25", [bazos("13"), part3]);
+      const years = [
+        fresh,
+        { kind: "SliceDone", slice: "used:2019" },
+        { kind: "SliceDone", slice: "new" },
+      ] as const;
+      await week("bazos", "2026-11-01", []);
+      await week("tipcars", "2026-10-11", [...years]);
+      await week("tipcars", "2026-10-18", [...years]);
+      await week("tipcars", "2026-10-25", []);
+      expect(
+        Object.fromEntries([...ledger.snapshot().listings()].map((l) => [l.id, l.gone])),
+      ).toEqual({
+        "bazos:13": null,
+        "bazos:23": "2026-10-18",
+        "tipcars:n": null,
+        "tipcars:u": "2026-10-11",
+      });
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -281,7 +364,7 @@ describe("Ledger", () => {
       ledger.close();
       // A schema v3 Ledger, as Data releases carry.
       const db = new DatabaseSync(file);
-      db.prepare("UPDATE meta SET value = '3' WHERE key = 'schema_version'").run();
+      downgrade(db, 3);
       db.close();
 
       ledger = openLedger(file);
@@ -352,7 +435,7 @@ describe("Ledger", () => {
       ledger.close();
 
       const db = new DatabaseSync(file);
-      db.prepare("UPDATE meta SET value = '3' WHERE key = 'schema_version'").run();
+      downgrade(db, 3);
       db.prepare(
         "INSERT INTO price_history (listing_id, date, amount, currency) VALUES (?, ?, ?, ?)",
       ).run("tipcars:56607021", "2026-10-27", 10_830, "EUR");
@@ -386,7 +469,7 @@ describe("Ledger", () => {
       ledger.close();
       // A schema v4 Ledger, as Data releases carry.
       const db = new DatabaseSync(file);
-      db.prepare("UPDATE meta SET value = '4' WHERE key = 'schema_version'").run();
+      downgrade(db, 4);
       db.close();
 
       ledger = openLedger(file);
@@ -612,5 +695,194 @@ describe("Ledger", () => {
       edition("a", 1_050_000, "2026-10-21"),
     ]);
     expect(ledger.checkpoint("cnb").offersInForce()).toEqual([]);
+  });
+});
+
+describe("Ledger absence per finished slice", () => {
+  const inSlice = (ref: string, slice: string) => seen(ref, 1, { slice });
+  const done = (slice: string) => ({ kind: "SliceDone", slice }) as const;
+  const plusDays = (date: string, days: number) =>
+    new Date(Date.parse(`${date}T12:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+
+  /** A full run of a Source whose slice B never finishes: it yields `obs`, then fails. */
+  async function unfinished(date: string, obs: Observation[]) {
+    async function* failing() {
+      yield* obs;
+      throw new Error("slice B never finishes");
+    }
+    await expect(run("bazos", "full", date, failing())).rejects.toThrow("never finishes");
+  }
+
+  /** A census week: Sunday harvests what it can, then daily retries finish nothing. */
+  async function stalledWeek(sunday: string, obs: Observation[]) {
+    await unfinished(sunday, obs);
+    await unfinished(plusDays(sunday, 1), []);
+    await unfinished(plusDays(sunday, 6), []);
+  }
+
+  const goneOf = () =>
+    Object.fromEntries([...ledger.snapshot().listings()].map((l) => [l.ref, l.gone]));
+
+  it("retires listings of a finished slice while another slice never finishes", async () => {
+    ledger = openLedger(":memory:");
+    await stalledWeek("2026-10-04", [
+      inSlice("a1", "A"),
+      inSlice("a2", "A"),
+      done("A"),
+      inSlice("b1", "B"),
+      inSlice("b2", "B"),
+    ]);
+    // a2 has sold; b2 is somewhere in B, which is never read whole.
+    await stalledWeek("2026-10-11", [inSlice("a1", "A"), done("A"), inSlice("b1", "B")]);
+    expect(goneOf()).toEqual({ a1: null, a2: null, b1: null, b2: null });
+    await stalledWeek("2026-10-18", [inSlice("a1", "A"), done("A"), inSlice("b1", "B")]);
+    await stalledWeek("2026-10-25", [inSlice("a1", "A"), done("A")]);
+    // Missed by two censuses, gone as of the first miss; B's listings are never missed.
+    expect(goneOf()).toEqual({ a1: null, a2: "2026-10-11", b1: null, b2: null });
+  });
+
+  it("a stalled census gives way to a new one after a week, a progressing one does not", async () => {
+    ledger = openLedger(":memory:");
+    await unfinished("2026-10-04", [inSlice("a1", "A"), done("A")]);
+    await unfinished("2026-10-05", []);
+    await unfinished("2026-10-09", []);
+    // Its runs span 5 days: A stays done.
+    expect(ledger.checkpoint("bazos").sliceDoneAt("A")).toEqual(day("2026-10-04"));
+    await unfinished("2026-10-10", []);
+    expect(ledger.checkpoint("bazos").sliceDoneAt("A")).toBeNull();
+
+    // A census that finishes a slice every day carries on past a week.
+    await unfinished("2026-10-11", [done("A")]);
+    for (let d = 1; d <= 8; d++) await unfinished(plusDays("2026-10-11", d), [done(`C${d}`)]);
+    const checkpoint = ledger.checkpoint("bazos");
+    expect(checkpoint.sliceDoneAt("A")).toEqual(day("2026-10-11"));
+    expect(checkpoint.sliceDoneAt("C8")).toEqual(day("2026-10-19"));
+  });
+
+  it("does not retire a listing that moved into an unfinished slice", async () => {
+    ledger = openLedger(":memory:");
+    await stalledWeek("2026-10-04", [inSlice("m", "A"), inSlice("p", "A"), done("A")]);
+    // m moves to B, whose walk meets it without finishing; p moves too, but only its price is
+    // met (ListingPriceSeen), so the Ledger still holds it in A.
+    const price = { kind: "ListingPriceSeen", ref: "p", price: { amount: 1, currency: "CZK" } };
+    await stalledWeek("2026-10-11", [done("A"), inSlice("m", "B"), price as Observation]);
+    await stalledWeek("2026-10-18", [done("A"), price as Observation]);
+    await stalledWeek("2026-10-25", [done("A"), price as Observation]);
+    // m was last seen in B, which no census finishes; p was seen in every census.
+    expect(goneOf()).toEqual({ m: null, p: null });
+  });
+
+  it("keeps a listing live that a failing run met before its failure", async () => {
+    ledger = openLedger(":memory:");
+    await stalledWeek("2026-10-04", [inSlice("m", "A"), done("A")]);
+    // m moved to B. Bazos meets it in B's walk and gives it a price there, as met; a later
+    // request fails the run before B finishes.
+    const price = { kind: "ListingPriceSeen", ref: "m", price: { amount: 1, currency: "CZK" } };
+    await stalledWeek("2026-10-11", [done("A"), price as Observation]);
+    await stalledWeek("2026-10-18", [done("A"), price as Observation]);
+    // The next census fails before reaching B.
+    await unfinished("2026-10-25", [done("A")]);
+    expect(goneOf()).toEqual({ m: null });
+  });
+
+  it("a rejected sighting naming its slice keeps that one not done, not the next SliceDone", async () => {
+    ledger = openLedger(":memory:");
+    await unfinished("2026-10-04", [inSlice("a1", "A"), inSlice("b1", "B"), done("A")]);
+    // Met while another slice's walk runs: a1's row, unreadable, naming A.
+    await unfinished("2026-10-11", [{ ...inSlice("a1", "A"), url: "" }, done("C"), done("A")]);
+    const checkpoint = ledger.checkpoint("bazos");
+    expect(checkpoint.sliceDoneAt("C")).toEqual(day("2026-10-11"));
+    // A's SliceDone in that run is rejected; the earlier one stands.
+    expect(checkpoint.sliceDoneAt("A")).toEqual(day("2026-10-04"));
+    // One naming no slice still keeps the next SliceDone from counting.
+    const unnamed = { ...seen("b1", 1), url: "" };
+    await unfinished("2026-10-12", [unnamed, done("D")]);
+    expect(ledger.checkpoint("bazos").sliceDoneAt("D")).toBeNull();
+  });
+
+  it("retires a listing missed twice only once the census of its second miss is over", async () => {
+    ledger = openLedger(":memory:");
+    await stalledWeek("2026-10-04", [inSlice("a1", "A"), inSlice("m", "A"), done("A")]);
+    await stalledWeek("2026-10-11", [inSlice("a1", "A"), done("A")]);
+    await unfinished("2026-10-18", [inSlice("a1", "A"), done("A")]);
+    // m moved to B, whose walk (not taken) a later run of this census meets it on.
+    expect(goneOf()).toEqual({ a1: null, m: null });
+    const price = { kind: "ListingPriceSeen", ref: "m", price: { amount: 1, currency: "CZK" } };
+    await unfinished("2026-10-19", [price as Observation]);
+    await unfinished("2026-10-24", []);
+    await stalledWeek("2026-10-25", [inSlice("a1", "A"), done("A")]);
+    expect(goneOf()).toEqual({ a1: null, m: null });
+  });
+
+  it("a rejected sighting in a later run of the census clears a pending second miss", async () => {
+    ledger = openLedger(":memory:");
+    await stalledWeek("2026-10-04", [inSlice("a1", "A"), inSlice("x", "A"), done("A")]);
+    await stalledWeek("2026-10-11", [inSlice("a1", "A"), done("A")]);
+    await unfinished("2026-10-18", [inSlice("a1", "A"), done("A")]);
+    // The census ends the next day; x is met there, but its page no longer parses.
+    const broken = { ...inSlice("x", "B"), url: "" };
+    const end = await run("bazos", "full", "2026-10-19", [broken, done("B")]);
+    expect(end).toMatchObject({ census: "skipped-rejections", gone: 0 });
+    expect(goneOf()).toEqual({ a1: null, x: null });
+  });
+
+  it("a rejected sighting keeps the slice the Ledger holds the listing in not done", async () => {
+    ledger = openLedger(":memory:");
+    await stalledWeek("2026-10-04", [inSlice("a1", "A"), inSlice("m", "A"), done("A")]);
+    // m moved to B and its card no longer parses there.
+    const broken = { ...inSlice("m", "B"), url: "" };
+    for (const sunday of ["2026-10-11", "2026-10-18", "2026-10-25"]) {
+      await stalledWeek(sunday, [inSlice("a1", "A"), done("A"), broken]);
+    }
+    expect(goneOf()).toEqual({ a1: null, m: null });
+  });
+
+  it("counts at most one miss per census, even when it ends after its slices", async () => {
+    ledger = openLedger(":memory:");
+    await run("bazos", "full", "2026-10-04", [inSlice("a1", "A"), inSlice("x", "A")]);
+    await unfinished("2026-10-11", [inSlice("a1", "A"), done("A")]);
+    // The census completes the next day: x is missed once, by this census.
+    const end = await run("bazos", "full", "2026-10-12", [inSlice("b1", "B"), done("B")]);
+    expect(end).toMatchObject({ census: "applied", gone: 0 });
+    const next = await run("bazos", "full", "2026-10-18", [
+      inSlice("a1", "A"),
+      done("A"),
+      inSlice("b1", "B"),
+      done("B"),
+    ]);
+    expect(next.gone).toBe(1);
+    expect(goneOf()).toEqual({ a1: null, b1: null, x: "2026-10-11" });
+  });
+
+  it("a rejected sighting of a listing keeps its slice not done and its listings unmissed", async () => {
+    ledger = openLedger(":memory:");
+    await stalledWeek("2026-10-04", [inSlice("a1", "A"), inSlice("a2", "A"), done("A")]);
+    const broken = { ...inSlice("a2", "A"), price: { amount: Number.NaN, currency: "CZK" } };
+    // Before the SliceDone of its slice, and after it (the slice is undone).
+    for (const [sunday, obs] of [
+      ["2026-10-11", [inSlice("a1", "A"), broken, done("A")]],
+      ["2026-10-18", [inSlice("a1", "A"), done("A"), broken]],
+      ["2026-10-25", [inSlice("a1", "A"), done("A"), broken]],
+    ] as const) {
+      await unfinished(sunday, [...obs]);
+      expect(ledger.checkpoint("bazos").sliceDoneAt("A")).toBeNull();
+      await unfinished(plusDays(sunday, 1), []);
+      await unfinished(plusDays(sunday, 6), []);
+    }
+    expect(goneOf()).toEqual({ a1: null, a2: null });
+  });
+
+  it("keeps a listing's slice out of the published listing and between sightings without one", async () => {
+    ledger = openLedger(":memory:");
+    await stalledWeek("2026-10-04", [inSlice("a1", "A"), inSlice("a2", "A"), done("A")]);
+    await run("bazos", "incremental", "2026-10-12", [seen("a2", 2)]);
+    const [, a2] = [...ledger.snapshot().listings()];
+    expect(a2).not.toHaveProperty("slice");
+    // Still held in A: the next two censuses that finish A without it retire it, once over.
+    await stalledWeek("2026-10-18", [inSlice("a1", "A"), done("A")]);
+    await stalledWeek("2026-10-25", [inSlice("a1", "A"), done("A")]);
+    expect(goneOf()).toEqual({ a1: null, a2: null });
+    await unfinished("2026-11-01", []);
+    expect(goneOf()).toEqual({ a1: null, a2: "2026-10-18" });
   });
 });
