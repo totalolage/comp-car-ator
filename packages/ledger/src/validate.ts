@@ -40,6 +40,9 @@ export function invalidReason(o: Observation): string | null {
       }
       if (!Array.isArray(o.photos)) return "photos must be an array";
       return vehicleReason(o.vehicle);
+    case "ListingPriceSeen":
+      if (!nonEmpty(o.ref)) return "ref is empty";
+      return isMoney(o.price) ? null : "price must be a finite amount >= 0 with an ISO currency";
     case "ListingGone":
       return nonEmpty(o.ref) ? null : "ref is empty";
     case "CatalogEntry": {

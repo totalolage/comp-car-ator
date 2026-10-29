@@ -87,11 +87,11 @@ One external website, API or dataset that the app harvests (Sauto, AutoScout24 D
 _Avoid_: site, provider, scraper, feed
 
 **Observation**:
-One fact a Source saw during a run, in the app's shared vocabulary: a Listing seen, a Listing gone, a catalog entry, a new price, an FX rate, or a Slice done.
+One fact a Source saw during a run, in the app's shared vocabulary: a Listing seen, a Listing's price seen, a Listing gone, a catalog entry, a new price, an FX rate, or a Slice done.
 _Avoid_: record, event, item
 
 **Run**:
-One harvest of one Source, either incremental (only what is new) or full (a census of everything the Source covers).
+One harvest of one Source, either incremental (what is new, plus the prices of known Listings it meets) or full (a census of everything the Source covers).
 _Avoid_: crawl, scrape, job
 
 **Census**:

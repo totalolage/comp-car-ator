@@ -20,6 +20,7 @@ import type {
  */
 export type Observation =
   | ListingSeen
+  | ListingPriceSeen
   | ListingGone
   | FxRate
   | CatalogEntry
@@ -63,6 +64,21 @@ export interface ListingSeen {
 export interface SellerExtras extends Money {
   /** Fees can be shown gross while the car is shown net, so they carry their own basis. */
   basis: PriceBasis;
+}
+
+/**
+ * A listing the Ledger knows was visible at the source during this run with this price, read
+ * from list data that lacks the rest of its ListingSeen (an incremental run's search page). The
+ * Ledger updates only the listing's price and its price history; every other field, and when
+ * the listing was last seen, stays as the last ListingSeen left it, `priceBasis` included.
+ * `price` must be the amount the source's ListingSeen would carry, from the same field and in
+ * the same currency, or the history records a change that did not happen. A ref the Ledger has no live listing for, or a
+ * price in another currency, is rejected: only a ListingSeen can add or change those.
+ */
+export interface ListingPriceSeen {
+  kind: "ListingPriceSeen";
+  ref: string;
+  price: Money;
 }
 
 /** The source positively reports the listing as removed or sold (e.g. a 404/410 detail page). */

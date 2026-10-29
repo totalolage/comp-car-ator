@@ -12,6 +12,7 @@ export type {
   CatalogEntry,
   FxRate,
   ListingGone,
+  ListingPriceSeen,
   ListingSeen,
   ListPrice,
   Observation,

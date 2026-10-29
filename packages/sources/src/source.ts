@@ -5,8 +5,9 @@ import type { ListPrice, Observation } from "@cca/vocabulary";
 export type SourceId = string;
 
 /**
- * `incremental`: only what is new since the last run (newest-first, stop at known refs).
- * Existing listings' price changes are not refreshed by incremental runs; full runs do that.
+ * `incremental`: only what is new since the last run (newest-first, stop at known refs). A
+ * known listing met in list data that carries its price may come out as a ListingPriceSeen,
+ * so its price changes land daily; otherwise full runs refresh known listings' prices.
  * `full`: a census of everything the adapter covers under its `scope`. After a full run
  * completes cleanly, the Ledger treats this Source's listings in that scope that no full run
  * of the census saw as missing. A census can span runs: see `Checkpoint.sliceDoneAt`.

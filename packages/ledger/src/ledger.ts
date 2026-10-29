@@ -6,6 +6,7 @@ import {
   type FxTable,
   generationIdOf,
   type IsoDate,
+  type ListingPriceSeen,
   type ListingSeen,
   type ListPrice,
   makeIdOf,
@@ -58,6 +59,13 @@ export function openLedger(path: string): Ledger {
        ON CONFLICT (currency, valid_for) DO UPDATE SET czk_per_unit = excluded.czk_per_unit`,
     ),
     getListing: db.prepare("SELECT price_amount, price_currency FROM listings WHERE id = ?"),
+    getLiveListing: db.prepare(
+      "SELECT price_amount, price_currency FROM listings WHERE id = ? AND gone IS NULL",
+    ),
+    // A price-only sighting: the rest of the listing, and when it was last seen, stay.
+    repriceListing: db.prepare(
+      "UPDATE listings SET data = json_set(data, '$.price', json(?)), price_amount = ? WHERE id = ?",
+    ),
     insertListing: db.prepare(
       `INSERT INTO listings (id, source, ref, scope, data, price_amount, price_currency, first_seen, last_seen, last_seen_run)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -165,6 +173,17 @@ export function openLedger(path: string): Ledger {
             q.upsertHistory.run(id, day, o.price.amount, o.price.currency);
             summary.priceChanges++;
           }
+        }
+        break;
+      }
+      case "ListingPriceSeen": {
+        // Checked live and in the listing's currency before recording (`repriceReason`).
+        const id = `${run.source}:${o.ref}`;
+        const existing = q.getLiveListing.get(id) as { price_amount: number };
+        if (existing.price_amount !== o.price.amount) {
+          q.repriceListing.run(JSON.stringify(o.price), o.price.amount, id);
+          q.upsertHistory.run(id, day, o.price.amount, o.price.currency);
+          summary.priceChanges++;
         }
         break;
       }
@@ -286,6 +305,16 @@ export function openLedger(path: string): Ledger {
         retired: 0,
         census: "not-full",
       };
+      /** Why a price-only sighting cannot apply: only a ListingSeen adds a listing or moves its currency. */
+      const repriceReason = (o: ListingPriceSeen): string | null => {
+        const live = q.getLiveListing.get(`${run.source}:${o.ref}`) as
+          | { price_currency: string }
+          | undefined;
+        if (!live) return "no live listing with this ref to reprice";
+        return live.price_currency === o.price.currency
+          ? null
+          : `price currency ${o.price.currency} differs from the listing's ${live.price_currency}`;
+      };
       let rejectedTotal = 0;
       // Observations since the previous SliceDone belong to the next one. A slice that had a
       // rejection stays not done for the rest of the run, even if its SliceDone repeats.
@@ -306,6 +335,9 @@ export function openLedger(path: string): Ledger {
       try {
         for await (const observation of observations) {
           let reason = invalidReason(observation);
+          if (!reason && observation.kind === "ListingPriceSeen") {
+            reason = repriceReason(observation);
+          }
           if (observation.kind === "SliceDone") {
             if (rejectedInSlice) tainted.add(observation.slice);
             if (!reason && tainted.has(observation.slice)) {
