@@ -310,10 +310,10 @@ describe("tipcars source", () => {
       body((b) => b.replace(/Stav: [^.]+\./, "Stav: neuvedeno.")),
     );
     const os = await harvest(cassette, { mode: "incremental", known: await known() });
-    const refs = listings(os).map((o) => o.ref);
-    expect(refs).toContain("");
-    expect(refs).not.toContain("12770757");
-    expect(refs).toContain("9120302");
+    const seen = listings(os);
+    // Rejected for its empty url; its ref stays, so the Ledger keeps its slice not done.
+    expect(seen.filter((o) => o.url === "").map((o) => o.ref)).toEqual(["12770757"]);
+    expect(seen.map((o) => o.ref)).toContain("9120302");
   });
 
   it("full run pages every slice to its end and reports it done", async () => {
@@ -348,7 +348,7 @@ describe("tipcars source", () => {
     );
     const os = await harvest(cassette, { mode: "full" });
     const seen = listings(os);
-    expect(seen.filter((o) => o.ref === "")).toHaveLength(1);
+    expect(seen.filter((o) => o.url === "")).toHaveLength(1);
     expect(seen.length).toBe(
       listings(await harvest(await loadCassette(full), { mode: "full" })).length,
     );
