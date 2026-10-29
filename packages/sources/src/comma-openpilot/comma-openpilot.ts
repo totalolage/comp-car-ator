@@ -215,16 +215,21 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
   const members = lines.slice(start + 1, end < 0 ? undefined : end);
 
   // Top-level `NAME = …` of the file, by name; a name assigned twice is none.
-  const assigned = new Map<string, Range | null>();
+  const assigned = new Map<string, Assignment | null>();
   for (const s of lines) {
     const head = s.indented ? null : /^([A-Za-z_]\w*)\s*(?::[^=\n]*)?=(?!=)/.exec(s.text);
     if (!head) continue;
     const name = head[1] as string;
-    assigned.set(name, assigned.has(name) ? null : [s.from + head[0].length, s.to]);
+    assigned.set(
+      name,
+      assigned.has(name) ? null : { at: s.from, value: [s.from + head[0].length, s.to] },
+    );
   }
 
   const out: [string, string][] = [];
   const platforms = new Set<string>();
+  // Where each name read for cars was read.
+  const reads = new Map<number, string>();
   for (const { from, to, text: member } of members) {
     // A bare annotation (`config: VolkswagenMQBPlatformConfig | …`) assigns nothing.
     if (/^[A-Za-z_]\w*\s*:[^=]*$/.test(member)) continue;
@@ -242,7 +247,11 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
     if (platforms.has(platform)) throw new Error(`comma-openpilot: ${platform} twice in ${url}`);
     platforms.add(platform);
     const open = from + head[0].length;
-    const args = items(code, open, closingBracket(code, open));
+    // The config call is the whole member: `Config(…).override(…)` would replace its cars.
+    if (closingBracket(code, open) !== to - 1) {
+      throw new Error(`comma-openpilot: unreadable member of class CAR in ${url}: ${platform}`);
+    }
+    const args = items(code, open, to - 1);
     const keyword = args.find(([a, b]) => /^\s*car_docs\s*=/.test(code.slice(a, b)));
     const first = args[0] && !/^\s*\w+\s*=(?!=)/.test(code.slice(...args[0])) ? args[0] : undefined;
     const cars: Range | undefined = keyword
@@ -250,7 +259,7 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
       : head[2]
         ? undefined
         : first;
-    const calls = cars && carDocs(code, cars, assigned, new Set());
+    const calls = cars && carDocs(code, cars, assigned, reads);
     if (!calls) throw new Error(`comma-openpilot: unreadable cars of ${platform} in ${url}`);
     // A car named elsewhere in the member is one the platform's cars do not hold.
     for (const call of code.slice(from, to).matchAll(/\b\w*CarDocs\w*\s*\(/g)) {
@@ -273,10 +282,22 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
       }
     }
   }
+  // A name read for cars holds them as assigned only if nothing else uses it: another use may
+  // rebind or change it (`X, Y = Y, X`, `X += […]`, `X.append(…)`).
+  for (const name of new Set(reads.values())) {
+    for (const use of code.matchAll(new RegExp(`\\b${name}\\b`, "g"))) {
+      if (use.index !== assigned.get(name)?.at && reads.get(use.index) !== name) {
+        throw new Error(`comma-openpilot: cars under ${name} change in ${url}`);
+      }
+    }
+  }
   return out;
 }
 
 type Range = [from: number, to: number];
+
+/** A top-level `NAME = value`: where it starts, and its value. */
+type Assignment = { at: number; value: Range };
 
 /**
  * The statements of `code`: what begins on a line outside every bracket, or after a `;` there,
@@ -326,13 +347,15 @@ function items(code: string, from: number, to: number): Range[] {
 
 /**
  * Where the arguments of each `…CarDocs(` call open, for an expression that is one such call,
- * a list of them (`*` parts too), or a name `assigned` to either; undefined for anything else.
+ * a list of them (`*` parts too), or a name `assigned` to either, noting where it `reads` each
+ * name; undefined for anything else.
  */
 function carDocs(
   code: string,
   [from, to]: Range,
-  assigned: Map<string, Range | null>,
-  seen: Set<string>,
+  assigned: Map<string, Assignment | null>,
+  reads: Map<number, string>,
+  seen = new Set<string>(),
 ): number[] | undefined {
   const text = code.slice(from, to);
   const a = from + (text.length - text.trimStart().length);
@@ -343,7 +366,7 @@ function carDocs(
     const out: number[] = [];
     for (const [x, y] of items(code, a + 1, b - 1)) {
       const star = /^\s*\*/.exec(code.slice(x, y))?.[0].length ?? 0;
-      const calls = carDocs(code, [x + star, y], assigned, seen);
+      const calls = carDocs(code, [x + star, y], assigned, reads, seen);
       if (!calls) return undefined;
       out.push(...calls);
     }
@@ -354,8 +377,10 @@ function carDocs(
     const open = a + call[0].length;
     return closingBracket(code, open) === b - 1 ? [open] : undefined;
   }
-  const value = /^[A-Za-z_]\w*$/.test(expr) && !seen.has(expr) ? assigned.get(expr) : undefined;
-  return value ? carDocs(code, value, assigned, new Set([...seen, expr])) : undefined;
+  const named = /^[A-Za-z_]\w*$/.test(expr) && !seen.has(expr) ? assigned.get(expr) : undefined;
+  if (!named) return undefined;
+  reads.set(a, expr);
+  return carDocs(code, named.value, assigned, reads, new Set([...seen, expr]));
 }
 
 /** Python source with the contents of strings and comments replaced by spaces, newlines kept. */

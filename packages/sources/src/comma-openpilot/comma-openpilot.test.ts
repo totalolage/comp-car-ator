@@ -28,6 +28,17 @@ async function harvest(
   return out as OpenpilotSupport[];
 }
 
+/**
+ * The fixture's Hyundai definitions with Tucson Diesel's cars under X and Kia Ceed's under Y,
+ * then `after`.
+ */
+function swapped(after: string) {
+  return (b: string) =>
+    `X = [${DIESEL.trim().slice(0, -1)}]\nY = [HyundaiCarDocs("Kia Ceed Plug-in Hybrid 2021")]\n${after}\n${b
+      .replace(DIESEL, "      *X,\n")
+      .replace(/\[HyundaiCarDocs\("Kia Ceed Plug-in Hybrid 2021".*\],\n/, "Y,\n")}`;
+}
+
 /** Tucson Diesel's line in the fixture's Hyundai definitions. */
 const DIESEL =
   '      HyundaiCarDocs("Hyundai Tucson Diesel 2019", car_parts=CarParts.common([CarHarness.hyundai_l])),\n';
@@ -260,6 +271,8 @@ describe("comma-openpilot source", () => {
             'HyundaiPlatformConfig(\n    [\n      HyundaiCarDocs("Hyundai Tucson 2021"',
             'HyundaiPlatformConfig(\n    [\n      *TUCSON_CARS,\n      HyundaiCarDocs("Hyundai Tucson 2021"',
           )}`,
+      // Two platforms' cars under names.
+      swapped(""),
       // Cars and specs by keyword.
       (b) =>
         b
@@ -314,6 +327,12 @@ describe("comma-openpilot source", () => {
         "  HYUNDAI_TUCSON_IC = HYUNDAI_TUCSON.override(flags=0)\n  HYUNDAI_IONIQ_5 = ",
       ),
     ).toThrow(/unreadable cars of HYUNDAI_TUCSON_IC/);
+    // Names whose cars change after they are assigned, a config call that goes on.
+    await fails(swapped("X, Y = Y, X")).toThrow(/cars under X change in .*hyundai\/values\.py/);
+    await fails(swapped("X += []")).toThrow(/cars under X change/);
+    await fails((b) =>
+      b.replace("HyundaiFlags.HYBRID,\n  )", "HyundaiFlags.HYBRID,\n  ).override(car_docs=[])"),
+    ).toThrow(/unreadable member of class CAR .*: KIA_CEED_PHEV$/);
     // A car outside the platform's cars.
     await fails((b) =>
       b
