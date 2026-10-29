@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { type Cassette, createReplayHttp, HttpBlockedError, loadCassette } from "@cca/http";
 import type { ListingGone, ListingPriceSeen, ListingSeen, Observation } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
-import { emptyCheckpoint, type HarvestMode, silentLogger } from "../source.ts";
+import { emptyCheckpoint, type HarvestMode, type Logger, silentLogger } from "../source.ts";
 import { type TipcarsOptions, tipcarsSource } from "./tipcars.ts";
 
 // Recorded 2026-10-25 from devbox (T1) with the real adapter; bodies trimmed to what the
@@ -45,6 +45,8 @@ interface Run {
   options?: TipcarsOptions;
   /** The cassette's recording time; default `now`. */
   now?: Date;
+  /** Receives the run's warnings. */
+  warn?: Logger["warn"];
 }
 
 /** Collects into `out`, so a run that fails still shows what it yielded. */
@@ -73,7 +75,7 @@ async function harvest(
       sliceDoneAt: (slice) => (run.done?.includes(slice) ? at : null),
     },
     now: at,
-    log: silentLogger,
+    log: run.warn ? { ...silentLogger, warn: run.warn } : silentLogger,
     signal: new AbortController().signal,
   })) {
     out.push(o);
@@ -803,21 +805,29 @@ describe("tipcars source", () => {
       expect(priced.sort()).toEqual(inScope(refs).sort());
     });
 
-    it("a sweep out of requests leaves the rest of the lists unpriced that day", async () => {
+    it("a sweep too small for both lists rotates, so two days price every known listing", async () => {
+      // 7 pages, 2 of them heads; 4 requests a day plan 2 shares, from page 1 and page 4.
       const { cassette, refs, inScope } = await sweepable();
-      const urls: string[] = [];
-      const os = await harvest(cassette, {
-        mode: "incremental",
-        known: new Set(refs),
-        options: { priceSweep: 3 },
-        urls,
-      });
-      // Both heads, then used pages 2-4: page 5 and the new list's page 2 go unread.
-      expect(urls).toHaveLength(2 + 3);
-      const priced = prices(os).map((o) => o.ref);
-      expect(priced.sort()).toEqual(
-        inScope([...refs.slice(0, 80), ...refs.slice(100, 120)]).sort(),
-      );
+      const warnings: string[] = [];
+      const priced = new Set<string>();
+      const read: string[][] = [];
+      for (const n of [0, 1]) {
+        const urls: string[] = [];
+        const os = await harvest(cassette, {
+          mode: "incremental",
+          known: new Set(refs),
+          options: { priceSweep: 4 },
+          urls,
+          now: day(n),
+          warn: (message, data) => warnings.push(`${message} ${JSON.stringify(data)}`),
+        });
+        expect(urls).toHaveLength(2 + 4);
+        read.push(urls.slice(2));
+        for (const o of prices(os)) priced.add(o.ref);
+      }
+      expect(read[0]).not.toEqual(read[1]);
+      expect([...priced].sort()).toEqual(inScope(refs).sort());
+      expect(warnings[0]).toMatch(/cannot price every listing daily .*"short":1,"days":2/);
     });
 
     it("follows a list that grows during the sweep to its new end", async () => {
@@ -930,9 +940,9 @@ describe("tipcars source", () => {
     expect(slicesDone(os)).toEqual(["new"]);
   });
 
-  it("the price sweep stops before a detail page past its requests", async () => {
+  it("the price sweep reads detail pages after its list pages, as its requests allow", async () => {
     // The new list's page 2 holds three unknown new or demo listings; with 3 requests the
-    // sweep reads page 2 and two detail pages.
+    // sweep reads page 2, then two detail pages.
     const plain = await loadCassette(incremental);
     const cards = cardsOf(plain);
     const page2 = plain.interactions.find((x) => x.request.url.endsWith("/nove?str=2-20"));
