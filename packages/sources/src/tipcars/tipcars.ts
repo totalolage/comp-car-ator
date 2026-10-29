@@ -64,12 +64,18 @@
  * - Out of scope: listings without a price ("Dohodou"), and cards of the site's "Ostatní"
  *   bucket (makes it does not list) that name no model.
  * - incremental: both lists newest first, yielding the listings not known before, each list
- *   stopping at a page with none in the scope; then a price sweep over the day's share of
- *   both lists (`sweep`). A known listing met on either gets a ListingPriceSeen from its
- *   card's record (amount and currency as its ListingSeen carries them; on 2026-10-29 nine
- *   cards, one in EUR and seven showing "bez DPH", matched their detail pages), so its price
- *   history is daily for the listings walked. Every listing's price each day does not fit the
- *   hour: the sweep reads each listing nominally every third day, best effort (`priceSweep`).
+ *   stopping at a page with none in the scope; then a price sweep over both lists to their
+ *   ends (`sweep`). A known listing met on either gets a ListingPriceSeen from its card's
+ *   record (amount and currency as its ListingSeen carries them; on 2026-10-29 nine cards, one
+ *   in EUR and seven showing "bez DPH", matched their detail pages), so a known listing's
+ *   price history is daily: some 3,400 pages a day, which `priceSweep` requests and TipCars'
+ *   incremental limit (`catchUpMinutes`, apps/ingest/src/schedule.ts) are sized for. Should
+ *   the lists outgrow `priceSweep`, the sweep rotates instead (logged with the days it needs):
+ *   each day starts at the next share of the pages, so as many days in a row as the pages need
+ *   sweeps read every page while the lists' page counts hold and the Runs complete; a failed
+ *   day or a change in the page counts can make a page wait longer. A listing's own wait is
+ *   best effort beyond that: the walk pages by offset, so a listing can slip between two
+ *   pages on a day (ADR 0014).
  *
  * Research notes: scrape-access.md (TipCars row); lists, filters and pages verified against
  * the live site 2026-10-25. Cloudflare scores clients there, so every request starts at T1.
@@ -107,7 +113,8 @@ export interface TipcarsOptions {
   sliceCap?: number;
   /**
    * Most requests an incremental run spends past the new listings on its price sweep
-   * (`sweep`). Default 1,200, which keeps the run near 40 minutes; 0 turns the sweep off.
+   * (`sweep`), which rotates over the lists' pages when they need more. Default 3,800, about
+   * 108 minutes; 0 turns the sweep off.
    */
   priceSweep?: number;
 }
@@ -130,8 +137,18 @@ const NEW_PRICE_EDGES = [
 const USED_PRICE_SPLIT = 1_000_000;
 /** An open price band from this price up is not split further. */
 const OPEN_PRICE_LIMIT = 100_000_000;
-/** Requests a day's price sweep may spend: 1,200 at about 1.7 s a list page is 35 minutes. */
-const PRICE_SWEEP = 1_200;
+/**
+ * Requests a day's price sweep may spend: 3,800 at about 1.7 s a list page is 108 minutes,
+ * which leaves the lists' heads and new listings' detail pages some 12 minutes of TipCars'
+ * 120-minute incremental limit (apps/ingest/src/schedule.ts). Both lists took 3,410 pages on
+ * 2026-10-29, so the cap leaves them room to grow by a tenth.
+ */
+const PRICE_SWEEP = 3_800;
+/**
+ * A rotating sweep's share takes this much of its requests, so the rest reads on past it: a
+ * listing that moved down a few pages since yesterday's share is still met.
+ */
+const SHARE_FILL = 0.9;
 const DAY_MS = 86_400_000;
 
 /** One query of the census. */
@@ -546,51 +563,85 @@ class Harvest {
   }
 
   /**
-   * The day's share of both lists past their heads, for prices. The site serves its lists
-   * newest first only, 20 a page, so every listing's price each day would take some 3,400
-   * pages (99 minutes at 1.7 s a page, on 2026-10-29) against the hour an incremental run
-   * has. So the lists' pages fall into as many shares as `priceSweep` requests need (three
-   * then), each list cut alike, taken in turn by Prague day: nominally a known listing's
-   * price is read every third day, a new listing's the day it appears. A share reads one page
-   * past its end, as listings drift down when new ones arrive. Known listings get their price,
-   * unknown ones in the scope come out whole (a new or demo one with its detail page): ones the
-   * census has not reached, or retired by mistake. Stops when the requests run out, and keeps
-   * no place for the next day: best effort, as a share's pages move with the counts and a day
-   * with many unknown new or demo listings spends its requests on their detail pages.
+   * Both lists past their heads, for prices: every known listing's price each day when the
+   * pages fit `priceSweep` requests. The site serves its lists newest first only, 20 a page,
+   * so that is some 3,400 pages (97 minutes at 1.7 s a page, on 2026-10-29). Known listings
+   * get their price, unknown ones in the scope come out whole: ones the census has not
+   * reached, or retired by mistake. A new or demo one's detail page waits until the list pages
+   * are read and takes the requests left, so detail pages never cost a list page; one left
+   * unread waits for the census (logged). Paging is by offset: a listing posted meanwhile
+   * pushes the rest down a place, so the walk meets one twice and follows the list's count to
+   * its new end; one sold above the walk lifts the rest a place, so one can slip between two
+   * pages and go unpriced that day.
+   *
+   * When the pages do not fit, the sweep rotates (logged): both lists' pages, the used list's
+   * first, fall into as many shares as need nine tenths of `priceSweep` each, and the sweep
+   * starts at the share of the Prague day (day number modulo shares) and reads on, wrapping
+   * from the new list's end to the used list's start, until its requests are spent. So that
+   * many days in a row read every page while the page counts hold and the Runs complete; a
+   * failed day or a change in the page counts can delay a page further.
+   * The day picks the share, as the Source seam keeps no place for an incremental run.
    */
   private async *sweep(heads: readonly Head[]): AsyncIterable<Observation> {
     if (this.priceSweep <= 0) return;
-    const pagesOf = (head: Head) => Math.ceil(head.total / PAGE_SIZE);
-    const all = heads.reduce((sum, head) => sum + pagesOf(head), 0);
-    // Each list's share reads a page past its end.
-    const shares = Math.max(1, Math.ceil(all / Math.max(1, this.priceSweep - heads.length)));
-    const day = Math.floor(Date.parse(`${pragueDate(this.ctx.now)}T00:00:00Z`) / DAY_MS);
-    const share = day % shares;
+    const pages = heads.map((head) => Math.ceil(head.total / PAGE_SIZE));
+    const all = pages.reduce((sum, n) => sum + n, 0);
+    const left = heads.reduce(
+      (sum, head, i) => sum + Math.max(0, (pages[i] as number) - head.read),
+      0,
+    );
+    let first = 0;
+    if (left > this.priceSweep) {
+      const shares = Math.ceil(all / (this.priceSweep * SHARE_FILL));
+      const day = Math.floor(Date.parse(`${pragueDate(this.ctx.now)}T00:00:00Z`) / DAY_MS);
+      first = Math.floor((all * (day % shares)) / shares);
+      this.ctx.log.warn("tipcars price sweep cannot price every listing daily", {
+        pages: left,
+        requests: this.priceSweep,
+        short: left - this.priceSweep,
+        days: shares,
+        share: day % shares,
+      });
+    }
     const stop = this.requests + this.priceSweep;
-    for (const head of heads) {
-      const pages = pagesOf(head);
-      const from = Math.max(head.read + 1, Math.floor((pages * share) / shares) + 1);
-      const to = Math.min(pages, Math.floor((pages * (share + 1)) / shares) + 1, this.maxPages);
-      for (let n = from; n <= to; n++) {
+    const details = new Map<string, Card>();
+    for (const run of runs(pages, first)) {
+      const head = heads[run.list] as Head;
+      let to = run.to;
+      for (let n = Math.max(run.from, head.read + 1); n <= Math.min(to, this.maxPages); n++) {
         if (this.requests >= stop) {
           this.ctx.log.warn("tipcars price sweep ran out of requests", {
             slice: sliceKey(head.slice),
             page: n,
           });
+          yield* this.details(details, stop);
           return;
         }
         const page = await this.page(head.slice, n);
         if (page.cards.length === 0) break;
+        if (run.end) to = Math.max(to, Math.ceil(page.total / PAGE_SIZE));
         yield* this.prices(page.cards);
         for (const card of page.cards) {
           if (this.wasKnown(card.ref)) continue;
-          if (card.category === "N" && this.requests >= stop) {
-            this.ctx.log.warn("tipcars price sweep ran out of requests", { ref: card.ref });
-            return;
-          }
-          yield* this.listing(card);
+          if (card.category === "N" && outOfScope(card) === null) details.set(card.ref, card);
+          else yield* this.listing(card);
         }
       }
+    }
+    yield* this.details(details, stop);
+  }
+
+  /** The sweep's unknown new or demo listings from their detail pages, until `stop` requests. */
+  private async *details(cards: ReadonlyMap<string, Card>, stop: number) {
+    for (const card of cards.values()) {
+      if (this.done.has(card.ref)) continue;
+      if (this.requests >= stop) {
+        this.ctx.log.warn("tipcars price sweep left new or demo listings for the census", {
+          ref: card.ref,
+        });
+        return;
+      }
+      yield* this.listing(card);
     }
   }
 
@@ -768,6 +819,29 @@ function split(slice: Slice): Slice[] | null {
   if (price.from >= price.to) return null;
   const mid = Math.floor((price.from + price.to) / 2);
   return [at(mid + 1, price.to), at(price.from, mid)];
+}
+
+/**
+ * The sweep's walk over lists of `pages` pages, from page `first` of all of them (0 is the
+ * first list's first page) round to the page before it, as runs of one list's pages. `end`
+ * marks a run to its list's end, which follows the list if it grows.
+ */
+function runs(
+  pages: readonly number[],
+  first: number,
+): { list: number; from: number; to: number; end: boolean }[] {
+  let list = 0;
+  let from = first + 1;
+  while (list < pages.length - 1 && from > (pages[list] as number)) {
+    from -= pages[list] as number;
+    list++;
+  }
+  const out = pages.map((_, i) => {
+    const at = (list + i) % pages.length;
+    return { list: at, from: i === 0 ? from : 1, to: pages[at] as number, end: true };
+  });
+  if (from > 1) out.push({ list, from: 1, to: from - 1, end: false });
+  return out;
 }
 
 /** The SliceDone that marks a new or demo listing read whole in this census (see `marks`). */

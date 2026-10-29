@@ -34,6 +34,9 @@ export const schedules: Record<SourceId, Schedule> = {
   // whose text states no year or odometer never become known: about 70 minutes a day, read
   // twice over the day after a failed Run (ADR 0014).
   bazos: { ...LISTINGS, catchUpMinutes: 150 },
+  // Its incremental prices every known listing from both lists' pages, some 3,400 a day at
+  // 1.7 s each: about 105 minutes with the new listings (its `PRICE_SWEEP` caps the sweep).
+  tipcars: { ...LISTINGS, catchUpMinutes: 120 },
 };
 
 /** How long the incremental Run of a Source's `incremental,full` job may take, in ms. */
