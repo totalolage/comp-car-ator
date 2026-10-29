@@ -126,12 +126,15 @@ export function matchOpenpilot(
     // A year within a year of a rival Generation could be either car (the US Tucson 2021 is
     // the old one though the register's new one starts in 2021): only the row's other years
     // say it is this one. A platform with years in a rival, away from this one, is both.
-    const others = rivals(generation, generations, latest);
+    const { others, umbrellas } = rivals(generation, generations, latest);
     const near = (y: number, g: Generation) => y >= g.from - 1 && y <= g.to + 1;
     const inRival = (y: number) => others.some((g) => y >= g.from && y <= g.to);
     if (years.some((y) => inRival(y) && !near(y, generation))) return placedOnModel;
     const clear = (y: number) =>
-      y >= generation.from && y <= generation.to && !others.some((g) => near(y, g));
+      y >= generation.from &&
+      y <= generation.to &&
+      !others.some((g) => near(y, g)) &&
+      !umbrellas.some((g) => Math.abs(y - g.to) <= 1);
     if (!row.years.some(clear)) return placedOnModel;
 
     const first = years[0] as number;
@@ -181,22 +184,28 @@ function namesSameCar(listed: string, catalog: string): boolean {
 }
 
 /**
- * The model's Generations that are another car than `generation`: all but types nested with
- * it and types longer than one design running alongside it for two years or more, the
- * register's umbrella and junk types (the Golf "1H" 2000-2016 beside the Golf VII). A type
- * before or after it is a rival however long it runs. An open Generation's length counts to
- * the catalog's latest year.
+ * The model's Generations that are another car than `generation` (`others`): all but types
+ * nested with it and `umbrellas`, types longer than one design that began before it and run
+ * alongside it for two years or more, the register's umbrella and junk types (the Golf "1H"
+ * 2000-2016 beside the Golf VII). An umbrella's end may still be a changeover, so its last
+ * year and the years either side decide nothing. A type that began after `generation` is a
+ * rival however long it runs. An open Generation's length counts to the catalog's latest year.
  */
-function rivals(generation: Generation, generations: Generation[], latest: number): Generation[] {
-  return generations.filter((other) => {
-    if (other === generation || nested(other, generation) || nested(generation, other)) {
-      return false;
-    }
+function rivals(
+  generation: Generation,
+  generations: Generation[],
+  latest: number,
+): { others: Generation[]; umbrellas: Generation[] } {
+  const others: Generation[] = [];
+  const umbrellas: Generation[] = [];
+  for (const other of generations) {
+    if (other === generation || nested(other, generation) || nested(generation, other)) continue;
     const long = Math.min(other.to, latest) - other.from > ONE_DESIGN_YEARS;
     const alongside =
       Math.min(other.to, generation.to) - Math.max(other.from, generation.from) >= 1;
-    return !(long && alongside);
-  });
+    (long && alongside && other.from < generation.from ? umbrellas : others).push(other);
+  }
+  return { others, umbrellas };
 }
 
 /**

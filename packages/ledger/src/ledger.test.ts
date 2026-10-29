@@ -932,6 +932,12 @@ describe("Ledger", () => {
         // A successor that has run longer than one design is still a changeover.
         variant("Bayon", g("e", 2010, 2016), "petrol", 94, { from: 2010, to: 2016 }),
         variant("Bayon", g("f", 2017), "petrol", 95, { from: 2017, to: 2026 }),
+        // A long successor overlapping its predecessor, and a long open one beside an open
+        // predecessor: both still mark a changeover.
+        variant("Venue", g("g", 2010, 2018), "petrol", 96, { from: 2010, to: 2018 }),
+        variant("Venue", g("h", 2017), "petrol", 97, { from: 2017 }),
+        variant("Getz", g("i", 2005), "petrol", 98, { from: 2009 }),
+        variant("Getz", g("j", 2015), "petrol", 99, { from: 2015 }),
       ]);
       await run("comma-openpilot", "full", "2026-10-02", [
         row("Elantra", [2017, 2018, 2019, 2020, 2021, 2022, 2023], { platform: "E" }),
@@ -939,6 +945,11 @@ describe("Ledger", () => {
         row("Ioniq", [2021], { platform: "I" }),
         row("Bayon", [2015], { platform: "B" }),
         row("Bayon", [2016], { platform: "B" }),
+        row("Venue", [2015], { platform: "V" }),
+        row("Venue", [2016], { platform: "V" }),
+        row("Venue", [2017], { platform: "V" }),
+        row("Getz", [2010, 2011], { platform: "G" }),
+        row("Getz", [2016], { platform: "G" }),
       ]);
       expect(
         Object.fromEntries(
@@ -950,6 +961,11 @@ describe("Ledger", () => {
         "Ioniq 2021": [],
         "Bayon 2015": ["hyundai/bayon/e/hatchback-petrol-94kw"],
         "Bayon 2016": [],
+        "Venue 2015": ["hyundai/venue/g/hatchback-petrol-96kw"],
+        "Venue 2016": [],
+        "Venue 2017": [],
+        "Getz 2010,2011": ["hyundai/getz/i/hatchback-petrol-98kw"],
+        "Getz 2016": [],
       });
     });
 
