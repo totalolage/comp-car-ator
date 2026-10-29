@@ -539,13 +539,10 @@ function toListingSeen(
     vehicle: prune(vehicle),
     odometerKm: typeof d.tachometer === "number" ? d.tachometer : undefined,
     price: { amount: typeof d.price === "number" ? d.price : Number.NaN, currency: "CZK" },
-    // A price shown without VAT is net even when the VAT is also deductible.
+    // `price` is the headline, VAT included. A seller who prices without VAT has the site
+    // add 21% to `price_original` for it and show the net (`price_without_vat`) below it.
     priceBasis:
-      d.price_is_without_vat === true
-        ? "net"
-        : d.price_is_vat_deductible === true
-          ? "gross"
-          : "unknown",
+      d.price_is_without_vat === true || d.price_is_vat_deductible === true ? "gross" : "unknown",
     seller: d.premise ? "dealer" : "private",
     location: Object.keys(location).length > 0 ? location : undefined,
     photos: photos(detail.images ?? item.images),

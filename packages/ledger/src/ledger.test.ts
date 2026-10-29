@@ -369,6 +369,47 @@ describe("Ledger", () => {
     }
   });
 
+  it("relabels as gross the Sauto prices recorded as net when it opens an older Ledger", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "cca-ledger-"));
+    try {
+      const file = join(dir, "ledger.sqlite");
+      const czk = (amount: number) => ({ price: { amount, currency: "CZK" } });
+      // A Sauto seller who priced without VAT and later cut the price; a Sauto listing with
+      // deductible VAT; another Source's net price, which stays.
+      ledger = openLedger(file);
+      await run("sauto", "incremental", "2026-10-26", [
+        seen("1", 605_000, { priceBasis: "net" }),
+        seen("2", 489_000),
+      ]);
+      await run("sauto", "incremental", "2026-10-27", [seen("1", 580_800, { priceBasis: "net" })]);
+      await run("bazos", "incremental", "2026-10-27", [seen("3", 400_000, { priceBasis: "net" })]);
+      ledger.close();
+      // A schema v4 Ledger, as Data releases carry.
+      const db = new DatabaseSync(file);
+      db.prepare("UPDATE meta SET value = '4' WHERE key = 'schema_version'").run();
+      db.close();
+
+      ledger = openLedger(file);
+      const listings = new Map([...ledger.snapshot().listings()].map((l) => [l.id, l]));
+      expect(listings.get("sauto:1")).toMatchObject({
+        ...czk(580_800),
+        priceBasis: "gross",
+        priceHistory: [
+          { date: "2026-10-26", ...czk(605_000) },
+          { date: "2026-10-27", ...czk(580_800) },
+        ],
+      });
+      expect(listings.get("sauto:2")).toMatchObject({ ...czk(489_000), priceBasis: "gross" });
+      expect(listings.get("bazos:3")).toMatchObject({
+        ...czk(400_000),
+        priceBasis: "net",
+        priceHistory: [{ date: "2026-10-27", ...czk(400_000) }],
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("resolves listings against the current catalog at snapshot time", async () => {
     ledger = openLedger(":memory:");
     await run("sauto", "incremental", "2026-10-10", [seen("1", 1)]);

@@ -21,6 +21,7 @@ import { type SautoOptions, sautoSource } from "./sauto.ts";
 // sautoSource(OPTIONS), personal fields (phone, user, VIN, description) stripped.
 const fixture = new URL("./fixtures/dacia-spring.cassette.json", import.meta.url);
 const now = new Date("2026-10-25T13:27:00Z");
+const withoutVat = new URL("./fixtures/without-vat.cassette.json", import.meta.url);
 const OPTIONS = { manufacturerModel: "dacia:spring", pageSize: 4, sliceLimit: 8 };
 /** A last run before every listing of the fixture: an incremental run yields all it does not know. */
 const LONG_AGO = new Date("2020-01-01T00:00:00Z");
@@ -556,14 +557,39 @@ describe("sauto source", () => {
     expect(listings(observations)).toHaveLength(all.length - 2);
   });
 
-  it("a price shown without VAT is net, even when the VAT is deductible", async () => {
-    const [first] = listings((await harvest("incremental")).observations) as [ListingSeen];
-    const { observations } = await harvest("incremental", {}, (cassette) =>
-      editBodies(cassette, isDetail(first.ref), (body) =>
-        Object.assign(body.result, { price_is_vat_deductible: true, price_is_without_vat: true }),
-      ),
-    );
-    expect(listings(observations)[0]).toMatchObject({ ref: first.ref, priceBasis: "net" });
+  it("a price set without VAT comes out as the gross headline the site shows, in search and detail alike", async () => {
+    // Recorded 2026-10-29 from live Sauto: every Toyota Sienna, bodies trimmed to the fields the
+    // adapter reads plus `price_original`. 209539998's page shows 1 681 900 Kč, "Bez DPH:
+    // 1 390 000 Kč": its seller entered the net, and `price` is that plus 21%.
+    const run = async (checkpoint: Partial<Checkpoint>) => {
+      const ctx: HarvestContext = {
+        http: createReplayHttp(await loadCassette(withoutVat)),
+        mode: "incremental",
+        checkpoint: { ...emptyCheckpoint, lastRunAt: LONG_AGO, ...checkpoint },
+        now: new Date("2026-10-29T02:33:00Z"),
+        log: silentLogger,
+        signal: new AbortController().signal,
+      };
+      const observations: Observation[] = [];
+      const source = sautoSource({ manufacturerModel: "toyota:sienna", pageSize: 4 });
+      for await (const o of source.harvest(ctx)) observations.push(o);
+      return observations;
+    };
+    const seen = listings(await run({}));
+    const byRef = new Map(seen.map((o) => [o.ref, o]));
+    expect(byRef.get("209539998")).toMatchObject({
+      price: { amount: 1_681_900, currency: "CZK" },
+      priceBasis: "gross",
+      seller: "dealer",
+    });
+    expect(byRef.get("209783754")).toMatchObject({
+      price: { amount: 1_750_000, currency: "CZK" },
+      priceBasis: "gross",
+    });
+    expect(seen.some((o) => o.priceBasis === "net")).toBe(false);
+    // The search price a known listing gets daily is the same gross amount.
+    const known = await run({ isKnown: () => true });
+    expect(new Map(prices(known))).toEqual(new Map(seen.map((o) => [o.ref, o.price.amount])));
   });
 
   it("fails the run when the API answers with a page that is not JSON", async () => {
