@@ -25,7 +25,9 @@
  *   ("skoda;part=3/10"), each fetched and reported done in turn, so a census of the large
  *   categories (Škoda: ~31,000 ads) resumes part by part. A category whose walk cannot be
  *   reconciled reports no part done and fails the run at the end; the other categories
- *   still run.
+ *   still run. Each ad names its part (`ListingSeen.slice`, in both modes), so the parts that
+ *   finish retire the ads they no longer list while Ford never finishes; a walk not taken
+ *   gives each known ad it met a ListingPriceSeen, so one moved into its category stays live.
  * - incremental: per category, from the top, ad pages for the ads on each page read that are
  *   not in the Ledger and a ListingPriceSeen from the list row for those it knows, stopping
  *   after the first page dated wholly before the last run's day (yesterday, without a
@@ -209,8 +211,9 @@ class Harvest {
     );
     if (parts.length === 0) return;
     const rows = await this.collect(category);
-    if (typeof rows === "string") {
-      this.unfinish(category, rows);
+    if (!(rows instanceof Map)) {
+      this.unfinish(category, rows.reason);
+      yield* this.alive(category, rows.met);
       return;
     }
     for (const part of parts) {
@@ -246,10 +249,13 @@ class Harvest {
    *   count when that walk began. Gone: ads met dated today that it did not meet (every ad
    *   dated today is above its end).
    * An ad removed before a count rose again is not caught by either, so the check narrows
-   * the gap without closing it (see Limits).
+   * the gap without closing it (see Limits). A walk not taken still returns the ads it met.
    */
-  private async collect(category: string): Promise<Map<string, Row> | string> {
+  private async collect(
+    category: string,
+  ): Promise<Map<string, Row> | { reason: string; met: ReadonlyMap<string, Row> }> {
     let reason = "";
+    const met = new Map<string, Row>();
     for (let attempt = 1; attempt <= 2; attempt++) {
       const rows = new Map<string, Row>();
       const datedToday = new Set<string>();
@@ -264,6 +270,7 @@ class Harvest {
           highest = Math.max(highest, page.total);
           for (const row of page.rows) {
             rows.set(row.id, row);
+            met.set(row.id, row);
             if (row.date === this.today) datedToday.add(row.id);
           }
           idless += page.idless;
@@ -276,6 +283,7 @@ class Harvest {
           highest = Math.max(highest, page.total);
           for (const row of page.rows) {
             rows.set(row.id, row);
+            met.set(row.id, row);
             toppedUp.add(row.id);
           }
           idless += page.idless;
@@ -291,7 +299,7 @@ class Harvest {
       if (idless > 0) {
         // An ad without an id cannot be told apart from a gone one, so no census here.
         this.ctx.log.warn("bazos: list rows without an ad id", { category, idless });
-        return `${idless} list rows without an ad id`;
+        return { reason: `${idless} list rows without an ad id`, met };
       }
       const gone = [...datedToday].filter((id) => !toppedUp.has(id)).length;
       const covered = rows.size >= highest && rows.size - gone >= final;
@@ -325,7 +333,25 @@ class Harvest {
       }
       reason = reasons.join("; ");
     }
-    return reason;
+    return { reason, met };
+  }
+
+  /**
+   * A ListingPriceSeen from its list row for each known candidate a walk met that cannot be
+   * taken. The category stays out of the census, but an ad moved into it since the last one is
+   * live, and must not count missed in the slice the Ledger holds it in.
+   */
+  private *alive(category: string, rows: ReadonlyMap<string, Row>): Iterable<ListingPriceSeen> {
+    for (const row of rows.values()) {
+      if (row.malformed || row.price === null || !this.isCandidate(category, row)) continue;
+      if (!this.knewBefore(row.id)) continue;
+      this.stats.prices++;
+      yield {
+        kind: "ListingPriceSeen",
+        ref: row.id,
+        price: { amount: row.price, currency: "CZK" },
+      };
+    }
   }
 
   /**
@@ -461,9 +487,11 @@ class Harvest {
   /** The Observation for one listed ad, from its detail page; nothing when out of scope. */
   private async *observe(category: string, row: Row): AsyncGenerator<Observation> {
     const url = `${HOST}${row.path}`;
+    // The part a census harvests the ad in, in both modes (ListingSeen.slice).
+    const slice = partKey(category, Number(row.id) % this.parts, this.parts);
     if (row.malformed) {
       this.stats.malformed++;
-      yield rejected(row.id, url, row.malformed, this.ctx);
+      yield { ...rejected(row.id, url, row.malformed, this.ctx), slice };
       return;
     }
     if (!this.isCandidate(category, row)) return;
@@ -479,13 +507,13 @@ class Harvest {
     }
     if (typeof detail === "string") {
       this.stats.malformed++;
-      yield rejected(row.id, url, detail, this.ctx);
+      yield { ...rejected(row.id, url, detail, this.ctx), slice };
       return;
     }
     const listing = this.toListingSeen(category, row, url, detail);
     if (listing) {
       this.stats.seen++;
-      yield listing;
+      yield { ...listing, slice };
     } else {
       this.stats.outOfScope++;
     }

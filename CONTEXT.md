@@ -69,7 +69,7 @@ Days from when a Listing was first seen (or posted, if earlier) until it was gon
 _Avoid_: age, listing age
 
 **Gone**:
-A Listing that is no longer offered: reported removed by its Source, or missing from two consecutive complete census runs.
+A Listing that is no longer offered: reported removed by its Source, or missed by two Censuses in a row: unseen by a complete Census, or unseen while a Census finished the Slice the Listing was last met in.
 _Avoid_: sold, deleted, expired
 
 **Landed price**:
@@ -95,11 +95,11 @@ One harvest of one Source, either incremental (what is new, plus the prices of k
 _Avoid_: crawl, scrape, job
 
 **Census**:
-The full Runs of a Source's scope up to and including a complete one: together they saw every Listing the Source currently offers in that scope, so absence means the Listing may be gone. Failed full Runs in between contribute the Slices they finished.
+The full Runs of a Source's scope up to and including a complete one: together they saw every Listing the Source currently offers in that scope, so absence means the Listing may be gone. Failed full Runs in between contribute the Slices they finished. A Census that stalls (its Slices left never finish) ends after a week without completing, and the next full Run starts a new one.
 _Avoid_: full scan, sweep
 
 **Slice**:
-A part of a Source's scope that its adapter harvests as one unit, keyed by the adapter (an AutoScout24 Condition, price band and year query under the result cap). A full Run reports each Slice it finished, so a Census that fails part way resumes with the Slices left.
+A part of a Source's scope that its adapter harvests as one unit, keyed by the adapter (an AutoScout24 Condition, price band and year query under the result cap). A full Run reports each Slice it finished, so a Census that fails part way resumes with the Slices left. Where Slices hold a Listing by what it seldom changes (a Bazoš category and ad id, a TipCars year), each Listing names the Slice it was met in, and a finished Slice's absent Listings count missed even while other Slices never finish.
 _Avoid_: shard, partition, chunk
 
 **Resolution**:

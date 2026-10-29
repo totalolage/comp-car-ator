@@ -20,7 +20,8 @@
  *   come out with the same fields every run.
  * - full: a census of slices `used:<year>` (the current year's slice is open above) and
  *   `new` (the new list). A slice is paged to its end before any of its detail pages, then
- *   its listings come out, then SliceDone; slices done earlier in the census are skipped. A
+ *   its listings come out, naming it (`ListingSeen.slice`, never a price part, as a price
+ *   moves), then SliceDone; slices done earlier in the census are skipped. A
  *   slice is done when one pass alone meets as many distinct listings as its pages report:
  *   passes are never pooled, since a listing gone and another arrived between two passes
  *   would let their union reach the count without one every pass missed. A short slice is
@@ -237,7 +238,12 @@ class Harvest {
       yield* this.sweep([used, fresh]);
       return;
     }
-    for (const slice of this.slices()) yield* this.slice(slice);
+    // A listing names its year or list (ListingSeen.slice), not a price part: a price moves.
+    for (const slice of this.slices()) {
+      const key = sliceKey(slice);
+      for await (const o of this.slice(slice))
+        yield o.kind === "ListingSeen" ? { ...o, slice: key } : o;
+    }
     if (this.short.length > 0) {
       throw new Error(
         `TipCars slices yielded fewer listings than reported: ${this.short.join(", ")}`,

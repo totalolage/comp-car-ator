@@ -35,7 +35,7 @@ export interface RunSummary {
   rejected: { kind: string; reason: string }[];
   newListings: number;
   priceChanges: number;
-  /** Listings marked gone by this run (explicit ListingGone, or missing from a full census). */
+  /** Listings marked gone by this run (explicit ListingGone, or missed by 2 censuses). */
   gone: number;
   /** Catalog entries of this Source retired by this run's census (stated by none of its runs). */
   retired: number;
@@ -57,18 +57,26 @@ export interface Ledger {
    * Records one run's Observations, streaming them in batched transactions. Idempotent per
    * (source, day): re-recording the same Observations changes nothing.
    *
-   * When the iterable completes, the run is marked complete, and a `full` run ends the
-   * census. If it had no rejected Observations, this Source's active listings in the run's
-   * scope that no full run since the scope's previous complete full run saw are counted as
-   * missed (at most once per day), and a listing missed on 2 days of censuses is gone as of
-   * the first miss, and this Source's catalog entries in the scope that no run of the census
-   * stated are retired (a Variant re-keyed or withdrawn; a
-   * later run that states it again restores it). Failed full runs in between belong to the
-   * census, so the slices they
-   * reported done (SliceDone) may be skipped. When the iterable throws, what was recorded
-   * stays (each SliceDone is durable once recorded), the run is marked failed, nothing is
-   * inferred, and `record` rejects with that error. A SliceDone after a rejected Observation
-   * in that slice is rejected too, so the slice is harvested again.
+   * A census is the full runs of a scope from the first after its previous complete full run,
+   * so the slices a failed one reported done (SliceDone) may be skipped. A complete full run
+   * ends it, and so does stalling: once its full runs span 6 days and its last two finished no
+   * slice, the next full run starts a new one (a slice that can never finish keeps no census
+   * open for good).
+   *
+   * Absence: a listing that no run of the census saw (ListingSeen or ListingPriceSeen) is
+   * counted missed, at most once per census and per day, and a listing missed by 2 censuses in
+   * a row is gone as of the first miss. When any full run ends, complete or failed, this counts
+   * the listings of the slices it finished (`ListingSeen.slice`), so finished slices retire
+   * listings while others never finish. When a complete full run without rejected
+   * Observations ends, it counts every active listing of the Source in the run's scope, and
+   * retires this Source's catalog entries in the scope that no run of the census stated (a
+   * Variant re-keyed or withdrawn; a later run that states it again restores it).
+   *
+   * When the iterable throws, what was recorded stays (each SliceDone is durable once
+   * recorded), the run is marked failed, only its finished slices are inferred on, and
+   * `record` rejects with that error. A SliceDone is rejected after a rejected Observation in
+   * its slice or a rejected sighting of a listing in it (see `SliceDone`), so the slice is
+   * harvested again.
    */
   record(
     run: RunInfo,
