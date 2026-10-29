@@ -31,6 +31,7 @@ import {
 import { type I18n, MISSING } from "../i18n/i18n.ts";
 import type { MessageKey } from "../i18n/messages.ts";
 import type { ListingState } from "./url-state.ts";
+import { bodyLabel } from "./variant-body.ts";
 
 export type ListingEnumFacet = keyof ListingFacets["values"];
 export type ListingRangeFacet = keyof ListingFacets["ranges"];
@@ -88,7 +89,7 @@ export function listingPage(
  */
 export function variantNames(variants: readonly VariantRow[], t: I18n): Record<string, string> {
   const label = (v: VariantRow) =>
-    [v.generation, t.label("body", v.body), t.label("fuel", v.fuel), t.kw(v.powerKw)].join(" · ");
+    [v.generation, bodyLabel(v, t), t.label("fuel", v.fuel), t.kw(v.powerKw)].join(" · ");
   const seen = new Map<string, number>();
   for (const v of variants) seen.set(label(v), (seen.get(label(v)) ?? 0) + 1);
   const names: Record<string, string> = {};

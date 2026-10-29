@@ -19,9 +19,11 @@ import {
 import { beforeAll, describe, expect, it } from "vitest";
 import { i18n } from "../i18n/i18n.ts";
 import {
+  COLUMNS,
   catalogQuery,
   type EnumFacet,
   facetOptions,
+  listingStateFor,
   namesOf,
   nextSort,
   odometerBands,
@@ -33,7 +35,9 @@ import {
   type CatalogState,
   rangeFromText,
   readCatalogState,
+  readListingState,
   writeCatalogState,
+  writeListingState,
 } from "./url-state.ts";
 
 // A deterministic catalog of 240 Variants over 4 makes, most with used listings in one to
@@ -378,5 +382,87 @@ describe("typed ranges", () => {
     ] as const) {
       expect([min, max, rangeFromText(min, max)]).toEqual([min, max, null]);
     }
+  });
+});
+
+describe("a row's model link", () => {
+  const variant = "skoda/octavia/nx/sedan-phev-150kw";
+  const row = { id: variant, used: { count: 3 } } as VariantRow;
+
+  it("opens the row's Variant under the catalog filters that apply to Listings", () => {
+    const filters: VariantFilters = {
+      make: ["skoda"],
+      model: ["skoda/octavia"],
+      body: ["hatchback", "sedan", "wagon"],
+      fuel: ["phev"],
+      transmission: ["automatic"],
+      market: ["CZ", "DE"],
+      source: ["sauto"],
+      year: { min: 2020 },
+      powerKw: { max: 160 },
+      seats: { min: 5 },
+      consumptionL100km: { max: 2 },
+      newPriceCzk: { max: 1_000_000 },
+      usedPriceCzk: { min: 400_000, max: 800_000 },
+      odometerKm: { max: 49_999 },
+      openpilot: ["upstream"],
+    };
+    const state = listingStateFor(filters, row);
+    expect(state).toEqual({
+      filters: {
+        variant: [variant],
+        condition: ["used"],
+        transmission: ["automatic"],
+        market: ["CZ", "DE"],
+        source: ["sauto"],
+        year: { min: 2020 },
+        odometerKm: { max: 49_999 },
+        priceCzk: { min: 400_000, max: 800_000 },
+      },
+    });
+    // The model page reads back exactly what the link carries.
+    expect(readListingState(writeListingState(state))).toEqual(state);
+  });
+
+  it("carries only the Variant from an unfiltered catalog", () => {
+    expect(writeListingState(listingStateFor({}, row))).toBe(
+      "?variant=skoda/octavia/nx/sedan-phev-150kw",
+    );
+  });
+
+  it("pins no Variant without used Listings; asks for used ones only with used filters", () => {
+    const unlisted = { id: variant, used: null } as VariantRow;
+    expect(
+      listingStateFor({ transmission: ["manual"], openpilot: ["upstream"] }, unlisted),
+    ).toEqual({
+      filters: { transmission: ["manual"] },
+    });
+    expect(listingStateFor({}, unlisted)).toEqual({ filters: {} });
+    expect(listingStateFor({ odometerKm: { max: 9_999 } }, row).filters.condition).toEqual([
+      "used",
+    ]);
+  });
+});
+
+describe("body column", () => {
+  const body = COLUMNS.find((c) => c.id === "body");
+  const cell = (generationId: string, b: VariantRow["body"]) =>
+    body?.cell(
+      {
+        modelId: generationId.split("/").slice(0, 2).join("/"),
+        generationId,
+        body: b,
+      } as VariantRow,
+      t,
+    );
+
+  it("names a liftback and the register code it is filed under", () => {
+    expect(cell("skoda/octavia/nx", "sedan")).toBe("liftback (sedan)");
+    expect(cell("skoda/octavia/1u", "hatchback")).toBe("liftback (hatchback)");
+    expect(cell("audi/a5/b8", "hatchback")).toBe("liftback (hatchback)");
+    expect(cell("skoda/octavia/nx", "wagon")).toBe("kombi");
+    expect(cell("audi/a5/b8", "convertible")).toBe("kabriolet");
+    expect(cell("skoda/superb/3u", "sedan")).toBe("sedan");
+    expect(cell("volkswagen/golf/mk8", "hatchback")).toBe("hatchback");
   });
 });

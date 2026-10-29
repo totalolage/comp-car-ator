@@ -50,6 +50,11 @@ and hash, so switching language keeps the view.
   shared list replaces the remembered one instead (Consequences).
 - **Loading the catalog index for the tray's names**: the index grows to megabytes at 50k
   Variants, and model pages load about 5 kB of JavaScript today. The store caches names.
+- **Carrying body, fuel and power as listing filters instead of the clicked Variant**: wider
+  (it also finds the model's Listings no Variant claimed), but each Listing is tested on its
+  own fields, so a Variant's Listings that state no body, or another body code for the same
+  car (a liftback listed as a hatchback), drop out, and two rows of one model open the same
+  view. The Variant was chosen; "clear filters" widens to the whole model.
 - **Prefetching**: Astro's built-in hover prefetch (`prefetchAll`) handles navigation.
   Separately, the shell script loads the category tree into the Kategorie menu on pointer or
   focus with one fetch of `/categories/`; the “Všechny modely” link opts out of Astro
@@ -75,6 +80,21 @@ and hash, so switching language keeps the view.
   The Variants table, price statistics and history chart stay in the page. A model without
   Listings has no island. Without JavaScript a model page now shows no Listings (a
   `<noscript>` note says so); before, it showed the first 25.
+- A catalog row's model link carries the view into the model page's listing state
+  (2026-10-28): the row's Variant plus the catalog filters a Listing has a counterpart for
+  (gearbox, country, source, years as registration years, odometer, used price as asking
+  price, the last two with condition "used", as in the catalog). A Variant without used
+  Listings (the only ones the catalog counts) is not pinned: most have none at all, and the
+  page would open empty on a Variant it has no name for; its link then opens the model's
+  Listings under the carried filters alone. Body, fuel and power come with the Variant rather than as listing filters, which
+  test each Listing's own fields and would drop the Variant's Listings that state none;
+  make and model are the page; seats, consumption, new price and openpilot support stay
+  behind (openpilot is a Variant fact the pinned Variant already meets). The catalog
+  island only writes the link (`listingStateFor` in `lib/catalog-view.ts`, kept out of the
+  shared url-state chunk the model page loads); the model page's island owns the listing URL
+  from there, shows the carried filters checked in its rail and offers "clear filters" next
+  to the count, since the rail folds away on phones. Back returns to the catalog URL, which
+  holds its own filters.
 - The compare list is one list per browser, in the store; everything that shows it renders
   from the store and follows it across islands and tabs. Every URL has one owner, and only
   that owner reads or writes `cmp` in it: `CatalogExplorer` on catalog pages, `CompareTable`

@@ -7,6 +7,7 @@
  */
 import { ODOMETER_BANDS, type VariantRow } from "@cca/bundle";
 import type {
+  ListingFilters,
   Range,
   Sort,
   VariantFacets,
@@ -19,7 +20,8 @@ import { BODIES, FUELS, MARKETS, TRANSMISSIONS } from "@cca/vocabulary";
 import { type I18n, MISSING } from "../i18n/i18n.ts";
 import type { MessageKey } from "../i18n/messages.ts";
 import { OPENPILOT_FACETS, openpilotLabel } from "./openpilot-view.ts";
-import type { CatalogState } from "./url-state.ts";
+import type { CatalogState, ListingState } from "./url-state.ts";
+import { bodyLabel } from "./variant-body.ts";
 
 export type EnumFacet = keyof VariantFacets["values"];
 export type RangeFacet = keyof VariantFacets["ranges"];
@@ -63,6 +65,39 @@ export function withoutScope(state: CatalogState, scope: VariantFilters = {}): C
   const filters: Record<string, unknown> = { ...state.filters };
   for (const key of Object.keys(scope)) delete filters[key];
   return { ...state, filters: filters as VariantFilters };
+}
+
+/**
+ * The listing state a row's model link opens: the row's Variant plus every catalog filter
+ * with a listing-level meaning, so the model page lists what the row stands for under the
+ * same filters. Body, fuel and power come with the Variant: as listing filters they would
+ * test each Listing's own fields and drop the Variant's Listings that state none. Make and
+ * model are the page itself; seats, consumption, new price and openpilot support have no
+ * Listing counterpart (openpilot is a Variant fact, so the pinned Variant already meets it).
+ * A Variant without used Listings (all the catalog counts) is not pinned: most such Variants
+ * have no Listings at all, and the model page would open empty on an unnamed Variant. Its
+ * link then widens to the model's Listings under the carried filters, whatever their
+ * Variant's body, fuel, power or openpilot support.
+ */
+export function listingStateFor(
+  filters: VariantFilters,
+  v: Pick<VariantRow, "id" | "used">,
+): ListingState {
+  const { usedPriceCzk, odometerKm } = filters;
+  const carried: Record<string, unknown> = {
+    variant: v.used ? [v.id] : undefined,
+    // The catalog's price and odometer filters look at used Listings only.
+    condition: usedPriceCzk || odometerKm ? ["used"] : undefined,
+    transmission: filters.transmission,
+    market: filters.market,
+    source: filters.source,
+    // Production years become registration years, the used asking price the asking price.
+    year: filters.year,
+    odometerKm,
+    priceCzk: usedPriceCzk,
+  };
+  for (const key of Object.keys(carried)) if (carried[key] === undefined) delete carried[key];
+  return { filters: carried as ListingFilters };
 }
 
 /** Display names for make and model ids, which the facet counts carry bare. */
@@ -202,7 +237,7 @@ export const COLUMNS: Column[] = [
     num: true,
     cell: (v) => `${v.years.from}–${v.years.to ?? ""}`,
   },
-  { id: "body", label: "col.body", cell: (v, t) => t.label("body", v.body) },
+  { id: "body", label: "col.body", cell: (v, t) => bodyLabel(v, t) },
   { id: "fuel", label: "col.fuel", cell: (v, t) => t.label("fuel", v.fuel) },
   { id: "power", label: "col.power", sort: "powerKw", num: true, cell: (v, t) => t.kw(v.powerKw) },
   {
