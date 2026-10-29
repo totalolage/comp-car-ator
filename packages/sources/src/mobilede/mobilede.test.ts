@@ -274,6 +274,34 @@ describe("mobile-de source", () => {
     ).toEqual(["52824537148736"]);
   });
 
+  it("reads a hybrid's kind from its title: a mild one is its combustion fuel", async () => {
+    // A "Hybrid (Benzin/Elektro)" Lexus, its card retitled.
+    const fuelOf = async (title: string) => {
+      const run = await harvest(
+        incremental,
+        mobiledeSource({ makes: [LEXUS] }),
+        "incremental",
+        {},
+        (cassette) => {
+          for (const { response } of cassette.interactions) {
+            response.body = response.body.replaceAll(
+              "Lexus NX 450h+ E-FOUR BUSINESS  *CONNECT Paket*",
+              title,
+            );
+          }
+        },
+      );
+      const listing = listings(run).find((l) => l.ref === "52835669852448");
+      expect(listing).toBeDefined();
+      return listing?.vehicle.fuel;
+    };
+    expect(await fuelOf("Lexus NX 450h+ E-FOUR BUSINESS")).toBeUndefined();
+    expect(await fuelOf("Lexus NX 450h+ Plug-in-Hybrid")).toBe("phev");
+    expect(await fuelOf("Lexus NX 350h 48V Mild-Hybrid")).toBe("petrol");
+    // "e-Hybrid" is a plug-in badge only on Volkswagen group cars.
+    expect(await fuelOf("Lexus NX 350h e-Hybrid")).toBeUndefined();
+  });
+
   it("full: splits a make into price bands that partition it, each reported done", async () => {
     const run = await harvest(full, mobiledeSource({ makes: [AIWAYS], resultCap: 4 }), "full");
     expect(run.error).toBeUndefined();

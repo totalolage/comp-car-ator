@@ -330,6 +330,60 @@ describe("autoscout24 source", () => {
     expect(newHybrid?.vehicle.fuel).toBeUndefined();
   });
 
+  it("reads a hybrid's version text with its make's badges", async () => {
+    const fuelOf = async (make: string, version: string, code = "2") => {
+      const run = await harvest(
+        deFull,
+        autoscout24Source(DE),
+        "full",
+        {},
+        editPages(
+          () => true,
+          (page) => {
+            for (const l of page.listings ?? []) {
+              if (l.id !== "ebb7bf2f-4b57-4761-bcd9-a36ad0488cce") continue;
+              l.vehicle.make = make;
+              l.vehicle.modelVersionInput = version;
+              l.tracking.fuelType = code;
+            }
+          },
+        ),
+      );
+      expect(run.error).toBeUndefined();
+      const listing = listings(run).find((l) => l.ref === "ebb7bf2f-4b57-4761-bcd9-a36ad0488cce");
+      expect(listing?.vehicle.make).toBe(make);
+      return listing?.vehicle.fuel;
+    };
+    // The listing's fuel code is 2, Elektro/Benzin: a mild hybrid is a petrol car.
+    expect(await fuelOf("Jeep", "Avenger 1.2 48V e-Hybrid Altitude")).toBe("petrol");
+    // Stellantis's "e-Hybrid" is a 48 V mild hybrid on its own too.
+    expect(await fuelOf("Jeep", "Compass 1.2 e-Hybrid First Edition e-DCT6")).toBe("petrol");
+    expect(await fuelOf("Alfa Romeo", "Tonale 1.5 e-Hybrid Veloce")).toBe("petrol");
+    expect(await fuelOf("Fiat", "500 e-Hybrid 1.0 Icon")).toBe("petrol");
+    expect(await fuelOf("Jeep", "Compass 1.3 4xe Plug-in Hybrid")).toBe("phev");
+    // The Volkswagen group's "e-Hybrid", Volkswagen's "GTE", Audi's "TFSI e", BYD's "DM-i".
+    expect(await fuelOf("Volkswagen", "Golf 1.4 TSI eHybrid DSG")).toBe("phev");
+    expect(await fuelOf("Volkswagen", "Golf GTE")).toBe("phev");
+    expect(await fuelOf("Volkswagen", "Passat Variant 1.4 TSI GTE DSG")).toBe("phev");
+    expect(await fuelOf("CUPRA", "Formentor 1.4 e-HYBRID VZ")).toBe("phev");
+    expect(await fuelOf("Porsche", "Cayenne E-Hybrid Coupé")).toBe("phev");
+    expect(await fuelOf("Audi", "A6 Avant TFSI e-hybrid quattro")).toBe("phev");
+    expect(await fuelOf("Audi", "Q5 55 TFSIe quattro S line")).toBe("phev");
+    expect(await fuelOf("BYD", "Seal U DM-i Boost")).toBe("phev");
+    // Another make's badge is just letters; BMW's "ActiveHybrid" is a full hybrid.
+    expect(await fuelOf("Opel", "Astra GTE")).toBeUndefined();
+    expect(await fuelOf("BMW", "X6 ActiveHybrid Aut.")).toBeUndefined();
+    expect(await fuelOf("Ford", "Kuga 2.5PHEV ST-Line")).toBe("phev");
+    expect(await fuelOf("Volkswagen", "Golf 1.5eTSI 48 Volt DSG")).toBe("petrol");
+    // Code 3 is Elektro/Diesel.
+    expect(await fuelOf("Audi", "A6 Avant 2.0 TDI MHEV", "3")).toBe("diesel");
+    // Škoda's "iV" is a plug-in; another make's is just letters.
+    expect(await fuelOf("Skoda", "Superb Combi 1.4 TSI iV")).toBe("phev");
+    expect(await fuelOf("Kia", "Ceed iV Hybrid")).toBeUndefined();
+    // Mild and plug-in wording at once says neither.
+    expect(await fuelOf("Volkswagen", "Tiguan 1.5 eTSI eHybrid DSG")).toBeUndefined();
+  });
+
   it("maps AT listings onto ListingSeen", async () => {
     const run = await harvest(atFull, autoscout24Source(AT), "full");
     expect(run.error).toBeUndefined();

@@ -44,6 +44,7 @@ import {
   type VehicleDescriptor,
   type YearMonth,
 } from "@cca/vocabulary";
+import { hybridFuel } from "../hybrid.ts";
 import type { HarvestContext, Source } from "../source.ts";
 
 export interface AutoesaOptions {
@@ -416,7 +417,7 @@ function toListingSeen(card: Card, detail: Detail): ListingSeen {
     // "Označení rok udává rok uvedení vozidla do provozu."
     firstRegistration: year ? { year } : undefined,
     body: BODY_SLUGS[card.slugs.body],
-    fuel: fuel(s.Palivo ?? text(r.fuel_type), text(r.title)),
+    fuel: fuel(s.Palivo ?? text(r.fuel_type), text(r.title), make),
     powerKw: whole(s.Výkon),
     transmission: transmission(s.Převodovka),
     drive: drive(s.Pohon),
@@ -471,14 +472,14 @@ const BODY_SLUGS: Record<string, Body> = {
 };
 
 /**
- * The site's "Palivo" values. "hybridní" does not tell a full or mild hybrid from a plug-in,
- * so it stays undefined unless the title marks a plug-in ("PHEV", "Plug-in", Škoda "iV").
+ * The site's "Palivo" values. "hybridní" does not tell a full, mild or plug-in hybrid apart,
+ * so the title's wording does.
  */
-function fuel(value: string, title: string): Fuel | undefined {
+function fuel(value: string, title: string, make: string): Fuel | undefined {
   const v = value.toLowerCase();
   if (v.startsWith("lpg")) return "lpg";
   if (v.startsWith("cng")) return "cng";
-  if (v.startsWith("hybrid")) return /plug-in|phev|\biV\b/i.test(title) ? "phev" : undefined;
+  if (v.startsWith("hybrid")) return hybridFuel(title, make);
   return ({ benzín: "petrol", nafta: "diesel", elektro: "bev" } as Record<string, Fuel>)[v];
 }
 

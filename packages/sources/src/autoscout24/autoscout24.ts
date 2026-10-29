@@ -52,6 +52,7 @@ import type {
   VehicleDescriptor,
   YearMonth,
 } from "@cca/vocabulary";
+import { hybridFuel } from "../hybrid.ts";
 import type { HarvestContext, Source } from "../source.ts";
 
 export interface AutoScout24Options {
@@ -422,7 +423,7 @@ function toListingSeen(raw: Raw, condition: Condition, country: "DE" | "AT"): Li
   // shows only make + version text, so that text is the model as shown.
   const model = text(v.model) || version;
   const trim = text(v.model) ? version || undefined : undefined;
-  const fuel = fuelOf(raw?.tracking?.fuelType, version);
+  const fuel = fuelOf(raw?.tracking?.fuelType, version, text(v.make));
   const consumption = details.water_drop ?? details.lightning_bolt;
   const vehicle: VehicleDescriptor = {
     make: text(v.make),
@@ -487,12 +488,11 @@ const FUELS: Record<string, Fuel> = {
   o: "other",
 };
 
-/** Hybrid codes cover HEV and PHEV; only a version text that says plug-in tells them apart. */
-function fuelOf(code: unknown, version: string): Fuel | undefined {
+/** Hybrid codes 2 (Elektro/Benzin) and 3 (Elektro/Diesel) leave the rest to the version text. */
+function fuelOf(code: unknown, version: string, make: string): Fuel | undefined {
   const value = text(code).toLowerCase();
-  if (value === "2" || value === "3") {
-    return /plug-?in|phev|e-?hybrid/i.test(version) ? "phev" : undefined;
-  }
+  if (value === "2") return hybridFuel(version, make, "petrol");
+  if (value === "3") return hybridFuel(version, make, "diesel");
   return FUELS[value];
 }
 

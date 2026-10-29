@@ -42,6 +42,7 @@ import type {
   VehicleDescriptor,
   YearMonth,
 } from "@cca/vocabulary";
+import { hybridFuel } from "../hybrid.ts";
 import type { HarvestContext, Source } from "../source.ts";
 
 export interface MobileDeOptions {
@@ -440,7 +441,7 @@ function toListingSeen(raw: Raw, card: Card | undefined, slice: Slice): ListingS
   const model = text(raw?.model?.localized);
   // The card's subtitle is the seller's version text ("for two 122 PS Neuzustand").
   const trim = card?.subTitle && card.subTitle !== model ? card.subTitle : undefined;
-  const fuel = fuelOf(text(attr.ft), card?.title ?? "");
+  const fuel = fuelOf(text(attr.ft), card?.title ?? "", text(raw?.make?.localized));
   const consumption = text(attr.csmpt);
   const vehicle: VehicleDescriptor = {
     make: text(raw?.make?.localized),
@@ -507,10 +508,15 @@ const FUELS: Record<string, Fuel> = {
   "Andere Kraftstoffart": "other",
 };
 
-/** Hybrids cover HEV and PHEV; only a title that says plug-in tells them apart. */
-function fuelOf(label: string, title: string): Fuel | undefined {
+/** "Hybrid (Benzin/Elektro)", "Hybrid (Diesel/Elektro)": the title tells the kind of hybrid. */
+function fuelOf(label: string, title: string, make: string): Fuel | undefined {
   if (label.startsWith("Hybrid")) {
-    return /plug-?in|phev|e-?hybrid/i.test(title) ? "phev" : undefined;
+    const combustion = /Diesel/.test(label)
+      ? "diesel"
+      : /Benzin/.test(label)
+        ? "petrol"
+        : undefined;
+    return hybridFuel(title, make, combustion);
   }
   return FUELS[label];
 }

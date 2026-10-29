@@ -878,6 +878,86 @@ describe("Resolver", () => {
       });
     });
 
+    it("reads e-Hybrid as a Volkswagen plug-in but not a Jeep's, a mild hybrid", () => {
+      const compass = createResolver(
+        variants("Jeep", "Compass", { slug: "mp", name: "Compass II", from: 2017 }, [
+          { body: "suv", fuel: "petrol", powerKw: 96, transmissions: ["automatic"] },
+          { body: "suv", fuel: "phev", powerKw: 96, transmissions: ["automatic"] },
+        ]),
+      );
+      const jeep = { make: "Jeep", model: "Compass" } as const;
+      for (const trim of ["1.5 T4 48V e-Hybrid 96 kW", "1.5 T4 48V eHybrid 96 kW"]) {
+        expect(compass.resolve({ ...jeep, fuel: "petrol", trim })).toMatchObject({
+          status: "matched",
+          variantId: "jeep/compass/mp/suv-petrol-96kw",
+        });
+      }
+      for (const trim of ["1.5 T4 e-Hybrid 96 kW", "1.5 T4 eHybrid 96 kW"]) {
+        expect(compass.resolve({ ...jeep, trim })).not.toMatchObject({
+          variantId: "jeep/compass/mp/suv-phev-96kw",
+        });
+      }
+      for (const trim of ["1.4 TSI eHybrid 150 kW DSG", "1.4 TSI e-Hybrid 150 kW DSG"]) {
+        expect(golf.resolve({ ...vw, trim })).toMatchObject({
+          status: "matched",
+          variantId: "volkswagen/golf/mk8/hatchback-phev-150kw",
+        });
+      }
+    });
+
+    it("reads Audi's TFSI e and BYD's DM-i as plug-ins, Škoda's e-TEC as a mild hybrid", () => {
+      const r = createResolver([
+        ...variants("Audi", "Q5", { slug: "fy", name: "Q5 II", from: 2017 }, [
+          { body: "suv", fuel: "petrol", powerKw: 220, transmissions: ["automatic"] },
+          { body: "suv", fuel: "phev", powerKw: 220, transmissions: ["automatic"] },
+        ]),
+        ...variants("BYD", "Seal U", { slug: "mk1", name: "Seal U", from: 2023 }, [
+          { body: "suv", fuel: "bev", powerKw: 160, transmissions: ["automatic"] },
+          { body: "suv", fuel: "phev", powerKw: 160, transmissions: ["automatic"] },
+        ]),
+        ...variants("Škoda", "Octavia", { slug: "nx", name: "Octavia IV", from: 2019 }, [
+          { body: "wagon", fuel: "petrol", powerKw: 110, transmissions: ["automatic"] },
+          { body: "wagon", fuel: "phev", powerKw: 110, transmissions: ["automatic"] },
+        ]),
+      ]);
+      expect(
+        r.resolve({ make: "Audi", model: "Q5", trim: "55 TFSI e quattro 220 kW" }),
+      ).toMatchObject({ status: "matched", variantId: "audi/q5/fy/suv-phev-220kw" });
+      expect(r.resolve({ make: "BYD", model: "Seal U", trim: "DM-i Boost 160 kW" })).toMatchObject({
+        status: "matched",
+        variantId: "byd/seal-u/mk1/suv-phev-160kw",
+      });
+      const octavia = { make: "Škoda", model: "Octavia", trim: "Combi 1.5 TSI e-TEC 110 kW DSG" };
+      expect(r.resolve({ ...octavia, fuel: "petrol" })).toMatchObject({
+        status: "matched",
+        variantId: "skoda/octavia/nx/wagon-petrol-110kw",
+      });
+      expect(r.resolve(octavia)).not.toMatchObject({
+        variantId: "skoda/octavia/nx/wagon-phev-110kw",
+      });
+      // Glued on, as sites write it.
+      expect(
+        r.resolve({ make: "Audi", model: "Q5", trim: "55 TFSI eHybridS line 220 kW" }),
+      ).toMatchObject({ status: "matched", variantId: "audi/q5/fy/suv-phev-220kw" });
+    });
+
+    it("reads another make's e-Hybrid as some hybrid, not its engine code's fuel", () => {
+      const sportage = createResolver(
+        variants("Kia", "Sportage", { slug: "nq5", name: "Sportage V", from: 2021 }, [
+          { body: "suv", fuel: "petrol", powerKw: 132, transmissions: ["automatic"] },
+          { body: "suv", fuel: "phev", powerKw: 132, transmissions: ["automatic"] },
+        ]),
+      );
+      const kia = { make: "Kia", model: "Sportage" } as const;
+      expect(sportage.resolve({ ...kia, trim: "1.6 T-GDI 132 kW" })).toMatchObject({
+        status: "matched",
+        variantId: "kia/sportage/nq5/suv-petrol-132kw",
+      });
+      expect(sportage.resolve({ ...kia, trim: "1.6 T-GDI e-Hybrid 132 kW" })).toMatchObject({
+        status: "model",
+      });
+    });
+
     it("reads a plug-in hybrid from its wording, and a mild hybrid by its stated fuel", () => {
       expect(
         golf.resolve({ ...vw, model: "Golf GTE", trim: "1.4 TSI Plug-in Hybrid 150 kW DSG" }),
@@ -885,12 +965,16 @@ describe("Resolver", () => {
         status: "matched",
         variantId: "volkswagen/golf/mk8/hatchback-phev-150kw",
       });
-      expect(
-        golf.resolve({ ...vw, fuel: "petrol", trim: "1.5 eTSI Mild-Hybrid 110 kW DSG" }),
-      ).toMatchObject({
-        status: "matched",
-        variantId: "volkswagen/golf/mk8/hatchback-petrol-110kw",
-      });
+      for (const trim of [
+        "1.5 eTSI Mild-Hybrid 110 kW DSG",
+        "1.5 e-TSI 110 kW DSG",
+        "1.5 TSI m-HEV 110 kW DSG",
+      ]) {
+        expect(golf.resolve({ ...vw, fuel: "petrol", trim })).toMatchObject({
+          status: "matched",
+          variantId: "volkswagen/golf/mk8/hatchback-petrol-110kw",
+        });
+      }
     });
   });
 

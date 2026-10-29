@@ -1,3 +1,4 @@
+import type { Fuel } from "@cca/vocabulary";
 import type { FuelWording } from "./hints.ts";
 
 /**
@@ -9,7 +10,7 @@ import type { FuelWording } from "./hints.ts";
  * entry is the group's key; it does not have to be the catalog's spelling, because catalog
  * names are looked up through the same groups. Slugs not in any group stand for themselves.
  */
-export const ALIASES_VERSION = 7;
+export const ALIASES_VERSION = 8;
 
 export const MAKE_GROUPS: readonly (readonly string[])[] = [
   ["volkswagen", "vw"],
@@ -151,15 +152,41 @@ export const CHASSIS_CODES: Readonly<Record<string, RegExp>> = {
 
 const badge = (word: string) => new RegExp(`(?<![a-z0-9])${word}(?![a-z0-9])`, "i");
 
+// "Multivan 1,5eHybrid", "TFSI eHybridS line", as sites write it.
+const E_HYBRID = /(?<![a-z])e-?hybrid/i;
+
+/** A mild hybrid is catalogued under its combustion fuel (hints.ts). */
+const MILD: readonly Fuel[] = ["petrol", "diesel", "hev"];
+
 /**
  * Electrified badges one make owns, with the fuels each allows ("GTE" is a plug-in
- * Volkswagen but a petrol Opel). Read only in that make's listings, with case kept: Škoda's
- * "iV" is the badge, "IV" and "iv" a generation. Keyed by make group key.
+ * Volkswagen but a petrol Opel; "e-Hybrid" a plug-in Audi but a mild-hybrid Jeep; "e-TEC" a
+ * mild-hybrid Škoda but a full-hybrid Renault). Read only in that make's listings, with case
+ * kept: Škoda's "iV" is the badge, "IV" and "iv" a generation. Keyed by make group key; the
+ * Sources read the same badges into a hybrid's fuel (packages/sources/src/hybrid.ts).
  */
 export const FUEL_BADGES: Readonly<Record<string, readonly FuelWording[]>> = {
-  volkswagen: [[["phev"], badge("gte")]],
-  skoda: [[["phev", "bev"], /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/]],
-  audi: [[["hev", "phev", "bev", "reev"], badge("e-?tron")]],
+  volkswagen: [
+    [["phev"], badge("gte")],
+    [["phev"], E_HYBRID],
+  ],
+  seat: [[["phev"], E_HYBRID]],
+  cupra: [[["phev"], E_HYBRID]],
+  porsche: [[["phev"], E_HYBRID]],
+  skoda: [
+    [["phev", "bev"], /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/],
+    [["phev"], E_HYBRID],
+    [MILD, badge("e-?tec")],
+  ],
+  audi: [
+    [["hev", "phev", "bev", "reev"], badge("e-?tron")],
+    [["phev"], E_HYBRID],
+    [["phev"], badge("tfsi ?e")],
+  ],
+  byd: [[["phev"], badge("dm-?[ip]")]],
+  jeep: [[MILD, E_HYBRID]],
+  "alfa-romeo": [[MILD, E_HYBRID]],
+  fiat: [[MILD, E_HYBRID]],
   renault: [[["hev", "phev", "bev", "reev"], badge("e-?tech")]],
 };
 
