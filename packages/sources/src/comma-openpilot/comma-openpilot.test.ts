@@ -377,7 +377,7 @@ describe("comma-openpilot source", () => {
       /HyundaiPlatformConfig bound in the file/,
     );
     await fails((b) => `from .helpers import drop as HyundaiCarDocs\n${b}`).toThrow(
-      /HyundaiCarDocs bound in the file/,
+      /HyundaiCarDocs imported/,
     );
     await fails((b) => `def HyundaiCarDocs(name, **kwargs):\n  return None\n${b}`).toThrow(
       /HyundaiCarDocs bound in the file/,
@@ -451,6 +451,51 @@ describe("comma-openpilot source", () => {
         'HyundaiCarDocs("Hyundai Tucson Diesel 2019", hybrid=HYBRID, ',
       ),
     ).toThrow(/hybrid of Hyundai Tucson Diesel 2019 is not True or False/);
+  });
+
+  it("fails on imports that may replace opendbc's names, and flags given by position", async () => {
+    const fails = (change: (body: string) => string) =>
+      expect(harvest("full", editBody("hyundai", change))).rejects;
+    await fails((b) => `${b}\nfrom .other_values import CAR\n`).toThrow(
+      /CAR imported in .*hyundai\/values\.py/,
+    );
+    await fails((b) => `from .configs import HyundaiPlatformConfig\n${b}`).toThrow(
+      /HyundaiPlatformConfig imported/,
+    );
+    await fails((b) => `from opendbc.car import PlatformConfig, CarDocs\n${b}`).toThrow(
+      /CarDocs imported/,
+    );
+    await fails(
+      (b) => `from opendbc.car.docs_definitions import CarDocs\n${b}\nclass CarDocs:\n  pass\n`,
+    ).toThrow(/CarDocs twice/);
+    await fails((b) => `from .helpers import *\n${b}`).toThrow(/import \*/);
+    // A car class's later fields by position: the 14th of FordCarDocs is `hybrid`.
+    await fails((b) =>
+      b.replace(
+        'HyundaiCarDocs("Hyundai Tucson Diesel 2019", ',
+        'HyundaiCarDocs("Hyundai Tucson Diesel 2019", "All", None, ',
+      ),
+    ).toThrow(/unreadable car name in HYUNDAI_TUCSON/);
+  });
+
+  it("fails on code that changes the platforms once Python has built them", async () => {
+    const fails = (after: string) =>
+      expect(
+        harvest(
+          "full",
+          editBody("hyundai", (b) => `${b}\n${after}\n`),
+        ),
+      ).rejects.toThrow(/Python cannot read .*hyundai\/values\.py: /);
+    // Cars swapped between two platforms, through CAR or a platform taken from it.
+    await fails(
+      "CAR.HYUNDAI_TUCSON.config.car_docs[:], CAR.HYUNDAI_IONIQ_5.config.car_docs[:] = (\n  CAR.HYUNDAI_IONIQ_5.config.car_docs[:], CAR.HYUNDAI_TUCSON.config.car_docs[:]\n)",
+    );
+    await fails("for c in CAR:\n  c.config = CAR.HYUNDAI_IONIQ_5.config");
+    await fails("CAR.HYUNDAI_TUCSON.config.car_docs.clear()");
+    await fails("CAR.HYUNDAI_TUCSON._value_ = CAR.HYUNDAI_IONIQ_5._value_");
+    await fails('setattr(CAR.HYUNDAI_TUCSON, "config", CAR.HYUNDAI_IONIQ_5.config)');
+    await fails('vars(CAR.HYUNDAI_TUCSON.config)["platform_str"] = "HYUNDAI_IONIQ_5"');
+    await fails("object.__setattr__(CAR.HYUNDAI_TUCSON, 'config', None)");
   });
 
   it("fails when Python's own parser reads the definitions otherwise, or cannot run", async () => {

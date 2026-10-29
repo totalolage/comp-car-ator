@@ -17,6 +17,15 @@ import sys
 YEARS = re.compile(r"^(.+?) (\d{4}\S*(?:, \d{4}\S*)*)$")
 PLATFORM = re.compile(r"^[A-Z][A-Z0-9_]*$")
 FLAGS = (("hybrid", "Hybrid"), ("plug_in_hybrid", "Plug-in Hybrid"))
+# The only imports that may bind a config or car class name.
+IMPORTS = {("opendbc.car", "PlatformConfig"), ("opendbc.car.docs_definitions", "CarDocs")}
+# Ways to reach or change objects without naming them: names, and attributes.
+REFLECTION = {
+  "setattr", "delattr", "getattr", "vars", "globals", "locals", "exec", "eval", "compile",
+  "__import__", "__builtins__", "builtins", "importlib", "gc", "ctypes", "inspect",
+}
+FRAMES = {"_getframe", "f_locals", "f_globals", "f_back"}
+SPECIAL = re.compile(r"^_.*_$")  # __dict__, __setattr__, an Enum's _value_
 
 
 class Unreadable(Exception):
@@ -56,9 +65,7 @@ def binds(name, node):
     return not isinstance(node.ctx, ast.Load)
   if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.arg, ast.Global, ast.Nonlocal)):
     return True
-  if isinstance(node, ast.alias):
-    return node.asname == name
-  if isinstance(node, ast.ClassDef):
+  if isinstance(node, (ast.alias, ast.ClassDef)):
     return False
   return not isinstance(node, (ast.Attribute, ast.keyword))
 
@@ -67,14 +74,33 @@ def read(source, constructors, car_docs):
   tree = ast.parse(source)
   spelled = list(identifiers(tree))
 
-  # The platform class and the names that build it are opendbc's own, bound once.
+  # The platform class and the names that build it are opendbc's own, bound once: by their
+  # class statement or an import of opendbc's own.
   known = constructors | car_docs | {"CAR"}
   for name, node in spelled:
     if name in known and binds(name, node):
       raise Unreadable(f"{name} is bound in the file")
+  defined = [n.name for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+  for node in ast.walk(tree):
+    if not isinstance(node, (ast.Import, ast.ImportFrom)):
+      continue
+    for alias in node.names:
+      if alias.name == "*":
+        raise Unreadable("import *")
+      name = alias.asname or alias.name.split(".")[0]
+      if name not in known:
+        continue
+      if not (
+        isinstance(node, ast.ImportFrom)
+        and not node.level
+        and (node.module, alias.name) in IMPORTS
+        and not alias.asname
+      ):
+        raise Unreadable(f"{name} is imported")
+      defined.append(name)
   for name in known:
-    if sum(isinstance(n, ast.ClassDef) and n.name == name for _, n in spelled) > 1:
-      raise Unreadable(f"class {name} twice")
+    if defined.count(name) > 1:
+      raise Unreadable(f"{name} twice")
   classes = [n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "CAR"]
   if len(classes) != 1:
     raise Unreadable("no platform class")
@@ -129,6 +155,9 @@ def read(source, constructors, car_docs):
   def car(expr, before):
     if isinstance(expr, ast.Call) and isinstance(expr.func, ast.Name) and expr.func.id in car_docs:
       keywords = plain(expr)
+      # A name and a package: a later argument may be a flag given by position.
+      if len(expr.args) > 2:
+        raise Unreadable(f"a car with more than two positional arguments (line {expr.lineno})")
       first = expr.args[0] if expr.args else None
       if not (isinstance(first, ast.Constant) and isinstance(first.value, str)):
         raise Unreadable(f"a car name is not a string (line {expr.lineno})")
@@ -150,6 +179,7 @@ def read(source, constructors, car_docs):
 
   out = []
   platforms = set()
+  heads = set()  # the members' targets, and the platforms overrides name
   for member in cls.body:
     if isinstance(member, ast.Pass) or (
       isinstance(member, ast.AnnAssign) and member.value is None and isinstance(member.target, ast.Name)
@@ -161,6 +191,7 @@ def read(source, constructors, car_docs):
       target, call = member.targets[0], member.value
     else:
       raise Unreadable(f"unreadable member of class CAR (line {member.lineno})")
+    heads.add(target)
     platform = target.id
     if not PLATFORM.match(platform) or not isinstance(call, ast.Call):
       raise Unreadable(f"unreadable member of class CAR: {platform}")
@@ -181,6 +212,7 @@ def read(source, constructors, car_docs):
       and not call.args
     ):
       cars = keywords.get("car_docs")
+      heads.add(func.value)
     else:
       raise Unreadable(f"{platform} is not built by a known platform config")
     if cars is None:
@@ -197,6 +229,37 @@ def read(source, constructors, car_docs):
       ):
         raise Unreadable(f"a car outside the cars of {platform}")
     out += [[name, platform] for _, names in found for name in names]
+
+  # Nothing outside opendbc's own classes reaches the platforms to change them after they are
+  # built: no assignment or `del` through CAR, a platform or a class above, or to an attribute
+  # but a method's own (`self.STEER_MAX = …`); no `car_docs`; no reflection or special
+  # attributes (`__dict__`, `_value_`) but `super().__init__`; a platform only as
+  # `PLATFORM.<name>` (`.specs`).
+  trusted = set()
+  for node in ast.walk(tree):
+    if isinstance(node, ast.ClassDef) and node.name in constructors | car_docs:
+      trusted |= {id(n) for n in ast.walk(node)}
+  parents = {id(child): node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+  guarded = known | platforms
+  for node in ast.walk(tree):
+    if id(node) in trusted:
+      continue
+    writes = isinstance(getattr(node, "ctx", None), (ast.Store, ast.Del)) and node not in heads
+    if writes and any(isinstance(n, ast.Name) and n.id in guarded for n in ast.walk(node)):
+      raise Unreadable(f"an assignment or del through a platform (line {node.lineno})")
+    if writes and isinstance(node, ast.Attribute):
+      own = isinstance(node.value, ast.Name) and node.value.id == "self"
+      if not own or node.attr == "config" or SPECIAL.match(node.attr):
+        raise Unreadable(f"an assignment or del of {node.attr} (line {node.lineno})")
+    if isinstance(node, ast.Attribute):
+      init = node.attr == "__init__" and isinstance(node.value, ast.Call) and getattr(node.value.func, "id", None) == "super"
+      if node.attr in FRAMES | {"car_docs"} or (SPECIAL.match(node.attr) and not init):
+        raise Unreadable(f"{node.attr} outside opendbc's classes (line {node.lineno})")
+    if isinstance(node, ast.Name) and node.id in REFLECTION:
+      raise Unreadable(f"{node.id} (line {node.lineno})")
+    if isinstance(node, ast.Name) and node.id in platforms and node not in heads:
+      if not isinstance(parents.get(id(node)), ast.Attribute):
+        raise Unreadable(f"{node.id} other than as {node.id}.<name> (line {node.lineno})")
 
   # A name read for cars holds them as assigned only if nothing else uses it.
   for name in set(reads.values()):

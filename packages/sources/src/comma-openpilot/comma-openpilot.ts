@@ -108,6 +108,9 @@ const CAR_DOCS = new Set([
   "VWCarDocs",
 ]);
 
+/** The only imports that may bind one of those names: opendbc's own base classes. */
+const IMPORTS = new Set(["opendbc.car.PlatformConfig", "opendbc.car.docs_definitions.CarDocs"]);
+
 /** A car's flags that add a car of the same name with a word before the years. */
 const HYBRID_FLAGS = [
   ["hybrid", "Hybrid"],
@@ -323,14 +326,17 @@ function checkPlatforms(rows: OpenpilotSupport[]): void {
  * Read by brackets, not indents or line breaks, as Python does, and only the grammar ADR 0016
  * allows; anything else fails the run rather than place a car Python would not:
  * - `class CAR(Platforms):`, once, undecorated; CAR and the CONSTRUCTORS and CAR_DOCS names
- *   bound by nothing in the file but their own class statement or a plain import.
+ *   bound once, by their own class statement or an import of IMPORTS; no `import *`.
  * - Each member a bare annotation, `pass` or a platform: one of CONSTRUCTORS called with its cars first
  *   or as `car_docs=`, or an `override` of an earlier platform stating its own `car_docs=`
  *   (`NISSAN_LEAF_IC = NISSAN_LEAF.override(car_docs=[])`). No `*` or `**` arguments.
  * - Cars: a list whose items are cars or `*` lists; a car is a call of one of CAR_DOCS with
- *   its name as one string first and `hybrid=` and `plug_in_hybrid=` True or False. A list or
+ *   its name as one string first, at most a package after it by position, and `hybrid=` and
+ *   `plug_in_hybrid=` True or False. A list or
  *   car may be a name the file assigns once at its top level before it is read, and uses for
  *   nothing else.
+ * Python's reading (platforms.py) also fails on code that changes the platforms once built
+ * (`CAR.X.config.car_docs.clear()`, `setattr`), which only a syntax tree tells apart.
  */
 function parsePlatforms(text: string, url: string): [name: string, platform: string][] {
   // Strings and comments blanked out, offsets kept: brackets and keywords are code only.
@@ -340,10 +346,25 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
   const unreadable = (member: string) =>
     new Error(`comma-openpilot: unreadable member of class CAR in ${url}: ${member}`);
 
-  for (const name of ["CAR", ...CONSTRUCTORS, ...CAR_DOCS]) {
-    if ((code.match(new RegExp(`\\bclass\\s+${name}\\b`, "g")) ?? []).length > 1) {
-      throw fail(`class ${name} twice`);
+  // What an import binds; `*` may bind anything.
+  const imported: [name: string, from: string | undefined][] = [];
+  for (const { text } of lines) {
+    const from = /^from\s+([.\w]+)\s+import\b([\s\S]*)$/.exec(text);
+    const plain = from ? null : /^import\b([\s\S]*)$/.exec(text);
+    for (const part of (from?.[2] ?? plain?.[1] ?? "").replace(/[()]/g, "").split(",")) {
+      const [, name = "", alias] = /^\s*([\w.*]+)(?:\s+as\s+(\w+))?\s*$/.exec(part) ?? [];
+      if (name === "*") throw fail("import *");
+      imported.push([
+        alias ?? name.split(".")[0] ?? "",
+        alias ? undefined : `${from?.[1]}.${name}`,
+      ]);
     }
+  }
+  for (const name of ["CAR", ...CONSTRUCTORS, ...CAR_DOCS]) {
+    const imports = imported.filter(([bound]) => bound === name);
+    if (imports.some(([, from]) => !from || !IMPORTS.has(from))) throw fail(`${name} imported`);
+    const classes = code.match(new RegExp(`\\bclass\\s+${name}\\b`, "g")) ?? [];
+    if (classes.length + imports.length > 1) throw fail(`${name} twice`);
     if (bound(code, name)) throw fail(`${name} bound in the file`);
   }
   const start = lines.findIndex((s) => !s.indented && /^class\s+CAR\b/.test(s.text));
@@ -413,7 +434,8 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
       const close = closingBracket(code, open);
       const carArgs = callArguments(code, open, close);
       const name = carArgs?.positional[0] && firstString(text, code, ...carArgs.positional[0]);
-      if (!carArgs || !name || name.includes("\\")) {
+      // A name and a package: a later argument may be a flag given by position.
+      if (!carArgs || !name || name.includes("\\") || carArgs.positional.length > 2) {
         throw fail(`unreadable car name in ${platform}`);
       }
       out.push([name, platform]);
