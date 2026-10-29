@@ -34,7 +34,7 @@ const PRECACHED_PAGES = ["/", "/en/", "/offline/", "/en/offline/"];
 /** @returns {import("astro").AstroIntegration} */
 export function serviceWorker() {
   return {
-    name: "comp-car-ator:service-worker",
+    name: "car-db:service-worker",
     hooks: {
       "astro:build:done": async ({ dir, logger }) => {
         const dist = fileURLToPath(dir);

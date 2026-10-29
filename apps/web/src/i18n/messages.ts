@@ -8,7 +8,7 @@ import type { Lang } from "./locale.ts";
 export { LANGS, type Lang, localePath, numberLocale } from "./locale.ts";
 
 const cs = {
-  "site.title": "comp-car-ator",
+  "site.title": "Car DB",
   "site.tagline": "Srovnání aut: katalog, nové ceny a inzeráty z ČR, Německa a Rakouska",
   "lang.switch": "English",
   "lang.switchLabel": "Switch to English",
@@ -237,7 +237,7 @@ const cs = {
 export type MessageKey = keyof typeof cs;
 
 const en: Record<MessageKey, string> = {
-  "site.title": "comp-car-ator",
+  "site.title": "Car DB",
   "site.tagline":
     "Car comparison: catalog, new prices and listings from Czechia, Germany and Austria",
   "lang.switch": "Česky",

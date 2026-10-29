@@ -1,6 +1,6 @@
 # Web design system
 
-cars.f8y.dev reads like a printed parts catalog for cars, after McMaster-Carr: the page is
+cardb.f8y.dev reads like a printed parts catalog for cars, after McMaster-Carr: the page is
 the table, navigation is a text index, filters narrow the table in place, and every view is
 a URL. No product cards, no hero, no imagery in the shell apart from the logo mark. Tokens
 live in `src/styles/tokens.css`, shared components in `src/styles/base.css`.

@@ -32,7 +32,7 @@ export function githubReleaseStore(options: GithubReleaseStoreOptions): ReleaseS
     authorization: `Bearer ${options.token}`,
     accept: "application/vnd.github+json",
     "x-github-api-version": "2022-11-28",
-    "user-agent": "comp-car-ator-ingest",
+    "user-agent": "car-db-ingest",
   };
 
   async function call(path: string, init: RequestInit = {}): Promise<Response> {

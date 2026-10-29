@@ -1,4 +1,4 @@
-# comp-car-ator
+# Car DB
 
 A personal car comparison site for a Czech buyer: a catalog of car variants with new prices and used-price statistics, plus individual used listings from Czechia, Germany and Austria, with an estimate of what an imported car costs once registered in Czechia.
 

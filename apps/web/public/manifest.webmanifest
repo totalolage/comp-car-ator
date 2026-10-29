@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "comp-car-ator",
-  "short_name": "comp-car-ator",
+  "name": "Car DB",
+  "short_name": "Car DB",
   "description": "Srovnání aut: katalog, nové ceny a inzeráty z ČR, Německa a Rakouska",
   "lang": "cs",
   "dir": "ltr",
