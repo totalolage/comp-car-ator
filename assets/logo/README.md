@@ -15,7 +15,7 @@ All masters are SVG with filled outlines (no strokes, no live text). Each comes 
 
 | File                                                           | Use                                                                                           |
 | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `cardb-symbol-*.svg`                                           | The mark on its 256 × 256 construction canvas. 24 px and up.                                  |
+| `cardb-symbol-*.svg`                                           | The mark on its 256 × 256 construction canvas. 24 px tall ink and up.                         |
 | `cardb-symbol-small-*.svg`                                     | Small cut for 16–32 px only (favicons, tab icons).                                            |
 | `cardb-lockup-horizontal-*.svg`                                | Mark + name. The default lockup.                                                              |
 | `cardb-lockup-stacked-*.svg`                                   | Mark over name, for square-ish spaces.                                                        |
@@ -23,9 +23,21 @@ All masters are SVG with filled outlines (no strokes, no live text). Each comes 
 | `cardb-tile-small-green.svg`                                   | The tile with the small cut; it is the site's `favicon.svg`.                                  |
 | `cardb-tile-square-green.svg`, `cardb-tile-maskable-green.svg` | Full-bleed sources of `apple-touch-icon.png` and `icon-maskable-*.png`.                       |
 
-The site's raster icons (`apps/web/public/`: `favicon.ico` 16/32 small cut + 48 main,
-`apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `icon-maskable-192.png`,
-`icon-maskable-512.png`) are rendered from these tiles with `rsvg-convert`; the ICO stores PNGs.
+The site's raster icons in `apps/web/public/` are rendered from these tiles with
+`rsvg-convert -w <size> -h <size> -o <png> <tile>`:
+
+| Icon                                             | Tile                            | Sizes          |
+| ------------------------------------------------ | ------------------------------- | -------------- |
+| `favicon.ico`                                    | `cardb-tile-small-green.svg`    | 16, 32         |
+| `favicon.ico`                                    | `cardb-tile-green.svg`          | 48             |
+| `favicon.svg`                                    | `cardb-tile-small-green.svg`    | copied as is   |
+| `apple-touch-icon.png`                           | `cardb-tile-square-green.svg`   | 180, alpha off |
+| `icon-192.png`, `icon-512.png`                   | `cardb-tile-green.svg`          | 192, 512       |
+| `icon-maskable-192.png`, `icon-maskable-512.png` | `cardb-tile-maskable-green.svg` | 192, 512       |
+
+The ICO holds the three renders as PNG entries (32-bit, in size order). iOS fills transparency
+with black, so the apple-touch PNG is written without alpha
+(`magick <png> -alpha off PNG24:apple-touch-icon.png`).
 
 ## Construction
 
@@ -56,12 +68,12 @@ The site's raster icons (`apps/web/public/`: `favicon.ico` 16/32 small cut + 48 
 
 Keep clear space of one tyre height (48 units on the 256 grid) on every side.
 
-| Version           | Smallest                                                    |
-| ----------------- | ----------------------------------------------------------- |
-| Symbol            | 24 px tall ink (27 px canvas); below that use the small cut |
-| Small cut         | 16 px; use it only from 16 to 32 px                         |
-| Horizontal lockup | 120 px wide                                                 |
-| Stacked lockup    | 64 px wide                                                  |
+| Version           | Smallest                                                      |
+| ----------------- | ------------------------------------------------------------- |
+| Symbol            | 24 px tall ink (a 28 px canvas); below that use the small cut |
+| Small cut         | 16 px; use it only from 16 to 32 px                           |
+| Horizontal lockup | 120 px wide                                                   |
+| Stacked lockup    | 64 px wide                                                    |
 
 ## Colour
 
