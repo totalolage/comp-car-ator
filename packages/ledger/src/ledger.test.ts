@@ -943,6 +943,9 @@ describe("Ledger", () => {
         variant("Accent", g("l", 2015), "petrol", 101, { from: 2015 }),
         variant("i10", g("m", 2005, 2018), "petrol", 102, { from: 2005, to: 2018 }),
         variant("i10", g("n", 2015), "petrol", 103, { from: 2015 }),
+        // A type built in one year only, the year after the chosen one ends, follows it.
+        variant("i20", g("o", 2015, 2020), "petrol", 104, { from: 2015, to: 2020 }),
+        variant("i20", g("p", 2021, 2021), "petrol", 105, { from: 2021, to: 2021 }),
       ]);
       await run("comma-openpilot", "full", "2026-10-02", [
         row("Elantra", [2017, 2018, 2019, 2020, 2021, 2022, 2023], { platform: "E" }),
@@ -961,6 +964,7 @@ describe("Ledger", () => {
         row("i10", [2012, 2013], { platform: "T" }),
         row("i10", [2015], { platform: "T" }),
         row("i10", [2021, 2022, 2023], { platform: "T" }),
+        row("i20", [2020], { platform: "U" }),
       ]);
       expect(
         Object.fromEntries(
@@ -982,6 +986,7 @@ describe("Ledger", () => {
         "i10 2012,2013": [],
         "i10 2015": [],
         "i10 2021,2022,2023": [],
+        "i20 2020": [],
       });
     });
 

@@ -207,10 +207,14 @@ function generationFor(years: number[], generations: Generation[]): Generation |
 }
 
 /**
- * `a` lies inside `b`, give or take a year at either end, and is not `b`'s span. Two open
- * Generations are two starts, not one inside the other.
+ * `a` lies inside `b`, give or take a year at either end, sharing two years at least, and is
+ * not `b`'s span. Two open Generations are two starts, not one inside the other, and a type
+ * built only in the year after `b` ends follows it.
  */
 function nested(a: Generation, b: Generation): boolean {
   if (a.to === Number.POSITIVE_INFINITY && b.to === Number.POSITIVE_INFINITY) return false;
-  return a.from >= b.from - 1 && a.to <= b.to + 1 && (a.from > b.from || a.to < b.to);
+  const shared = Math.min(a.to, b.to) - Math.max(a.from, b.from) + 1;
+  return (
+    a.from >= b.from - 1 && a.to <= b.to + 1 && shared >= 2 && (a.from > b.from || a.to < b.to)
+  );
 }
