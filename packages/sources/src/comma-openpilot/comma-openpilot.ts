@@ -287,7 +287,9 @@ function parsePlatforms(text: string, url: string): [name: string, platform: str
   for (const name of new Set(reads.values())) {
     for (const use of code.matchAll(new RegExp(`\\b${name}\\b`, "g"))) {
       if (use.index !== assigned.get(name)?.at && reads.get(use.index) !== name) {
-        throw new Error(`comma-openpilot: cars under ${name}, which the file uses elsewhere, in ${url}`);
+        throw new Error(
+          `comma-openpilot: cars under ${name}, which the file uses elsewhere, in ${url}`,
+        );
       }
     }
   }
