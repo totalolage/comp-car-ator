@@ -924,6 +924,47 @@ describe("bazos source", () => {
       expect(observations).toHaveLength(known.size);
     });
 
+    it("on a page read again for its rows, when that read fails", async () => {
+      // /kia/ comes out a row short, and the read again gets HTTP 503.
+      const recorded = await cassette("full", (c) => {
+        const at = ({ request }: Interaction) => pathOf(request.url) === "/kia/";
+        const first = c.interactions.find(at) as Interaction;
+        const short = first.response.body.slice(0, first.response.body.lastIndexOf(ROW));
+        c.interactions = [
+          ...c.interactions.filter((i) => !at(i)),
+          { ...first, response: { ...first.response, body: short } },
+          { ...first, response: { ...first.response, status: 503, body: "" } },
+        ];
+      });
+      const { observations, error, listed } = await harvest(recorded, "full", { isKnown });
+      expect(String(error)).toMatch(/Bazoš returned HTTP 503 for https:\/\/auto.bazos.cz\/kia\/$/);
+      expect(listed).toEqual(["/kia/", "/kia/"]);
+      expect(prices(observations).map((o) => o.ref)).toEqual(["224452818"]);
+      expect(observations).toHaveLength(1);
+    });
+
+    it("on a page the walk steps back from, when the read after it fails", async () => {
+      // The first 20 ads go during the walk: /kia/16/ shares none of /kia/'s, so the walk
+      // steps back, and that read gets HTTP 503. The known ad was only on /kia/16/.
+      const c = await category();
+      const target = c.ids.slice(36, 56).find((id) => IN_SCOPE.includes(id)) as string;
+      const recorded = await c.cassette([
+        [0, c.ids],
+        [16, c.ids.slice(20)],
+      ]);
+      const root = recorded.interactions[0] as Interaction;
+      recorded.interactions.push({
+        ...root,
+        response: { ...root.response, status: 503, body: "" },
+      });
+      const { observations, error, listed } = await harvest(recorded, "full", {
+        isKnown: (ref) => ref === target,
+      });
+      expect(String(error)).toMatch(/Bazoš returned HTTP 503 for https:\/\/auto.bazos.cz\/kia\/$/);
+      expect(listed).toEqual(["/kia/", "/kia/16/", "/kia/"]);
+      expect(prices(observations).map((o) => o.ref)).toEqual([target]);
+    });
+
     it("in parts done earlier in the census, without their ad pages", async () => {
       const doneAt = new Date("2026-10-24T03:00:00Z");
       const { observations, error, details } = await harvest(await cassette("full"), "full", {

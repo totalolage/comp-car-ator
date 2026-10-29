@@ -22,7 +22,11 @@
  *   `new` (the new list). A slice is paged to its end before any of its detail pages, its
  *   used listings coming out as they are met and its new or demo ones from their detail
  *   pages after, each naming the slice (`ListingSeen.slice`, never a price part, as a price
- *   moves), then SliceDone; slices done earlier in the census are skipped. A
+ *   moves), then SliceDone; slices done earlier in the census are skipped. A known listing
+ *   whose card a census reads without it coming out then (a new or demo one before its
+ *   detail page, one met by a recount or a proof's pass) gets a ListingPriceSeen from its
+ *   card as read (`alive`), so one moved from a slice that finishes stays live when the run
+ *   fails or is stopped first. A
  *   slice is done when one pass alone meets as many distinct listings as its pages report:
  *   passes are never pooled, since a listing gone and another arrived between two passes
  *   would let their union reach the count without one every pass missed. A short slice is
@@ -211,6 +215,8 @@ class Harvest {
   private readonly gone = new Set<string>();
   /** Refs of new or demo listings that came out whole from their detail page this run. */
   private readonly detailed = new Set<string>();
+  /** Refs a census read gave a ListingPriceSeen (`alive`). */
+  private readonly sighted = new Set<string>();
   /** Refs whose `listing:<ref>` mark (see `marks`) this run has yielded. */
   private readonly marked = new Set<string>();
   /** Slices skipped as done earlier in the census, in the order met, until a split takes them. */
@@ -286,6 +292,7 @@ class Harvest {
     const parts = split(slice);
     let harvested: Set<string> | null = null;
     if (parts && first.total > this.cap) {
+      yield* this.alive(first.cards);
       harvested = yield* this.parts(slice, parts);
     } else {
       // Page the slice before any detail page, so few listings move under it.
@@ -344,7 +351,7 @@ class Harvest {
   ): AsyncGenerator<Observation, Set<string> | null> {
     for (const part of skipped) yield* this.again(part, harvested);
     const key = sliceKey(slice);
-    let { left, total } = await this.recount(slice, parts);
+    let { left, total } = yield* this.recount(slice, parts);
     if (left <= 0 && this.live(harvested).size >= total) return harvested;
     if (slice.price) {
       const why = left > 0 ? "listings in neither half" : this.tally(harvested, total);
@@ -355,12 +362,12 @@ class Harvest {
     if (candidates === "whole") return harvested;
     // Counted before the band and online checks: a listing proven then was online and
     // outside every band when counted.
-    ({ left, total } = await this.recount(slice, parts));
+    ({ left, total } = yield* this.recount(slice, parts));
     left = Math.max(0, left);
     const failed: Record<string, number> = {};
     let proven = 0;
     for (const { card, band } of candidates) {
-      let reason = typeof band === "string" ? band : await this.absent(band, card.ref);
+      let reason = typeof band === "string" ? band : yield* this.absent(band, card.ref);
       if (reason === null) {
         // Still online after the recount, and still as its first read showed it: one gone or
         // changed since cannot stand in.
@@ -438,19 +445,25 @@ class Harvest {
    * first), each keeping its lower count: a listing that moves from one part to another once
    * meanwhile counts in one at most (ADR 0003).
    */
-  private async recount(
+  private async *recount(
     slice: Slice,
     parts: readonly Slice[],
-  ): Promise<{ left: number; total: number }> {
-    const count = async (s: Slice) => (await this.page(s, 1)).total;
-    const before = await count(slice);
+  ): AsyncGenerator<ListingPriceSeen, { left: number; total: number }> {
+    const before = yield* this.count(slice);
     const counts: number[] = [];
-    for (const part of parts) counts.push(await count(part));
+    for (const part of parts) counts.push(yield* this.count(part));
     for (let i = parts.length - 2; i >= 0; i--) {
-      counts[i] = Math.min(counts[i] as number, await count(parts[i] as Slice));
+      counts[i] = Math.min(counts[i] as number, yield* this.count(parts[i] as Slice));
     }
-    const total = Math.max(before, await count(slice));
+    const total = Math.max(before, yield* this.count(slice));
     return { left: total - counts.reduce((sum, n) => sum + n, 0), total };
+  }
+
+  /** How many listings `slice` reports, by its first page, whose known cards it proves live. */
+  private async *count(slice: Slice): AsyncGenerator<ListingPriceSeen, number> {
+    const page = await this.page(slice, 1);
+    yield* this.alive(page.cards);
+    return page.total;
   }
 
   /**
@@ -468,6 +481,7 @@ class Harvest {
     let reported = 0;
     for await (const page of this.pages(slice, true)) {
       reported = Math.max(reported, page.total);
+      yield* this.alive(page.cards);
       for (const card of page.cards) if (!cards.has(card.ref)) cards.set(card.ref, card);
     }
     const fresh = [...cards.values()].filter((card) => !harvested.has(card.ref));
@@ -507,11 +521,12 @@ class Harvest {
   }
 
   /** Null when one whole pass over `band` does not meet `ref`, else why that is no proof. */
-  private async absent(band: Slice, ref: string): Promise<string | null> {
+  private async *absent(band: Slice, ref: string): AsyncGenerator<ListingPriceSeen, string | null> {
     const refs = new Set<string>();
     let reported = 0;
     for await (const page of this.pages(band, true)) {
       reported = Math.max(reported, page.total);
+      yield* this.alive(page.cards);
       for (const card of page.cards) refs.add(card.ref);
     }
     if (refs.has(ref)) return "returned by their price band";
@@ -525,15 +540,15 @@ class Harvest {
    * another arrive, so their union can reach the count without a listing every pass missed.
    * The cards of every pass come out either way, with the refs of the complete pass, if any,
    * and the highest total any page reported. A card that needs no detail page (any but a new
-   * or demo one) comes out as a listing as it is met, so a pass or detail page that fails
-   * later keeps none of them from proving a listing live (one moved here from a slice that
-   * finishes).
+   * or demo one) comes out as a listing as it is met, and a known new or demo one as a
+   * ListingPriceSeen (`alive`), so a pass or detail page that fails later keeps none of them
+   * from proving a listing live (one moved here from a slice that finishes).
    */
   private async *census(
     slice: Slice,
     first: ListPage,
   ): AsyncGenerator<
-    ListingSeen | ListingGone,
+    ListingSeen | ListingGone | ListingPriceSeen,
     { cards: Card[]; pass: Set<string> | null; reported: number }
   > {
     const cards = new Map<string, Card>();
@@ -547,7 +562,8 @@ class Harvest {
           refs.add(card.ref);
           if (cards.has(card.ref)) continue;
           cards.set(card.ref, card);
-          if (card.category !== "N") yield* this.listing(card);
+          if (card.category === "N") yield* this.alive([card]);
+          else yield* this.listing(card);
         }
       }
       most = Math.max(most, reported);
@@ -675,6 +691,32 @@ class Harvest {
         continue;
       }
       this.done.add(card.ref);
+      if (outOfScope(card) || card.price === undefined || !card.currency) continue;
+      yield {
+        kind: "ListingPriceSeen",
+        ref: card.ref,
+        price: { amount: card.price, currency: card.currency },
+      };
+    }
+  }
+
+  /**
+   * In a census, a ListingPriceSeen for each listing among `cards` the Ledger knew before the
+   * run that has not come out this run, once a run, as a page that holds it back or never
+   * yields it is read (a new or demo card before its detail page, a recount, a proof's pass):
+   * a listing that moved here from a slice that finishes is not missed there, even when the
+   * run fails or is stopped before the card comes out. The card's record price, as `prices`;
+   * none without a price, in an unknown currency or outside the scope. Its own ListingSeen, if
+   * any, still comes out later. A card whose currency is not the one the Ledger holds gets a
+   * ListingPriceSeen the Ledger rejects, which still proves it live but keeps the slice out of
+   * this run's census; its ListingSeen moves the currency for the next run.
+   */
+  private *alive(cards: readonly Card[]): Iterable<ListingPriceSeen> {
+    for (const card of cards) {
+      if (!card.ref || !card.category || this.done.has(card.ref) || this.sighted.has(card.ref))
+        continue;
+      if (!this.wasKnown(card.ref)) continue;
+      this.sighted.add(card.ref);
       if (outOfScope(card) || card.price === undefined || !card.currency) continue;
       yield {
         kind: "ListingPriceSeen",
