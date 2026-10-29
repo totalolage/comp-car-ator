@@ -765,34 +765,65 @@ describe("tipcars source", () => {
       expect(listings(os)).toEqual([]);
     });
 
-    it("sweeps a share of each list a day, so every known listing is priced within the shares", async () => {
-      // 100 used listings on 5 pages, no new ones; 4 requests a day make 3 shares.
+    /** Both lists' pages: 100 used listings on 5 pages and 30 more as the new list's 2. */
+    async function sweepable() {
       const cards = cardsOf(await loadCassette(full));
-      const refs = [...cards.keys()].slice(0, 100);
-      let cassette = serve(await loadCassette(full), "https://www.tipcars.com/nove", [
-        listPage(cards, 0, []),
-      ]);
+      const used = [...cards.keys()].slice(0, 100);
+      const fresh = [...cards.keys()].slice(100, 130);
+      expect(fresh).toHaveLength(30);
+      let cassette = await loadCassette(full);
       for (let n = 1; n <= 5; n++) {
         const url = n === 1 ? usedHead : `https://www.tipcars.com/ojete?str=${n}-20&2000-=`;
-        cassette = serve(cassette, url, [listPage(cards, 100, refs.slice((n - 1) * 20, n * 20))]);
+        cassette = serve(cassette, url, [listPage(cards, 100, used.slice((n - 1) * 20, n * 20))]);
       }
-      const all = new Set(refs);
-      const priced = new Set<string>();
-      for (const n of [0, 1, 2]) {
-        const urls: string[] = [];
-        const os = await harvest(cassette, {
-          mode: "incremental",
-          known: all,
-          options: { priceSweep: 4 },
-          now: day(n),
-          urls,
-        });
-        expect(urls.length).toBeLessThanOrEqual(2 + 4);
-        expect(listings(os)).toEqual([]);
-        for (const o of prices(os)) priced.add(o.ref);
-      }
-      const inScope = refs.filter((ref) => !/Dohodou/.test(cards.get(ref) ?? ""));
-      expect([...priced].sort()).toEqual(inScope.sort());
+      cassette = serve(cassette, "https://www.tipcars.com/nove", [
+        listPage(cards, 30, fresh.slice(0, 20)),
+      ]);
+      cassette = serve(cassette, "https://www.tipcars.com/nove?str=2-20", [
+        listPage(cards, 30, fresh.slice(20)),
+      ]);
+      const inScope = (refs: string[]) => refs.filter((r) => !/Dohodou/.test(cards.get(r) ?? ""));
+      return { cards, cassette, refs: [...used, ...fresh], inScope };
+    }
+
+    it("sweeps both lists to their ends, so every known listing is priced in one run", async () => {
+      const { cassette, refs, inScope } = await sweepable();
+      const urls: string[] = [];
+      const os = await harvest(cassette, {
+        mode: "incremental",
+        known: new Set(refs),
+        options: {},
+        urls,
+      });
+      // Each list's head walk stops at its first page (nothing new); the sweep reads the rest.
+      expect(urls).toHaveLength(5 + 2);
+      expect(listings(os)).toEqual([]);
+      const priced = prices(os).map((o) => o.ref);
+      expect(new Set(priced).size).toBe(priced.length);
+      expect(priced.sort()).toEqual(inScope(refs).sort());
+    });
+
+    it("follows a list that grows during the sweep to its new end", async () => {
+      // A listing posted meanwhile pushes the used list's last one onto a page 6.
+      const { cards, cassette: plain, refs, inScope } = await sweepable();
+      const used = refs.slice(0, 100);
+      expect(inScope(used)).toContain(used[99]);
+      let cassette = serve(plain, "https://www.tipcars.com/ojete?str=5-20&2000-=", [
+        listPage(cards, 101, used.slice(79, 99)),
+      ]);
+      cassette = serve(cassette, "https://www.tipcars.com/ojete?str=6-20&2000-=", [
+        listPage(cards, 101, used.slice(99)),
+      ]);
+      const os = await harvest(cassette, {
+        mode: "incremental",
+        known: new Set(refs),
+        options: {},
+      });
+      expect(
+        prices(os)
+          .map((o) => o.ref)
+          .sort(),
+      ).toEqual(inScope(refs).sort());
     });
 
     it("a listing the sweep meets that the Ledger does not know comes out whole", async () => {
@@ -883,8 +914,8 @@ describe("tipcars source", () => {
   });
 
   it("the price sweep stops before a detail page past its requests", async () => {
-    // The new list's page 2 holds three unknown new or demo listings; 3 requests make 2
-    // shares, and on a day of the second the sweep reads page 2 and two detail pages.
+    // The new list's page 2 holds three unknown new or demo listings; with 3 requests the
+    // sweep reads page 2 and two detail pages.
     const plain = await loadCassette(incremental);
     const cards = cardsOf(plain);
     const page2 = plain.interactions.find((x) => x.request.url.endsWith("/nove?str=2-20"));
@@ -897,16 +928,11 @@ describe("tipcars source", () => {
     cassette = serve(cassette, "https://www.tipcars.com/nove?str=2-20", [
       listPage(cards, 40, fresh),
     ]);
-    const dayOf = (d: Date) => Math.floor(Date.parse(d.toISOString().slice(0, 10)) / 86_400_000);
-    const at = [0, 1]
-      .map((n) => new Date(now.getTime() + n * 86_400_000))
-      .find((d) => dayOf(d) % 2 === 1);
     const urls: string[] = [];
     const os = await harvest(cassette, {
       mode: "incremental",
       known: new Set(known),
       options: { priceSweep: 3 },
-      now: at,
       urls,
     });
     expect(listings(os).map((o) => o.ref)).toEqual(fresh.slice(0, 2));

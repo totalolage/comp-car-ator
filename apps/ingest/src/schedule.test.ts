@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { catchUpMs, plan } from "./schedule.ts";
 
 describe("schedule", () => {
-  it("gives the incremental Run before a census an hour, Bazoš two and a half", () => {
+  it("gives the incremental Run before a census an hour, TipCars two, Bazoš two and a half", () => {
     expect(catchUpMs("sauto")).toBe(60 * 60_000);
+    expect(catchUpMs("tipcars")).toBe(120 * 60_000);
     expect(catchUpMs("bazos")).toBe(150 * 60_000);
   });
 

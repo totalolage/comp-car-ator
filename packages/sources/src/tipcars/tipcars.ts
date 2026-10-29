@@ -64,12 +64,12 @@
  * - Out of scope: listings without a price ("Dohodou"), and cards of the site's "Ostatní"
  *   bucket (makes it does not list) that name no model.
  * - incremental: both lists newest first, yielding the listings not known before, each list
- *   stopping at a page with none in the scope; then a price sweep over the day's share of
- *   both lists (`sweep`). A known listing met on either gets a ListingPriceSeen from its
- *   card's record (amount and currency as its ListingSeen carries them; on 2026-10-29 nine
- *   cards, one in EUR and seven showing "bez DPH", matched their detail pages), so its price
- *   history is daily for the listings walked. Every listing's price each day does not fit the
- *   hour: the sweep reads each listing nominally every third day, best effort (`priceSweep`).
+ *   stopping at a page with none in the scope; then a price sweep over both lists to their
+ *   ends (`sweep`). A known listing met on either gets a ListingPriceSeen from its card's
+ *   record (amount and currency as its ListingSeen carries them; on 2026-10-29 nine cards, one
+ *   in EUR and seven showing "bez DPH", matched their detail pages), so every known listing's
+ *   price history is daily. That is some 3,400 pages a day, which TipCars' incremental limit
+ *   (`catchUpMinutes`, apps/ingest/src/schedule.ts) is sized for.
  *
  * Research notes: scrape-access.md (TipCars row); lists, filters and pages verified against
  * the live site 2026-10-25. Cloudflare scores clients there, so every request starts at T1.
@@ -107,7 +107,7 @@ export interface TipcarsOptions {
   sliceCap?: number;
   /**
    * Most requests an incremental run spends past the new listings on its price sweep
-   * (`sweep`). Default 1,200, which keeps the run near 40 minutes; 0 turns the sweep off.
+   * (`sweep`). Default 3,800, about 108 minutes; 0 turns the sweep off.
    */
   priceSweep?: number;
 }
@@ -130,9 +130,13 @@ const NEW_PRICE_EDGES = [
 const USED_PRICE_SPLIT = 1_000_000;
 /** An open price band from this price up is not split further. */
 const OPEN_PRICE_LIMIT = 100_000_000;
-/** Requests a day's price sweep may spend: 1,200 at about 1.7 s a list page is 35 minutes. */
-const PRICE_SWEEP = 1_200;
-const DAY_MS = 86_400_000;
+/**
+ * Requests a day's price sweep may spend: 3,800 at about 1.7 s a list page is 108 minutes,
+ * which leaves the lists' heads and new listings' detail pages some 12 minutes of TipCars'
+ * 120-minute incremental limit (apps/ingest/src/schedule.ts). Both lists took 3,410 pages on
+ * 2026-10-29, so the cap leaves them room to grow by a tenth.
+ */
+const PRICE_SWEEP = 3_800;
 
 /** One query of the census. */
 type Response = Awaited<ReturnType<HarvestContext["http"]["get"]>>;
@@ -546,32 +550,22 @@ class Harvest {
   }
 
   /**
-   * The day's share of both lists past their heads, for prices. The site serves its lists
-   * newest first only, 20 a page, so every listing's price each day would take some 3,400
-   * pages (99 minutes at 1.7 s a page, on 2026-10-29) against the hour an incremental run
-   * has. So the lists' pages fall into as many shares as `priceSweep` requests need (three
-   * then), each list cut alike, taken in turn by Prague day: nominally a known listing's
-   * price is read every third day, a new listing's the day it appears. A share reads one page
-   * past its end, as listings drift down when new ones arrive. Known listings get their price,
-   * unknown ones in the scope come out whole (a new or demo one with its detail page): ones the
-   * census has not reached, or retired by mistake. Stops when the requests run out, and keeps
-   * no place for the next day: best effort, as a share's pages move with the counts and a day
-   * with many unknown new or demo listings spends its requests on their detail pages.
+   * Both lists past their heads to their ends, for prices: every known listing's price each
+   * day. The site serves its lists newest first only, 20 a page, so that is some 3,400 pages
+   * (97 minutes at 1.7 s a page, on 2026-10-29). Known listings get their price, unknown ones
+   * in the scope come out whole (a new or demo one with its detail page): ones the census has
+   * not reached, or retired by mistake. Paging is by offset: a listing posted meanwhile pushes
+   * the rest down a place, so the walk meets one twice and follows the list's count to its new
+   * end; one sold above the walk lifts the rest a place, so one can slip between two pages and
+   * go unpriced that day. Stops when `priceSweep` requests are spent, before a page or a
+   * detail page, so a list grown past them leaves its oldest listings unpriced (logged).
    */
   private async *sweep(heads: readonly Head[]): AsyncIterable<Observation> {
     if (this.priceSweep <= 0) return;
-    const pagesOf = (head: Head) => Math.ceil(head.total / PAGE_SIZE);
-    const all = heads.reduce((sum, head) => sum + pagesOf(head), 0);
-    // Each list's share reads a page past its end.
-    const shares = Math.max(1, Math.ceil(all / Math.max(1, this.priceSweep - heads.length)));
-    const day = Math.floor(Date.parse(`${pragueDate(this.ctx.now)}T00:00:00Z`) / DAY_MS);
-    const share = day % shares;
     const stop = this.requests + this.priceSweep;
     for (const head of heads) {
-      const pages = pagesOf(head);
-      const from = Math.max(head.read + 1, Math.floor((pages * share) / shares) + 1);
-      const to = Math.min(pages, Math.floor((pages * (share + 1)) / shares) + 1, this.maxPages);
-      for (let n = from; n <= to; n++) {
+      let pages = Math.ceil(head.total / PAGE_SIZE);
+      for (let n = head.read + 1; n <= Math.min(pages, this.maxPages); n++) {
         if (this.requests >= stop) {
           this.ctx.log.warn("tipcars price sweep ran out of requests", {
             slice: sliceKey(head.slice),
@@ -581,6 +575,7 @@ class Harvest {
         }
         const page = await this.page(head.slice, n);
         if (page.cards.length === 0) break;
+        pages = Math.max(pages, Math.ceil(page.total / PAGE_SIZE));
         yield* this.prices(page.cards);
         for (const card of page.cards) {
           if (this.wasKnown(card.ref)) continue;
