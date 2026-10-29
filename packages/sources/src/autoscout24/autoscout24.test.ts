@@ -706,36 +706,72 @@ describe("autoscout24 source", () => {
     expect(slices(failed)).toContain("used;price=12000-12000;year=2026");
   });
 
-  it("without makes, a failed census resumes, skipping the price bands it finished", async () => {
+  it("without makes, a census advances across timeouts while retaining count safety", async () => {
     const source = autoscout24Source({ ...DE, makes: undefined });
     const complete = await harvest(deFull, source, "full", {}, bandsFromMakes());
-    const lowest = (query: URLSearchParams) =>
-      query.get("offer") === "U,J,O" && query.get("priceto") === "31249";
-    const failing = await harvest(deFull, source, "full", {}, (cassette) => {
-      bandsFromMakes()(cassette);
-      for (const { request, response } of cassette.interactions) {
-        if (lowest(new URL(request.url).searchParams)) {
-          response.body = "<html><body>Wartungsarbeiten</body></html>";
-        }
-      }
+    expect(complete.error).toBeUndefined();
+    const finished = new Set<string>();
+    const checkpoint: Partial<Checkpoint> = {
+      sliceDoneAt: (key) => (finished.has(key) ? now : null),
+    };
+    const timeout = new DOMException("Harvest time limit reached", "TimeoutError");
+    const until = async (stopAfter: string) => {
+      const controller = new AbortController();
+      const interrupted: Source = {
+        ...source,
+        async *harvest(ctx) {
+          for await (const observation of source.harvest(ctx)) {
+            yield observation;
+            if (observation.kind === "SliceDone" && observation.slice === stopAfter) {
+              controller.abort(timeout);
+            }
+          }
+        },
+      };
+      const run = await harvest(
+        deFull,
+        interrupted,
+        "full",
+        checkpoint,
+        bandsFromMakes(),
+        controller.signal,
+      );
+      for (const key of slices(run)) finished.add(key);
+      return run;
+    };
+    const first = await until("used;price=62500-124999");
+    expect(first.error).toBe(timeout);
+    expect(slices(first).at(-1)).toBe("used;price=62500-124999");
+    const second = await until("used;price=31250-62499");
+    expect(second.error).toBe(timeout);
+    expect(slices(second)).toEqual(["used;price=31250-62499"]);
+    expect(listings(second).length).toBeGreaterThan(0);
+    expect(
+      listings(second).every((l) => l.price.amount >= 31_250 && l.price.amount <= 62_499),
+    ).toBe(true);
+    const last = await harvest(deFull, source, "full", checkpoint, bandsFromMakes());
+    expect(last.error).toBeUndefined();
+    expect(slices(last)).toEqual(["used;price=0-31249"]);
+    expect(listings(last).length).toBeGreaterThan(0);
+    expect(listings(last).every((l) => l.price.amount <= 31_249)).toBe(true);
+    expect([...finished, ...slices(last)]).toEqual(slices(complete));
+    expect(new Set([...refs(first), ...refs(second), ...refs(last)])).toEqual(refs(complete));
+    // Finished bands still need fresh first-page counts to reconcile their split parents.
+    const counted = last.urls.filter((url) => {
+      const query = params(url);
+      return query.get("offer") === "U,J,O" && query.get("pricefrom") === "62500";
     });
-    expect(String(failing.error)).toMatch(/page changed/);
-    const finished = slices(failing);
-    expect(finished).toContain("used;price=31250-62499");
-    expect(finished).not.toContain("used;price=0-31249");
-    const resumed = await harvest(
-      deFull,
-      source,
-      "full",
-      { sliceDoneAt: (key) => (finished.includes(key) ? new Date("2026-10-24T00:00:00Z") : null) },
-      bandsFromMakes(),
-    );
-    expect(resumed.error).toBeUndefined();
-    expect(slices(resumed)).toEqual(["used;price=0-31249"]);
-    // Finished bands are only counted again (for the split slices above them), not paged.
-    expect(listings(resumed).every((l) => l.price.amount <= 31_249)).toBe(true);
-    expect([...finished, ...slices(resumed)]).toEqual(slices(complete));
-    expect(new Set([...refs(failing), ...refs(resumed)])).toEqual(refs(complete));
+    expect(counted.length).toBeGreaterThan(0);
+    expect(counted.every((url) => params(url).get("page") === "1")).toBe(true);
+    // A retained checkpoint never excuses a deficit, even once every leaf has finished.
+    for (const key of slices(last)) finished.add(key);
+    const deficit = await harvest(deFull, source, "full", checkpoint, (cassette) => {
+      bandsFromMakes()(cassette);
+      countsInTurn(usedEverywhere, [COUNTS.used + 1])(cassette);
+    });
+    expect(String(deficit.error)).toMatch(unpriced);
+    expect(slices(deficit)).toEqual([]);
+    expect(listings(deficit)).toEqual([]);
   });
 
   it("a full run fails when a split slice's parts miss even one of its results", async () => {
