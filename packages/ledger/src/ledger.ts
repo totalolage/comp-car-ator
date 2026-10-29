@@ -416,8 +416,13 @@ export function openLedger(path: string): Ledger {
         }
         const ended = complete ? 1 : 0;
         summary.gone += Number(
-          q.goneAfterMisses.run({ source: run.source, scope, census, ended, misses: MISSES_TO_GONE })
-            .changes,
+          q.goneAfterMisses.run({
+            source: run.source,
+            scope,
+            census,
+            ended,
+            misses: MISSES_TO_GONE,
+          }).changes,
         );
       };
       let open = false;
