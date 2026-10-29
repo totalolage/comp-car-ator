@@ -11,12 +11,12 @@ live in `src/styles/tokens.css`, shared components in `src/styles/base.css`.
   mode is the same sheet inverted (`light-dark()` tokens follow the OS setting).
 - **Motorway-sign green** (`--sign`) is the masthead band and nothing else; it marks "site
   chrome" the way the green D-road signs mark the motorway.
-- **The c-c mark** sits before "comp-car-ator" in the masthead: a car drawn as one line whose
-  wheels are two lowercase c's with a hyphen between them. It is the one image in the chrome,
-  an inline SVG in `currentColor` (white on the green), 26px wide (1.75 × `--text-lg`) at
-  every width, its bottom on the text baseline. The name stays live text and does not wrap; below
-  30rem only the mark shows and the name is visually hidden link text. Masters,
-  favicons and usage rules: `assets/logo/README.md`.
+- **The tyre stack** sits before the site name in the masthead: three tyres stacked and seen
+  slightly from above, which is also the database cylinder. It is the one image in the chrome,
+  an inline SVG in `currentColor` (white on the green, so the reversed master), cropped to its
+  ink and 24px tall (1.5rem) at every width, the name's caps centred on it as in the lockup.
+  The name stays live text and does not wrap; below 30rem only the mark shows and the name is
+  visually hidden link text. Masters, favicons and usage rules: `assets/logo/README.md`.
 - **Highlighter yellow** (`--mark`) marks what the person chose or what differs: checked
   facets, the compare count, table row and facet hover (McMaster's pale `#FFFFB5`), and the
   compare page's differing values. Never decoration.

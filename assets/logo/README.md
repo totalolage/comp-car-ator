@@ -1,27 +1,27 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="cc-lockup-horizontal-white.svg">
-  <img src="cc-lockup-horizontal-green.svg" width="420" alt="comp-car-ator">
+  <source media="(prefers-color-scheme: dark)" srcset="cardb-lockup-horizontal-white.svg">
+  <img src="cardb-lockup-horizontal-green.svg" width="420" alt="Car DB">
 </picture>
 
-# comp-car-ator logo
+# Car DB logo
 
-**Idea.** A car drawn as one line whose wheels are two lowercase c's with a hyphen between
-them, so the car spells "c-c": the hyphens of comp-car-ator, its initials, and engine cc.
+**Idea.** Three tyres stacked and seen slightly from above, with the rim hole in the top one,
+so the stack is also the database cylinder: Car + DB in one shape.
 
 ## Files
 
 All masters are SVG with filled outlines (no strokes, no live text). Each comes in `green`
 (sign green on paper), `white` (reversed, for the green masthead and dark grounds) and `black`.
 
-| File                                                     | Use                                                                                           |
-| -------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `cc-symbol-*.svg`                                        | The mark on its 256 × 256 construction canvas. Everything above 24 px.                        |
-| `cc-symbol-small-*.svg`                                  | Small cut for 16–32 px only (favicons, tab icons).                                            |
-| `cc-lockup-horizontal-*.svg`                             | Mark + name. The default lockup.                                                              |
-| `cc-lockup-stacked-*.svg`                                | Mark over name, for square-ish spaces.                                                        |
-| `cc-tile-green.svg`, `cc-tile-green-dark.svg`            | App icon: white mark on a rounded tile, light- and dark-scheme green. Also `assets/icon.svg`. |
-| `cc-tile-small-green.svg`                                | The tile with the small cut; it is the site's `favicon.svg`.                                  |
-| `cc-tile-square-green.svg`, `cc-tile-maskable-green.svg` | Full-bleed sources of `apple-touch-icon.png` and `icon-maskable-*.png`.                       |
+| File                                                           | Use                                                                                           |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `cardb-symbol-*.svg`                                           | The mark on its 256 × 256 construction canvas. 24 px and up.                                  |
+| `cardb-symbol-small-*.svg`                                     | Small cut for 16–32 px only (favicons, tab icons).                                            |
+| `cardb-lockup-horizontal-*.svg`                                | Mark + name. The default lockup.                                                              |
+| `cardb-lockup-stacked-*.svg`                                   | Mark over name, for square-ish spaces.                                                        |
+| `cardb-tile-green.svg`, `cardb-tile-green-dark.svg`            | App icon: white mark on a rounded tile, light- and dark-scheme green. Also `assets/icon.svg`. |
+| `cardb-tile-small-green.svg`                                   | The tile with the small cut; it is the site's `favicon.svg`.                                  |
+| `cardb-tile-square-green.svg`, `cardb-tile-maskable-green.svg` | Full-bleed sources of `apple-touch-icon.png` and `icon-maskable-*.png`.                       |
 
 The site's raster icons (`apps/web/public/`: `favicon.ico` 16/32 small cut + 48 main,
 `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `icon-maskable-192.png`,
@@ -29,29 +29,37 @@ The site's raster icons (`apps/web/public/`: `favicon.ico` 16/32 small cut + 48 
 
 ## Construction
 
-- **Main mark**, 256 grid: one stroke weight, 21. The body line has 16-radius shoulders and
-  round joins; rear pillar at 60°, windscreen at 45°. Wheels are rings (outer radius 31,
-  inner 10) opened by radial cuts at ±42°. The hyphen (38 × 21) sits on the wheel axis, 10
-  from each wheel. The ink box is 240 × 150, centred on the canvas.
-- **Small cut**, 32-unit grid × 8: weight 16, mitred corners, square cabin, apertures cut at
-  ±45°. Every horizontal and vertical edge falls on a whole pixel at both 16 and 32 px.
-- **Wordmark**: "comp-car-ator" in Liberation Sans Bold (SIL OFL; metric twin of Arial, the
-  site's face), outlined, tracked −0.02 em. In the lockups its c's are exactly as tall as the
-  c-wheels and stand on the same line, so the word's hyphens fall on the mark's hyphen axis.
-  Gap between mark and word: 40 units (about half the cap height).
-- **Masthead**: live text, with the mark inline before it, 1.75em wide, its bottom on the
-  text baseline (`.wordmark` in `apps/web/src/styles/base.css`). That is a little smaller
-  than the lockup ratio, as approved on the mock-up: about 26 × 16 px next to 15 px text.
-  Below 30rem the mark stands alone and the name becomes visually hidden link text.
+- **Main mark**, 256 grid: three tyres, each an ellipse face of rx 94, ry 30 over a side 48
+  tall, with gaps of 10 between them. The sidewalls bulge 12 as circular arcs (radius 30).
+  The top tyre's rim hole is an ellipse of rx 62 (ry 19.79, the face's proportion). The ink
+  box is 212 × 224 (x 22–234, y 14–238).
+- **Reversed** (`white`, and every tile): gaps 12 and sides 46.67, so the height stays 224,
+  and a rim hole of rx 64. Light ink on green looks heavier than green ink on paper; this
+  takes the weight back out.
+- **Small cut**, for 16–32 px: rx 92, ry 28, bulge 18, sides 50, gaps 22, rim hole 58; the
+  reversed small cut has gaps 24 and sides 48.67. Wider gaps and a deeper bulge keep the
+  three tyres apart at favicon size.
+- **Wordmark**: "Car DB" in Liberation Sans Bold (SIL OFL; metric twin of Arial, the site's
+  face), outlined, tracked −0.01 em, cap height 92 against the 224-unit mark. Horizontal
+  lockup: gap 60, the caps centred on the mark. Stacked lockup: gap 52, the name centred
+  under the mark.
+- **Tiles**: the reversed mark at 0.66 scale on a 256 tile with corner radius 48, in sign
+  green or dark-scheme green. The square tile is the same full bleed; the maskable tile is
+  full bleed at 0.52, inside the maskable safe zone. The small tile carries the reversed
+  small cut at 0.84.
+- **Masthead**: live text, with the reversed mark inline before it in `currentColor`, cropped
+  to its ink and 24 px tall at every width (`.wordmark` in `apps/web/src/styles/base.css`).
+  The gap and the centring follow the horizontal lockup. Below 30rem the mark stands alone
+  and the name becomes visually hidden link text.
 
 ## Clear space and minimum size
 
-Keep clear space of one wheel diameter (the height of the wordmark's "c") on every side.
+Keep clear space of one tyre height (48 units on the 256 grid) on every side.
 
 | Version           | Smallest                                                    |
 | ----------------- | ----------------------------------------------------------- |
-| Symbol            | 24 px wide ink (26 px canvas); below that use the small cut |
-| Small cut         | 16 px; draw it only at 16 and 32 px                         |
+| Symbol            | 24 px tall ink (27 px canvas); below that use the small cut |
+| Small cut         | 16 px; use it only from 16 to 32 px                         |
 | Horizontal lockup | 120 px wide                                                 |
 | Stacked lockup    | 64 px wide                                                  |
 
@@ -65,12 +73,13 @@ Keep clear space of one wheel diameter (the height of the wordmark's "c") on eve
 | Black                   | `#000000` | 0 0 0       | One-colour print, fax, stamps                                          |
 
 Approved pairs: green on white · white on sign green · white on dark-scheme green · white on
-dark paper · black on white. Not green on dark paper (2.4 : 1).
+dark paper · black on white. Not green on dark paper (2.4 : 1). White ink always uses the
+reversed masters.
 
 ## Don't
 
-Stretch, rotate or slant the mark · redraw the c's as other letters or round wheels · close
-the c apertures · drop or move the hyphen · use the small cut above 48 px or the main mark
-below 24 px · change the stroke weight · retype the wordmark in another face or move the
-parts of a lockup · add outlines, shadows or gradients · put it on a busy background without
-the tile.
+Stretch, rotate or slant the mark · add or remove tyres · fill the rim hole or close the gaps
+between tyres · draw the sides straight · use the main mark's green geometry in white, or the
+reversed geometry in green · use the small cut above 32 px or the main mark below 24 px ·
+retype the wordmark in another face or move the parts of a lockup · add outlines, shadows or
+gradients · put it on a busy background without the tile.
