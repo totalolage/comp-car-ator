@@ -272,11 +272,12 @@ describe("autoesa source", () => {
     expect(listings(again)).toHaveLength(31);
   });
 
-  /** Listing 414464866 as a "hybridní" car with the given title. */
-  const hybridVehicle = async (title: string) => {
+  /** Listing 414464866, a Škoda, as a "hybridní" car with the given title (and make). */
+  const hybridVehicle = async (title: string, make = "\\u0160koda") => {
     const hybrid = body((b) =>
       b
         .replace(/"title": "[^"]*"/, `"title": "${title}"`)
+        .replace('"make": "\\u0160koda"', `"make": "${make}"`)
         .replace("<span>benzín</span>", "<span>hybridní</span>"),
     );
     const cassette = edit(await loadCassette(incremental), "/414464866", hybrid);
@@ -291,6 +292,12 @@ describe("autoesa source", () => {
       trim: "1.4 TSI iV Style",
     });
     expect((await hybridVehicle("Kia Niro 1.6 GDi Plug in Hybrid"))?.fuel).toBe("phev");
+    // A make's own plug-in badge: Volkswagen's "GTE", but an Opel GTE is just letters.
+    const golf = await hybridVehicle("Volkswagen Golf 1.4 TSI GTE DSG", "Volkswagen");
+    expect(golf).toMatchObject({ make: "Volkswagen", fuel: "phev" });
+    const astra = await hybridVehicle("Opel Astra 1.6 GTE", "Opel");
+    expect(astra?.make).toBe("Opel");
+    expect(astra?.fuel).toBeUndefined();
   });
 
   it("a mild hybrid goes under its engine's fuel, and generation IV is no iV badge", async () => {
@@ -298,9 +305,11 @@ describe("autoesa source", () => {
     expect(await fuelOf("Škoda Octavia IV 1.5 TSi m-HEV Selection")).toBe("petrol");
     expect(await fuelOf("Škoda Octavia IV 1.5 eTSI Style")).toBe("petrol");
     expect(await fuelOf("Audi A4 2.0 TDI 48V mild hybrid")).toBe("diesel");
+    expect(await fuelOf("Škoda Octavia IV 1.5 TSI e-TEC Style")).toBe("petrol");
     expect(await fuelOf("Škoda Octavia IV Hybrid Style")).toBeUndefined();
     // Mild wording without one engine code, or beside a plug-in marker, says no fuel.
     expect(await fuelOf("Jeep Renegade 1.5 48V e-Hybrid")).toBeUndefined();
+    expect(await fuelOf("Škoda Octavia IV 1.5 e-TEC Style")).toBeUndefined();
     expect(await fuelOf("Škoda Octavia 1.5 TSI 2.0 TDI m-HEV")).toBeUndefined();
     expect(await fuelOf("Škoda Superb 1.5 eTSI PHEV")).toBeUndefined();
     expect(await fuelOf("Škoda Octavia IV 1.4 TSI iV Style")).toBe("phev");

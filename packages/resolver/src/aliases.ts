@@ -1,3 +1,4 @@
+import type { Fuel } from "@cca/vocabulary";
 import type { FuelWording } from "./hints.ts";
 
 /**
@@ -151,11 +152,15 @@ export const CHASSIS_CODES: Readonly<Record<string, RegExp>> = {
 
 const badge = (word: string) => new RegExp(`(?<![a-z0-9])${word}(?![a-z0-9])`, "i");
 
+/** A mild hybrid is catalogued under its combustion fuel (hints.ts). */
+const MILD: readonly Fuel[] = ["petrol", "diesel", "hev"];
+
 /**
  * Electrified badges one make owns, with the fuels each allows ("GTE" is a plug-in
- * Volkswagen but a petrol Opel; "e-Hybrid" a plug-in Audi but a mild-hybrid Jeep). Read only
- * in that make's listings, with case kept: Škoda's "iV" is the badge, "IV" and "iv" a
- * generation. Keyed by make group key.
+ * Volkswagen but a petrol Opel; "e-Hybrid" a plug-in Audi but a mild-hybrid Jeep; "e-TEC" a
+ * mild-hybrid Škoda but a full-hybrid Renault). Read only in that make's listings, with case
+ * kept: Škoda's "iV" is the badge, "IV" and "iv" a generation. Keyed by make group key; the
+ * Sources read the same badges into a hybrid's fuel (packages/sources/src/hybrid.ts).
  */
 export const FUEL_BADGES: Readonly<Record<string, readonly FuelWording[]>> = {
   volkswagen: [
@@ -168,11 +173,17 @@ export const FUEL_BADGES: Readonly<Record<string, readonly FuelWording[]>> = {
   skoda: [
     [["phev", "bev"], /(?<![A-Za-z0-9])iV(?![A-Za-z0-9])/],
     [["phev"], badge("e-?hybrid")],
+    [MILD, badge("e-?tec")],
   ],
   audi: [
     [["hev", "phev", "bev", "reev"], badge("e-?tron")],
     [["phev"], badge("e-?hybrid")],
+    [["phev"], badge("tfsi ?e")],
   ],
+  byd: [[["phev"], badge("dm-?[ip]")]],
+  jeep: [[MILD, badge("e-?hybrid")]],
+  "alfa-romeo": [[MILD, badge("e-?hybrid")]],
+  fiat: [[MILD, badge("e-?hybrid")]],
   renault: [[["hev", "phev", "bev", "reev"], badge("e-?tech")]],
 };
 
