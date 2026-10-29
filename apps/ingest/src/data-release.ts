@@ -17,7 +17,7 @@ import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { createZstdCompress, createZstdDecompress } from "node:zlib";
 import { packBundle } from "@cca/bundle/node";
-import { openLedger, type RunSummary } from "@cca/ledger";
+import { openLedger, RunFailedError, type RunSummary } from "@cca/ledger";
 import { publish } from "@cca/publisher";
 import { type HarvestMode, type Logger, silentLogger } from "@cca/sources";
 import type { ReleaseStore } from "./release-store.ts";
@@ -48,7 +48,7 @@ export interface RunOutcome {
   source: string;
   mode: HarvestMode;
   startedAt: string;
-  /** Present when the run was recorded as complete. */
+  /** Counters for the durable observations, including a failed run's accepted prefix. */
   summary?: RunSummary;
   /** Present when the harvest failed; what it got before failing is recorded. */
   error?: string;
@@ -199,8 +199,13 @@ export async function releaseRuns(options: ReleaseRunsOptions): Promise<ReleaseR
         run.summary = await recordLog(ledger, path);
         log.info(`recorded ${info.source} ${info.mode}`, { ...run.summary });
       } catch (error) {
-        run.error = String(error);
-        log.warn(`recorded failed run ${info.source} ${info.mode}`, { error: run.error });
+        if (!(error instanceof RunFailedError)) throw error;
+        run.summary = error.summary;
+        run.error = String(error.cause);
+        log.warn(`recorded failed run ${info.source} ${info.mode}`, {
+          error: run.error,
+          ...run.summary,
+        });
       }
       runs.push(run);
     }
@@ -264,7 +269,7 @@ export async function releaseRuns(options: ReleaseRunsOptions): Promise<ReleaseR
 function releaseNotes(manifest: Manifest): string {
   const lines = manifest.runs.map((r) =>
     r.error
-      ? `- ${r.source} ${r.mode}: failed (${r.error.slice(0, 200)})`
+      ? `- ${r.source} ${r.mode}: failed (${r.error.slice(0, 200)}), partial ${JSON.stringify(r.summary)}`
       : `- ${r.source} ${r.mode}: ${JSON.stringify(r.summary?.recorded ?? {})}`,
   );
   return [

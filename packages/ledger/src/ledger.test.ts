@@ -10,7 +10,7 @@ import type {
   OpenpilotSupport,
 } from "@cca/vocabulary";
 import { afterEach, describe, expect, it } from "vitest";
-import { type Ledger, openLedger } from "./index.ts";
+import { type Ledger, openLedger, RunFailedError } from "./index.ts";
 
 const day = (d: string) => new Date(`${d}T03:00:00Z`);
 
@@ -197,6 +197,76 @@ describe("Ledger", () => {
     expect(listings.every((l) => l.gone === null)).toBe(true);
     expect(ledger.checkpoint("sauto").lastRunAt).toEqual(day("2026-10-10"));
   });
+
+  it("reports durable partial counters while keeping a failed census incomplete", async () => {
+    ledger = openLedger(":memory:");
+    await run("sauto", "full", "2026-10-10", [
+      seen("1", 1, { slice: "A" }),
+      seen("2", 2, { slice: "A" }),
+      seen("3", 3, { slice: "B" }),
+      seen("4", 4, { slice: "C" }),
+    ]);
+    const cause = new Error("site changed");
+    async function* failing(): AsyncIterable<Observation> {
+      yield seen("5", 5, { slice: "A" });
+      yield { kind: "ListingPriceSeen", ref: "1", price: { amount: 10, currency: "CZK" } };
+      yield { kind: "ListingGone", ref: "3" };
+      yield { kind: "SliceDone", slice: "A" };
+      for (let n = 0; n < 55; n++) yield seen(`bad${n}`, Number.NaN);
+      yield { kind: "SliceDone", slice: "Z" };
+      throw cause;
+    }
+    await expect(run("sauto", "full", "2026-10-17", failing())).rejects.toMatchObject({
+      cause,
+      summary: {
+        recorded: { ListingSeen: 1, ListingPriceSeen: 1, ListingGone: 1, SliceDone: 1 },
+        rejected: expect.any(Array),
+        rejectedTotal: 56,
+        newListings: 1,
+        priceChanges: 1,
+        gone: 1,
+        missed: 1,
+        retired: 0,
+        census: "incomplete",
+      },
+    });
+    const checkpoint = ledger.checkpoint("sauto");
+    expect(checkpoint.lastRunAt).toEqual(day("2026-10-10"));
+    expect(checkpoint.sliceDoneAt("A")).toEqual(day("2026-10-17"));
+    expect(checkpoint.sliceDoneAt("Z")).toBeNull();
+    expect(
+      [...ledger.snapshot().listings()].filter((l) => l.gone !== null).map((l) => l.ref),
+    ).toEqual(["3"]);
+  });
+
+  it.each([false, true])(
+    "does not report a storage failure as a finalized upstream failure (cleanup throws: %s)",
+    async (cleanupThrows) => {
+      const dir = await mkdtemp(join(tmpdir(), "cca-storage-failure-"));
+      try {
+        const path = join(dir, "ledger.sqlite");
+        ledger = openLedger(path);
+        const db = new DatabaseSync(path);
+        db.exec(
+          "CREATE TRIGGER fail_insert BEFORE INSERT ON listings BEGIN SELECT RAISE(ABORT, 'disk failure'); END",
+        );
+        db.close();
+        async function* observations() {
+          try {
+            yield seen("1", 1);
+          } finally {
+            // biome-ignore lint/correctness/noUnsafeFinally: reproduce a storage error followed by an iterator cleanup error.
+            if (cleanupThrows) throw new Error("iterator cleanup failed");
+          }
+        }
+        const failure = run("sauto", "full", "2026-10-17", observations());
+        await expect(failure).rejects.toThrow("disk failure");
+        await expect(failure).rejects.not.toBeInstanceOf(RunFailedError);
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("rejects observations that break invariants and records the rest", async () => {
     ledger = openLedger(":memory:");
