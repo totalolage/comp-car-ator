@@ -288,6 +288,21 @@ describe("catalog query engine", () => {
     ]);
   });
 
+  it("opens a Bundle written before openpilot support, every Variant unlisted", async () => {
+    const before: BundleContent = {
+      ...content,
+      catalog: {
+        ...content.catalog,
+        variants: content.catalog.variants.map(({ openpilot, ...row }) => row),
+      },
+      models: content.models.map(({ openpilot, ...file }) => file),
+    };
+    const catalog = await openCatalog(memoryLoader(encodeBundle(before)));
+    expect(catalog.query().facets.values.openpilot).toEqual([{ value: "unlisted", count: 4 }]);
+    expect(catalog.query({ filters: { openpilot: ["upstream"] } }).total).toBe(0);
+    expect((await catalog.model("skoda/octavia"))?.openpilot).toEqual([]);
+  });
+
   it("returns null for an unknown model", async () => {
     expect(await (await open()).model("lada/niva")).toBeNull();
   });
