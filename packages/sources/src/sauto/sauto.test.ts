@@ -276,9 +276,8 @@ describe("sauto source", () => {
     const { observations, urls } = await harvest("incremental", { lastRunAt: LAST_RUN });
     // The 3rd page is wholly older than the last run.
     expect(searches(urls)).toHaveLength(3);
-    // The listing created since comes first; then page 1, older listings moved up by edits
-    // and top-ups, newest first.
-    const read = ["211264902", "211187061", "210518621", "210389525", "211098051"];
+    // Each page's unknown details come out before the next search, in sorting_date order.
+    const read = ["211187061", "210518621", "210389525", "211098051", "211264902"];
     expect(details(urls)).toEqual(read.map((ref) => `https://www.sauto.cz/api/v1/items/${ref}`));
     expect(listings(observations).map((o) => o.ref)).toEqual(read);
   });
@@ -357,7 +356,7 @@ describe("sauto source", () => {
         () => {},
         undefined,
         {
-          source: { budget: 3 },
+          source: { budget: 5 },
           consume: (o) => {
             out.push(o);
             if (o.kind === "ListingSeen") recorded.add(o.ref);
@@ -370,29 +369,98 @@ describe("sauto source", () => {
       return { error, out };
     };
     const first = await day();
-    // The one created since first, then the older ones newest first; the Ledger keeps what a
-    // failed run yielded, and lastRunAt stays where it was.
-    expect(listings(first.out).map((o) => o.ref)).toEqual(["211264902", "211187061", "210518621"]);
-    expect(String(first.error)).toMatch(/left 2 of 5 unknown listings for the next run/);
+    // One search and four details use the cap; the Ledger keeps those late-published
+    // listings and lastRunAt stays where it was, so the next page is still eligible.
+    expect(listings(first.out).map((o) => o.ref)).toEqual([
+      "211187061",
+      "210518621",
+      "210389525",
+      "211098051",
+    ]);
+    expect(String(first.error)).toMatch(/request budget 5 exhausted/);
     const second = await day();
     expect(second.error).toBeUndefined();
-    expect(listings(second.out).map((o) => o.ref)).toEqual(["210389525", "211098051"]);
-    expect(prices(second.out).map(([ref]) => ref)).toEqual(["211187061", "210518621", "211264902"]);
+    expect(listings(second.out).map((o) => o.ref)).toEqual(["211264902"]);
+    expect(prices(second.out).map(([ref]) => ref)).toEqual([
+      "211187061",
+      "210518621",
+      "210389525",
+      "211098051",
+    ]);
+  });
+
+  it("incremental budget includes search requests, including a walk of only known listings", async () => {
+    const { observations, urls, error } = await harvestSite(
+      "incremental",
+      paged(cars(1, 2, 3, 4, 5, 6, 7, 8, 9)),
+      {
+        checkpoint: { isKnown: () => true },
+        source: { budget: 2 },
+      },
+    );
+    expect(urls).toHaveLength(2);
+    expect(details(urls)).toEqual([]);
+    expect(prices(observations).map(([ref]) => ref)).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ]);
+    expect(String(error)).toMatch(/request budget 2 exhausted/);
+  });
+
+  it("incremental run streams unknown details within the request cap and keeps a fetched page's known prices before exhaustion", async () => {
+    const list = cars(1, 2, 3, 4, 5, 6);
+    // Old drafts published recently remain eligible, regardless of create_date.
+    for (const item of list) item.create_date = "2020-01-01T00:00:00";
+    const recorded = new Set(["3", "4", "6"]);
+    const day = () =>
+      harvestSite("incremental", paged(list), {
+        checkpoint: {
+          lastRunAt: new Date("2026-10-24T00:00:00Z"),
+          isKnown: (ref) => recorded.has(ref),
+        },
+        source: { budget: 4 },
+        consume: (o) => {
+          if (o.kind === "ListingSeen") recorded.add(o.ref);
+        },
+      });
+    const first = await day();
+    expect(first.urls).toHaveLength(4);
+    expect(listings(first.observations).map((o) => o.ref)).toEqual(["1", "2"]);
+    expect(prices(first.observations).map(([ref]) => ref)).toEqual(["3", "4", "6"]);
+    expect(first.urls[1]).toMatch(/\/items\/1$/);
+    expect(String(first.error)).toMatch(/request budget 4 exhausted/);
+    const second = await day();
+    expect(second.error).toBeUndefined();
+    expect(listings(second.observations).map((o) => o.ref)).toEqual(["5"]);
+    expect(second.urls).toHaveLength(3);
+    const exact = await harvestSite("incremental", paged(cars(10, 11, 12)), {
+      source: { budget: 4 },
+    });
+    expect(exact.error).toBeUndefined();
+    expect(exact.urls).toHaveLength(4);
+    expect(listings(exact.observations)).toHaveLength(3);
   });
 
   it("incremental run pages overlap, so a removal between pages skips no listing, and fails when it loses its place", async () => {
     const walk = async (removed: number) => {
       let list = Array.from({ length: 300 }, (_, i) => car(i + 1));
-      let calls = 0;
       const search = (q: URLSearchParams) => {
-        // Listings removed from the top of the order after the first page was served.
-        if (calls++ === 1) list = list.slice(removed);
         const offset = Number(q.get("offset"));
         return { total: list.length, results: list.slice(offset, offset + 100) };
       };
       return harvestSite("incremental", search, {
         checkpoint: { lastRunAt: new Date("2026-10-24T00:00:00Z") },
         source: { pageSize: 100 },
+        // Slow detail reads give the order time to move before the next search.
+        consume: (o) => {
+          if (o.kind === "ListingSeen" && o.ref === "100") list = list.slice(removed);
+        },
       });
     };
     const shifted = await walk(1);
@@ -400,6 +468,7 @@ describe("sauto source", () => {
     expect(listings(shifted.observations)).toHaveLength(300);
     const lost = await walk(10);
     expect(String(lost.error)).toMatch(/lost its place in the order at offset 95/);
+    expect(listings(lost.observations)).toHaveLength(100);
   });
 
   it("incremental run prices known listings and reads no detail for them, however recently changed", async () => {
