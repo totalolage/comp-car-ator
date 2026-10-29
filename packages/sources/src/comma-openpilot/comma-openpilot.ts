@@ -7,8 +7,14 @@
  *   which openpilot does not accelerate or steer (mph), and the harness. Joined on the exact
  *   make, model and package cells; a row without a match gets no details.
  *
- * The list is a census and small (two requests), so incremental and full runs both read it
- * whole. A changed table header or an unknown support level fails the run.
+ * - Platforms: opendbc's car definitions (`opendbc/car/<brand>/values.py`), where each
+ *   platform lists the cars it covers by the same name the list shows. A platform is one car
+ *   to openpilot, and the Ledger reads its Generation from all its rows together. Cars defined
+ *   outside a brand's platforms (most incompatible and community rows) get none.
+ *
+ * The list is a census and small (a few requests), so incremental and full runs both read it
+ * whole. A changed table header, an unknown support level or a definitions file without its
+ * platform class fails the run.
  */
 import type { Fuel, OpenpilotLevel, OpenpilotSupport } from "@cca/vocabulary";
 import type { HarvestContext, Source } from "../source.ts";
@@ -16,6 +22,26 @@ import type { HarvestContext, Source } from "../source.ts";
 const LIST_URL = "https://raw.githubusercontent.com/commaai/opendbc/master/docs/CARS.md";
 const DETAILS_URL = "https://raw.githubusercontent.com/commaai/openpilot/master/docs/CARS.md";
 const VEHICLES_URL = "https://comma.ai/vehicles";
+const DEFINITIONS_URL = "https://raw.githubusercontent.com/commaai/opendbc/master/opendbc/car";
+
+/** opendbc's brand directories whose `values.py` defines the platforms of listed cars. */
+const BRANDS = [
+  "byd",
+  "chrysler",
+  "ford",
+  "gm",
+  "honda",
+  "hyundai",
+  "mazda",
+  "mg",
+  "nissan",
+  "psa",
+  "rivian",
+  "subaru",
+  "tesla",
+  "toyota",
+  "volkswagen",
+];
 
 const LIST_HEADER = "|Make|Model|Package|Support Level|";
 const DETAILS_HEADER =
@@ -56,7 +82,18 @@ export function commaOpenpilotSource(): Source {
     async *harvest(ctx: HarvestContext): AsyncIterable<OpenpilotSupport> {
       const list = await getOk(ctx, LIST_URL);
       const details = await getOk(ctx, DETAILS_URL);
-      yield* parseSupportList(list, parseDetails(details));
+      const platforms = new Map<string, string | null>();
+      for (const brand of BRANDS) {
+        const url = `${DEFINITIONS_URL}/${brand}/values.py`;
+        for (const [name, platform] of parsePlatforms(await getOk(ctx, url), url)) {
+          // A name two platforms claim says nothing about which car it is.
+          platforms.set(
+            name,
+            platforms.has(name) && platforms.get(name) !== platform ? null : platform,
+          );
+        }
+      }
+      yield* parseSupportList(list, parseDetails(details), platforms);
     },
   };
 }
@@ -80,7 +117,8 @@ type Details = Pick<OpenpilotSupport, "longitudinal" | "minSteerKmh" | "minEnabl
  */
 function parseSupportList(
   text: string,
-  details: Map<string, Details> = new Map(),
+  details: Map<string, Details>,
+  platforms: Map<string, string | null>,
 ): OpenpilotSupport[] {
   const rows = tableRows(text, /^# Support Information for (\d+) Known Cars$/m, LIST_HEADER, 4);
 
@@ -101,6 +139,7 @@ function parseSupportList(
         ? /\bEurope\b/i.test(market) || market === "Non-US"
         : EUROPEAN_MAKES.has(make) || undefined;
     const fuel = parseFuel(make, model);
+    const platform = platforms.get(`${make} ${modelCell}`);
     out.push({
       kind: "OpenpilotSupport",
       ref,
@@ -108,6 +147,7 @@ function parseSupportList(
       model,
       ...(fuel ? { fuel } : {}),
       years,
+      ...(platform ? { platform } : {}),
       level: supportLevel(levelCell),
       ...(packageCell !== "All" ? { package: packageCell } : {}),
       market: market ?? (europe ? "Europe" : "US"),
@@ -115,6 +155,41 @@ function parseSupportList(
       ...details.get(ref),
       url: makesWithUpstream.has(make) ? `${VEHICLES_URL}#${make.toLowerCase()}` : VEHICLES_URL,
     });
+  }
+  return out;
+}
+
+/**
+ * Car names by platform from a brand's definitions: each platform of `class CAR` lists its
+ * cars by the name the list shows ("Hyundai Tucson 2021" is Make plus the Model cell):
+ *   class CAR(Platforms):
+ *     HYUNDAI_TUCSON = HyundaiPlatformConfig(
+ *       [
+ *         HyundaiCarDocs("Hyundai Tucson 2021", min_enable_speed=19 * CV.MPH_TO_MS, …),
+ * Ford adds a Hybrid and a Plug-in Hybrid car for `hybrid=True` and `plug_in_hybrid=True`
+ * ("Ford Kuga Hybrid 2020-23").
+ */
+function parsePlatforms(text: string, url: string): [name: string, platform: string][] {
+  const start = /^class CAR\(.*$/m.exec(text);
+  if (!start) throw new Error(`comma-openpilot: no platform class in ${url}`);
+  // The class runs to the next line that is not indented.
+  const rest = text.slice(start.index + start[0].length);
+  const end = rest.search(/\n\S/);
+  const body = end < 0 ? rest : rest.slice(0, end);
+  const out: [string, string][] = [];
+  let platform: string | undefined;
+  for (const line of body.split("\n")) {
+    platform = /^ {2}([A-Z][A-Z0-9_]*) = \w+\(/.exec(line)?.[1] ?? platform;
+    if (!platform) continue;
+    for (const [, name = ""] of line.matchAll(/\b\w*CarDocs\w*\(\s*"([^"]+)"/g)) {
+      out.push([name, platform]);
+      const named = /^(.+?) (\d{4}\S*(?:, \d{4}\S*)*)$/.exec(name);
+      if (named && /\bhybrid=True\b/.test(line))
+        out.push([`${named[1]} Hybrid ${named[2]}`, platform]);
+      if (named && /\bplug_in_hybrid=True\b/.test(line)) {
+        out.push([`${named[1]} Plug-in Hybrid ${named[2]}`, platform]);
+      }
+    }
   }
   return out;
 }

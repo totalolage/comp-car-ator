@@ -469,6 +469,7 @@
             2018,
             2019
           ],
+          "platform": "HYUNDAI_ELANTRA_GT_I30",
           "level": "upstream",
           "package": "Smart Cruise Control (SCC)",
           "market": "US",
@@ -487,6 +488,7 @@
             2022,
             2023
           ],
+          "platform": "SKODA_FABIA_MK4",
           "level": "upstream",
           "package": "Adaptive Cruise Control (ACC) & Lane Assist",
           "market": "Europe",
@@ -509,6 +511,7 @@
             2018,
             2019
           ],
+          "platform": "SKODA_OCTAVIA_MK3",
           "level": "upstream",
           "package": "Adaptive Cruise Control (ACC) & Lane Assist",
           "market": "Europe",
@@ -529,6 +532,7 @@
             2021,
             2022
           ],
+          "platform": "TOYOTA_COROLLA_TSS2",
           "level": "upstream",
           "market": "US",
           "harness": "Toyota A connector",
@@ -563,6 +567,7 @@
             2021,
             2022
           ],
+          "platform": "TOYOTA_COROLLA_TSS2",
           "level": "upstream",
           "market": "US",
           "harness": "Toyota A connector",
@@ -582,6 +587,7 @@
             2021,
             2022
           ],
+          "platform": "TOYOTA_COROLLA_TSS2",
           "level": "upstream",
           "market": "US",
           "harness": "Toyota A connector",
@@ -603,6 +609,7 @@
             2019,
             2020
           ],
+          "platform": "VOLKSWAGEN_GOLF_MK7",
           "level": "upstream",
           "package": "Adaptive Cruise Control (ACC) & Lane Assist",
           "market": "US",

@@ -39,7 +39,7 @@ One priced configuration on a manufacturer price list (Trim, engine, drive, gear
 _Avoid_: price-list item, configuration
 
 **openpilot support**:
-How well comma.ai's openpilot driver assistance works on a car, as comma's own list states it: a level (upstream, community, custom, under review, dashcam, incompatible) for a make, model and model years, with the package the car needs and the market the list refers to. The Ledger places each row on one Generation and its fitting Variants; a Variant shows the best level placed on it.
+How well comma.ai's openpilot driver assistance works on a car, as comma's own list states it: a level (upstream, community, custom, under review, dashcam, incompatible) for a make, model and model years, with the package the car needs and the market the list refers to. The Ledger places each row on one Generation, read from all the rows of its comma platform (one car to openpilot), and its fitting Variants; a Variant shows the best level placed on it.
 _Avoid_: comma compatibility, ADAS support
 
 ### Listings

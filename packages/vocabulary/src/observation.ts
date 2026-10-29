@@ -210,7 +210,7 @@ export type OpenpilotLevel = (typeof OPENPILOT_LEVELS)[number];
  * One row of openpilot's supported-car list: a make, a model and its model years, the package
  * the car needs, and how well openpilot supports it. The list is a census: a full run states
  * every row, and rows it no longer states leave the catalog. At snapshot time the Ledger
- * matches the row to Generations and Variants by make, model, fuel and years.
+ * matches the row to Generations and Variants by make, model, platform, fuel and years.
  */
 export interface OpenpilotSupport {
   kind: "OpenpilotSupport";
@@ -223,6 +223,12 @@ export interface OpenpilotSupport {
   fuel?: Fuel;
   /** Model years, ascending ("2018-20, 2023" is [2018, 2019, 2020, 2023]). */
   years: number[];
+  /**
+   * comma's platform for the row ("HYUNDAI_TUCSON_4TH_GEN"): one car to openpilot, whatever
+   * names and years it is listed under. Absent for a row comma defines no platform for
+   * (most incompatible and community rows).
+   */
+  platform?: string;
   level: OpenpilotLevel;
   /** The trim or package the car needs, as listed; absent when the list says "All". */
   package?: string;

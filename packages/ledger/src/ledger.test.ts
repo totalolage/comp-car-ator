@@ -711,7 +711,7 @@ describe("Ledger", () => {
       powerKw: number,
       years: CatalogEntry["variant"]["years"],
     ): CatalogEntry {
-      const make = model === "Golf" ? "Volkswagen" : "Hyundai";
+      const make = model === "Golf" ? "Volkswagen" : model === "Sorento" ? "Kia" : "Hyundai";
       return {
         kind: "CatalogEntry",
         variant: { make, model, generation, body: "hatchback", fuel, powerKw, years },
@@ -765,14 +765,20 @@ describe("Ledger", () => {
       variant("Kona", kona, "petrol", 88, { from: 2017, to: 2023 }),
       variant("Kona", kona, "bev", 150, { from: 2018, to: 2023 }),
     ];
+    // Each row is its own platform unless it names one.
     function row(model: string, years: number[], extra: Partial<OpenpilotSupport> = {}) {
-      const make = model.startsWith("Golf") ? "Volkswagen" : "Hyundai";
+      const make = model.startsWith("Golf")
+        ? "Volkswagen"
+        : model.startsWith("Sorento")
+          ? "Kia"
+          : "Hyundai";
       return {
         kind: "OpenpilotSupport",
         ref: `${make}|${model} ${years.join(",")}`,
         make,
         model,
         years,
+        platform: `${model} ${years.join(",")}`,
         level: "upstream",
         market: "US",
         url: "https://comma.ai/vehicles",
@@ -809,6 +815,8 @@ describe("Ledger", () => {
         row("Tucson", [2016, 2017]),
         row("Santa Fe", [2019, 2020, 2021]),
         row("Golf Cabriolet", [2016]),
+        // A car comma defines no platform for.
+        row("Kona", [2019], { platform: undefined }),
       ]);
       expect(placed()).toEqual({
         "Golf 2015,2016,2017,2018,2019,2020": [
@@ -833,6 +841,7 @@ describe("Ledger", () => {
           ["hyundai/santa-fe/tm/hatchback-diesel-147kw"],
         ],
         "Golf Cabriolet 2016": ["volkswagen/golf", []],
+        "Kona 2019": ["hyundai/kona", []],
       });
       const kona = ledger.snapshot().openpilot.find((m) => m.row.endsWith("Kona 2020"));
       expect(kona).toMatchObject({
@@ -840,6 +849,68 @@ describe("Ledger", () => {
         level: "upstream",
         market: "US",
         generationIds: ["hyundai/kona/os"],
+      });
+    });
+
+    it("reads a platform's Generation from all its rows, and no year on a changeover decides", async () => {
+      const tl = { slug: "tl", name: "Tucson TL", from: 2015, to: 2020 };
+      const nx4 = { slug: "nx4", name: "Tucson NX4", from: 2021 };
+      const um = { slug: "um", name: "Sorento UM", from: 2015, to: 2020 };
+      const mq4 = { slug: "mq4", name: "Sorento MQ4", from: 2020 };
+      ledger = openLedger(":memory:");
+      await run("rsv", "full", "2026-10-01", [
+        variant("Tucson", tl, "petrol", 97, { from: 2015, to: 2021 }),
+        variant("Tucson", tl, "diesel", 100, { from: 2015, to: 2020 }),
+        variant("Tucson", nx4, "petrol", 110, { from: 2020 }),
+        // Registered three years before its Generation: an earlier engine filed under it.
+        variant("Tucson", nx4, "petrol", 130, { from: 2018, to: 2024 }),
+        variant("Sorento", um, "diesel", 147, { from: 2015, to: 2020 }),
+        variant("Sorento", mq4, "diesel", 148, { from: 2020 }),
+      ]);
+      await run("comma-openpilot", "full", "2026-10-02", [
+        // comma's US Tucson 2021 is the TL, though the register's NX4 starts in 2021: its
+        // platform's other row is a TL, so the platform holds both Generations.
+        row("Tucson", [2021], { platform: "HYUNDAI_TUCSON" }),
+        row("Tucson Diesel", [2019], { platform: "HYUNDAI_TUCSON", fuel: "diesel" }),
+        row("Tucson", [2022], { platform: "HYUNDAI_TUCSON_4TH_GEN" }),
+        row("Tucson", [2023, 2024], { platform: "HYUNDAI_TUCSON_4TH_GEN" }),
+        // Alone on its platform, a changeover year names no Generation either.
+        row("Tucson", [2021], {
+          ref: "Hyundai|Tucson 2021|alone",
+          platform: "HYUNDAI_TUCSON_ALONE",
+        }),
+        // One platform, wholly the UM: its 2018 row is placed, its 2019 one sits within a
+        // year of the MQ4. A row with years clear of the changeover is placed on them.
+        row("Sorento", [2018], { platform: "KIA_SORENTO" }),
+        row("Sorento", [2019], { platform: "KIA_SORENTO" }),
+        row("Sorento", [2021, 2022, 2023], { platform: "KIA_SORENTO_4TH_GEN" }),
+      ]);
+      const where = Object.fromEntries(
+        ledger
+          .snapshot()
+          .openpilot.map((m) => [
+            `${m.model} ${m.years.join(",")} ${m.platform}`,
+            [m.generationIds, m.variantIds],
+          ]),
+      );
+      expect(where).toEqual({
+        "Tucson 2021 HYUNDAI_TUCSON": [[], []],
+        "Tucson Diesel 2019 HYUNDAI_TUCSON": [[], []],
+        "Tucson 2022 HYUNDAI_TUCSON_4TH_GEN": [
+          ["hyundai/tucson/nx4"],
+          ["hyundai/tucson/nx4/hatchback-petrol-110kw"],
+        ],
+        "Tucson 2023,2024 HYUNDAI_TUCSON_4TH_GEN": [
+          ["hyundai/tucson/nx4"],
+          ["hyundai/tucson/nx4/hatchback-petrol-110kw"],
+        ],
+        "Tucson 2021 HYUNDAI_TUCSON_ALONE": [[], []],
+        "Sorento 2018 KIA_SORENTO": [["kia/sorento/um"], ["kia/sorento/um/hatchback-diesel-147kw"]],
+        "Sorento 2019 KIA_SORENTO": [[], []],
+        "Sorento 2021,2022,2023 KIA_SORENTO_4TH_GEN": [
+          ["kia/sorento/mq4"],
+          ["kia/sorento/mq4/hatchback-diesel-148kw"],
+        ],
       });
     });
 

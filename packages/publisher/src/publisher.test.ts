@@ -635,6 +635,7 @@ describe("publish: determinism and scale", { timeout: 60_000 }, () => {
         make: "Volkswagen",
         model,
         years,
+        platform: `${model} ${years.join(",")}`,
         level,
         market: "US",
         url: "https://comma.ai/vehicles#volkswagen",

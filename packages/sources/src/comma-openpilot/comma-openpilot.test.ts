@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { emptyCheckpoint, type HarvestContext, type HarvestMode, silentLogger } from "../source.ts";
 import { commaOpenpilotSource } from "./comma-openpilot.ts";
 
-// Recorded 2026-10-28 from both CARS.md files, trimmed by hand to 23 list rows and 11 detail rows.
+// Recorded 2026-10-28 from both CARS.md files, trimmed by hand to 24 list rows and 11 detail rows,
+// with each brand's values.py from opendbc 8ceee62 trimmed to the platforms of those rows.
 const fixture = new URL("./fixtures/list.cassette.json", import.meta.url);
 const now = new Date("2026-10-28T22:00:00Z");
 
@@ -31,11 +32,15 @@ function byRef(rows: OpenpilotSupport[], ref: string): OpenpilotSupport | undefi
   return rows.find((row) => row.ref === ref);
 }
 
-/** Rewrites the list file (`opendbc`) or the details file (`openpilot`) in the cassette. */
-function editBody(repo: "opendbc" | "openpilot", change: (body: string) => string) {
+/**
+ * Rewrites the list file (`opendbc`), the details file (`openpilot`) or a brand's platform
+ * definitions (`hyundai`) in the cassette.
+ */
+function editBody(file: "opendbc" | "openpilot" | "hyundai", change: (body: string) => string) {
+  const path = file === "hyundai" ? "/opendbc/car/hyundai/values.py" : `/${file}/master/docs/`;
   return (cassette: Cassette) => {
     for (const { request, response } of cassette.interactions) {
-      if (request.url.includes(`/commaai/${repo}/`)) response.body = change(response.body);
+      if (request.url.includes(path)) response.body = change(response.body);
     }
   };
 }
@@ -43,8 +48,8 @@ function editBody(repo: "opendbc" | "openpilot", change: (body: string) => strin
 describe("comma-openpilot source", () => {
   it("full run yields every car on the list with its details", async () => {
     const rows = await harvest("full");
-    expect(rows).toHaveLength(22);
-    expect(new Set(rows.map((r) => r.ref)).size).toBe(22);
+    expect(rows).toHaveLength(23);
+    expect(new Set(rows.map((r) => r.ref)).size).toBe(23);
     // comma's own robot has no model years and is not a car.
     expect(rows.some((r) => r.make === "comma")).toBe(false);
 
@@ -54,6 +59,7 @@ describe("comma-openpilot source", () => {
       make: "Toyota",
       model: "Camry",
       years: [2018, 2019, 2020],
+      platform: "TOYOTA_CAMRY",
       level: "upstream",
       market: "US",
       longitudinal: "stock",
@@ -70,6 +76,7 @@ describe("comma-openpilot source", () => {
         make: "Škoda",
         model: "Kodiaq",
         years: [2017, 2018, 2019, 2020, 2021, 2022, 2023],
+        platform: "SKODA_KODIAQ_MK1",
         level: "upstream",
         package: "Adaptive Cruise Control (ACC) & Lane Assist",
         market: "Europe",
@@ -179,6 +186,50 @@ describe("comma-openpilot source", () => {
     });
   });
 
+  it("names each car's platform from opendbc's definitions", async () => {
+    const platform = (rows: OpenpilotSupport[], ref: string) => byRef(rows, ref)?.platform;
+    const rows = await harvest("full");
+    expect(platform(rows, "Hyundai|Tucson Diesel 2019|Smart Cruise Control (SCC)")).toBe(
+      "HYUNDAI_TUCSON",
+    );
+    expect(platform(rows, "Hyundai|Ioniq 5 (Southeast Asia and Europe only) 2022-24|All")).toBe(
+      "HYUNDAI_IONIQ_5",
+    );
+    // Ford defines "Ford Kuga 2020-23" with plug_in_hybrid=True.
+    expect(
+      platform(
+        rows,
+        "Ford|Kuga Plug-in Hybrid 2020-23|Adaptive Cruise Control with Lane Centering",
+      ),
+    ).toBe("FORD_ESCAPE_MK4");
+    // Defined outside the brands' platforms.
+    expect(platform(rows, "Acura|Integra 2023-25|All")).toBeUndefined();
+    expect(platform(rows, "Audi|A4 2016-24|All")).toBeUndefined();
+
+    // A car two platforms claim is neither's.
+    const twice = await harvest(
+      "full",
+      editBody("hyundai", (b) =>
+        b.replace(
+          "  HYUNDAI_IONIQ_5 = HyundaiCanFDPlatformConfig(\n    [",
+          '  HYUNDAI_IONIQ_5 = HyundaiCanFDPlatformConfig(\n    [\n      HyundaiCarDocs("Hyundai Tucson Diesel 2019"),',
+        ),
+      ),
+    );
+    expect(
+      platform(twice, "Hyundai|Tucson Diesel 2019|Smart Cruise Control (SCC)"),
+    ).toBeUndefined();
+  });
+
+  it("fails on platform definitions without their platform class", async () => {
+    await expect(
+      harvest(
+        "full",
+        editBody("hyundai", (b) => b.replace("class CAR(Platforms):", "class Car(Platforms):")),
+      ),
+    ).rejects.toThrow(/no platform class in .*hyundai\/values\.py/);
+  });
+
   it("links a make's section of comma.ai/vehicles only when it lists the make", async () => {
     const rows = await harvest("full");
     // comma.ai/vehicles shows makes with an upstream car; BYD has none.
@@ -226,7 +277,7 @@ describe("comma-openpilot source", () => {
         "full",
         editBody("opendbc", (b) => b.replace(/^\|Toyota\|Camry 2018-20\|.*\n/m, "")),
       ),
-    ).rejects.toThrow(/23 cars declared, 22 rows/);
+    ).rejects.toThrow(/24 cars declared, 23 rows/);
     // A blank line cuts the details table short.
     await expect(
       harvest(

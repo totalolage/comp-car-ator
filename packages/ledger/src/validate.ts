@@ -92,6 +92,7 @@ export function invalidReason(o: Observation): string | null {
       ) {
         return "years must be a non-empty ascending list of years";
       }
+      if (o.platform !== undefined && !nonEmpty(o.platform)) return "platform is empty";
       if (!oneOf(OPENPILOT_LEVELS, o.level)) return `unknown level ${o.level}`;
       if (!nonEmpty(o.market)) return "market is empty";
       if (o.europe !== undefined && typeof o.europe !== "boolean")
