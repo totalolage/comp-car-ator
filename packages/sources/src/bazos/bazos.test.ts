@@ -42,16 +42,19 @@ async function harvest(
   checkpoint: Partial<Checkpoint> = {},
   signal = new AbortController().signal,
   categories = ["kia"],
+  onRequest?: (count: number) => void,
 ) {
   const replay = createReplayHttp(recorded);
   const requested: string[] = [];
   const http: Http = {
     get(request) {
       requested.push(typeof request === "string" ? request : request.url);
+      onRequest?.(requested.length);
       return replay.get(request);
     },
   };
   const warnings: string[] = [];
+  const diagnostics: { message: string; data?: Record<string, unknown> }[] = [];
   const observations: Observation[] = [];
   let error: unknown;
   try {
@@ -60,7 +63,13 @@ async function harvest(
       mode,
       checkpoint: { ...emptyCheckpoint, ...checkpoint },
       now,
-      log: { info() {}, warn: (message) => warnings.push(message) },
+      log: {
+        info() {},
+        warn(message, data) {
+          warnings.push(message);
+          diagnostics.push({ message, data });
+        },
+      },
       signal,
     })) {
       observations.push(o);
@@ -70,7 +79,15 @@ async function harvest(
   }
   const listed = requested.filter((u) => !u.includes("/inzerat/"));
   const details = requested.filter((u) => u.includes("/inzerat/")).map((u) => refIn(u));
-  return { observations, error, warnings, listed: listed.map(pathOf), details };
+  return {
+    observations,
+    error,
+    warnings,
+    diagnostics,
+    requested,
+    listed: listed.map(pathOf),
+    details,
+  };
 }
 
 const ROW = '<div class="inzeraty inzeratyflex">';
@@ -692,6 +709,81 @@ describe("bazos source", () => {
     expect(refs(observations).every((ref) => IN_SCOPE.includes(ref))).toBe(true);
   });
 
+  it.each([
+    { known: true, short: false, outOfScope: false, abort: false },
+    { known: false, short: false, outOfScope: false, abort: false },
+    { known: false, short: false, outOfScope: true, abort: false },
+    { known: true, short: true, outOfScope: false, abort: false },
+    { known: false, short: false, outOfScope: false, abort: true },
+  ])(
+    "bounds incremental list and detail work before the next category: %j",
+    async ({ known, short, outOfScope, abort }) => {
+      const kia = await category();
+      const ids = Array.from({ length: 1620 }, (_, i) => String(226000000 + i));
+      for (const id of ids) kia.post(id, "223455729");
+      const recorded = await kia.cassette(Array.from({ length: 102 }, (_, i) => [i * 16, ids]));
+      const template = recorded.interactions.find(({ request }) =>
+        request.url.includes("/inzerat/223455729/"),
+      ) as Interaction;
+      for (const id of ids) {
+        recorded.interactions.push({
+          request: { url: template.request.url.replaceAll("223455729", id) },
+          response: {
+            ...template.response,
+            url: template.response.url.replaceAll("223455729", id),
+            body: outOfScope
+              ? "<h1 class=nadpisdetail>Kia Ceed</h1><div class=popisdetail>Bez dalších údajů</div>"
+              : template.response.body,
+          },
+        });
+      }
+      const mazda = (url: string) => url.replace("/kia/", "/mazda/");
+      for (const interaction of (await cassette("full")).interactions) {
+        recorded.interactions.push({
+          request: { ...interaction.request, url: mazda(interaction.request.url) },
+          response: { ...interaction.response, url: mazda(interaction.response.url) },
+        });
+      }
+      if (short) {
+        for (const { request, response } of recorded.interactions) {
+          if (request.url.includes("/kia/")) {
+            response.body = response.body.slice(0, response.body.lastIndexOf(ROW));
+          }
+        }
+      }
+      const controller = new AbortController();
+      const stopped = new Error("stop at the request boundary");
+      const result = await harvest(
+        recorded,
+        "incremental",
+        { lastRunAt: LONG_AGO, isKnown: () => known },
+        controller.signal,
+        ["kia", "mazda"],
+        (count) => {
+          if (abort && count === 100) controller.abort(stopped);
+        },
+      );
+      if (abort) {
+        expect(result.error).toBe(stopped);
+        expect(result.requested).toHaveLength(100);
+        expect(result.warnings).not.toContain("bazos: incremental request limit reached");
+        return;
+      }
+      expect(result.error).toBeUndefined();
+      expect(pathOf(result.requested[100] as string)).toBe("/mazda/");
+      expect(result.diagnostics).toContainEqual({
+        message: "bazos: incremental request limit reached",
+        data: expect.objectContaining({ category: "kia", requests: 100, cutoff: "2026-09-01" }),
+      });
+      expect(result.observations.some((o) => o.kind === "SliceDone")).toBe(false);
+      expect(
+        result.observations.some((o) => o.kind === "ListingSeen" || o.kind === "ListingPriceSeen"),
+      ).toBe(true);
+      if (outOfScope)
+        expect(refs(result.observations).some((ref) => ids.includes(ref))).toBe(false);
+    },
+  );
+
   describe("a list page cut short", () => {
     const lastRow = (body: string) => body.slice(0, body.lastIndexOf(ROW));
     const everyRow = (body: string) => body.slice(0, body.indexOf(ROW));
@@ -736,6 +828,80 @@ describe("bazos source", () => {
       });
     const short = "Bazoš list page has 19 rows, its header 20: https://auto.bazos.cz/kia/16/";
     const unmatched = "bazos: walk met a list page whose rows do not match its header";
+
+    it("reads representative Ford markup and preserves the evidence when a replay is short", async () => {
+      // Captured 2026-10-29 at /ford/1184/, where the failed run had logged 19/20.
+      // This later response has all 20. Re-page it as a 20-row scope, then remove one row
+      // to reproduce the historical warning shape without claiming its original cause.
+      const recorded = await loadCassette(fixture("ford-1184"));
+      const interaction = recorded.interactions[0] as Interaction;
+      interaction.request.url = "https://auto.bazos.cz/ford/";
+      interaction.response.url = interaction.request.url;
+      interaction.response.body = interaction.response.body.replace(
+        "Zobrazeno 1185-1204 inzerátů z 9 209",
+        "Zobrazeno 1-20 inzerátů z 20",
+      );
+      const whole = await harvest(recorded, "incremental", { isKnown: () => true }, undefined, [
+        "ford",
+      ]);
+      expect(whole.error).toBeUndefined();
+      expect(whole.warnings).toEqual([]);
+      expect(whole.listed).toEqual(["/ford/"]);
+      expect(whole.observations.length).toBeGreaterThan(0);
+      expect(whole.observations.every((o) => o.kind === "ListingPriceSeen")).toBe(true);
+
+      interaction.response.body = lastRow(interaction.response.body);
+      const short = await harvest(recorded, "full", {}, undefined, ["ford"]);
+      expect(String(short.error)).toContain("met 19 ads of 20 counted");
+      expect(short.observations.some((o) => o.kind === "SliceDone")).toBe(false);
+      expect(short.diagnostics).toContainEqual({
+        message: "Bazoš list page has 19 rows, its header 20: https://auto.bazos.cz/ford/",
+        data: {
+          category: "ford",
+          offset: 0,
+          status: 404,
+          from: 1,
+          to: 20,
+          total: 20,
+          idless: 0,
+          refs: expect.arrayContaining(["225624021"]),
+          attempt: 2,
+        },
+      });
+      expect(short.diagnostics.find(({ data }) => data?.refs)?.data?.refs).toHaveLength(19);
+    });
+
+    it("reports a five-count high-water deficit even when the final count matches", async () => {
+      // Scaled replay of Ford's met9178/highest9183/final9178: an earlier higher count
+      // still prevents SliceDone, independently of the final count agreeing with ids met.
+      const recorded = await cassette("full", (c) => {
+        const top = c.interactions.filter(({ request }) => request.url.endsWith("/kia/"));
+        // Replay repeats the last response; both attempts need their own changing counts.
+        c.interactions.push(...structuredClone(top));
+        inPages(
+          c,
+          "inzerátů z 59",
+          "inzerátů z 64",
+          (url, read) => url.endsWith("/kia/") && read % 2 === 1,
+        );
+      });
+      const result = await harvest(recorded, "full");
+      expect(String(result.error)).toContain("met 59 ads of 64 counted");
+      expect(result.observations.some((o) => o.kind === "SliceDone")).toBe(false);
+      expect(result.diagnostics).toContainEqual({
+        message: "bazos: walk met fewer ads than the site counts",
+        data: expect.objectContaining({
+          category: "kia",
+          met: 59,
+          highest: 64,
+          final: 59,
+          countDrift: 5,
+          highestShortfall: 5,
+          finalShortfall: 0,
+          attempt: 2,
+        }),
+      });
+    });
 
     it("is fetched again", async () => {
       const recorded = await cassette("full", (c) => cutAt(c, "/kia/16/", (read) => read === 1));
