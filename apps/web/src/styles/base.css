@@ -100,12 +100,12 @@ a:hover {
 }
 
 .wordmark {
-  /* One grid row, centred in the band; the mark's bottom edge sits on the text baseline. */
+  /* One grid row, centred in the band, the name's caps centred on the mark as in the lockup. */
   display: grid;
   grid-auto-flow: column;
   align-content: center;
-  align-items: baseline;
-  column-gap: 0.4em;
+  align-items: center;
+  column-gap: 0.4rem;
   margin-right: var(--s4);
   white-space: nowrap;
   color: inherit;
@@ -114,11 +114,12 @@ a:hover {
   letter-spacing: -0.01em;
 }
 
-/* The c-c mark (assets/logo/README.md), at the scale of the approved masthead mock-up:
-   26px wide at every width, so it does not shrink with the narrow-screen name. */
+/* The tyre stack (assets/logo/README.md), cropped to its 212 × 224 ink: 24px tall at every
+   width (the symbol's minimum size; about 2.3 × the 15px name's cap height), so it does not
+   shrink with the narrow-screen name. The gap is the lockup's, 60 units of the 224-unit mark. */
 .wordmark svg {
-  width: calc(1.75 * var(--text-lg));
-  height: calc(1.09 * var(--text-lg));
+  width: calc(1.5rem * 212 / 224);
+  height: 1.5rem;
 }
 
 .masthead-link {
