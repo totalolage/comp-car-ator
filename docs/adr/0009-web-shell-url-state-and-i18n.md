@@ -95,12 +95,18 @@ and hash, so switching language keeps the view.
   every other facet's filters (the engine's disjunctive counts, unchanged). Checking or
   unchecking a value never changes the counts in its own facet (clearing the last make also
   clears the model choice, so the make counts then widen with it). In a facet with a checked
-  value, unchecked make, model, body, fuel and transmission options read "+N": each Variant
-  has one such value, so checking it adds exactly N. Listing country and source keep the
+  value, unchecked make, model, body, fuel, transmission and openpilot options read "+N":
+  each Variant has one such value, so checking it adds exactly N. Listing country and source keep the
   plain count there, since their Variants overlap and a click adds at most N. The rail
   footnote and each checkbox's accessible name say which meaning a number has.
   `facetOptions` and `toggleValue` in `lib/catalog-view.ts` own this and are tested
   against the engine.
 - Message catalogs ship to islands as one shared chunk with both languages (about 3 kB
   gzipped today); the shell script imports only `i18n/locale.ts`.
+- `openpilot` is the catalog parameter for comma.ai openpilot support (ADR 0016): a list of
+  `OPENPILOT_LEVELS` plus `unlisted` (`?openpilot=community,upstream`), written after
+  `source`. Its option labels, the catalog row badge and the model page section take their
+  strings from `lib/openpilot-view.ts`, not the shared message catalog: the labels and badge
+  reach the catalog island only and the section renders at build time, so a model page, the
+  page nearest its JS budget, ships none of them.
 - A performance budget per page is enforced at build time (`apps/web/DESIGN.md`).
