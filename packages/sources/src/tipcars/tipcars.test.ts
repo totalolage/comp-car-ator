@@ -805,30 +805,39 @@ describe("tipcars source", () => {
       expect(priced.sort()).toEqual(inScope(refs).sort());
     });
 
-    it("a sweep too small for both lists rotates, so two days price every known listing", async () => {
-      // 7 pages, 2 of them heads; 4 requests a day plan 2 shares, from page 1 and page 4.
-      const { cassette, refs, inScope } = await sweepable();
-      const warnings: string[] = [];
-      const priced = new Set<string>();
-      const read: string[][] = [];
-      for (const n of [0, 1]) {
-        const urls: string[] = [];
-        const os = await harvest(cassette, {
-          mode: "incremental",
-          known: new Set(refs),
-          options: { priceSweep: 4 },
-          urls,
-          now: day(n),
-          warn: (message, data) => warnings.push(`${message} ${JSON.stringify(data)}`),
-        });
-        expect(urls).toHaveLength(2 + 4);
-        read.push(urls.slice(2));
-        for (const o of prices(os)) priced.add(o.ref);
-      }
-      expect(read[0]).not.toEqual(read[1]);
-      expect([...priced].sort()).toEqual(inScope(refs).sort());
-      expect(warnings[0]).toMatch(/cannot price every listing daily .*"short":1,"days":2/);
-    });
+    // 7 pages, 2 of them heads (used page 1, new page 1 = page 6). 4 requests a day plan 2
+    // shares, from pages 1 and 4; 3 plan 3, from pages 1, 3 and 5; 2 plan 4, the last from
+    // page 6, a head in the second list, wrapping round to the used list's page 2.
+    it.each([
+      [4, 2],
+      [3, 3],
+      [2, 4],
+    ])(
+      "a sweep of %i requests, too few for both lists, rotates: %i days in a row price every known listing",
+      async (requests, days) => {
+        const { cassette, refs, inScope } = await sweepable();
+        const warnings: string[] = [];
+        const priced = new Set<string>();
+        for (let n = 0; n < days; n++) {
+          const urls: string[] = [];
+          const os = await harvest(cassette, {
+            mode: "incremental",
+            known: new Set(refs),
+            options: { priceSweep: requests },
+            urls,
+            now: day(n),
+            warn: (message, data) => warnings.push(`${message} ${JSON.stringify(data)}`),
+          });
+          expect(urls).toHaveLength(2 + requests);
+          expect(prices(os).length).toBeLessThan(inScope(refs).length);
+          for (const o of prices(os)) priced.add(o.ref);
+        }
+        expect([...priced].sort()).toEqual(inScope(refs).sort());
+        expect(warnings[0]).toMatch(
+          new RegExp(`cannot price every listing daily .*"short":${5 - requests},"days":${days}`),
+        );
+      },
+    );
 
     it("follows a list that grows during the sweep to its new end", async () => {
       // A listing posted meanwhile pushes the used list's last one onto a page 6.
