@@ -20,7 +20,7 @@ const repo = process.env.BUNDLE_REPO ?? "totalolage/comp-car-ator-ingest";
 async function github(path, accept = "application/vnd.github+json") {
   if (!BUNDLE_TOKEN) throw new Error("BUNDLE_TOKEN is not set; production builds need it");
   const response = await fetch(path.startsWith("https:") ? path : `https://api.github.com${path}`, {
-    headers: { authorization: `Bearer ${BUNDLE_TOKEN}`, accept, "user-agent": "comp-car-ator-web" },
+    headers: { authorization: `Bearer ${BUNDLE_TOKEN}`, accept, "user-agent": "car-db-web" },
     signal: AbortSignal.timeout(120_000),
   });
   if (!response.ok) throw new Error(`GitHub ${path}: HTTP ${response.status}`);
