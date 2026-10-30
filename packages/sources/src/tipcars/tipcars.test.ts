@@ -519,6 +519,87 @@ describe("tipcars source", () => {
     expect(listings(os).filter((o) => inUpper.includes(o.ref))).toHaveLength(2);
   });
 
+  describe("a completed nested part whose whole pages omit a listing", () => {
+    async function setup() {
+      const plain = await loadCassette(split);
+      const cards = cardsOf(plain);
+      const refs = [...cards.keys()]
+        .filter((ref) => !/Dohodou/.test(cards.get(ref) ?? ""))
+        .slice(0, 21);
+      const root = "https://www.tipcars.com/ojete?2000-2000=";
+      let cassette = serve(plain, root, [listPage(cards, 21, refs.slice(0, 20))]);
+      for (const [band, part] of [
+        ["1000000-", []],
+        ["0-999999", refs],
+        ["500000-999999", []],
+        ["0-499999", refs],
+        ["250000-499999", refs.slice(20)],
+        ["0-249999", refs.slice(0, 20)],
+      ] as const) {
+        cassette = serve(cassette, `${root}&${band}kc=`, [
+          listPage(cards, part.length, part.slice(0, 20)),
+        ]);
+      }
+      // The larger query repeats its first card on page 2 instead of returning the 21st.
+      cassette = serve(cassette, "https://www.tipcars.com/ojete?str=2-20&2000-2000=&0-499999kc=", [
+        listPage(cards, 21, refs.slice(0, 1)),
+      ]);
+      const initial = await harvest(cassette, SPLIT_RUN);
+      const done = slicesDone(initial).filter(
+        (key) => key !== "used:2000" && key !== "used:2000:0-999999",
+      );
+      return { cards, refs, root, cassette, initial, done };
+    }
+
+    it("resumes through independently complete smaller bands", async () => {
+      const { root, cassette, initial, done } = await setup();
+      const urls: string[] = [];
+      const resumed = await harvest(cassette, { ...SPLIT_RUN, done, urls });
+      expect(new Set(listings(resumed).map((o) => o.ref))).toEqual(
+        new Set(listings(initial).map((o) => o.ref)),
+      );
+      expect(slicesDone(resumed)).toEqual(["used:2000:0-999999", "used:2000"]);
+      expect(urls).toContain(`${root}&250000-499999kc=`);
+      // Recovery adds two child reads and five reconciliation reads to the short reread.
+      expect(urls.filter((url) => url.endsWith("&250000-499999kc="))).toHaveLength(3);
+      expect(urls.filter((url) => url.endsWith("&0-249999kc="))).toHaveLength(2);
+    });
+
+    it("leaves the parent unfinished when a stable listing is excluded by both smaller bands", async () => {
+      const { cards, root, cassette, done } = await setup();
+      const gap = serve(cassette, `${root}&250000-499999kc=`, [listPage(cards, 0, [])]);
+      const out: Observation[] = [];
+      await expect(harvest(gap, { ...SPLIT_RUN, done }, out)).rejects.toThrow(
+        /used:2000:0-499999 \(listings in neither half\)/,
+      );
+      expect(slicesDone(out)).toEqual([]);
+    });
+
+    it("never pools the short parent pass with an incomplete smaller band", async () => {
+      const { cards, refs, root, cassette, done } = await setup();
+      const short = serve(cassette, `${root}&0-249999kc=`, [
+        listPage(cards, 20, refs.slice(0, 19)),
+      ]);
+      const out: Observation[] = [];
+      await expect(harvest(short, { ...SPLIT_RUN, done }, out)).rejects.toThrow(
+        /used:2000:0-249999 \(20 reported at the end, 19 harvested\)/,
+      );
+      // The short parent and children saw 21 together, but no complete traversal did.
+      expect(new Set(listings(out).map((o) => o.ref)).size).toBe(21);
+      expect(slicesDone(out)).toEqual([]);
+    });
+
+    it("keeps sightings when a recovery request fails without completing the parent", async () => {
+      const { refs, root, cassette, done } = await setup();
+      const out: Observation[] = [];
+      await expect(
+        harvest(cassette, { ...SPLIT_RUN, done, failAt: `${root}&0-249999kc=` }, out),
+      ).rejects.toThrow("planned interruption");
+      expect(new Set(listings(out).map((o) => o.ref))).toEqual(new Set(refs));
+      expect(slicesDone(out)).toEqual([]);
+    });
+  });
+
   it("a slice short on every pass over more pages is split in two by price, each part done", async () => {
     // Paging by offset can serve a listing on two pages and push another off both, the same
     // way on every pass: used:2000 comes out one short twice, so it is split at 1,000,000 Kč.
