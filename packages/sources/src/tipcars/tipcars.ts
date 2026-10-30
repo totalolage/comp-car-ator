@@ -360,7 +360,11 @@ class Harvest {
     harvested: Set<string>,
     skipped: readonly Slice[],
   ): AsyncGenerator<Observation, Set<string> | null> {
-    for (const part of skipped) yield* this.again(part, harvested);
+    for (const part of skipped) {
+      const refs = yield* this.again(part);
+      if (!refs) return null;
+      for (const ref of refs) harvested.add(ref);
+    }
     const key = sliceKey(slice);
     let { left, total } = yield* this.recount(slice, parts);
     if (left <= 0 && this.live(harvested).size >= total) return harvested;
@@ -416,14 +420,18 @@ class Harvest {
   }
 
   /**
-   * Pages a part done earlier in the census again, adding its listings to `harvested`. A
+   * Pages a part done earlier in the census again, returning its complete pass's refs. A
    * used one comes out again from its card. A new or demo one costs a detail page, so it
    * comes out again only when no run of this census has read it whole (its `listing:<ref>`
    * mark, and the Ledger still knows it): one that moved into the part since it was done, or
-   * arrived.
+   * arrived. A short pass recovers through smaller parts, each complete and reconciled
+   * against this part; its short pass's refs never count towards that recovery.
    */
-  private async *again(part: Slice, harvested: Set<string>): AsyncGenerator<Observation> {
+  private async *again(part: Slice): AsyncGenerator<Observation, Set<string> | null> {
+    const harvested = new Set<string>();
+    let reported = 0;
     for await (const page of this.pages(part, true)) {
+      reported = Math.max(reported, page.total);
       // The page's sightings before any detail page, which may fail: the known new or demo
       // ones from their cards (`alive`), then the used ones.
       const fresh = page.cards.filter((card) => card.category === "N");
@@ -437,6 +445,21 @@ class Harvest {
       }
       for (const card of page.cards) if (!this.gone.has(card.ref)) harvested.add(card.ref);
     }
+    if (this.live(harvested).size >= reported) return harvested;
+    const parts = split(part);
+    if (parts && reported > PAGE_SIZE) {
+      const recovered = new Set<string>();
+      let done = true;
+      for (const child of parts) {
+        const refs = yield* this.again(child);
+        if (refs) for (const ref of refs) recovered.add(ref);
+        else done = false;
+      }
+      if (!done) return null;
+      return yield* this.covered(part, parts, recovered, []);
+    }
+    this.short.push(`${sliceKey(part)} (${this.tally(harvested, reported)})`);
+    return null;
   }
 
   /**
