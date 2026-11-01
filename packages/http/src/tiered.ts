@@ -40,6 +40,8 @@ export interface RawResponse {
 export type TierFetcher = (request: {
   url: string;
   headers: Record<string, string>;
+  /** POST this form-urlencoded body instead of a GET (`HttpRequest.form`). */
+  form?: URLSearchParams;
   binary: boolean;
   stream: boolean;
   signal?: AbortSignal;
@@ -153,8 +155,10 @@ export function createTieredHttp(
     }
   }
 
-  function tiersFrom(minTier: Tier): Tier[] {
-    const available = TIERS.filter((t) => fetchers[t]);
+  function tiersFrom(request: HttpRequest): Tier[] {
+    const minTier = request.minTier ?? "T0";
+    // A browser navigation cannot carry a form body, so a form request stays below T2.
+    const available = TIERS.filter((t) => fetchers[t] && !(request.form && t === "T2"));
     if (available.length === 0) throw new Error("Http has no fetch tiers configured");
     const atOrAbove = available.filter((t) => TIERS.indexOf(t) >= TIERS.indexOf(minTier));
     // A requested tier that is not available falls back to the highest one we have.
@@ -169,6 +173,7 @@ export function createTieredHttp(
   ): Promise<RawResponse> {
     const fetcher = fetchers[tier] as TierFetcher;
     const { url, signal } = request;
+    const form = request.form ? new URLSearchParams(request.form) : undefined;
     const coolDown = (ms: number) => cooldownUntil.set(host, now() + ms);
     let lastError: unknown;
     for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -179,6 +184,7 @@ export function createTieredHttp(
           fetcher({
             url,
             headers,
+            ...(form ? { form } : {}),
             binary: request.binary ?? false,
             stream: request.stream ?? false,
             signal,
@@ -205,7 +211,7 @@ export function createTieredHttp(
       "accept-language": ACCEPT_LANGUAGE[request.locale ?? "cs"],
       ...lowerKeys(request.headers ?? {}),
     };
-    const tiers = tiersFrom(request.minTier ?? "T0");
+    const tiers = tiersFrom(request);
     let blocked: { tier: Tier; marker: string } | undefined;
     for (const [index, tier] of tiers.entries()) {
       const response = await fetchWithRetry(tier, request, host, headers);

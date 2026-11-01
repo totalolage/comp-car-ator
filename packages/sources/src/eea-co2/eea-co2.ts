@@ -123,9 +123,10 @@ async function getPage(
   pageSize: number,
 ): Promise<unknown[]> {
   ctx.signal.throwIfAborted();
-  const params = new URLSearchParams({ query: sql, p: String(page), nrOfHits: String(pageSize) });
-  const url = `${ENDPOINT}?${params}`;
-  const response = await ctx.http.get({ url, locale: "en", signal: ctx.signal });
+  // POSTed as a form, as DiscoData's own query page does: since 2026-11 the gateway in front
+  // of it answers 403 to SQL with quotes or brackets in a URL query string.
+  const form = { query: sql, p: String(page), nrOfHits: String(pageSize) };
+  const response = await ctx.http.get({ url: ENDPOINT, form, locale: "en", signal: ctx.signal });
   if (response.status !== 200) throw new Error(`EEA DiscoData returned HTTP ${response.status}`);
   const json = JSON.parse(response.body) as { results?: unknown; errors?: { error: string }[] };
   if (!Array.isArray(json.results)) {

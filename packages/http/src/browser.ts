@@ -196,7 +196,9 @@ export function createBrowserFetcher(
     return closing;
   }
 
-  const fetch: TierFetcher = async ({ url, headers, binary, stream, signal }) => {
+  const fetch: TierFetcher = async ({ url, headers, form, binary, stream, signal }) => {
+    // The policy keeps form requests below T2; a navigation would silently drop the body.
+    if (form) throw new Error(`T2 cannot send a form body: ${url}`);
     clearTimeout(idleTimer);
     active++;
     try {

@@ -1,13 +1,13 @@
-import { createReplayHttp, loadCassette } from "@cca/http";
+import { createReplayHttp, type Http, type HttpRequest, loadCassette } from "@cca/http";
 import type { Observation, VariantFacts } from "@cca/vocabulary";
 import { describe, expect, it } from "vitest";
 import { emptyCheckpoint, type HarvestMode, silentLogger } from "../source.ts";
 import { type EeaCo2Options, type EeaTable, eeaCo2Source } from "./eea-co2.ts";
 
-// Recorded 2026-10-25 from DiscoData, Škoda only, 50 rows per page.
+// Recorded 2026-11-01 from DiscoData (POSTed form queries), Škoda only, 50 rows per page.
 const skoda = new URL("./fixtures/skoda.cassette.json", import.meta.url);
 const missingTable = new URL("./fixtures/missing-table.cassette.json", import.meta.url);
-const now = new Date("2026-10-25T18:03:00Z");
+const now = new Date("2026-11-01T23:05:00Z");
 const tables: EeaTable[] = [
   { table: "co2cars_2024Fv30", year: 2024, status: "F" },
   { table: "co2cars_2025Pv31", year: 2025, status: "P" },
@@ -15,14 +15,14 @@ const tables: EeaTable[] = [
 const options: EeaCo2Options = { makes: ["SKODA"], tables, pageSize: 50 };
 
 async function harvest(
-  cassette: URL,
+  cassette: URL | Http,
   mode: HarvestMode,
   lastRunAt: Date | null,
   opts: EeaCo2Options = options,
 ): Promise<Observation[]> {
   const out: Observation[] = [];
   for await (const o of eeaCo2Source(opts).harvest({
-    http: createReplayHttp(await loadCassette(cassette)),
+    http: cassette instanceof URL ? createReplayHttp(await loadCassette(cassette)) : cassette,
     mode,
     checkpoint: { ...emptyCheckpoint, lastRunAt },
     now,
@@ -88,7 +88,7 @@ describe("eea-co2 source", () => {
     const cassette = await loadCassette(skoda);
     // The last 2024 page (25 rows): put malformed rows between valid ones.
     const last = cassette.interactions.find(
-      (i) => i.request.url.includes("co2cars_2024Fv30") && i.request.url.includes("p=2"),
+      (i) => i.request.form?.query?.includes("co2cars_2024Fv30") && i.request.form.p === "2",
     );
     if (!last) throw new Error("cassette lacks the second 2024 page");
     const json = JSON.parse(last.response.body) as { results: unknown[] };
@@ -119,6 +119,44 @@ describe("eea-co2 source", () => {
     }
     expect(out).toHaveLength(75);
     expect(warnings).toEqual([{ table: "co2cars_2024Fv30", malformed: 7 }]);
+  });
+
+  it("POSTs its SQL as a form, keeping quotes and brackets out of the URL", async () => {
+    // DiscoData's gateway answers 403 to SQL in a query string (seen 2026-11-01).
+    const replay = createReplayHttp(await loadCassette(skoda));
+    const sent: HttpRequest[] = [];
+    const spy: Http = {
+      get: (request) => {
+        sent.push(request as HttpRequest);
+        return replay.get(request);
+      },
+    };
+    await harvest(spy, "full", null);
+    expect(sent).toHaveLength(4);
+    for (const request of sent) {
+      expect(request.url).toBe("https://discodata.eea.europa.eu/sql");
+      expect(request.form?.query).toContain("FROM [CO2Emission].[latest].[co2cars_202");
+      expect(request.form?.query).toContain("[MS] IN ('CZ', 'DE', 'AT')");
+    }
+    expect(sent.map((r) => [r.form?.p, r.form?.nrOfHits])).toEqual([
+      ["1", "50"],
+      ["2", "50"],
+      ["1", "50"],
+      ["2", "50"],
+    ]);
+  });
+
+  it("fails the run when DiscoData's gateway refuses the request", async () => {
+    const gateway: Http = {
+      get: async () => ({
+        url: "https://discodata.eea.europa.eu/sql",
+        status: 403,
+        headers: { server: "Microsoft-Azure-Application-Gateway/v2" },
+        body: "<html><center><h1>403 Forbidden</h1></center></html>",
+        tier: "T1",
+      }),
+    };
+    await expect(harvest(gateway, "full", null)).rejects.toThrow("EEA DiscoData returned HTTP 403");
   });
 
   it("fails the run when DiscoData rejects the query", async () => {
