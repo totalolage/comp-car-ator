@@ -76,7 +76,11 @@ export interface SautoOptions {
    * ("skoda", "skoda:octavia"). Also names the Source's `scope`.
    */
   manufacturerModel?: string;
-  /** Results per search page. Default 100. */
+  /**
+   * Results per search page, a whole number from 1 to 10,000 (else `sautoSource` throws).
+   * Default 100. Incremental pages overlap by a twentieth, at least one listing; pages of one
+   * or two never step on, so their walk goes by price halves.
+   */
   pageSize?: number;
   /** A full-run slice with more results than this is halved by price. Default 2,000. */
   sliceLimit?: number;
@@ -89,6 +93,9 @@ export interface SautoOptions {
 
 export function sautoSource(options: SautoOptions = {}): Source {
   const pageSize = options.pageSize ?? 100;
+  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > WINDOW) {
+    throw new Error(`Sauto pageSize must be a whole number from 1 to ${WINDOW}, not ${pageSize}`);
+  }
   const sliceLimit = Math.min(options.sliceLimit ?? SLICE_LIMIT, WINDOW - pageSize);
   const budget = options.budget ?? 2_400;
   const filter = options.manufacturerModel;
@@ -197,11 +204,11 @@ class Run {
    * skipped anyway; the halves share their middle price, so a listing stored at a fraction of
    * a crown falls in one). Only a well-formed date counts towards the walk's place; a page
    * whose dates are not newest first fails the run, and a listing without a date is read as if
-   * moved, rather than left out. Pages under 20 results (tests) cannot overlap and step a page
-   * unchecked.
+   * moved, rather than left out. Every page size overlaps by at least one listing, so no step
+   * goes unchecked; pages of one or two never step on, and walk price halves.
    */
   private async *moved(since: string, band?: Band): AsyncIterable<Item[]> {
-    const overlap = Math.floor(this.pageSize / 20);
+    const overlap = Math.max(1, Math.floor(this.pageSize / 20));
     let reached: string | undefined;
     let backsteps = 0;
     for (let offset = 0; ; ) {
@@ -213,13 +220,13 @@ class Run {
       // A malformed item has no date; its dated neighbours bound it.
       const dates = page.items.map(dateOf);
       const dated = dates.filter((date) => date !== undefined);
-      if (overlap > 0 && dated.some((date, i) => i > 0 && date > (dated[i - 1] as string))) {
+      if (dated.some((date, i) => i > 0 && date > (dated[i - 1] as string))) {
         throw new Error(
           `Sauto incremental: the search page at offset ${offset} is not newest first`,
         );
       }
       const first = dated[0];
-      if (overlap > 0 && reached !== undefined && !(first !== undefined && first > reached)) {
+      if (reached !== undefined && !(first !== undefined && first > reached)) {
         if (backsteps >= BACKSTEPS || offset === 0) {
           throw new Error(`Sauto incremental lost its place in the order at offset ${offset}`);
         }
@@ -240,10 +247,6 @@ class Run {
         offset + this.pageSize >= page.total
       )
         return;
-      if (overlap === 0) {
-        offset += this.pageSize;
-        continue;
-      }
       const last = dated.at(-1);
       if (last === undefined) {
         throw new Error(`Sauto incremental: no listing on the page at offset ${offset} is dated`);

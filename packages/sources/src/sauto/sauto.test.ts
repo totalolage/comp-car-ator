@@ -18,7 +18,10 @@ import {
 import { type SautoOptions, sautoSource } from "./sauto.ts";
 
 // Recorded 2026-10-25 against live Sauto: an incremental and a full run of
-// sautoSource(OPTIONS), personal fields (phone, user, VIN, description) stripped.
+// sautoSource(OPTIONS), personal fields (phone, user, VIN, description) stripped. The walk then
+// stepped a whole page at a time; it now overlaps its pages by a listing, so the incremental
+// pages at offsets 2, 6 and 10 are cut from the order the recorded pages at 0, 4, 8 and 12
+// served (both cassettes; each order's dates are distinct, newest first).
 const fixture = new URL("./fixtures/dacia-spring.cassette.json", import.meta.url);
 const now = new Date("2026-10-25T13:27:00Z");
 const withoutVat = new URL("./fixtures/without-vat.cassette.json", import.meta.url);
@@ -284,19 +287,21 @@ describe("sauto source", () => {
 
   it("incremental run after a last run reads down to it and reads every unknown listing moved up", async () => {
     const { observations, urls } = await harvest("incremental", { lastRunAt: LAST_RUN });
-    // The 3rd page is wholly older than the last run.
-    expect(searches(urls)).toHaveLength(3);
+    // The 2nd page (from offset 2: the 1st page's last two and two more) ends older than it.
+    expect(searches(urls)).toHaveLength(2);
     // Each page's unknown details come out before the next search, in sorting_date order.
     const read = ["211187061", "210518621", "210389525", "211098051", "211264902"];
     expect(details(urls)).toEqual(read.map((ref) => `https://www.sauto.cz/api/v1/items/${ref}`));
     expect(listings(observations).map((o) => o.ref)).toEqual(read);
   });
 
+  /** The listings on the first recorded search page. */
+  const FIRST_PAGE = new Set(["211187061", "210518621", "210389525", "211098051"]);
+
   it("incremental run prices known listings moved up from their search items, without a detail", async () => {
-    const page1 = new Set(["211187061", "210518621", "210389525", "211098051"]);
     const { observations, urls } = await harvest("incremental", {
       lastRunAt: LAST_RUN,
-      isKnown: (ref) => page1.has(ref),
+      isKnown: (ref) => FIRST_PAGE.has(ref),
     });
     expect(details(urls)).toEqual(["https://www.sauto.cz/api/v1/items/211264902"]);
     expect(prices(observations)).toEqual([
@@ -325,8 +330,13 @@ describe("sauto source", () => {
       { lastRunAt: LAST_RUN, isKnown: () => true },
       (cassette) =>
         editBodies(cassette, firstSearchPage, (body) => {
-          const item = body.results.find((i) => i.id === 210518621);
-          if (item) Object.assign(item, { price: 339000, sorting_date: "2026-10-25T12:00:00" });
+          // The edit moves it to the top of the order.
+          const at = body.results.findIndex((i) => i.id === 210518621);
+          const [item] = body.results.splice(at, 1);
+          if (item) {
+            Object.assign(item, { price: 339000, sorting_date: "2026-10-25T12:00:00" });
+            body.results.unshift(item);
+          }
         }),
     );
     expect(details(urls)).toEqual([]);
@@ -344,13 +354,19 @@ describe("sauto source", () => {
     const { observations, urls } = await harvest(
       "incremental",
       { lastRunAt: LAST_RUN },
+      // The first page's listings lose their price, on every page that repeats them.
       (cassette) =>
-        editBodies(cassette, firstSearchPage, (body) => {
-          for (const item of body.results)
-            Object.assign(item, { price: null, price_by_agreement: true });
-        }),
+        editBodies(
+          cassette,
+          (url) => url.includes("/items/search?"),
+          (body) => {
+            for (const item of body.results)
+              if (FIRST_PAGE.has(String(item.id)))
+                Object.assign(item, { price: null, price_by_agreement: true });
+          },
+        ),
     );
-    expect(searches(urls)).toHaveLength(3);
+    expect(searches(urls)).toHaveLength(2);
     expect(listings(observations).map((o) => o.ref)).toEqual(["211264902"]);
   });
 
@@ -400,31 +416,19 @@ describe("sauto source", () => {
   });
 
   it("incremental budget includes search requests, including a walk of only known listings", async () => {
-    const { observations, urls, error } = await harvestSite(
-      "incremental",
-      paged(cars(1, 2, 3, 4, 5, 6, 7, 8, 9)),
-      {
-        checkpoint: { isKnown: () => true },
-        source: { budget: 2 },
-      },
-    );
+    const { observations, urls, error } = await harvestSite("incremental", paged(datedCars(1, 9)), {
+      checkpoint: { isKnown: () => true },
+      source: { budget: 2 },
+    });
     expect(urls).toHaveLength(2);
     expect(details(urls)).toEqual([]);
-    expect(prices(observations).map(([ref]) => ref)).toEqual([
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      "7",
-      "8",
-    ]);
+    // The 2nd page, at offset 2, repeats 3 and 4.
+    expect(prices(observations).map(([ref]) => ref)).toEqual(["1", "2", "3", "4", "5", "6"]);
     expect(String(error)).toMatch(/request budget 2 exhausted/);
   });
 
   it("incremental run streams unknown details within the request cap and keeps a fetched page's known prices before exhaustion", async () => {
-    const list = cars(1, 2, 3, 4, 5, 6);
+    const list = datedCars(1, 6);
     // Old drafts published recently remain eligible, regardless of create_date.
     for (const item of list) item.create_date = "2020-01-01T00:00:00";
     const recorded = new Set(["3", "4", "6"]);
@@ -449,7 +453,7 @@ describe("sauto source", () => {
     expect(second.error).toBeUndefined();
     expect(listings(second.observations).map((o) => o.ref)).toEqual(["5"]);
     expect(second.urls).toHaveLength(3);
-    const exact = await harvestSite("incremental", paged(cars(10, 11, 12)), {
+    const exact = await harvestSite("incremental", paged(datedCars(10, 12)), {
       source: { budget: 4 },
     });
     expect(exact.error).toBeUndefined();
@@ -603,6 +607,53 @@ describe("sauto source", () => {
     expect(new Set(refs(halved.observations))).toEqual(new Set(range(1, 41).map(String)));
   });
 
+  it("rejects a page size that is not a whole number from 1 to 10,000", () => {
+    for (const pageSize of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 10_001]) {
+      expect(() => sautoSource({ pageSize })).toThrow(/pageSize must be a whole number from 1/);
+    }
+    for (const pageSize of [1, 2, 10_000]) expect(() => sautoSource({ pageSize })).not.toThrow();
+  });
+
+  // The review's small-page case: 30 listings share one date; once the first page is read,
+  // unseen 11 moves to the top of the order. Every page size checks each step (pages of 1 and
+  // 2 cannot step on, and walk price halves), so the walk reads all 30 or fails.
+  it.each([1, 2, 3, 4, 10, 20])(
+    "pages of %i: listings sharing a date that reorder between pages are all read, or the run fails",
+    async (pageSize) => {
+      const walk = (price: (id: number) => number) => {
+        const list = range(1, 30).map((id) => car(id, { price: price(id) }));
+        let searched = 0;
+        return harvestSite(
+          "incremental",
+          (q) => {
+            if (searched++ === 1) {
+              const [moved] = list.splice(10, 1);
+              list.unshift(moved as ApiItem);
+            }
+            const offset = Number(q.get("offset"));
+            const from = Number(q.get("price_from") ?? "0");
+            const to = Number(q.get("price_to") ?? Number.POSITIVE_INFINITY);
+            const inBand = list.filter(
+              (item) => (item.price as number) >= from && (item.price as number) <= to,
+            );
+            return { total: inBand.length, results: inBand.slice(offset, offset + pageSize) };
+          },
+          { checkpoint: { lastRunAt: new Date("2026-10-24T00:00:00Z") }, source: { pageSize } },
+        );
+      };
+      const refs = (o: Observation[]) => new Set(listings(o).map((l) => l.ref));
+
+      // One price: no half splits the tie.
+      const tied = await walk(() => 100_000);
+      expect(String(tied.error)).toMatch(/cannot be split/);
+
+      // A price each: the halves split it, and each is walked from its top.
+      const split = await walk((id) => 100_000 + id * 1_000);
+      expect(split.error).toBeUndefined();
+      expect(refs(split.observations)).toEqual(new Set(range(1, 30).map(String)));
+    },
+  );
+
   it("incremental run places pages by well-formed dates only, and pages back to a page dated above its place", async () => {
     const refs = (o: Observation[]) => listings(o).map((l) => l.ref);
     const lastRunAt = new Date("2026-10-24T00:00:00Z");
@@ -663,7 +714,7 @@ describe("sauto source", () => {
     expect(listings(longAgo.observations)).toEqual([]);
     expect(prices(longAgo.observations)).toHaveLength(13);
     expect(details(longAgo.urls)).toEqual([]);
-    expect(searches(longAgo.urls)).toHaveLength(4);
+    expect(searches(longAgo.urls)).toHaveLength(6);
     const justNow = await harvest("incremental", { ...known, lastRunAt: now });
     expect(justNow.observations).toEqual([]);
     expect(searches(justNow.urls)).toHaveLength(1);
@@ -957,17 +1008,20 @@ describe("sauto source", () => {
   });
 
   it("incremental run yields each new listing once, though the order repeats it", async () => {
-    // The second page repeats the first (the order moved); the third holds unseen listings.
-    const pages: Record<string, ApiItem[]> = {
-      0: cars(1, 2, 3, 4),
-      4: cars(1, 2, 3, 4),
-      8: cars(5, 6, 7, 8),
-      12: [],
-    };
+    // After the first page two listings arrive on top, so the second page (at 2) repeats the
+    // first whole; the pages after it hold unseen listings.
+    let list = datedCars(1, 8);
+    let searched = 0;
     const recorded = new Set<string>();
-    const { observations, error } = await harvestSite(
+    const { observations, error, urls } = await harvestSite(
       "incremental",
-      (q) => ({ total: 12, results: pages[q.get("offset") ?? ""] ?? [] }),
+      (q) => {
+        if (searched++ === 1) {
+          const fresh = [101, 102].map((id) => car(id, { sorting_date: secondsBefore(-id) }));
+          list = [...fresh, ...list];
+        }
+        return paged(list)(q);
+      },
       {
         checkpoint: { lastRunAt: LONG_AGO, isKnown: (ref) => recorded.has(ref) },
         consume: (o) => {
@@ -976,6 +1030,12 @@ describe("sauto source", () => {
       },
     );
     expect(error).toBeUndefined();
+    expect(searches(urls).map((u) => new URL(u).searchParams.get("offset"))).toEqual([
+      "0",
+      "2",
+      "4",
+      "6",
+    ]);
     expect(listings(observations).map((o) => o.ref)).toEqual([
       "1",
       "2",
@@ -1000,7 +1060,7 @@ describe("sauto source", () => {
       car(4, { manufacturing_date: null, in_operation_date: "2000-03-01" }),
       // Only the detail dates this one.
       car(5, { manufacturing_date: null }),
-    ];
+    ].map((item, i) => ({ ...item, sorting_date: secondsBefore(i + 1) }));
     const details = { 5: { manufacturing_date: "1998-01-01" } };
     const incremental = await harvestSite("incremental", paged(list), { details });
     expect(incremental.error).toBeUndefined();

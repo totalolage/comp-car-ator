@@ -71,6 +71,58 @@ function record(http: Http, options: SautoOptions) {
 const refs = () =>
   [...ledger.snapshot().listings()].map((l) => l.ref).sort((a, b) => Number(a) - Number(b));
 
+/**
+ * The review's small-page case at `pageSize`: 30 listings share one date (and a price, unless
+ * `price` sets one each); once the first page is read, unseen 11 moves to the top of the order.
+ * `bands` serves the price halves the walk asks for; without it this API ignores them.
+ */
+function reordered(pageSize: number, { bands = false, price = (_id: number) => 100_000 } = {}) {
+  const list = range(1, 30).map((id) => car(id, { price: price(id) }));
+  let searches = 0;
+  return site((q) => {
+    if (searches++ === 1) {
+      const [moved] = list.splice(10, 1);
+      list.unshift(moved as Item);
+    }
+    const offset = Number(q.get("offset"));
+    const from = Number(q.get("price_from") ?? 0);
+    const to = Number(q.get("price_to") ?? Number.POSITIVE_INFINITY);
+    const inBand = bands
+      ? list.filter((item) => (item.price as number) >= from && (item.price as number) <= to)
+      : list;
+    return { total: inBand.length, results: inBand.slice(offset, offset + pageSize) };
+  });
+}
+
+// Pages of 1 and 2 cannot step on at all; pages of 3 and 10 overlap by one listing.
+it.each([1, 2, 3, 10])(
+  "pages of %i: a tie that reorders past an unseen listing fails the run, keeping the last run's cutoff",
+  async (pageSize) => {
+    ledger = openLedger(":memory:");
+    await ledger.record({ source: "sauto", mode: "incremental", startedAt: lastRun }, []);
+    const failure = await record(reordered(pageSize), { pageSize }).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(RunFailedError);
+    expect(String((failure as RunFailedError).cause)).toMatch(/cannot be split/);
+    expect(ledger.checkpoint("sauto").lastRunAt).toEqual(lastRun);
+  },
+);
+
+it.each([1, 2, 3, 10])(
+  "pages of %i: where price halves split the tie, every listing is read and the cutoff advances",
+  async (pageSize) => {
+    ledger = openLedger(":memory:");
+    await ledger.record({ source: "sauto", mode: "incremental", startedAt: lastRun }, []);
+    const http = reordered(pageSize, { bands: true, price: (id) => 100_000 + id * 1_000 });
+    const summary = await record(http, { pageSize });
+    expect(summary.newListings).toBe(30);
+    expect(refs()).toEqual(range(1, 30).map(String));
+    expect(ledger.checkpoint("sauto").lastRunAt).toEqual(now);
+  },
+);
+
 it("a Sauto walk that cannot place listings sharing a date fails, keeping its reads and the last run's cutoff", async () => {
   ledger = openLedger(":memory:");
   await ledger.record({ source: "sauto", mode: "incremental", startedAt: lastRun }, []);
