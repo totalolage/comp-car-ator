@@ -407,7 +407,11 @@ describe("autoesa source", () => {
     const href = /<a href="(\/[^"]*\/(\d+))"\s+class="car_item"/.exec(page?.response.body ?? "");
     const [, path, ref] = href as RegExpExecArray;
     const slashed = (path as string).replace(/\/[^/]+\/(\d+)$/, "/benzin/nafta/$1");
-    let cassette = edit(plain, SLICE_2003, body((b) => b.replace(`"${path}"`, `"${slashed}"`)));
+    let cassette = edit(
+      plain,
+      SLICE_2003,
+      body((b) => b.replace(`"${path}"`, `"${slashed}"`)),
+    );
     // The site serves the listing at the link it gives.
     cassette = {
       ...cassette,

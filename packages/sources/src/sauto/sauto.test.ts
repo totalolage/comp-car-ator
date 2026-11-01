@@ -465,7 +465,9 @@ describe("sauto source", () => {
       });
     };
     const offsets = (urls: string[]) =>
-      urls.filter((u) => u.includes("/items/search?")).map((u) => new URL(u).searchParams.get("offset"));
+      urls
+        .filter((u) => u.includes("/items/search?"))
+        .map((u) => new URL(u).searchParams.get("offset"));
     const refs = (o: Observation[]) => listings(o).map((l) => l.ref);
 
     const shifted = await walk(300, "100", (list) => list.slice(1));
