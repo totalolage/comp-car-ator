@@ -73,15 +73,22 @@ const refs = () =>
 
 /**
  * The review's small-page case at `pageSize`: 30 listings share one date (and a price, unless
- * `price` sets one each); once the first page is read, unseen 11 moves to the top of the order.
+ * `price` sets one each); once the first page is read, the unseen listing just past it moves to
+ * the top of the order.
  * `bands` serves the price halves the walk asks for; without it this API ignores them.
  */
-function reordered(pageSize: number, { bands = false, price = (_id: number) => 100_000 } = {}) {
+function reordered(
+  pageSize: number,
+  {
+    bands = false,
+    price = () => 100_000,
+  }: { bands?: boolean; price?: (id: number) => number } = {},
+) {
   const list = range(1, 30).map((id) => car(id, { price: price(id) }));
   let searches = 0;
   return site((q) => {
     if (searches++ === 1) {
-      const [moved] = list.splice(10, 1);
+      const [moved] = list.splice(pageSize, 1);
       list.unshift(moved as Item);
     }
     const offset = Number(q.get("offset"));
@@ -94,8 +101,8 @@ function reordered(pageSize: number, { bands = false, price = (_id: number) => 1
   });
 }
 
-// Pages of 1 and 2 cannot step on at all; pages of 3 and 10 overlap by one listing.
-it.each([1, 2, 3, 10])(
+// Pages of 1 and 2 cannot step on at all; pages of 3 to 20 overlap by one listing.
+it.each([1, 2, 3, 4, 10, 20])(
   "pages of %i: a tie that reorders past an unseen listing fails the run, keeping the last run's cutoff",
   async (pageSize) => {
     ledger = openLedger(":memory:");
@@ -110,7 +117,7 @@ it.each([1, 2, 3, 10])(
   },
 );
 
-it.each([1, 2, 3, 10])(
+it.each([1, 2, 3, 4, 10, 20])(
   "pages of %i: where price halves split the tie, every listing is read and the cutoff advances",
   async (pageSize) => {
     ledger = openLedger(":memory:");

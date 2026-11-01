@@ -77,8 +77,8 @@ export interface SautoOptions {
    */
   manufacturerModel?: string;
   /**
-   * Results per search page, a whole number from 1 to 10,000 (else `sautoSource` throws).
-   * Default 100. Incremental pages overlap by a twentieth, at least one listing; pages of one
+   * Results per search page, a whole number from 1 to 5,000, so a full-run slice still has
+   * room in the window (else `sautoSource` throws). Default 100. Incremental pages overlap by a twentieth, at least one listing; pages of one
    * or two never step on, so their walk goes by price halves.
    */
   pageSize?: number;
@@ -93,8 +93,10 @@ export interface SautoOptions {
 
 export function sautoSource(options: SautoOptions = {}): Source {
   const pageSize = options.pageSize ?? 100;
-  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > WINDOW) {
-    throw new Error(`Sauto pageSize must be a whole number from 1 to ${WINDOW}, not ${pageSize}`);
+  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > WINDOW / 2) {
+    throw new Error(
+      `Sauto pageSize must be a whole number from 1 to ${WINDOW / 2}, not ${pageSize}`,
+    );
   }
   const sliceLimit = Math.min(options.sliceLimit ?? SLICE_LIMIT, WINDOW - pageSize);
   const budget = options.budget ?? 2_400;

@@ -607,52 +607,50 @@ describe("sauto source", () => {
     expect(new Set(refs(halved.observations))).toEqual(new Set(range(1, 41).map(String)));
   });
 
-  it("rejects a page size that is not a whole number from 1 to 10,000", () => {
-    for (const pageSize of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 10_001]) {
+  it("rejects a page size that is not a whole number from 1 to 5,000", () => {
+    for (const pageSize of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 5_001, 10_000]) {
       expect(() => sautoSource({ pageSize })).toThrow(/pageSize must be a whole number from 1/);
     }
-    for (const pageSize of [1, 2, 10_000]) expect(() => sautoSource({ pageSize })).not.toThrow();
+    for (const pageSize of [1, 2, 5_000]) expect(() => sautoSource({ pageSize })).not.toThrow();
   });
 
-  // The review's small-page case: 30 listings share one date; once the first page is read,
-  // unseen 11 moves to the top of the order. Every page size checks each step (pages of 1 and
-  // 2 cannot step on, and walk price halves), so the walk reads all 30 or fails.
-  it.each([1, 2, 3, 4, 10, 20])(
-    "pages of %i: listings sharing a date that reorder between pages are all read, or the run fails",
-    async (pageSize) => {
-      const walk = (price: (id: number) => number) => {
-        const list = range(1, 30).map((id) => car(id, { price: price(id) }));
-        let searched = 0;
-        return harvestSite(
-          "incremental",
-          (q) => {
-            if (searched++ === 1) {
-              const [moved] = list.splice(10, 1);
-              list.unshift(moved as ApiItem);
-            }
-            const offset = Number(q.get("offset"));
-            const from = Number(q.get("price_from") ?? "0");
-            const to = Number(q.get("price_to") ?? Number.POSITIVE_INFINITY);
-            const inBand = list.filter(
-              (item) => (item.price as number) >= from && (item.price as number) <= to,
-            );
-            return { total: inBand.length, results: inBand.slice(offset, offset + pageSize) };
-          },
-          { checkpoint: { lastRunAt: new Date("2026-10-24T00:00:00Z") }, source: { pageSize } },
-        );
-      };
-      const refs = (o: Observation[]) => new Set(listings(o).map((l) => l.ref));
+  it("incremental run in pages of 10 reads every listing of a tie that reorders between pages, or fails", async () => {
+    // The review's case: 30 listings share one date; once the first page (1–10) is read,
+    // unseen 11 moves to the top of the order. Pages of 10 overlap by one listing, so the
+    // page after a tie must start above it; one filling a page goes to price halves.
+    // Every page size is covered through the Ledger in apps/ingest's sauto-coverage test.
+    const walk = (price: (id: number) => number) => {
+      const list = range(1, 30).map((id) => car(id, { price: price(id) }));
+      let searched = 0;
+      return harvestSite(
+        "incremental",
+        (q) => {
+          if (searched++ === 1) {
+            const [moved] = list.splice(10, 1);
+            list.unshift(moved as ApiItem);
+          }
+          const offset = Number(q.get("offset"));
+          const from = Number(q.get("price_from") ?? "0");
+          const to = Number(q.get("price_to") ?? Number.POSITIVE_INFINITY);
+          const inBand = list.filter(
+            (item) => (item.price as number) >= from && (item.price as number) <= to,
+          );
+          return { total: inBand.length, results: inBand.slice(offset, offset + 10) };
+        },
+        { checkpoint: { lastRunAt: new Date("2026-10-24T00:00:00Z") }, source: { pageSize: 10 } },
+      );
+    };
+    const refs = (o: Observation[]) => new Set(listings(o).map((l) => l.ref));
 
-      // One price: no half splits the tie.
-      const tied = await walk(() => 100_000);
-      expect(String(tied.error)).toMatch(/cannot be split/);
+    // One price: no half splits the tie, so the run fails.
+    const tied = await walk(() => 100_000);
+    expect(String(tied.error)).toMatch(/cannot be split/);
 
-      // A price each: the halves split it, and each is walked from its top.
-      const split = await walk((id) => 100_000 + id * 1_000);
-      expect(split.error).toBeUndefined();
-      expect(refs(split.observations)).toEqual(new Set(range(1, 30).map(String)));
-    },
-  );
+    // A price each: the halves split it, and each is walked from its top.
+    const split = await walk((id) => 100_000 + id * 1_000);
+    expect(split.error).toBeUndefined();
+    expect(refs(split.observations)).toEqual(new Set(range(1, 30).map(String)));
+  });
 
   it("incremental run places pages by well-formed dates only, and pages back to a page dated above its place", async () => {
     const refs = (o: Observation[]) => listings(o).map((l) => l.ref);
