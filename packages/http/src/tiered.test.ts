@@ -332,6 +332,15 @@ describe("Http policy: tiers and challenges", () => {
     expect(page).toMatchObject({ status: 403, tier: "T1" });
     expect(forms).toEqual(["query=SELECT+%27CZ%27", "query=SELECT+%27CZ%27"]);
     expect(t2.calls).toHaveLength(0);
+    // Asking for T2 outright starts a form request at T1 instead.
+    const fromT2 = await http.get({
+      url: "https://a.example/sql",
+      form: { q: "1" },
+      minTier: "T2",
+    });
+    expect(fromT2.tier).toBe("T1");
+    expect(forms.at(-1)).toBe("q=1");
+    expect(t2.calls).toHaveLength(0);
   });
 
   it("stops sending a host anything after repeated blocked requests", async () => {
