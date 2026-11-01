@@ -10,7 +10,8 @@
  *   The Ledger stores each ListingSeen whole, so every listing yielded carries its detail.
  *
  * incremental: walks the newest-first order down to the last run (a day back on a first run),
- *   in price halves where it outgrows the 10,000-result window, and reads a detail for every
+ *   in price halves where it outgrows the 10,000-result window or one `sorting_date` fills a
+ *   page, and reads a detail for every
  *   listing on the way that the Ledger does not know, up to `budget` search and detail calls;
  *   past it the run fails
  *   and the next one resumes (see `incremental`).
@@ -44,8 +45,8 @@ const CATEGORY = 838;
 /** Results one query can reach: `offset + limit` may not exceed it. */
 const WINDOW = 10_000;
 /**
- * Pages an incremental walk that lost its place pages back in a row before it fails: an
- * order that shifted up more than this many pages between two searches is not followed.
+ * Pages an incremental walk that lost its place pages back without getting further before it
+ * fails: an order that shifted up more than this many pages between two searches is not followed.
  */
 const BACKSTEPS = 3;
 /** Incremental runs re-check listings changed this long before the last run's start. */
@@ -177,47 +178,45 @@ class Run {
   }
 
   /**
-   * Search items sorted since `since`, newest first, with repeats. A query whose order holds
-   * more than the 10,000-result window above `since` is walked again in price halves, each
-   * with a window of its own (listings without a price drop out, as they are skipped anyway).
-   * Pages overlap by a twentieth: a listing removed meanwhile shifts the rest up, and the
-   * overlap keeps the one shifted onto a page already read. A page that repeats a listing of
-   * the one before follows on from it: listings only arrive at the top of the order or leave
-   * it, so every listing below the repeated one is on this page or past it. A page that
-   * repeats none has lost its place: the order shifted up past the overlap meanwhile (the
+   * Search items sorted since `since`, newest first, with repeats. The order is by
+   * `sorting_date` alone: listings arrive at its top (created, edited, topped up) or leave it,
+   * and listings sharing a `sorting_date` may come in any order, page to page. So the walk
+   * keeps `reached`, a date it has met every listing dated after, and takes a page as
+   * following on only when the page's first dated listing is dated after `reached`: every
+   * listing dated `reached` or earlier is then on this page or past it, whichever listing
+   * left or swapped places meanwhile. The next page starts `overlap` (a twentieth) above the
+   * first listing dated like this page's last, so it repeats that whole tie and a few above
+   * it, and a few removals meanwhile still leave a later date at its top. A page that starts
+   * at or below `reached` has lost its place: the order shifted up past the overlap (the
    * 2026-10-31 and 2026-11-01 runs lost it 36 to 72 seconds after the page before, at offsets
-   * 5225 and 285), or the page's last listing moved. The walk then pages back a page at a
-   * time, at most BACKSTEPS times, until a page repeats one, and fails rather than skip.
+   * 5225 and 285). The walk then pages back, at most BACKSTEPS times without getting further,
+   * and fails rather than skip. A tie filling nearly a page cannot be stepped over; the query
+   * is walked again in price halves, as is one whose order outgrows the 10,000-result window,
+   * each half with a window of its own (listings without a price drop out, as they are
+   * skipped anyway). Pages under 20 results (tests) cannot overlap and step a page unchecked.
    */
   private async *moved(since: string, band?: Band): AsyncIterable<Item[]> {
     const overlap = Math.floor(this.pageSize / 20);
-    const step = this.pageSize - overlap;
-    let read: ReadonlySet<string> | undefined;
+    let reached: string | undefined;
     let backsteps = 0;
-    for (let offset = 0; ; offset += step) {
+    for (let offset = 0; ; ) {
       if (offset + this.pageSize > WINDOW) {
-        const halves = band ? halve(band) : [{ from: 0, to: PRICE_TOP }, { from: PRICE_TOP }];
-        if (!halves) {
-          throw new Error(
-            `Sauto incremental: band ${band?.from}-${band?.to ?? ""} cannot be split`,
-          );
-        }
-        for (const half of halves) yield* this.moved(since, half);
+        yield* this.halves(since, band, `its order outgrows the ${WINDOW}-result window`);
         return;
       }
       const page = await this.search({ conditions: CONDITION_SEOS, band, offset });
-      const before = read;
-      if (overlap > 0 && before && !page.items.some((i) => before.has(refOf(i) ?? ""))) {
+      // A malformed item has no date; its dated neighbours bound it.
+      const dates = page.items.map((item) => text(item.sorting_date));
+      const first = dates.find((date) => date !== "");
+      if (overlap > 0 && reached !== undefined && !(first !== undefined && first > reached)) {
         if (backsteps >= BACKSTEPS || offset === 0) {
           throw new Error(`Sauto incremental lost its place in the order at offset ${offset}`);
         }
         backsteps++;
         this.ctx.log.warn("sauto incremental lost its place; paging back", { offset, backsteps });
-        // The loop's step brings it to the page before this one.
-        offset = Math.max(0, offset - step) - step;
+        offset = Math.max(0, offset - (this.pageSize - overlap));
         continue;
       }
-      backsteps = 0;
       // Skipped listings never become known, so only their timestamp keeps the walk going.
       const moved = page.items.filter((item) => text(item.sorting_date) >= since);
       yield moved;
@@ -227,8 +226,38 @@ class Run {
         offset + this.pageSize >= page.total
       )
         return;
-      read = new Set(page.items.map(refOf).filter((ref) => ref !== undefined));
+      if (overlap === 0) {
+        offset += this.pageSize;
+        continue;
+      }
+      // Dated, as `moved` holds a listing dated `since` or later.
+      const last = dates.findLast((date) => date !== "") as string;
+      if (reached === undefined || last < reached) {
+        reached = last;
+        backsteps = 0;
+      }
+      // Every listing dated after `last`, so every one dated `since` or later, has been met.
+      if (last < since) return;
+      const tie = dates.indexOf(last);
+      if (tie <= overlap) {
+        const why = `${page.items.length - tie} listings dated ${last} fill its page`;
+        this.ctx.log.info("sauto incremental walks price halves", { offset, why });
+        yield* this.halves(since, band, why);
+        return;
+      }
+      offset += tie - overlap;
     }
+  }
+
+  /** `moved` over each price half of `band` (of every price when absent). */
+  private async *halves(since: string, band: Band | undefined, why: string): AsyncIterable<Item[]> {
+    const halves = band ? halve(band) : [{ from: 0, to: PRICE_TOP }, { from: PRICE_TOP }];
+    if (!halves) {
+      throw new Error(
+        `Sauto incremental: band ${band?.from}-${band?.to ?? ""} cannot be split, and ${why}`,
+      );
+    }
+    for (const half of halves) yield* this.moved(since, half);
   }
 
   /** The census: every band, then a failure naming the bands that came out short. */

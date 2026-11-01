@@ -107,6 +107,16 @@ const car = (id: number, fields: ApiItem = {}): ApiItem => ({
   ...fields,
 });
 const cars = (...ids: number[]) => ids.map((id) => car(id));
+const range = (from: number, to: number) =>
+  Array.from({ length: to - from + 1 }, (_, i) => from + i);
+/** `sorting_date` the given seconds before 10:00 on 2026-10-25, as the site writes it. */
+const secondsBefore = (seconds: number) =>
+  new Date(Date.UTC(2026, 9, 25, 10) - seconds * 1000).toISOString().slice(0, 19);
+/** Listings `from`…`to`, each a second older than the one before, newest first. */
+const datedCars = (from: number, to: number) =>
+  Array.from({ length: to - from + 1 }, (_, i) =>
+    car(from + i, { sorting_date: secondsBefore(from + i) }),
+  );
 
 /**
  * Runs sautoSource({ pageSize: 4 }) against a synthetic API: `search` answers each search
@@ -450,7 +460,7 @@ describe("sauto source", () => {
   it("incremental run pages overlap, so a removal between pages skips no listing, and pages back when it loses its place", async () => {
     /** Walks `length` listings in pages of 100; `move` reorders them after listing `at`. */
     const walk = async (length: number, at: string, move: (list: ApiItem[]) => ApiItem[]) => {
-      let list = Array.from({ length }, (_, i) => car(i + 1));
+      let list = datedCars(1, length);
       const search = (q: URLSearchParams) => {
         const offset = Number(q.get("offset"));
         return { total: list.length, results: list.slice(offset, offset + 100) };
@@ -479,24 +489,115 @@ describe("sauto source", () => {
     const lost = await walk(300, "100", (list) => list.slice(10));
     expect(lost.error).toBeUndefined();
     expect(new Set(refs(lost.observations)).size).toBe(300);
-    expect(offsets(lost.urls)).toEqual(["0", "95", "0", "95", "190"]);
+    expect(offsets(lost.urls)).toEqual(["0", "94", "0", "94", "188", "282"]);
 
     // The page's last listing moves to the top (an edit or top-up): the next page still
     // repeats the listings before it, so the walk goes on.
     const topped = await walk(300, "100", (list) => [
-      list[99] as ApiItem,
+      { ...list[99], sorting_date: "2026-10-25T12:00:00" },
       ...list.slice(0, 99),
       ...list.slice(100),
     ]);
     expect(topped.error).toBeUndefined();
     expect(refs(topped.observations)).toHaveLength(300);
-    expect(offsets(topped.urls)).toEqual(["0", "95", "190", "285"]);
+    expect(offsets(topped.urls)).toEqual(["0", "94", "188", "282"]);
 
     // An order that shifted up more pages than the walk pages back fails rather than skip.
-    const far = await walk(1000, "575", (list) => list.slice(400));
-    expect(String(far.error)).toMatch(/lost its place in the order at offset 285/);
-    expect(refs(far.observations)).toHaveLength(575);
-    expect(offsets(far.urls).slice(-4)).toEqual(["570", "475", "380", "285"]);
+    const far = await walk(1000, "664", (list) => list.slice(400));
+    expect(String(far.error)).toMatch(/lost its place in the order at offset 373/);
+    expect(refs(far.observations)).toHaveLength(664);
+    expect(offsets(far.urls).slice(-4)).toEqual(["658", "563", "468", "373"]);
+  });
+
+  it("incremental run takes listings sharing a date in any order: it steps above their tie, and fails when one fills a page", async () => {
+    const refs = (o: Observation[]) => listings(o).map((l) => l.ref);
+    const tie = "2026-10-25T09:00:00";
+    const old = "2020-01-01T00:00:00";
+    // Listings 1–15 dated a second apart, 16–25 one tie, 26–40 older. Once the walk has read
+    // the first page (1–20), unseen 21 swaps above 16 inside the tie: the page at the old
+    // stride (19) still repeats 19 and 20, yet 21 is above it.
+    const list = [
+      ...datedCars(1, 15),
+      ...Array.from({ length: 10 }, (_, i) => car(16 + i, { sorting_date: tie })),
+      ...Array.from({ length: 15 }, (_, i) => car(26 + i, { sorting_date: old })),
+    ];
+    const offsets: number[] = [];
+    const swapped = await harvestSite(
+      "incremental",
+      (q) => {
+        const offset = Number(q.get("offset"));
+        offsets.push(offset);
+        return { total: list.length, results: list.slice(offset, offset + 20) };
+      },
+      {
+        checkpoint: { lastRunAt: new Date("2026-10-24T00:00:00Z") },
+        source: { pageSize: 20 },
+        consume: (o) => {
+          if (o.kind === "ListingSeen" && o.ref === "20") {
+            const at = list.findIndex((item) => item.id === 21);
+            const [moved] = list.splice(at, 1);
+            list.splice(15, 0, moved as ApiItem);
+          }
+        },
+      },
+    );
+    expect(swapped.error).toBeUndefined();
+    // The next page starts one above the tie (at 15, less the overlap of one), reads it
+    // whole, and its last listing is older than the last run: nothing newer is left.
+    expect(offsets).toEqual([0, 14]);
+    expect(new Set(refs(swapped.observations))).toEqual(
+      new Set(Array.from({ length: 25 }, (_, i) => String(i + 1))),
+    );
+
+    // The review's case: 1–20 share one date and fill the first page; 21 moves above the page
+    // at 19 while 20 goes. No page can start above that tie, and this API ignores the price
+    // halves that would split it, so the run fails having read only 1–20.
+    const split: string[] = [];
+    const filled = await harvestSite(
+      "incremental",
+      (q) => {
+        const offset = Number(q.get("offset"));
+        if (q.has("price_from")) split.push(`${q.get("price_from")}-${q.get("price_to") ?? ""}`);
+        if (offset === 0) return { total: 60, results: cars(...range(1, 20)) };
+        if (offset === 19) return { total: 60, results: cars(19, ...range(22, 40)) };
+        return {
+          total: 60,
+          results: [car(40, { sorting_date: old }), car(41, { sorting_date: old })],
+        };
+      },
+      {
+        checkpoint: { lastRunAt: new Date("2026-10-24T00:00:00Z") },
+        source: { pageSize: 20 },
+      },
+    );
+    expect(String(filled.error)).toMatch(
+      /band 0-2 cannot be split, and 20 listings dated 2026-10-25T10:00:00 fill its page/,
+    );
+    expect(refs(filled.observations)).toEqual(range(1, 20).map(String));
+    expect(split[0]).toBe("0-134217727");
+
+    // Where the price halves do split it, each half is walked from its top and nothing is lost.
+    const cheap = cars(...range(1, 20));
+    const dear = range(21, 40).map((id) => car(id, { price: 200_000 }));
+    const halved = await harvestSite(
+      "incremental",
+      (q) => {
+        const offset = Number(q.get("offset"));
+        const from = Number(q.get("price_from") ?? "0");
+        const to = Number(q.get("price_to") ?? Number.POSITIVE_INFINITY);
+        const all = [...cheap, ...dear];
+        const inBand = q.has("price_from")
+          ? all.filter((item) => (item.price as number) >= from && (item.price as number) <= to)
+          : all;
+        return { total: inBand.length, results: inBand.slice(offset, offset + 20) };
+      },
+      {
+        checkpoint: { lastRunAt: new Date("2026-10-24T00:00:00Z") },
+        source: { pageSize: 20 },
+      },
+    );
+    expect(halved.error).toBeUndefined();
+    expect(new Set(refs(halved.observations))).toEqual(new Set(range(1, 40).map(String)));
   });
 
   it("incremental run prices known listings and reads no detail for them, however recently changed", async () => {
@@ -720,7 +821,14 @@ describe("sauto source", () => {
       if (q.get("price_from") === "0")
         return { total: 2, results: low.slice(offset, offset + 100) };
       if (q.get("price_from")) return { total: 1, results: high.slice(offset, offset + 100) };
-      return { total: 10_001, results: Array.from({ length: 100 }, () => low[0] as ApiItem) };
+      // Each place its own date, so pages step past their last listing's tie of one.
+      return {
+        total: 10_001,
+        results: Array.from({ length: 100 }, (_, i) => ({
+          ...low[0],
+          sorting_date: secondsBefore(offset + i),
+        })),
+      };
     };
     for (const lastRunAt of [new Date("2026-10-24T00:00:00Z"), null]) {
       const { observations, urls, error } = await harvestSite("incremental", search, {
@@ -728,8 +836,8 @@ describe("sauto source", () => {
         source: { pageSize: 100 },
       });
       expect(error).toBeUndefined();
-      // 105 overlapping pages up to the window, then one page per half.
-      expect(searches(urls)).toHaveLength(107);
+      // 106 overlapping pages up to the window, then one page per half.
+      expect(searches(urls)).toHaveLength(108);
       expect(listings(observations).map((o) => o.ref)).toEqual(["1", "2", "3"]);
     }
   });
