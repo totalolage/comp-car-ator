@@ -39,8 +39,13 @@
  *   pages), or one still short over more than one page, is split by price, dearest first:
  *   the new list into fixed bands (`new:500000-599999`), a used year at 1,000,000 Kč
  *   (`used:2017:0-999999`), an open band [from, ∞) at 2·from, a closed one in the middle at
- *   whole Kč. A split slice is done when each part is, a recount finds no listing outside
- *   them, and the distinct listings harvested for it (from its parts, the proofs below and
+ *   whole Kč. The site filters on a stored price that can hold a fraction of a Kč, so a
+ *   listing can fall between a price band's halves (one showing 249,999 Kč between 0-249999
+ *   and 250000-499999); when a band's recount finds listings outside its halves, the one-Kč
+ *   seam between them (`used:2021:249999-250000`) is harvested as a slice of its own and
+ *   accounts for the listings it holds beyond its two whole prices (`seam`). A split slice
+ *   is done when each part (and seam harvested) is, a recount finds no listing outside them,
+ *   and the distinct listings harvested for it (from its parts, seam, the proofs below and
  *   the parts done earlier in the census, paged again) are at least as many as it reports at
  *   the end. That count is taken at the end, not at the start: a listing sold before its
  *   part was paged leaves nothing to harvest. Prices mostly drop, so a listing that drops
@@ -346,7 +351,8 @@ class Harvest {
   /**
    * Whether the parts of a slice take every listing it reports, counted back to back, and
    * the listings harvested for it by ref are at least as many as it reports at the end. A
-   * price band's halves take every whole-Kč price. A year or the new list also has listings
+   * price band's halves take every whole-Kč price, and its seam (`seam`) the ones between,
+   * priced at a fraction of a Kč. A year or the new list also has listings
    * no price filter returns, "Dohodou" ones and some priced ones (the site's price filter
    * leaves out 177 used and 185 new or demo cards on 2026-10-28, not one of them returned by
    * a band around its own price); the slice is done when each of those is proven (`candidates`).
@@ -367,6 +373,7 @@ class Harvest {
     }
     const key = sliceKey(slice);
     let { left, total } = yield* this.recount(slice, parts);
+    if (left > 0 && slice.price) left -= yield* this.seam(slice, parts, harvested);
     if (left <= 0 && this.live(harvested).size >= total) return harvested;
     if (slice.price) {
       const why = left > 0 ? "listings in neither half" : this.tally(harvested, total);
@@ -408,6 +415,45 @@ class Harvest {
     this.short.push(`${key} (${left} listings in no price band, ${proven} proven${note}${tally})`);
     this.ctx.log.warn("tipcars listings in no price band unproven", { slice: key, left, proven });
     return null;
+  }
+
+  /**
+   * How many of the listings price band `slice` reports and its halves do not lie between
+   * them. The site filters on the price it stores, which can hold a fraction of a Kč (on
+   * 2026-11-01 two 2021 cards showing 249,999 Kč were returned by 249999-250000kc but by
+   * neither 249999-249999kc nor 250000-250000kc), so such a listing falls between halves split
+   * at whole Kč. The one-Kč seam [a, a + 1] between the halves is harvested as a slice of its
+   * own (paged again when done earlier in the census), and its listings join `harvested`. It
+   * accounts for the listings it reports beyond its two whole prices (the seam counted there
+   * and back keeping its lower count, each price its higher count), and for no more than it
+   * met that neither half did; none when it is not done or is the slice itself.
+   */
+  private async *seam(
+    slice: Slice,
+    [upper, lower]: readonly Slice[],
+    harvested: Set<string>,
+  ): AsyncGenerator<Observation, number> {
+    const a = lower?.price?.to;
+    if (a === undefined || upper?.price?.from !== a + 1) return 0;
+    const seam: Slice = { ...slice, price: { from: a, to: a + 1 } };
+    const key = sliceKey(seam);
+    // The seam's own halves are its two whole prices: their seam is the seam itself.
+    if (key === sliceKey(slice)) return 0;
+    const refs = this.ctx.checkpoint.sliceDoneAt(key)
+      ? yield* this.again(seam)
+      : yield* this.slice(seam);
+    if (!refs) return 0;
+    const unmet = this.live(new Set([...refs].filter((ref) => !harvested.has(ref))));
+    for (const ref of refs) harvested.add(ref);
+    const at = (price: number): Slice => ({ ...slice, price: { from: price, to: price } });
+    const there = yield* this.count(seam);
+    const low = yield* this.count(at(a));
+    const high = yield* this.count(at(a + 1));
+    const back = yield* this.count(seam);
+    const highAgain = yield* this.count(at(a + 1));
+    const lowAgain = yield* this.count(at(a));
+    const between = Math.min(there, back) - Math.max(low, lowAgain) - Math.max(high, highAgain);
+    return Math.max(0, Math.min(between, unmet.size));
   }
 
   /** `refs` without the ones that came out as ListingGone. */

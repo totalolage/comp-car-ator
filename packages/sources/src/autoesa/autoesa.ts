@@ -299,7 +299,12 @@ interface ListPage {
   cards: Card[];
 }
 
-const LISTING_PATH = /^\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)\/(\d+)$/;
+/**
+ * `/<make>/<model>/<body>/<fuel>/<id>`. A fuel slug can hold a slash: on 2026-11-01 BMW řada 5
+ * estates linked `/bmw/rada-5/kombi/benzin/nafta/527465185`, a live listing whose page says
+ * "nafta".
+ */
+const LISTING_PATH = /^\/([^/]+)\/([^/]+)\/([^/]+)\/(.+)\/(\d+)$/;
 
 function parseListPage(html: string, url: string, n: number): ListPage {
   const total = /Počet vozů(?:&nbsp;|\s)*<strong>(\d+)<\/strong>/.exec(html)?.[1];

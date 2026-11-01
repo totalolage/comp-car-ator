@@ -43,6 +43,11 @@ const SITE = "https://www.sauto.cz";
 const CATEGORY = 838;
 /** Results one query can reach: `offset + limit` may not exceed it. */
 const WINDOW = 10_000;
+/**
+ * Pages an incremental walk that lost its place pages back in a row before it fails: an
+ * order that shifted up more than this many pages between two searches is not followed.
+ */
+const BACKSTEPS = 3;
 /** Incremental runs re-check listings changed this long before the last run's start. */
 const SINCE_MARGIN_MS = 2 * 3_600_000;
 /** How far back an incremental run without a last run looks: a day, as a daily run would. */
@@ -176,13 +181,20 @@ class Run {
    * more than the 10,000-result window above `since` is walked again in price halves, each
    * with a window of its own (listings without a price drop out, as they are skipped anyway).
    * Pages overlap by a twentieth: a listing removed meanwhile shifts the rest up, and the
-   * overlap keeps the one shifted onto a page already read. A page that does not repeat the
-   * last listing of the one before has lost its place, so the walk fails rather than skip.
+   * overlap keeps the one shifted onto a page already read. A page that repeats a listing of
+   * the one before follows on from it: listings only arrive at the top of the order or leave
+   * it, so every listing below the repeated one is on this page or past it. A page that
+   * repeats none has lost its place: the order shifted up past the overlap meanwhile (the
+   * 2026-10-31 and 2026-11-01 runs lost it 36 to 72 seconds after the page before, at offsets
+   * 5225 and 285), or the page's last listing moved. The walk then pages back a page at a
+   * time, at most BACKSTEPS times, until a page repeats one, and fails rather than skip.
    */
   private async *moved(since: string, band?: Band): AsyncIterable<Item[]> {
     const overlap = Math.floor(this.pageSize / 20);
-    let last: string | undefined;
-    for (let offset = 0; ; offset += this.pageSize - overlap) {
+    const step = this.pageSize - overlap;
+    let read: ReadonlySet<string> | undefined;
+    let backsteps = 0;
+    for (let offset = 0; ; offset += step) {
       if (offset + this.pageSize > WINDOW) {
         const halves = band ? halve(band) : [{ from: 0, to: PRICE_TOP }, { from: PRICE_TOP }];
         if (!halves) {
@@ -194,9 +206,18 @@ class Run {
         return;
       }
       const page = await this.search({ conditions: CONDITION_SEOS, band, offset });
-      if (overlap > 0 && last !== undefined && !page.items.some((i) => refOf(i) === last)) {
-        throw new Error(`Sauto incremental lost its place in the order at offset ${offset}`);
+      const before = read;
+      if (overlap > 0 && before && !page.items.some((i) => before.has(refOf(i) ?? ""))) {
+        if (backsteps >= BACKSTEPS || offset === 0) {
+          throw new Error(`Sauto incremental lost its place in the order at offset ${offset}`);
+        }
+        backsteps++;
+        this.ctx.log.warn("sauto incremental lost its place; paging back", { offset, backsteps });
+        // The loop's step brings it to the page before this one.
+        offset = Math.max(0, offset - step) - step;
+        continue;
       }
+      backsteps = 0;
       // Skipped listings never become known, so only their timestamp keeps the walk going.
       const moved = page.items.filter((item) => text(item.sorting_date) >= since);
       yield moved;
@@ -206,7 +227,7 @@ class Run {
         offset + this.pageSize >= page.total
       )
         return;
-      last = refOf(page.items[page.items.length - 1] ?? {});
+      read = new Set(page.items.map(refOf).filter((ref) => ref !== undefined));
     }
   }
 

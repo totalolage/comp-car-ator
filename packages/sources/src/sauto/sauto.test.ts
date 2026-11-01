@@ -447,9 +447,10 @@ describe("sauto source", () => {
     expect(listings(exact.observations)).toHaveLength(3);
   });
 
-  it("incremental run pages overlap, so a removal between pages skips no listing, and fails when it loses its place", async () => {
-    const walk = async (removed: number) => {
-      let list = Array.from({ length: 300 }, (_, i) => car(i + 1));
+  it("incremental run pages overlap, so a removal between pages skips no listing, and pages back when it loses its place", async () => {
+    /** Walks `length` listings in pages of 100; `move` reorders them after listing `at`. */
+    const walk = async (length: number, at: string, move: (list: ApiItem[]) => ApiItem[]) => {
+      let list = Array.from({ length }, (_, i) => car(i + 1));
       const search = (q: URLSearchParams) => {
         const offset = Number(q.get("offset"));
         return { total: list.length, results: list.slice(offset, offset + 100) };
@@ -459,16 +460,41 @@ describe("sauto source", () => {
         source: { pageSize: 100 },
         // Slow detail reads give the order time to move before the next search.
         consume: (o) => {
-          if (o.kind === "ListingSeen" && o.ref === "100") list = list.slice(removed);
+          if (o.kind === "ListingSeen" && o.ref === at) list = move(list);
         },
       });
     };
-    const shifted = await walk(1);
+    const offsets = (urls: string[]) =>
+      urls.filter((u) => u.includes("/items/search?")).map((u) => new URL(u).searchParams.get("offset"));
+    const refs = (o: Observation[]) => listings(o).map((l) => l.ref);
+
+    const shifted = await walk(300, "100", (list) => list.slice(1));
     expect(shifted.error).toBeUndefined();
-    expect(listings(shifted.observations)).toHaveLength(300);
-    const lost = await walk(10);
-    expect(String(lost.error)).toMatch(/lost its place in the order at offset 95/);
-    expect(listings(lost.observations)).toHaveLength(100);
+    expect(refs(shifted.observations)).toHaveLength(300);
+
+    // Ten listings above the page go: the next page starts past it, so the walk pages back
+    // to the page before, now repeating the end of the one it read, and goes on.
+    const lost = await walk(300, "100", (list) => list.slice(10));
+    expect(lost.error).toBeUndefined();
+    expect(new Set(refs(lost.observations)).size).toBe(300);
+    expect(offsets(lost.urls)).toEqual(["0", "95", "0", "95", "190"]);
+
+    // The page's last listing moves to the top (an edit or top-up): the next page still
+    // repeats the listings before it, so the walk goes on.
+    const topped = await walk(300, "100", (list) => [
+      list[99] as ApiItem,
+      ...list.slice(0, 99),
+      ...list.slice(100),
+    ]);
+    expect(topped.error).toBeUndefined();
+    expect(refs(topped.observations)).toHaveLength(300);
+    expect(offsets(topped.urls)).toEqual(["0", "95", "190", "285"]);
+
+    // An order that shifted up more pages than the walk pages back fails rather than skip.
+    const far = await walk(1000, "575", (list) => list.slice(400));
+    expect(String(far.error)).toMatch(/lost its place in the order at offset 285/);
+    expect(refs(far.observations)).toHaveLength(575);
+    expect(offsets(far.urls).slice(-4)).toEqual(["570", "475", "380", "285"]);
   });
 
   it("incremental run prices known listings and reads no detail for them, however recently changed", async () => {
