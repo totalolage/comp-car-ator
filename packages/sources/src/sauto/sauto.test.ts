@@ -577,7 +577,9 @@ describe("sauto source", () => {
     // The halves share their middle price: the lower one ends at it.
     expect(split[0]).toBe("0-134217728");
 
-    // Where the price halves do split it, each half is walked from its top and nothing is lost.
+    // Where the price halves do split it, each half is walked from its top and nothing is lost,
+    // a listing stored at a fraction of a crown included: halves share their middle price, so
+    // 41 at 131,071.5 falls in the half up to 131,072 (2^17) rather than between two.
     const cheap = cars(...range(1, 20));
     const dear = range(21, 40).map((id) => car(id, { price: 200_000 }));
     const halved = await harvestSite(
@@ -586,7 +588,7 @@ describe("sauto source", () => {
         const offset = Number(q.get("offset"));
         const from = Number(q.get("price_from") ?? "0");
         const to = Number(q.get("price_to") ?? Number.POSITIVE_INFINITY);
-        const all = [...cheap, ...dear];
+        const all = [...cheap, car(41, { price: 131_071.5 }), ...dear];
         const inBand = q.has("price_from")
           ? all.filter((item) => (item.price as number) >= from && (item.price as number) <= to)
           : all;
@@ -598,7 +600,7 @@ describe("sauto source", () => {
       },
     );
     expect(halved.error).toBeUndefined();
-    expect(new Set(refs(halved.observations))).toEqual(new Set(range(1, 40).map(String)));
+    expect(new Set(refs(halved.observations))).toEqual(new Set(range(1, 41).map(String)));
   });
 
   it("incremental run places pages by well-formed dates only, and pages back to a page dated above its place", async () => {
