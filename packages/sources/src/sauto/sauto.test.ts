@@ -574,7 +574,8 @@ describe("sauto source", () => {
       /band 0-2 cannot be split, and 20 listings dated 2026-10-25T10:00:00 fill its page/,
     );
     expect(refs(filled.observations)).toEqual(range(1, 20).map(String));
-    expect(split[0]).toBe("0-134217727");
+    // The halves share their middle price: the lower one ends at it.
+    expect(split[0]).toBe("0-134217728");
 
     // Where the price halves do split it, each half is walked from its top and nothing is lost.
     const cheap = cars(...range(1, 20));
@@ -598,6 +599,60 @@ describe("sauto source", () => {
     );
     expect(halved.error).toBeUndefined();
     expect(new Set(refs(halved.observations))).toEqual(new Set(range(1, 40).map(String)));
+  });
+
+  it("incremental run places pages by well-formed dates only, and pages back to a page dated above its place", async () => {
+    const refs = (o: Observation[]) => listings(o).map((l) => l.ref);
+    const lastRunAt = new Date("2026-10-24T00:00:00Z");
+    /** Pages of 20 over `list`; `change(n, list)` runs before the n-th search is served. */
+    const walk = (initial: ApiItem[], change: (n: number, list: ApiItem[]) => ApiItem[]) => {
+      let list = initial;
+      const offsets: number[] = [];
+      return harvestSite(
+        "incremental",
+        (q) => {
+          const offset = Number(q.get("offset"));
+          offsets.push(offset);
+          list = change(offsets.length, list);
+          return { total: list.length, results: list.slice(offset, offset + 20) };
+        },
+        { checkpoint: { lastRunAt }, source: { pageSize: 20 } },
+      ).then((result) => ({ ...result, offsets }));
+    };
+
+    // 22 has a malformed date. After the first page, 2–4 go: the page at 18 starts at 22,
+    // past unseen 21. Its date ("z") would sort after any; it is not taken as a place, the
+    // walk pages back, and 22 is still read as moved.
+    const malformed = await walk(
+      datedCars(1, 60).map((item) => (item.id === 22 ? { ...item, sorting_date: "z" } : item)),
+      (n, list) => (n === 2 ? list.filter((item) => ![2, 3, 4].includes(item.id as number)) : list),
+    );
+    expect(malformed.error).toBeUndefined();
+    // From the page at 0, the next starts above 21, the last dated listing above the tie of
+    // one (23), as 22's date tells nothing.
+    expect(malformed.offsets.slice(0, 4)).toEqual([0, 18, 0, 17]);
+    // 2–4 were read before they went; 21 on the page paged back to.
+    expect(new Set(refs(malformed.observations))).toEqual(new Set(range(1, 60).map(String)));
+
+    // After the third page, 2–11 go and the page at 54 starts past it; by the next search 30
+    // listings arrive on top, so the page it pages back to (35) ends above its place. That
+    // page follows on but gets no further; the walk steps on from it and meets every listing.
+    const fresh = Array.from({ length: 30 }, (_, i) =>
+      car(1000 + i, { sorting_date: `2026-10-25T11:00:${String(59 - i).padStart(2, "0")}` }),
+    );
+    const backed = await walk(datedCars(1, 100), (n, list) => {
+      if (n === 4) return list.filter((item) => !range(2, 11).includes(item.id as number));
+      if (n === 5) return [...fresh, ...list];
+      return list;
+    });
+    expect(backed.error).toBeUndefined();
+    expect(backed.offsets.slice(0, 6)).toEqual([0, 18, 36, 54, 35, 53]);
+    const met = new Set(refs(backed.observations));
+    expect([1, ...range(12, 100)].filter((id) => !met.has(String(id)))).toEqual([]);
+
+    // A page whose dates are not newest first is not an order the walk can place itself in.
+    const unsorted = await walk(datedCars(1, 20).reverse(), (_, list) => list);
+    expect(String(unsorted.error)).toMatch(/at offset 0 is not newest first/);
   });
 
   it("incremental run prices known listings and reads no detail for them, however recently changed", async () => {

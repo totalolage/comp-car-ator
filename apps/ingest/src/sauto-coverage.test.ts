@@ -123,3 +123,34 @@ it("a Sauto walk that steps above a tie meets the listing that moved inside it, 
   expect(refs()).toEqual(range(1, 25).map(String));
   expect(ledger.checkpoint("sauto").lastRunAt).toEqual(now);
 });
+
+it("a Sauto walk that loses its place after progress fails, keeping its reads and the last run's cutoff", async () => {
+  ledger = openLedger(":memory:");
+  await ledger.record({ source: "sauto", mode: "incremental", startedAt: lastRun }, []);
+  // 400 listings a second apart. Before the 11th search, 2–201 go: the order shifted up
+  // further than three pages back, so no page shows the walk where it was.
+  const dated = (id: number) =>
+    car(id, {
+      sorting_date: new Date(Date.UTC(2026, 9, 25, 11) - id * 1000).toISOString().slice(0, 19),
+    });
+  let list = range(1, 400).map(dated);
+  const offsets: number[] = [];
+  const http = site((q) => {
+    const offset = Number(q.get("offset"));
+    offsets.push(offset);
+    if (offsets.length === 11) list = [dated(1), ...range(202, 400).map(dated)];
+    return { total: list.length, results: list.slice(offset, offset + 20) };
+  });
+  const failure = await record(http, { pageSize: 20 }).then(
+    () => undefined,
+    (error: unknown) => error,
+  );
+  expect(failure).toBeInstanceOf(RunFailedError);
+  expect(String((failure as RunFailedError).cause)).toMatch(
+    /lost its place in the order at offset 123/,
+  );
+  expect(offsets.slice(-4)).toEqual([180, 161, 142, 123]);
+  // Ten pages read before the order moved, and kept.
+  expect(refs()).toEqual(range(1, 182).map(String));
+  expect(ledger.checkpoint("sauto").lastRunAt).toEqual(lastRun);
+});

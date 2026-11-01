@@ -186,14 +186,19 @@ class Run {
    * listing dated `reached` or earlier is then on this page or past it, whichever listing
    * left or swapped places meanwhile. The next page starts `overlap` (a twentieth) above the
    * first listing dated like this page's last, so it repeats that whole tie and a few above
-   * it, and a few removals meanwhile still leave a later date at its top. A page that starts
+   * it, and a few removals meanwhile still leave a later date at its top (counting from the
+   * last dated listing above the tie, when one between has no date). A page that starts
    * at or below `reached` has lost its place: the order shifted up past the overlap (the
    * 2026-10-31 and 2026-11-01 runs lost it 36 to 72 seconds after the page before, at offsets
    * 5225 and 285). The walk then pages back, at most BACKSTEPS times without getting further,
    * and fails rather than skip. A tie filling nearly a page cannot be stepped over; the query
    * is walked again in price halves, as is one whose order outgrows the 10,000-result window,
    * each half with a window of its own (listings without a price drop out, as they are
-   * skipped anyway). Pages under 20 results (tests) cannot overlap and step a page unchecked.
+   * skipped anyway; the halves share their middle price, so a listing stored at a fraction of
+   * a crown falls in one). Only a well-formed date counts towards the walk's place; a page
+   * whose dates are not newest first fails the run, and a listing without a date is read as if
+   * moved, rather than left out. Pages under 20 results (tests) cannot overlap and step a page
+   * unchecked.
    */
   private async *moved(since: string, band?: Band): AsyncIterable<Item[]> {
     const overlap = Math.floor(this.pageSize / 20);
@@ -206,8 +211,14 @@ class Run {
       }
       const page = await this.search({ conditions: CONDITION_SEOS, band, offset });
       // A malformed item has no date; its dated neighbours bound it.
-      const dates = page.items.map((item) => text(item.sorting_date));
-      const first = dates.find((date) => date !== "");
+      const dates = page.items.map(dateOf);
+      const dated = dates.filter((date) => date !== undefined);
+      if (overlap > 0 && dated.some((date, i) => i > 0 && date > (dated[i - 1] as string))) {
+        throw new Error(
+          `Sauto incremental: the search page at offset ${offset} is not newest first`,
+        );
+      }
+      const first = dated[0];
       if (overlap > 0 && reached !== undefined && !(first !== undefined && first > reached)) {
         if (backsteps >= BACKSTEPS || offset === 0) {
           throw new Error(`Sauto incremental lost its place in the order at offset ${offset}`);
@@ -218,7 +229,10 @@ class Run {
         continue;
       }
       // Skipped listings never become known, so only their timestamp keeps the walk going.
-      const moved = page.items.filter((item) => text(item.sorting_date) >= since);
+      const moved = page.items.filter((_, i) => {
+        const date = dates[i];
+        return date === undefined || date >= since;
+      });
       yield moved;
       if (
         moved.length === 0 ||
@@ -230,28 +244,36 @@ class Run {
         offset += this.pageSize;
         continue;
       }
-      // Dated, as `moved` holds a listing dated `since` or later.
-      const last = dates.findLast((date) => date !== "") as string;
+      const last = dated.at(-1);
+      if (last === undefined) {
+        throw new Error(`Sauto incremental: no listing on the page at offset ${offset} is dated`);
+      }
       if (reached === undefined || last < reached) {
         reached = last;
         backsteps = 0;
       }
       // Every listing dated after `last`, so every one dated `since` or later, has been met.
       if (last < since) return;
+      // The next page starts `overlap` above the last listing dated after the tie, so a few
+      // removals meanwhile still leave it there.
       const tie = dates.indexOf(last);
-      if (tie <= overlap) {
+      const above = dates.findLastIndex((date, i) => i < tie && date !== undefined);
+      const step = above + 1 - overlap;
+      if (above < 0 || step <= 0) {
         const why = `${page.items.length - tie} listings dated ${last} fill its page`;
         this.ctx.log.info("sauto incremental walks price halves", { offset, why });
         yield* this.halves(since, band, why);
         return;
       }
-      offset += tie - overlap;
+      offset += step;
     }
   }
 
   /** `moved` over each price half of `band` (of every price when absent). */
   private async *halves(since: string, band: Band | undefined, why: string): AsyncIterable<Item[]> {
-    const halves = band ? halve(band) : [{ from: 0, to: PRICE_TOP }, { from: PRICE_TOP }];
+    const halves = band
+      ? halveSharing(band)
+      : [{ from: 0, to: PRICE_TOP + 1 }, { from: PRICE_TOP }];
     if (!halves) {
       throw new Error(
         `Sauto incremental: band ${band?.from}-${band?.to ?? ""} cannot be split, and ${why}`,
@@ -461,6 +483,26 @@ function halve(band: Band): [Band, Band] | undefined {
     { from: band.from, to: mid },
     { ...band, from: mid },
   ];
+}
+
+/**
+ * Halves of `band` that share its middle price (the lower one ends at it, inclusive), so a
+ * listing priced between two whole crowns cannot fall between them. Undefined once a half
+ * would be no narrower than `band`.
+ */
+function halveSharing(band: Band): [Band, Band] | undefined {
+  const mid = band.to === undefined ? band.from * 2 : Math.floor((band.from + band.to) / 2);
+  if (mid <= band.from || (band.to !== undefined && mid + 1 >= band.to)) return undefined;
+  return [
+    { from: band.from, to: mid + 1 },
+    { ...band, from: mid },
+  ];
+}
+
+/** A `sorting_date` as the site writes it ("2026-10-25T10:00:00"), or undefined. */
+function dateOf(item: Item): string | undefined {
+  const date = text(item.sorting_date);
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(date) ? date : undefined;
 }
 
 function parseJson(body: string, url: string): unknown {
