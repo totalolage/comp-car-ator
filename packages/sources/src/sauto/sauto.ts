@@ -9,12 +9,11 @@
  *   drive, seats, VAT deductibility, condition, every photo); 404 once the listing is removed.
  *   The Ledger stores each ListingSeen whole, so every listing yielded carries its detail.
  *
- * incremental: walks the newest-first order down to the last run (a day back on a first run),
- *   in price halves where it outgrows the 10,000-result window or one `sorting_date` fills a
- *   page, and reads a detail for every
- *   listing on the way that the Ledger does not know, up to `budget` search and detail calls;
- *   past it the run fails
- *   and the next one resumes (see `incremental`).
+ * incremental: walks the whole newest-first order, in price halves where it outgrows the
+ *   10,000-result window or one `sorting_date` fills a page, then reads a detail for every
+ *   listing moved since the last run (a day back on a first run), or without a date, that the
+ *   Ledger does not know, up to `budget` search and detail calls; past it the run fails and the
+ *   next one resumes (see `incremental`).
  * full: a census sliced by condition and price band; a band over `sliceLimit` results is
  *   halved until each fits (2,000 by default: some 40 minutes of detail pages, well within
  *   one run). Slices done earlier in the census are skipped before any split. Each band
@@ -44,6 +43,8 @@ const SITE = "https://www.sauto.cz";
 const CATEGORY = 838;
 /** Results one query can reach: `offset + limit` may not exceed it. */
 const WINDOW = 10_000;
+/** Most results one search page serves: a larger `limit` gets HTTP 422 (2026-11-01). */
+const PAGE_LIMIT = 1_000;
 /**
  * Pages an incremental walk that lost its place pages back without getting further before it
  * fails: an order that shifted up more than this many pages between two searches is not followed.
@@ -77,9 +78,10 @@ export interface SautoOptions {
    */
   manufacturerModel?: string;
   /**
-   * Results per search page, a whole number from 1 to 5,000, so a full-run slice still has
-   * room in the window (else `sautoSource` throws). Default 100. Incremental pages overlap by a twentieth, at least one listing; pages of one
-   * or two never step on, so their walk goes by price halves.
+   * Results per search page, a whole number from 1 to 1,000, the most Sauto serves (else
+   * `sautoSource` throws). Default 1,000: an incremental run walks the whole order. Incremental
+   * pages overlap by a twentieth, at least one listing; pages of one or two never step on, so
+   * their walk goes by price halves.
    */
   pageSize?: number;
   /** A full-run slice with more results than this is halved by price. Default 2,000. */
@@ -92,10 +94,10 @@ export interface SautoOptions {
 }
 
 export function sautoSource(options: SautoOptions = {}): Source {
-  const pageSize = options.pageSize ?? 100;
-  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > WINDOW / 2) {
+  const pageSize = options.pageSize ?? PAGE_LIMIT;
+  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > PAGE_LIMIT) {
     throw new Error(
-      `Sauto pageSize must be a whole number from 1 to ${WINDOW / 2}, not ${pageSize}`,
+      `Sauto pageSize must be a whole number from 1 to ${PAGE_LIMIT}, not ${pageSize}`,
     );
   }
   const sliceLimit = Math.min(options.sliceLimit ?? SLICE_LIMIT, WINDOW - pageSize);
@@ -139,16 +141,21 @@ class Run {
   }
 
   /**
-   * The listings moved up the order since the last run (a day back on a first run). Top-ups
-   * move some 5,000 older listings a day (95 of the newest 100 on 2026-10-28), so a detail
-   * page each would take longer than the hour the run may have. A known listing gets a
-   * ListingPriceSeen from its search item instead, so its price changes land daily (an edit
-   * moves it up). Details go only to the listings the Ledger does not know: those created
-   * since the last run or older ones (published days after they were drafted, back after
-   * their removal, or not yet reached by the census), in the order met. Each page's known
-   * prices come out before its unknown details; searches and details share `budget`.
-   * Past it the run fails, so `lastRunAt` stays and the next run walks from the same point,
-   * skipping the listings now known. Nothing moved up is
+   * The listings moved up the order since the last run (a day back on a first run), and every
+   * listing in scope without a well-formed `sorting_date`, wherever Sauto sorts it: no date
+   * shows whether it moved, nor where it stands in the order. Top-ups move some 5,000 older
+   * listings a day (95 of the newest 100 on 2026-10-28), so a detail page each would take
+   * longer than the hour the run may have. A known listing gets a ListingPriceSeen from its
+   * search item instead, so its price changes land daily (an edit moves it up). Details go
+   * only to the listings the Ledger does not know: those created since the last run or older
+   * ones (published days after they were drafted, back after their removal, or not yet
+   * reached by the census). The run walks the whole order before any detail (some 110,000
+   * listings took 173 searches of 1,000 and five minutes on 2026-11-01), so the order barely
+   * moves under the walk, and no cutoff ends it before a listing it cannot date. Every price
+   * comes out as met; the details follow, newest first (undated first, as any may be the
+   * newest). A walk that fails still reads the listings it met, then fails the run. Searches
+   * and details share `budget`. Past it the run fails, so `lastRunAt` stays and the next run
+   * walks again, skipping the listings now known. Nothing moved up is
    * dropped: it is read, or the run fails. (A first run has no last run to hold: what it
    * leaves, like what moved before its day, waits for the census.)
    */
@@ -160,66 +167,102 @@ class Run {
       : now.getTime() - FIRST_RUN_LOOKBACK_MS;
     const since = pragueLocal(new Date(from));
     const met = new Set<string>();
-    for await (const items of this.moved(since)) {
-      const unknown: Item[] = [];
-      for (const item of items) {
-        if (isSkipped(item)) continue;
-        const ref = refOf(item);
-        if (ref !== undefined) {
-          if (met.has(ref)) continue;
-          met.add(ref);
-          if (checkpoint.isKnown(ref)) {
-            // Prices on an already fetched page survive even if its next detail is over budget.
-            if (typeof item.price === "number") {
-              yield {
-                kind: "ListingPriceSeen",
-                ref,
-                price: { amount: item.price, currency: "CZK" },
-              };
+    const unknown: Item[] = [];
+    let failure: { error: unknown } | undefined;
+    try {
+      for await (const items of this.walk(since)) {
+        for (const item of items) {
+          if (isSkipped(item)) continue;
+          const ref = refOf(item);
+          if (ref !== undefined) {
+            if (met.has(ref)) continue;
+            met.add(ref);
+            if (checkpoint.isKnown(ref)) {
+              if (typeof item.price === "number") {
+                yield {
+                  kind: "ListingPriceSeen",
+                  ref,
+                  price: { amount: item.price, currency: "CZK" },
+                };
+              }
+              continue;
             }
-            continue;
           }
+          unknown.push(item);
         }
-        unknown.push(item);
       }
-      for (const item of unknown) yield* this.listing(item);
+    } catch (error) {
+      if (this.ctx.signal.aborted) throw error;
+      failure = { error };
     }
+    const newest = (item: Item) => dateOf(item) ?? "\uffff";
+    unknown.sort((a, b) => (newest(a) < newest(b) ? 1 : newest(a) > newest(b) ? -1 : 0));
+    try {
+      for (const item of unknown) yield* this.listing(item);
+    } catch (error) {
+      throw failure ? failure.error : error;
+    }
+    if (failure) throw failure.error;
   }
 
   /**
-   * Search items sorted since `since`, newest first, with repeats. The order is by
-   * `sorting_date` alone: listings arrive at its top (created, edited, topped up) or leave it,
-   * and listings sharing a `sorting_date` may come in any order, page to page. So the walk
-   * keeps `reached`, a date it has met every listing dated after, and takes a page as
+   * Every search item (of `band`, of every price when absent), newest first, page by page with
+   * repeats, keeping those dated `since` or later and those without a well-formed date. The
+   * order is by `sorting_date` alone: listings arrive at its top (created, edited, topped up)
+   * or leave it, and listings sharing a `sorting_date` may come in any order, page to page. So
+   * the walk keeps `reached`, a date it has met every listing dated after, and takes a page as
    * following on only when the page's first dated listing is dated after `reached`: every
-   * listing dated `reached` or earlier is then on this page or past it, whichever listing
-   * left or swapped places meanwhile. The next page starts `overlap` (a twentieth) above the
-   * first listing dated like this page's last, so it repeats that whole tie and a few above
-   * it, and a few removals meanwhile still leave a later date at its top (counting from the
-   * last dated listing above the tie, when one between has no date). A page that starts
-   * at or below `reached` has lost its place: the order shifted up past the overlap (the
-   * 2026-10-31 and 2026-11-01 runs lost it 36 to 72 seconds after the page before, at offsets
-   * 5225 and 285). The walk then pages back, at most BACKSTEPS times without getting further,
-   * and fails rather than skip. A tie filling nearly a page cannot be stepped over; the query
-   * is walked again in price halves, as is one whose order outgrows the 10,000-result window,
-   * each half with a window of its own (listings without a price drop out, as they are
-   * skipped anyway; the halves share their middle price, so a listing stored at a fraction of
-   * a crown falls in one). Only a well-formed date counts towards the walk's place; a page
-   * whose dates are not newest first fails the run, and a listing without a date is read as if
-   * moved, rather than left out. Every page size overlaps by at least one listing, so no step
-   * goes unchecked; pages of one or two never step on, and walk price halves.
+   * listing dated `reached` or earlier is then on this page or past it, whichever listing left
+   * or swapped places meanwhile. The next page starts `overlap` (a twentieth) above the first
+   * listing dated like this page's last, so it repeats that whole tie and a few above it, and
+   * a few removals meanwhile still leave a later date at its top (counting from the last dated
+   * listing above the tie, when one between has no date). A page that starts at or below
+   * `reached` has lost its place: the order shifted up past the overlap (the 2026-10-31 and
+   * 2026-11-01 runs lost it 36 to 72 seconds after the page before, at offsets 5225 and 285,
+   * reading details between pages). The walk then pages back, at most BACKSTEPS times without
+   * getting further, and fails rather than skip. A tie filling nearly a page cannot be stepped
+   * over; the query is walked again in price halves, as is one whose order outgrows the
+   * 10,000-result window, each half with a window of its own (listings without a price drop
+   * out, as they are skipped anyway; the halves share their middle price, so a listing stored
+   * at a fraction of a crown falls in one). Only a well-formed date counts towards the walk's
+   * place (a full page with none goes to price halves too), and a page whose dates are not
+   * newest first fails the run. The walk goes to the end of every band, so a listing without a
+   * date is met wherever it sits. A band walked over more than one page then reads its top
+   * again, where listings topped up from below the walk meanwhile wait, and must have met as
+   * many listings as the fewest any of its pages reported (arrivals raise later totals,
+   * removals lower them), else the run fails: no date shows where an undated listing moved. A
+   * page shorter than its total says fails it too. Every page size overlaps by at least one
+   * listing, so no step goes unchecked; pages of one or two never step on, and walk price
+   * halves.
    */
-  private async *moved(since: string, band?: Band): AsyncIterable<Item[]> {
+  private async *walk(since: string, band?: Band): AsyncIterable<Item[]> {
     const overlap = Math.max(1, Math.floor(this.pageSize / 20));
+    const eligible = (items: Item[]) =>
+      items.filter((item) => {
+        const date = dateOf(item);
+        return date === undefined || date >= since;
+      });
+    // Every listing the walk met, against the fewest results any of its pages reported.
+    const seen = new Set<string>();
+    let fewest = Number.POSITIVE_INFINITY;
+    const count = (page: Page, offset: number) => {
+      fewest = Math.min(fewest, page.total);
+      // A malformed entry has no id: its place stands in for it.
+      for (const [i, item] of page.items.entries()) seen.add(refOf(item) ?? `@${offset + i}`);
+    };
     let reached: string | undefined;
     let backsteps = 0;
-    for (let offset = 0; ; ) {
+    for (let offset = 0, pages = 0; ; pages++) {
       if (offset + this.pageSize > WINDOW) {
         yield* this.halves(since, band, `its order outgrows the ${WINDOW}-result window`);
         return;
       }
       const page = await this.search({ conditions: CONDITION_SEOS, band, offset });
-      // A malformed item has no date; its dated neighbours bound it.
+      if (offset === 0 && page.total > WINDOW - this.pageSize) {
+        yield* this.halves(since, band, `its ${page.total} results outgrow the window`);
+        return;
+      }
+      count(page, offset);
       const dates = page.items.map(dateOf);
       const dated = dates.filter((date) => date !== undefined);
       if (dated.some((date, i) => i > 0 && date > (dated[i - 1] as string))) {
@@ -237,28 +280,41 @@ class Run {
         offset = Math.max(0, offset - (this.pageSize - overlap));
         continue;
       }
-      // Skipped listings never become known, so only their timestamp keeps the walk going.
-      const moved = page.items.filter((_, i) => {
-        const date = dates[i];
-        return date === undefined || date >= since;
-      });
-      yield moved;
-      if (
-        moved.length === 0 ||
-        page.items.length < this.pageSize ||
-        offset + this.pageSize >= page.total
-      )
+      yield eligible(page.items);
+      if (offset + page.items.length >= page.total) {
+        if (pages > 0) {
+          // Listings topped up from below the walk meanwhile wait at the top.
+          const top = await this.search({ conditions: CONDITION_SEOS, band, offset: 0 });
+          const fresh = top.items.filter((item) => {
+            const ref = refOf(item);
+            return ref !== undefined && !seen.has(ref);
+          });
+          count(top, 0);
+          yield eligible(fresh);
+        }
+        if (seen.size < fewest) {
+          throw new Error(
+            `Sauto incremental met ${seen.size} of the ${fewest} listings in band ${bandName(band)}`,
+          );
+        }
         return;
+      }
+      if (page.items.length < this.pageSize) {
+        throw new Error(
+          `Sauto incremental: the search page at offset ${offset} holds ${page.items.length} of the ${page.total - offset} results past it`,
+        );
+      }
       const last = dated.at(-1);
       if (last === undefined) {
-        throw new Error(`Sauto incremental: no listing on the page at offset ${offset} is dated`);
+        const why = `no listing on its page at offset ${offset} is dated`;
+        this.ctx.log.info("sauto incremental walks price halves", { offset, why });
+        yield* this.halves(since, band, why);
+        return;
       }
       if (reached === undefined || last < reached) {
         reached = last;
         backsteps = 0;
       }
-      // Every listing dated after `last`, so every one dated `since` or later, has been met.
-      if (last < since) return;
       // The next page starts `overlap` above the last listing dated after the tie, so a few
       // removals meanwhile still leave it there.
       const tie = dates.indexOf(last);
@@ -274,17 +330,15 @@ class Run {
     }
   }
 
-  /** `moved` over each price half of `band` (of every price when absent). */
+  /** `walk` over each price half of `band` (of every price when absent). */
   private async *halves(since: string, band: Band | undefined, why: string): AsyncIterable<Item[]> {
     const halves = band
       ? halveSharing(band)
       : [{ from: 0, to: PRICE_TOP + 1 }, { from: PRICE_TOP }];
     if (!halves) {
-      throw new Error(
-        `Sauto incremental: band ${band?.from}-${band?.to ?? ""} cannot be split, and ${why}`,
-      );
+      throw new Error(`Sauto incremental: band ${bandName(band)} cannot be split, and ${why}`);
     }
-    for (const half of halves) yield* this.moved(since, half);
+    for (const half of halves) yield* this.walk(since, half);
   }
 
   /** The census: every band, then a failure naming the bands that came out short. */
@@ -477,6 +531,11 @@ class Run {
 interface Page {
   total: number;
   items: Item[];
+}
+
+/** `from-to` of a band, `-` for every price. */
+function bandName(band: Band | undefined): string {
+  return band ? `${band.from}-${band.to ?? ""}` : "-";
 }
 
 /** A price band's two halves, or undefined when it cannot be split. */
