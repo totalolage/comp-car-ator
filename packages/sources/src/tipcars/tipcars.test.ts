@@ -565,14 +565,82 @@ describe("tipcars source", () => {
       expect(urls.filter((url) => url.endsWith("&0-249999kc="))).toHaveLength(2);
     });
 
+    /** The seam between 0-249999 and 250000-499999: the band, then its two whole prices. */
+    function seam(
+      cassette: Cassette,
+      cards: Map<string, string>,
+      root: string,
+      band: readonly string[],
+      [low, high] = [0, 0],
+    ): Cassette {
+      let out = serve(cassette, `${root}&249999-250000kc=`, [listPage(cards, band.length, band)]);
+      out = serve(out, `${root}&249999-249999kc=`, [listPage(cards, low, [])]);
+      return serve(out, `${root}&250000-250000kc=`, [listPage(cards, high, [])]);
+    }
+
     it("leaves the parent unfinished when a stable listing is excluded by both smaller bands", async () => {
       const { cards, root, cassette, done } = await setup();
-      const gap = serve(cassette, `${root}&250000-499999kc=`, [listPage(cards, 0, [])]);
+      const gap = seam(
+        serve(cassette, `${root}&250000-499999kc=`, [listPage(cards, 0, [])]),
+        cards,
+        root,
+        [],
+      );
       const out: Observation[] = [];
       await expect(harvest(gap, { ...SPLIT_RUN, done }, out)).rejects.toThrow(
         /used:2000:0-499999 \(listings in neither half\)/,
       );
-      expect(slicesDone(out)).toEqual([]);
+      // The seam between the halves holds nothing: done itself, it leaves the parent short.
+      expect(slicesDone(out)).toEqual(["used:2000:249999-250000"]);
+    });
+
+    it("finishes the parent through the one-Kč seam that holds a fractional price", async () => {
+      const { cards, refs, root, cassette, initial, done } = await setup();
+      const between = refs[20] as string;
+      // The site stores a fraction (249,999.31 Kč, shown as 249,999): neither half returns
+      // it, the seam does, and neither whole price of the seam does.
+      const gap = seam(
+        serve(cassette, `${root}&250000-499999kc=`, [listPage(cards, 0, [])]),
+        cards,
+        root,
+        [between],
+      );
+      const out = await harvest(gap, { ...SPLIT_RUN, done });
+      expect(slicesDone(out)).toEqual([
+        "used:2000:249999-250000",
+        "used:2000:0-999999",
+        "used:2000",
+      ]);
+      expect(new Set(listings(out).map((o) => o.ref))).toEqual(
+        new Set(listings(initial).map((o) => o.ref)),
+      );
+      // A later run of the census pages the done seam again instead of trusting it.
+      const urls: string[] = [];
+      const again = await harvest(gap, {
+        ...SPLIT_RUN,
+        done: [...done, "used:2000:249999-250000"],
+        urls,
+      });
+      expect(slicesDone(again)).toEqual(["used:2000:0-999999", "used:2000"]);
+      expect(urls.filter((url) => url.endsWith("&249999-250000kc="))).toHaveLength(3);
+    });
+
+    it("credits no seam listing that a whole price or a part accounts for", async () => {
+      const { cards, refs, root, cassette, done } = await setup();
+      const between = refs[20] as string;
+      const upperless = serve(cassette, `${root}&250000-499999kc=`, [listPage(cards, 0, [])]);
+      // The seam's listing is at a whole 250,000 Kč, which the upper half should have returned.
+      const whole = seam(upperless, cards, root, [between], [0, 1]);
+      await expect(harvest(whole, { ...SPLIT_RUN, done })).rejects.toThrow(
+        /used:2000:0-499999 \(listings in neither half\)/,
+      );
+      // The seam reports a listing beyond its whole prices but serves only one a part met.
+      const met = seam(upperless, cards, root, [refs[0] as string]);
+      const out: Observation[] = [];
+      await expect(harvest(met, { ...SPLIT_RUN, done }, out)).rejects.toThrow(
+        /used:2000:0-499999 \(listings in neither half\)/,
+      );
+      expect(slicesDone(out)).toEqual(["used:2000:249999-250000"]);
     });
 
     it("never pools the short parent pass with an incomplete smaller band", async () => {
