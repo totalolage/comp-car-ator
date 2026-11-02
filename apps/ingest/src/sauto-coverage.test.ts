@@ -1,7 +1,8 @@
 // Sauto incremental, Source → Ledger through `harvest` and `record`: the walk covers the whole
-// order, so a listing without a well-formed date is read wherever it sits, and a walk that
-// cannot show it met every listing fails, so the Ledger keeps what it read and the last run's
-// cutoff, and the next run walks from there again. Listings that share a
+// order, so a listing without a well-formed date is read wherever the walk meets it (and stays
+// eligible for later runs when the walk misses it), and a walk that cannot show it met every
+// listing fails, so the Ledger keeps what it read and the last run's cutoff, and the next run
+// walks from there again. Listings that share a
 // `sorting_date` may come in any order between two searches; the review's case below moves an
 // unseen one above the next page while the listing at the page's end goes.
 import type { Http } from "@cca/http";
@@ -54,15 +55,15 @@ function site(search: (query: URLSearchParams) => { total: number; results: Item
 }
 
 /** One incremental Run recorded as the ingest records it, its checkpoint the Ledger's. */
-function record(http: Http, options: SautoOptions) {
+function record(http: Http, options: SautoOptions, at = now) {
   const source = sautoSource(options);
   return ledger.record(
-    { source: source.id, mode: "incremental", startedAt: now },
+    { source: source.id, mode: "incremental", startedAt: at },
     source.harvest({
       http,
       mode: "incremental",
       checkpoint: ledger.checkpoint(source.id),
-      now,
+      now: at,
       log: silentLogger,
       signal: new AbortController().signal,
     }),
@@ -425,6 +426,82 @@ describe.each([
     expect(n).toBeGreaterThan(6);
     expect(refs()).toEqual(range(1, 10).map(String));
     expect(ledger.checkpoint("sauto").lastRunAt).toEqual(lastRun);
+  });
+});
+
+// The last review's case: as the pass begins, 70 (without a well-formed date) sits at the end and
+// counts towards the band's total; it then moves into the part the walk has passed while 71,
+// dated long ago, comes in at the bottom, so the pass meets as many listings as the band held
+// without meeting 70. No date or count shows the run missed it, and the run advances the cutoff.
+// The cutoff never bars a listing without a date: every run walks the whole order and reads each
+// one it meets, so the next run reads 70 and fails, keeping this run's cutoff; and an edit dates
+// 70 after this run began, inside the next run's window. (Were its date well-formed but old, it
+// would be one more listing coming in below the cutoff, like 71, which the Census reads.)
+describe.each([
+  ["without a date", undefined],
+  ["with a malformed date", "2026-10-25 10:00"],
+])("a Sauto listing %s that moves unseen as an old listing comes in below", (_, date) => {
+  const nextRun = new Date("2026-10-26T13:27:00Z");
+  /** The order the first run walks: 70 moves and 71 comes in before its third search. */
+  function sauto() {
+    let list = [
+      ...range(1, 10).map((id) => car(id, { sorting_date: secondsBefore(id) })),
+      ...range(11, 60).map((id) => car(id, { sorting_date: longBefore(id) })),
+      car(70, { sorting_date: date }),
+    ];
+    let n = 0;
+    const http = site((q) => {
+      if (++n === 3) {
+        const rest = list.filter((item) => item.id !== 70);
+        list = [
+          ...rest.slice(0, 25),
+          car(70, { sorting_date: date }),
+          ...rest.slice(25),
+          car(71, { sorting_date: longBefore(71) }),
+        ];
+      }
+      const offset = Number(q.get("offset"));
+      return { total: list.length, results: list.slice(offset, offset + 20) };
+    });
+    return {
+      http,
+      /** Before the next run, `edit` changes the order as it then stands. */
+      later: (edit: (list: Item[]) => Item[] = (same) => same) => {
+        list = edit(list);
+        return http;
+      },
+    };
+  }
+
+  it("is read by the next run, which fails and keeps this run's cutoff", async () => {
+    ledger = openLedger(":memory:");
+    await ledger.record({ source: "sauto", mode: "incremental", startedAt: lastRun }, []);
+    const { http, later } = sauto();
+    const first = await record(http, { pageSize: 20 });
+    expect(first.newListings).toBe(10);
+    expect(refs()).toEqual(range(1, 10).map(String));
+    expect(ledger.checkpoint("sauto").lastRunAt).toEqual(now);
+
+    expect(await failed(record(later(), { pageSize: 20 }, nextRun))).toMatch(UNDATED);
+    expect(refs()).toEqual([...range(1, 10), 70].map(String));
+    expect(ledger.checkpoint("sauto").lastRunAt).toEqual(now);
+  });
+
+  it("once an edit dates it, is read by the next run, which advances the cutoff", async () => {
+    ledger = openLedger(":memory:");
+    await ledger.record({ source: "sauto", mode: "incremental", startedAt: lastRun }, []);
+    const { http, later } = sauto();
+    await record(http, { pageSize: 20 });
+    expect(ledger.checkpoint("sauto").lastRunAt).toEqual(now);
+
+    const edited = later((list) => [
+      car(70, { sorting_date: "2026-10-26T09:00:00" }),
+      ...list.filter((item) => item.id !== 70),
+    ]);
+    const second = await record(edited, { pageSize: 20 }, nextRun);
+    expect(second.newListings).toBe(1);
+    expect(refs()).toEqual([...range(1, 10), 70].map(String));
+    expect(ledger.checkpoint("sauto").lastRunAt).toEqual(nextRun);
   });
 });
 

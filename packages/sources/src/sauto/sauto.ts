@@ -152,7 +152,11 @@ class Run {
    * shows whether it moved, nor where it stands in the order. Such a listing is read, but then
    * the run fails, keeping `lastRunAt`: the walk proves its coverage by dates, and by counts
    * that one undated listing arriving could make up for another moving unseen (a sweep of the
-   * whole scope on 2026-11-01 met none). Top-ups move some 5,000 older
+   * whole scope on 2026-11-01 met none). Nor can a count show the walk met an undated listing
+   * that moved, when a listing with an old date comes in below the top as it moves. The cutoff
+   * never bars an undated listing, though: one the walk missed stays eligible for every later
+   * run, which reads it (and fails) when its walk meets it, or reads it in its window once an
+   * edit dates it. Top-ups move some 5,000 older
    * listings a day (95 of the newest 100 on 2026-10-28), so a detail page each would take
    * longer than the hour the run may have. A known listing gets a ListingPriceSeen from its
    * search item instead, so its price changes land daily (an edit moves it up). Details go
@@ -164,9 +168,12 @@ class Run {
    * comes out as met; the details follow, newest first (undated first, as any may be the
    * newest). A walk that fails still reads the listings it met, then fails the run. Searches
    * and details share `budget`. Past it the run fails, so `lastRunAt` stays and the next run
-   * walks again, skipping the listings now known. Nothing moved up is
-   * dropped: it is read, or the run fails. (A first run has no last run to hold: what it
-   * leaves, like what moved before its day, waits for the census.)
+   * walks again, skipping the listings now known. Nothing moved up before the run began is
+   * dropped: it is read, or the run fails; what moves up during the walk is in the next run's
+   * window. (A listing that comes in with an old date, as a draft published late, is read when
+   * the walk meets it since the cutoff; one dated before the next run's cutoff and coming in
+   * where the walk has passed waits for the census. A first run has no last run to hold: what
+   * it leaves, like what moved before its day, waits for the census too.)
    */
   async *incremental(budget: number): AsyncIterable<Observation> {
     this.budget = budget;
@@ -248,9 +255,10 @@ class Run {
    * show where an undated listing moved, so each pass over a band must also meet as many
    * listings as its first page reported: a listing that arrives, or moves when it is edited or
    * topped up, comes in at the top the pass has left, so whatever the pass meets beyond its
-   * first page was in the band as it began, and meeting that many means meeting them all (only
-   * a new undated listing entering below the top could stand in for one that moved, and
-   * meeting any undated listing fails the run; see `incremental`). A
+   * first page was in the band as it began, and meeting that many means meeting them all (a
+   * listing entering below the top can stand in for an undated one that moved: meeting an
+   * undated one fails the run, but one with an old date cannot be told from the rest, so the
+   * moved one stays eligible for a later run; see `incremental`). A
    * pass that falls short (a listing removed or topped up from below the walk meanwhile) walks
    * the band again, up to PASSES times, and then fails the run. Every page size overlaps by at least one
    * listing, so no step goes unchecked; pages of one or two never step on, and walk price
