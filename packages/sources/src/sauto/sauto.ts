@@ -12,8 +12,8 @@
  * incremental: walks the whole newest-first order, in price halves where it outgrows the
  *   10,000-result window or one `sorting_date` fills a page, then reads a detail for every
  *   listing moved since the last run (a day back on a first run), or without a date, that the
- *   Ledger does not know, up to `budget` search and detail calls; past it the run fails and the
- *   next one resumes (see `incremental`).
+ *   Ledger does not know, up to `budget` search and detail calls; past it, or having met a
+ *   listing without a date, the run fails and the next one resumes (see `incremental`).
  * full: a census sliced by condition and price band; a band over `sliceLimit` results is
  *   halved until each fits (2,000 by default: some 40 minutes of detail pages, well within
  *   one run). Slices done earlier in the census are skipped before any split. Each band
@@ -149,7 +149,10 @@ class Run {
   /**
    * The listings moved up the order since the last run (a day back on a first run), and every
    * listing in scope without a well-formed `sorting_date`, wherever Sauto sorts it: no date
-   * shows whether it moved, nor where it stands in the order. Top-ups move some 5,000 older
+   * shows whether it moved, nor where it stands in the order. Such a listing is read, but then
+   * the run fails, keeping `lastRunAt`: the walk proves its coverage by dates, and by counts
+   * that one undated listing arriving could make up for another moving unseen (a sweep of the
+   * whole scope on 2026-11-01 met none). Top-ups move some 5,000 older
    * listings a day (95 of the newest 100 on 2026-10-28), so a detail page each would take
    * longer than the hour the run may have. A known listing gets a ListingPriceSeen from its
    * search item instead, so its price changes land daily (an edit moves it up). Details go
@@ -174,10 +177,13 @@ class Run {
     const since = pragueLocal(new Date(from));
     const met = new Set<string>();
     const unknown: Item[] = [];
+    // Listings met without a well-formed date, in scope or not: none can be placed or counted on.
+    const undated = new Set<string>();
     let failure: { error: unknown } | undefined;
     try {
       for await (const items of this.walk(since)) {
         for (const item of items) {
+          if (dateOf(item) === undefined) undated.add(refOf(item) ?? "without an id");
           if (isSkipped(item)) continue;
           const ref = refOf(item);
           if (ref !== undefined) {
@@ -209,6 +215,11 @@ class Run {
       throw failure ? failure.error : error;
     }
     if (failure) throw failure.error;
+    if (undated.size > 0) {
+      throw new Error(
+        `Sauto incremental met ${undated.size} ${undated.size === 1 ? "listing" : "listings"} without a well-formed sorting_date (${[...undated].slice(0, 5).join(", ")}): read, but no date or count shows the walk met every listing around them`,
+      );
+    }
   }
 
   /**
@@ -238,7 +249,8 @@ class Run {
    * listings as its first page reported: a listing that arrives, or moves when it is edited or
    * topped up, comes in at the top the pass has left, so whatever the pass meets beyond its
    * first page was in the band as it began, and meeting that many means meeting them all (only
-   * a new undated listing entering below the top could stand in for one that moved). A
+   * a new undated listing entering below the top could stand in for one that moved, and
+   * meeting any undated listing fails the run; see `incremental`). A
    * pass that falls short (a listing removed or topped up from below the walk meanwhile) walks
    * the band again, up to PASSES times, and then fails the run. Every page size overlaps by at least one
    * listing, so no step goes unchecked; pages of one or two never step on, and walk price

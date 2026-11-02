@@ -688,12 +688,14 @@ describe("sauto source", () => {
 
     // 22 has a malformed date. After the first page, 2–4 go: the page at 18 starts at 22,
     // past unseen 21. Its date ("z") would sort after any; it is not taken as a place, the
-    // walk pages back, and 22 is still read as moved.
+    // walk pages back, and 22 is still read as moved. Having met it, the run then fails.
     const malformed = await walk(
       datedCars(1, 60).map((item) => (item.id === 22 ? { ...item, sorting_date: "z" } : item)),
       (n, list) => (n === 2 ? list.filter((item) => ![2, 3, 4].includes(item.id as number)) : list),
     );
-    expect(malformed.error).toBeUndefined();
+    expect(String(malformed.error)).toMatch(
+      /met 1 listing without a well-formed sorting_date \(22\)/,
+    );
     // From the page at 0, the next starts above 21, the last dated listing above the tie of
     // one (23), as 22's date tells nothing.
     expect(malformed.offsets.slice(0, 4)).toEqual([0, 18, 0, 17]);
