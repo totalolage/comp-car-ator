@@ -11,8 +11,8 @@
  *
  * incremental: walks the whole newest-first order, in price halves where it outgrows the
  *   10,000-result window or one `sorting_date` fills a page, then reads a detail for every
- *   listing moved since the last run (a day back on a first run), or without a date, that the
- *   Ledger does not know, up to `budget` search and detail calls; past it, or having met a
+ *   listing it met moved since the last run (a day back on a first run), or without a date,
+ *   that the Ledger does not know, up to `budget` search and detail calls; past it, or having met a
  *   listing without a date, the run fails and the next one resumes (see `incremental`).
  * full: a census sliced by condition and price band; a band over `sliceLimit` results is
  *   halved until each fits (2,000 by default: some 40 minutes of detail pages, well within
@@ -147,16 +147,16 @@ class Run {
   }
 
   /**
-   * The listings moved up the order since the last run (a day back on a first run), and every
-   * listing in scope without a well-formed `sorting_date`, wherever Sauto sorts it: no date
-   * shows whether it moved, nor where it stands in the order. Such a listing is read, but then
-   * the run fails, keeping `lastRunAt`: the walk proves its coverage by dates, and by counts
-   * that one undated listing arriving could make up for another moving unseen (a sweep of the
-   * whole scope on 2026-11-01 met none). Nor can a count show the walk met an undated listing
+   * The listings moved up the order since the last run (a day back on a first run), and the
+   * listings in scope without a well-formed `sorting_date` the walk meets, wherever Sauto sorts
+   * them: no date shows whether one moved, nor where it stands in the order. Such a listing is
+   * read, but then the run fails, keeping `lastRunAt`: the walk checks its coverage by dates, and
+   * by counts that one undated listing arriving could make up for another moving unseen (a sweep of
+   * the whole scope on 2026-11-01 met none). Nor can a count show the walk met an undated listing
    * that moved, when a listing with an old date comes in below the top as it moves. The cutoff
-   * never bars an undated listing, though: one the walk missed stays eligible for every later
-   * run, which reads it (and fails) when its walk meets it, or reads it in its window once an
-   * edit dates it. Top-ups move some 5,000 older
+   * never bars an undated listing, though: one the walk missed stays eligible for every later run,
+   * which reads it (and fails) when its walk meets it, or reads it in its window once an edit dates
+   * it. Top-ups move some 5,000 older
    * listings a day (95 of the newest 100 on 2026-10-28), so a detail page each would take
    * longer than the hour the run may have. A known listing gets a ListingPriceSeen from its
    * search item instead, so its price changes land daily (an edit moves it up). Details go
@@ -251,11 +251,12 @@ class Run {
    * at a fraction of a crown falls in one). Only a well-formed date counts towards the walk's
    * place (a full page with none goes to price halves too), and a page whose dates are not
    * newest first fails the run. The walk goes to the end of every band, so a listing without a
-   * date is met wherever it sits, and a page shorter than its total says fails it. Dates cannot
-   * show where an undated listing moved, so each pass over a band must also meet as many
-   * listings as its first page reported: a listing that arrives, or moves when it is edited or
-   * topped up, comes in at the top the pass has left, so whatever the pass meets beyond its
-   * first page was in the band as it began, and meeting that many means meeting them all (a
+   * date that stays put is met wherever it sits, and a page shorter than its total says fails
+   * it. Dates cannot show where an undated listing moved, so each pass over a band must also
+   * meet as many listings as its first page reported: if listings come in only at the top the
+   * pass has left (as one that arrives, or moves when it is edited or topped up, does),
+   * whatever the pass meets beyond its first page was in the band as it began, and meeting that
+   * many means meeting them all (a
    * listing entering below the top can stand in for an undated one that moved: meeting an
    * undated one fails the run, but one with an old date cannot be told from the rest, so the
    * moved one stays eligible for a later run; see `incremental`). A
