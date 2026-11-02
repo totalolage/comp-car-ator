@@ -50,6 +50,12 @@ const PAGE_LIMIT = 1_000;
  * fails: an order that shifted up more than this many pages between two searches is not followed.
  */
 const BACKSTEPS = 3;
+/**
+ * Passes an incremental walk makes over one band before it fails, when each meets fewer
+ * listings than the band held as the pass began (one removed or topped up from below the walk
+ * meanwhile, or one moved where no date can place it).
+ */
+const PASSES = 3;
 /** Incremental runs re-check listings changed this long before the last run's start. */
 const SINCE_MARGIN_MS = 2 * 3_600_000;
 /** How far back an incremental run without a last run looks: a day, as a daily run would. */
@@ -227,32 +233,46 @@ class Run {
    * at a fraction of a crown falls in one). Only a well-formed date counts towards the walk's
    * place (a full page with none goes to price halves too), and a page whose dates are not
    * newest first fails the run. The walk goes to the end of every band, so a listing without a
-   * date is met wherever it sits. A band walked over more than one page then reads its top
-   * again, where listings topped up from below the walk meanwhile wait, and must have met as
-   * many listings as the fewest any of its pages reported (arrivals raise later totals,
-   * removals lower them), else the run fails: no date shows where an undated listing moved. A
-   * page shorter than its total says fails it too. Every page size overlaps by at least one
+   * date is met wherever it sits, and a page shorter than its total says fails it. Dates cannot
+   * show where an undated listing moved, so each pass over a band must also meet as many
+   * listings as its first page reported: a listing that arrives, or moves when it is edited or
+   * topped up, comes in at the top the pass has left, so whatever the pass meets beyond its
+   * first page was in the band as it began, and meeting that many means meeting them all (only
+   * a new undated listing entering below the top could stand in for one that moved). A
+   * pass that falls short (a listing removed or topped up from below the walk meanwhile) walks
+   * the band again, up to PASSES times, and then fails the run. Every page size overlaps by at least one
    * listing, so no step goes unchecked; pages of one or two never step on, and walk price
    * halves.
    */
   private async *walk(since: string, band?: Band): AsyncIterable<Item[]> {
-    const overlap = Math.max(1, Math.floor(this.pageSize / 20));
-    const eligible = (items: Item[]) =>
-      items.filter((item) => {
-        const date = dateOf(item);
-        return date === undefined || date >= since;
+    for (let pass = 1; ; pass++) {
+      const short = yield* this.pass(since, band);
+      if (!short) return;
+      if (pass >= PASSES) {
+        throw new Error(
+          `Sauto incremental met ${short.met} of the ${short.of} listings in band ${bandName(band)} on each of ${PASSES} passes`,
+        );
+      }
+      this.ctx.log.warn("sauto incremental band came out short; walking it again", {
+        band: bandName(band),
+        pass,
+        ...short,
       });
-    // Every listing the walk met, against the fewest results any of its pages reported.
+    }
+  }
+
+  /** One pass of `walk`; what it met and of how many when it falls short of its first page's total. */
+  private async *pass(
+    since: string,
+    band: Band | undefined,
+  ): AsyncGenerator<Item[], { met: number; of: number } | undefined> {
+    const overlap = Math.max(1, Math.floor(this.pageSize / 20));
+    // Every listing the pass met; a malformed entry has no id, so its place stands in for it.
     const seen = new Set<string>();
-    let fewest = Number.POSITIVE_INFINITY;
-    const count = (page: Page, offset: number) => {
-      fewest = Math.min(fewest, page.total);
-      // A malformed entry has no id: its place stands in for it.
-      for (const [i, item] of page.items.entries()) seen.add(refOf(item) ?? `@${offset + i}`);
-    };
     let reached: string | undefined;
     let backsteps = 0;
-    for (let offset = 0, pages = 0; ; pages++) {
+    let held = 0;
+    for (let offset = 0; ; ) {
       if (offset + this.pageSize > WINDOW) {
         yield* this.halves(since, band, `its order outgrows the ${WINDOW}-result window`);
         return;
@@ -262,7 +282,8 @@ class Run {
         yield* this.halves(since, band, `its ${page.total} results outgrow the window`);
         return;
       }
-      count(page, offset);
+      if (offset === 0 && reached === undefined) held = page.total;
+      for (const [i, item] of page.items.entries()) seen.add(refOf(item) ?? `@${offset + i}`);
       const dates = page.items.map(dateOf);
       const dated = dates.filter((date) => date !== undefined);
       if (dated.some((date, i) => i > 0 && date > (dated[i - 1] as string))) {
@@ -280,24 +301,12 @@ class Run {
         offset = Math.max(0, offset - (this.pageSize - overlap));
         continue;
       }
-      yield eligible(page.items);
+      yield page.items.filter((_, i) => {
+        const date = dates[i];
+        return date === undefined || date >= since;
+      });
       if (offset + page.items.length >= page.total) {
-        if (pages > 0) {
-          // Listings topped up from below the walk meanwhile wait at the top.
-          const top = await this.search({ conditions: CONDITION_SEOS, band, offset: 0 });
-          const fresh = top.items.filter((item) => {
-            const ref = refOf(item);
-            return ref !== undefined && !seen.has(ref);
-          });
-          count(top, 0);
-          yield eligible(fresh);
-        }
-        if (seen.size < fewest) {
-          throw new Error(
-            `Sauto incremental met ${seen.size} of the ${fewest} listings in band ${bandName(band)}`,
-          );
-        }
-        return;
+        return seen.size < held ? { met: seen.size, of: held } : undefined;
       }
       if (page.items.length < this.pageSize) {
         throw new Error(

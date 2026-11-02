@@ -284,17 +284,15 @@ describe("sauto source", () => {
     });
   });
 
-  // The recorded order by sorting_date (created), 13 listings in 6 pages of 4 stepping by 2,
-  // then the first page again:
+  // The recorded order by sorting_date (created), 13 listings in 6 pages of 4 stepping by 2:
   // 11-01 (11-01), 10-29 (10-29), 10-29 (10-29), 10-29 (05-09) | 10-24 (09-29) 211187061,
   // 10-19 (05-30), 10-05 (10-05), 10-05 (04-22) | 09-14 ... | 2025-09-16.
   const LAST_RUN = new Date("2026-10-20T00:00:00Z"); // less the margin, 10-20 00:00 in Prague
 
   it("incremental run after a last run walks the whole order, then reads every unknown listing moved since", async () => {
     const { observations, urls } = await harvest("incremental", { lastRunAt: LAST_RUN });
-    // Every page, though the 2nd (from offset 2) already ends older than the last run, and the
-    // top once more.
-    expect(searches(urls)).toHaveLength(7);
+    // Every page, though the 2nd (from offset 2) already ends older than the last run.
+    expect(searches(urls)).toHaveLength(6);
     // The details come after the walk, newest first.
     const read = ["211376613", "211363203", "211361640", "210389525", "211187061"];
     expect(urls).toEqual([
@@ -371,7 +369,7 @@ describe("sauto source", () => {
       ),
     );
     // The walk still goes to the end of the order.
-    expect(searches(urls)).toHaveLength(7);
+    expect(searches(urls)).toHaveLength(6);
     const read = ["211376613", "211363203"];
     expect(details(urls)).toEqual(read.map((ref) => `https://www.sauto.cz/api/v1/items/${ref}`));
     expect(listings(observations).map((o) => o.ref)).toEqual(read);
@@ -394,7 +392,7 @@ describe("sauto source", () => {
           },
         ),
     );
-    expect(searches(urls)).toHaveLength(7);
+    expect(searches(urls)).toHaveLength(6);
     expect(details(urls)).toEqual(["https://www.sauto.cz/api/v1/items/211187061"]);
     expect(listings(observations).map((o) => o.ref)).toEqual(["211187061"]);
   });
@@ -411,7 +409,7 @@ describe("sauto source", () => {
         () => {},
         undefined,
         {
-          source: { budget: 10 },
+          source: { budget: 9 },
           consume: (o) => {
             out.push(o);
             if (o.kind === "ListingSeen") recorded.add(o.ref);
@@ -424,10 +422,10 @@ describe("sauto source", () => {
       return { error, out };
     };
     const first = await day();
-    // The walk's seven searches and the three newest details use the cap; the Ledger keeps those
+    // The walk's six searches and the three newest details use the cap; the Ledger keeps those
     // and lastRunAt stays where it was, so the older two are still eligible.
     expect(listings(first.out).map((o) => o.ref)).toEqual(["211376613", "211363203", "211361640"]);
-    expect(String(first.error)).toMatch(/request budget 10 exhausted/);
+    expect(String(first.error)).toMatch(/request budget 9 exhausted/);
     const second = await day();
     expect(second.error).toBeUndefined();
     expect(listings(second.out).map((o) => o.ref)).toEqual(["210389525", "211187061"]);
@@ -457,25 +455,23 @@ describe("sauto source", () => {
           lastRunAt: new Date("2026-10-24T00:00:00Z"),
           isKnown: (ref) => recorded.has(ref),
         },
-        source: { budget: 5 },
+        source: { budget: 4 },
         consume: (o) => {
           if (o.kind === "ListingSeen") recorded.add(o.ref);
         },
       });
     const first = await day();
-    expect(first.urls).toHaveLength(5);
+    expect(first.urls).toHaveLength(4);
     expect(listings(first.observations).map((o) => o.ref)).toEqual(["1", "2"]);
     expect(prices(first.observations).map(([ref]) => ref)).toEqual(["3", "4", "6"]);
-    // The whole order is walked (pages at 0 and 2, and the top again) before any detail,
-    // newest first.
-    expect(searches(first.urls)).toHaveLength(3);
-    expect(first.urls[3]).toMatch(/\/items\/1$/);
-    expect(String(first.error)).toMatch(/request budget 5 exhausted/);
+    // The whole order is walked (pages at 0 and 2) before any detail, newest first.
+    expect(searches(first.urls)).toHaveLength(2);
+    expect(first.urls[2]).toMatch(/\/items\/1$/);
+    expect(String(first.error)).toMatch(/request budget 4 exhausted/);
     const second = await day();
     expect(second.error).toBeUndefined();
     expect(listings(second.observations).map((o) => o.ref)).toEqual(["5"]);
-    expect(second.urls).toHaveLength(4);
-    // One page needs no second look at the top: a search and three details.
+    expect(second.urls).toHaveLength(3);
     const exact = await harvestSite("incremental", paged(datedCars(10, 12)), {
       source: { budget: 4 },
     });
@@ -514,7 +510,7 @@ describe("sauto source", () => {
     const lost = await walk(300, 2, (list) => list.slice(10));
     expect(lost.error).toBeUndefined();
     expect(new Set(refs(lost.observations)).size).toBe(300);
-    expect(offsets(lost.urls)).toEqual(["0", "94", "0", "94", "188", "282", "0"]);
+    expect(offsets(lost.urls)).toEqual(["0", "94", "0", "94", "188", "282"]);
 
     // The page's last listing moves to the top (an edit or top-up): the next page still
     // repeats the listings before it, so the walk goes on.
@@ -525,7 +521,7 @@ describe("sauto source", () => {
     ]);
     expect(topped.error).toBeUndefined();
     expect(refs(topped.observations)).toHaveLength(300);
-    expect(offsets(topped.urls)).toEqual(["0", "94", "188", "282", "0"]);
+    expect(offsets(topped.urls)).toEqual(["0", "94", "188", "282"]);
 
     // An order that shifted up more pages than the walk pages back fails rather than skip,
     // after reading the listings it met.
@@ -566,9 +562,8 @@ describe("sauto source", () => {
     );
     expect(swapped.error).toBeUndefined();
     // The next page starts one above the tie (at 15, less the overlap of one) and reads it
-    // whole; the one after starts one above the older listings' tie and ends the order, and
-    // the top is read once more.
-    expect(offsets).toEqual([0, 14, 24, 0]);
+    // whole; the one after starts one above the older listings' tie and ends the order.
+    expect(offsets).toEqual([0, 14, 24]);
     expect(new Set(refs(swapped.observations))).toEqual(
       new Set(Array.from({ length: 25 }, (_, i) => String(i + 1))),
     );
@@ -732,11 +727,11 @@ describe("sauto source", () => {
     expect(listings(longAgo.observations)).toEqual([]);
     expect(prices(longAgo.observations)).toHaveLength(13);
     expect(details(longAgo.urls)).toEqual([]);
-    expect(searches(longAgo.urls)).toHaveLength(7);
+    expect(searches(longAgo.urls)).toHaveLength(6);
     const justNow = await harvest("incremental", { ...known, lastRunAt: recordedAt });
     expect(justNow.observations).toEqual([]);
     // Nothing moved since; the walk still goes to the end.
-    expect(searches(justNow.urls)).toHaveLength(7);
+    expect(searches(justNow.urls)).toHaveLength(6);
   });
 
   it("full run halves bands over the slice limit and reports each finished slice", async () => {
@@ -1054,8 +1049,8 @@ describe("sauto source", () => {
 
   it("incremental run yields each new listing once, though the order repeats it", async () => {
     // After the first page two listings arrive on top, so the second page (at 2) repeats the
-    // first whole; the pages after it hold unseen listings, and the top read again at the end
-    // meets the two that arrived, read first as the newest.
+    // first whole; the pages after it hold unseen listings. The two that arrived on top after
+    // the walk left it wait for the next run.
     let list = datedCars(1, 8);
     let searched = 0;
     const recorded = new Set<string>();
@@ -1081,11 +1076,8 @@ describe("sauto source", () => {
       "2",
       "4",
       "6",
-      "0",
     ]);
     expect(listings(observations).map((o) => o.ref)).toEqual([
-      "102",
-      "101",
       "1",
       "2",
       "3",

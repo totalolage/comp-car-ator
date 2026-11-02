@@ -278,8 +278,8 @@ describe.each([
       },
     };
     await record(http, {});
-    // Pages at 0 and 949 (overlapping by a twentieth), then the top again.
-    expect(offsets).toEqual(["0", "949", "0"]);
+    // Pages at 0 and 949, overlapping by a twentieth.
+    expect(offsets).toEqual(["0", "949"]);
     expect(refs()).toEqual([...range(1, 50), 1_101].map(String));
     expect(ledger.checkpoint("sauto").lastRunAt).toEqual(now);
   });
@@ -334,28 +334,70 @@ function moving(
   });
 }
 
-it("a Sauto walk that ends short of its band's count fails, keeping its reads and the last run's cutoff", async () => {
-  ledger = openLedger(":memory:");
-  await ledger.record({ source: "sauto", mode: "incremental", startedAt: lastRun }, []);
-  // 70 has no date, so no date shows where it goes: before the third search it moves from the
-  // end to just past the first page, which the walk has passed. Every page still follows on.
-  const undated = car(70, { sorting_date: undefined });
-  const http = moving((n, list) => {
-    if (n === 1) return [...list, undated];
-    if (n === 3) return [...list.slice(0, 25), undated, ...list.slice(25, -1)];
-    return list;
+// The review's case: 70, without a date (or with a malformed one), moves from the end into the
+// part the walk has passed while 1, already met, goes, so the totals add up without 70. Each
+// pass must meet as many listings as its band held as it began, so the band is walked again.
+describe.each([
+  ["without a date", undefined],
+  ["with a malformed date", "2026-10-25 10:00"],
+])("a Sauto listing %s that moves where no date places it", (_, date) => {
+  const moved = car(70, { sorting_date: date });
+  /** Before search `n` of `at`, 70 moves to just past the first page, and 1 goes. */
+  const moveAt =
+    (...at: number[]) =>
+    (n: number, list: Item[]) => {
+      if (n === 1) return [...list, moved];
+      if (!at.includes(n)) return list;
+      const rest = list.filter((item) => item.id !== 70 && item.id !== 1);
+      return [...rest.slice(0, 25), moved, ...rest.slice(25)];
+    };
+
+  it("is met on the next pass, and the cutoff advances", async () => {
+    ledger = openLedger(":memory:");
+    await ledger.record({ source: "sauto", mode: "incremental", startedAt: lastRun }, []);
+    const summary = await record(moving(moveAt(3)), { pageSize: 20 });
+    expect(refs()).toEqual([...range(1, 10), 70].map(String));
+    expect(summary.newListings).toBe(11);
+    expect(ledger.checkpoint("sauto").lastRunAt).toEqual(now);
   });
-  const failure = await record(http, { pageSize: 20 }).then(
-    () => undefined,
-    (error: unknown) => error,
-  );
-  expect(failure).toBeInstanceOf(RunFailedError);
-  expect(String((failure as RunFailedError).cause)).toMatch(/met 60 of the 61 listings in band -/);
-  expect(refs()).toEqual(range(1, 10).map(String));
-  expect(ledger.checkpoint("sauto").lastRunAt).toEqual(lastRun);
+
+  it("moving on every pass, fails the run, keeping its reads and the last run's cutoff", async () => {
+    ledger = openLedger(":memory:");
+    await ledger.record({ source: "sauto", mode: "incremental", startedAt: lastRun }, []);
+    // Each pass reads pages at 0, 18, 36 and 54: 70 goes back to the end before a pass's first
+    // page, and just past its first page once the pass is past 30.
+    let n = 0;
+    let list = [
+      ...range(1, 10).map((id) => car(id, { sorting_date: secondsBefore(id) })),
+      ...range(11, 60).map((id) => car(id, { sorting_date: longBefore(id) })),
+    ];
+    const http = site((q) => {
+      n++;
+      const offset = Number(q.get("offset"));
+      const rest = list.filter((item) => item.id !== 70);
+      list =
+        offset === 0
+          ? [...rest, moved]
+          : offset > 30
+            ? [...rest.slice(0, 25), moved, ...rest.slice(25)]
+            : list;
+      return { total: list.length, results: list.slice(offset, offset + 20) };
+    });
+    const failure = await record(http, { pageSize: 20 }).then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(RunFailedError);
+    expect(String((failure as RunFailedError).cause)).toMatch(
+      /met 60 of the 61 listings in band - on each of 3 passes/,
+    );
+    expect(n).toBeGreaterThan(6);
+    expect(refs()).toEqual(range(1, 10).map(String));
+    expect(ledger.checkpoint("sauto").lastRunAt).toEqual(lastRun);
+  });
 });
 
-it("a Sauto listing topped up from below the walk is read from the top, and the cutoff advances", async () => {
+it("a Sauto listing topped up from below the walk is read on the next pass, and the cutoff advances", async () => {
   ledger = openLedger(":memory:");
   await ledger.record({ source: "sauto", mode: "incremental", startedAt: lastRun }, []);
   // Before the second search, unseen 50 is topped up: it leaves the part still to walk.
