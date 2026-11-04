@@ -4,6 +4,7 @@ import { stat } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream } from "node:stream/web";
+import { type Logger, silentLogger } from "@cca/sources";
 import type { ReleaseStore } from "./release-store.ts";
 
 export interface GithubReleaseStoreOptions {
@@ -15,6 +16,38 @@ export interface GithubReleaseStoreOptions {
   tagPrefix: string;
   /** Default https://api.github.com; tests point it at a fake. */
   apiUrl?: string;
+  /** Draft ids, upload timings and retries. */
+  log?: Logger;
+  /** Wait before an upload's second attempt, twice as long before its third. Default 10 s. */
+  retryDelayMs?: number;
+}
+
+/** Tries per asset. A day's release carries the whole day's harvest, so one bad answer from
+ *  GitHub must not lose it; a failure that survives three tries is not a blip. */
+const UPLOAD_ATTEMPTS = 3;
+
+/** GitHub answered with an error status. */
+class GithubError extends Error {
+  status: number;
+  /** Retry-After in milliseconds, when GitHub sent one. */
+  retryAfterMs: number | null;
+  constructor(message: string, status: number, retryAfterMs: number | null) {
+    super(message);
+    this.status = status;
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+/**
+ * Whether a failed upload may be tried again: no answer at all (the connection broke), or a
+ * status GitHub gives transiently. A 404 is among them because the uploads host has answered it
+ * for a draft the API had just created (run 41769699218); the caller retries only after the API
+ * confirms the draft is still there, so a deleted release is never retried.
+ */
+function transient(error: unknown): boolean {
+  if (!(error instanceof GithubError)) return true;
+  const { status } = error;
+  return status === 404 || status === 408 || status === 429 || status >= 500;
 }
 
 interface GithubRelease {
@@ -28,6 +61,8 @@ interface GithubRelease {
 
 export function githubReleaseStore(options: GithubReleaseStoreOptions): ReleaseStore {
   const api = `${options.apiUrl ?? "https://api.github.com"}/repos/${options.repo}`;
+  const log = options.log ?? silentLogger;
+  const retryDelayMs = options.retryDelayMs ?? 10_000;
   const headers = {
     authorization: `Bearer ${options.token}`,
     accept: "application/vnd.github+json",
@@ -43,12 +78,19 @@ export function githubReleaseStore(options: GithubReleaseStoreOptions): ReleaseS
       // A 404 on a read or delete is an answer ("not there"); on a write it is a failure.
       if (response.ok || (response.status === 404 && (method === "GET" || method === "DELETE")))
         return response;
-      // Only GETs are retried: a half-done upload or create is cleaned up by the caller instead.
+      // Only GETs are retried here: an upload is retried by `upload`, which first checks the
+      // draft and clears a partial asset; a create is cleaned up by the caller instead.
       if (method === "GET" && response.status >= 500 && attempt < 3) {
         await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
         continue;
       }
-      throw new Error(`GitHub ${method} ${url}: ${response.status} ${await response.text()}`);
+      const requestId = response.headers.get("x-github-request-id");
+      const retryAfter = Number(response.headers.get("retry-after") ?? Number.NaN);
+      throw new GithubError(
+        `GitHub ${method} ${url}: ${response.status} ${await response.text()}${requestId ? ` (request ${requestId})` : ""}`,
+        response.status,
+        Number.isFinite(retryAfter) ? retryAfter * 1000 : null,
+      );
     }
   }
 
@@ -87,6 +129,54 @@ export function githubReleaseStore(options: GithubReleaseStoreOptions): ReleaseS
       });
   }
 
+  /**
+   * Uploads one asset to a draft, trying again while the failure looks transient and the draft
+   * is still a draft. Before another try it removes any asset of the same name the failed one
+   * left (an empty "starter" asset, or a whole one whose answer was lost), which would otherwise
+   * make GitHub refuse the name.
+   */
+  async function upload(release: GithubRelease, file: { name: string; path: string }) {
+    const { size } = await stat(file.path);
+    const url = `${release.upload_url.replace(/\{.*\}$/, "")}?name=${encodeURIComponent(file.name)}`;
+    for (let attempt = 1; ; attempt++) {
+      const started = Date.now();
+      const body = createReadStream(file.path);
+      try {
+        await call(url, {
+          method: "POST",
+          headers: { "content-type": "application/octet-stream", "content-length": String(size) },
+          body: Readable.toWeb(body) as unknown as BodyInit,
+          duplex: "half",
+        } as RequestInit);
+        log.info(`uploaded ${file.name} to draft ${release.id}`, {
+          bytes: size,
+          seconds: Math.round((Date.now() - started) / 1000),
+          attempt,
+        });
+        return;
+      } catch (error) {
+        // GitHub may answer before it has read the whole body; stop sending this attempt's.
+        body.destroy();
+        if (attempt >= UPLOAD_ATTEMPTS || !transient(error)) throw error;
+        const wait = Math.max(
+          retryDelayMs * attempt,
+          error instanceof GithubError ? (error.retryAfterMs ?? 0) : 0,
+        );
+        log.warn(`upload of ${file.name} to draft ${release.id} failed; trying again`, {
+          error: String(error),
+          attempt,
+          waitSeconds: wait / 1000,
+        });
+        await new Promise((resolve) => setTimeout(resolve, wait));
+        const state = await call(`/releases/${release.id}`).catch(() => null);
+        const current = state?.ok ? ((await state.json()) as GithubRelease) : null;
+        if (!current?.draft) throw error;
+        for (const left of current.assets.filter((a) => a.name === file.name))
+          await call(`/releases/assets/${left.id}`, { method: "DELETE" });
+      }
+    }
+  }
+
   return {
     async list() {
       return (await releases())
@@ -117,28 +207,27 @@ export function githubReleaseStore(options: GithubReleaseStoreOptions): ReleaseS
         method: "POST",
         body: JSON.stringify({ tag_name: tag, name: tag, body: notes, draft: true }),
       });
+      log.info(`created draft ${release.id} for ${tag}`);
+      let publishing = false;
       try {
-        const uploadUrl = release.upload_url.replace(/\{.*\}$/, "");
-        for (const file of files) {
-          const { size } = await stat(file.path);
-          await call(`${uploadUrl}?name=${encodeURIComponent(file.name)}`, {
-            method: "POST",
-            headers: { "content-type": "application/octet-stream", "content-length": String(size) },
-            body: Readable.toWeb(createReadStream(file.path)) as unknown as BodyInit,
-            duplex: "half",
-          } as RequestInit);
-        }
+        for (const file of files) await upload(release, file);
+        publishing = true;
         await call(`/releases/${release.id}`, {
           method: "PATCH",
           body: JSON.stringify({ draft: false, make_latest: "true" }),
         });
       } catch (error) {
-        // The publishing PATCH may have gone through with its response lost. A published
-        // release is complete (publishing is the last step): keep it. Delete it only when it is
-        // known to be a draft; when its state is unknown, the next create cleans it up if it is.
+        // The publishing PATCH may have gone through with its response lost. A release that PATCH
+        // published is complete (publishing is the last step): keep it. One published before this
+        // call got that far was not published by it: keep it, but fail. Delete the release only
+        // when it is known to be a draft; when its state is unknown, the next create cleans it up
+        // if it is.
         const state = await call(`/releases/${release.id}`).catch(() => null);
         const current = state?.ok ? ((await state.json()) as GithubRelease) : null;
-        if (current && !current.draft) return;
+        if (current && !current.draft) {
+          if (publishing) return;
+          throw error;
+        }
         if (current) await remove(current).catch(() => {});
         throw error;
       }
