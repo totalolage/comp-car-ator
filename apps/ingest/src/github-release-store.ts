@@ -81,6 +81,7 @@ export function githubReleaseStore(options: GithubReleaseStoreOptions): ReleaseS
       // Only GETs are retried here: an upload is retried by `upload`, which first checks the
       // draft and clears a partial asset; a create is cleaned up by the caller instead.
       if (method === "GET" && response.status >= 500 && attempt < 3) {
+        await response.body?.cancel();
         await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
         continue;
       }
@@ -142,12 +143,13 @@ export function githubReleaseStore(options: GithubReleaseStoreOptions): ReleaseS
       const started = Date.now();
       const body = createReadStream(file.path);
       try {
-        await call(url, {
+        const response = await call(url, {
           method: "POST",
           headers: { "content-type": "application/octet-stream", "content-length": String(size) },
           body: Readable.toWeb(body) as unknown as BodyInit,
           duplex: "half",
         } as RequestInit);
+        await response.body?.cancel();
         log.info(`uploaded ${file.name} to draft ${release.id}`, {
           bytes: size,
           seconds: Math.round((Date.now() - started) / 1000),

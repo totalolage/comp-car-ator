@@ -72,14 +72,16 @@ interface FakeRelease {
  * How the fake answers one upload: a status (`early`: before reading the body, as GitHub may),
  * or a scenario: `partial` leaves an empty asset of that name and answers 502; `lost` stores
  * the asset but drops the connection; `gone` deletes the release and answers 404; `published`
- * publishes the release (as another writer would) and answers 502.
+ * publishes the release (as another writer would) and answers 502; `unchecked` answers 502 and
+ * drops the connection of the next release lookup.
  */
 type UploadFault =
   | { status: number; early?: boolean; retryAfter?: string }
   | "partial"
   | "lost"
   | "gone"
-  | "published";
+  | "published"
+  | "unchecked";
 
 /** The slice of the GitHub REST API the adapter uses, in memory. */
 interface GithubHarness extends Harness {
@@ -179,6 +181,10 @@ async function githubHarness(): Promise<GithubHarness> {
       }
       if (fault === "published") {
         release.draft = false;
+        return send(502, { message: "upload failed" });
+      }
+      if (fault === "unchecked") {
+        loseLookup = true;
         return send(502, { message: "upload failed" });
       }
       if (fault === "partial") {
@@ -631,6 +637,21 @@ describe("GitHub release store", () => {
     h.failUploads({ status: 502 }, { status: 502 }, { status: 502 });
     await expect(create("data-1")).rejects.toThrow(/502/);
     expect(h.uploads()).toEqual(["a.txt", "a.txt", "a.txt"]);
+    expect(h.tags()).toEqual([]);
+  });
+
+  it("waits as long as GitHub's Retry-After asks before uploading again", async () => {
+    h.failUploads({ status: 429, retryAfter: "1" });
+    const started = Date.now();
+    await create("data-1");
+    expect(Date.now() - started).toBeGreaterThanOrEqual(1000);
+    expect(h.uploads()).toEqual(["a.txt", "a.txt"]);
+  });
+
+  it("does not upload again to a draft whose state it could not check", async () => {
+    h.failUploads("unchecked");
+    await expect(create("data-1")).rejects.toThrow(/502/);
+    expect(h.uploads()).toEqual(["a.txt"]);
     expect(h.tags()).toEqual([]);
   });
 
