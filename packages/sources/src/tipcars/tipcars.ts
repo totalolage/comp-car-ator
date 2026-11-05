@@ -53,7 +53,8 @@
  *   balances the recount without coming out, but leaves the count by ref short: a year then
  *   gets the whole pass below, a price band stays not done. A new or demo listing of a part
  *   done earlier in the census comes out again only if no run of the census read it whole:
- *   a SliceDone `listing:<ref>` after its part's SliceDone marks one that was. Limit: the
+ *   a SliceDone `listing:<ref>` after its part's SliceDone marks one that was (a part paged
+ *   again yields its SliceDone again for the ones it read whole; see `again`). Limit: the
  *   count by ref is necessary, not sufficient: a used listing harvested and then sold still
  *   counts, so it can stand in for one that rose into a part already done within the same
  *   minutes.
@@ -237,6 +238,12 @@ class Harvest {
   private readonly skipped: Slice[] = [];
   /** Requests this run has made. */
   private requests = 0;
+  /**
+   * Whether a ListingSeen the Ledger rejects, naming no slice, came out since the last
+   * SliceDone: the Ledger counts it towards the next SliceDone, so a part paged again yields
+   * none of its own (`again`) and leaves it to the slice holding the part.
+   */
+  private unclaimed = false;
   private readonly ctx: HarvestContext;
   private readonly maxPages: number;
   private readonly cap: number;
@@ -266,8 +273,11 @@ class Harvest {
     // well as the slice it holds a known listing in.
     for (const slice of this.slices()) {
       const key = sliceKey(slice);
-      for await (const o of this.slice(slice))
+      for await (const o of this.slice(slice)) {
+        if (o.kind === "SliceDone") this.unclaimed = false;
+        else if (o.kind === "ListingSeen" && !takeable(o)) this.unclaimed = true;
         yield o.kind === "ListingSeen" && takeable(o) ? { ...o, slice: key } : o;
+      }
     }
     if (this.short.length > 0) {
       throw new Error(
@@ -466,14 +476,35 @@ class Harvest {
   }
 
   /**
+   * Pages a part done earlier in the census again (`reread`), returning its complete pass's
+   * refs. When that pass read new or demo listings whole, the part's SliceDone comes out again
+   * with their marks right after it, as after a slice's first SliceDone. Left to the SliceDone
+   * of the slice holding the part, the marks were lost whenever a run stopped before that
+   * slice was done, so each run of the census read the same listings whole again: on
+   * 2026-11-03 to 05 some 8,000 of the new list's detail pages a day, which left no time to
+   * finish it. Not after a rejected ListingSeen naming no slice (`unclaimed`): the Ledger
+   * counts that one towards the next SliceDone, which must stay the holding slice's.
+   */
+  private async *again(part: Slice): AsyncGenerator<Observation, Set<string> | null> {
+    const refs = yield* this.reread(part);
+    const unmarked = (ref: string) => this.detailed.has(ref) && !this.marked.has(ref);
+    // `run` has seen every observation `reread` yielded before it resumed `reread`.
+    if (refs && !this.unclaimed && [...refs].some(unmarked)) {
+      yield { kind: "SliceDone", slice: sliceKey(part) };
+      yield* this.marks(refs);
+    }
+    return refs;
+  }
+
+  /**
    * Pages a part done earlier in the census again, returning its complete pass's refs. A
    * used one comes out again from its card. A new or demo one costs a detail page, so it
    * comes out again only when no run of this census has read it whole (its `listing:<ref>`
    * mark, and the Ledger still knows it): one that moved into the part since it was done, or
-   * arrived. A short pass recovers through smaller parts, each complete and reconciled
-   * against this part; its short pass's refs never count towards that recovery.
+   * arrived. A short pass recovers through smaller parts (`again`), each complete and
+   * reconciled against this part; its short pass's refs never count towards that recovery.
    */
-  private async *again(part: Slice): AsyncGenerator<Observation, Set<string> | null> {
+  private async *reread(part: Slice): AsyncGenerator<Observation, Set<string> | null> {
     const harvested = new Set<string>();
     let reported = 0;
     for await (const page of this.pages(part, true)) {
