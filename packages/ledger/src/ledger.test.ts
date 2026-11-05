@@ -1249,10 +1249,10 @@ describe("Ledger absence per finished slice", () => {
 
   it("a rejected price sighting naming its slice keeps that one not done, not the next SliceDone", async () => {
     ledger = openLedger(":memory:");
-    // x was first recorded by an incremental run, so the Ledger holds it in no slice; a2 is
-    // held in A, where the next run does not meet it.
+    // x was first recorded by an incremental run, so the Ledger holds it in no slice. a2 is
+    // held in A by a census that is over, and the next census does not meet it.
     await run("bazos", "incremental", "2026-10-03", [seen("x", 1)]);
-    await unfinished("2026-10-04", [inSlice("a1", "A"), inSlice("a2", "A")]);
+    await run("bazos", "full", "2026-10-04", [inSlice("a1", "A"), inSlice("a2", "A"), done("A")]);
     // x now shows a price in another currency, met in A before C's SliceDone comes out.
     const price = { kind: "ListingPriceSeen", ref: "x", price: { amount: 1, currency: "EUR" } };
     const obs = [inSlice("a1", "A"), { ...price, slice: "A" } as Observation, done("C"), done("A")];
