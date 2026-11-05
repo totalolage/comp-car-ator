@@ -1247,6 +1247,28 @@ describe("Ledger absence per finished slice", () => {
     expect(ledger.checkpoint("bazos").sliceDoneAt("D")).toBeNull();
   });
 
+  it("a rejected price sighting naming its slice keeps that one not done, not the next SliceDone", async () => {
+    ledger = openLedger(":memory:");
+    // x was first recorded by an incremental run, so the Ledger holds it in no slice; a2 is
+    // held in A, where the next run does not meet it.
+    await run("bazos", "incremental", "2026-10-03", [seen("x", 1)]);
+    await unfinished("2026-10-04", [inSlice("a1", "A"), inSlice("a2", "A")]);
+    // x now shows a price in another currency, met in A before C's SliceDone comes out.
+    const price = { kind: "ListingPriceSeen", ref: "x", price: { amount: 1, currency: "EUR" } };
+    const obs = [inSlice("a1", "A"), { ...price, slice: "A" } as Observation, done("C"), done("A")];
+    async function* failing() {
+      yield* obs;
+      throw new Error("stopped");
+    }
+    const failure = await run("bazos", "full", "2026-10-05", failing()).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(RunFailedError);
+    // A stays not done, so a2 counts no miss.
+    expect((failure as RunFailedError).summary).toMatchObject({ rejectedTotal: 2, missed: 0 });
+    const checkpoint = ledger.checkpoint("bazos");
+    expect(checkpoint.sliceDoneAt("C")).toEqual(day("2026-10-05"));
+    expect(checkpoint.sliceDoneAt("A")).toBeNull();
+  });
+
   it("retires a listing missed twice only once the census of its second miss is over", async () => {
     ledger = openLedger(":memory:");
     await stalledWeek("2026-10-04", [inSlice("a1", "A"), inSlice("m", "A"), done("A")]);

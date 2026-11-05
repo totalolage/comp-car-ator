@@ -270,13 +270,16 @@ class Harvest {
     }
     // A listing names its year or list (ListingSeen.slice), not a price part: a price moves.
     // One the Ledger rejects names none, so it keeps the part it came out in not done, as
-    // well as the slice it holds a known listing in.
+    // well as the slice it holds a known listing in. A price sighting names it too: only the
+    // Ledger knows when it rejects one (a price in another currency), and a part paged again
+    // may yield its SliceDone before the slice is done (`again`).
     for (const slice of this.slices()) {
       const key = sliceKey(slice);
       for await (const o of this.slice(slice)) {
         if (o.kind === "SliceDone") this.unclaimed = false;
         else if (o.kind === "ListingSeen" && !takeable(o)) this.unclaimed = true;
-        yield o.kind === "ListingSeen" && takeable(o) ? { ...o, slice: key } : o;
+        if (o.kind === "ListingPriceSeen") yield { ...o, slice: key };
+        else yield o.kind === "ListingSeen" && takeable(o) ? { ...o, slice: key } : o;
       }
     }
     if (this.short.length > 0) {

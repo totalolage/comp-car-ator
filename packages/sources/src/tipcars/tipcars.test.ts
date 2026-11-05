@@ -808,7 +808,12 @@ describe("tipcars source", () => {
       const { x, os, run, record } = await year(21, { passFails: true });
       await expect(run).rejects.toThrow(/No recorded interaction for .*str=2-20&2000-2000=/);
       expect(prices(os)).toEqual([
-        { kind: "ListingPriceSeen", ref: x, price: { amount: record, currency: "CZK" } },
+        {
+          kind: "ListingPriceSeen",
+          ref: x,
+          price: { amount: record, currency: "CZK" },
+          slice: "used:2000",
+        },
       ]);
       expect(listings(os).map((o) => o.ref)).not.toContain(x);
     });
@@ -1338,6 +1343,10 @@ describe("tipcars source", () => {
       harvest(cassette, { ...run, done: bands, known, failAt: detailOf(b) }, out),
     ).rejects.toThrow(/planned interruption/);
     expect(slicesDone(out)).toEqual(["new:500000-599999", `listing:${c}`]);
+    // Its price sightings name the new list, so one the Ledger rejects keeps that not done
+    // rather than the band's SliceDone after it.
+    expect(prices(out).length).toBeGreaterThan(0);
+    expect(prices(out).every((o) => o.slice === "new")).toBe(true);
     // The next run of the census reads c whole no more.
     const urls: string[] = [];
     await harvest(cassette, { ...run, done: [...bands, ...slicesDone(out)], known, urls });

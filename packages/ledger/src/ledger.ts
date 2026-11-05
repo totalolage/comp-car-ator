@@ -407,7 +407,7 @@ export function openLedger(path: string): Ledger {
        */
       const rejectedSighting = (o: Observation) => {
         const slices = new Set<string>();
-        if (o?.kind === "ListingSeen" && typeof o.slice === "string") slices.add(o.slice);
+        if (namesSlice(o)) slices.add((o as { slice: string }).slice);
         if (
           (o?.kind === "ListingSeen" || o?.kind === "ListingPriceSeen") &&
           typeof o.ref === "string"
@@ -657,5 +657,7 @@ function defined<T extends object>(value: T): Partial<T> {
 
 /** A ListingSeen naming the census slice it was met in, valid or not. */
 function namesSlice(o: Observation): boolean {
-  return o?.kind === "ListingSeen" && typeof o.slice === "string";
+  return (
+    (o?.kind === "ListingSeen" || o?.kind === "ListingPriceSeen") && typeof o.slice === "string"
+  );
 }
