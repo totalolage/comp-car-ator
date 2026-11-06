@@ -64,21 +64,18 @@ const T0_HEADERS = {
 
 /** T0: built-in fetch with browser-like headers. */
 function createT0Fetcher(timeoutMs: number): TierFetcher {
-  return async ({ url, headers, binary, stream, signal }) => {
-    if (stream) {
-      return fetchStream(url, signal, timeoutMs, (combined) =>
-        fetch(url, {
-          headers: { ...T0_HEADERS, ...headers },
-          redirect: "follow",
-          signal: combined,
-        }),
-      );
-    }
-    const response = await fetch(url, {
+  return async ({ url, headers, form, binary, stream, signal }) => {
+    const init: RequestInit = {
       headers: { ...T0_HEADERS, ...headers },
       redirect: "follow",
-      signal: withTimeout(signal, timeoutMs),
-    });
+      ...(form ? { method: "POST", body: form } : {}),
+    };
+    if (stream) {
+      return fetchStream(url, signal, timeoutMs, (combined) =>
+        fetch(url, { ...init, signal: combined }),
+      );
+    }
+    const response = await fetch(url, { ...init, signal: withTimeout(signal, timeoutMs) });
     return toRaw(response.url || url, response, binary);
   };
 }
@@ -90,13 +87,18 @@ function createT0Fetcher(timeoutMs: number): TierFetcher {
  */
 function createT1Fetcher(timeoutMs: number): TierFetcher {
   let client: Promise<Impit> | undefined;
-  return async ({ url, headers, binary, stream, signal }) => {
+  return async ({ url, headers, form, binary, stream, signal }) => {
     client ??= import("impit").then(({ Impit }) => new Impit({ browser: "chrome151" }));
     // Impit cannot stop a native request before its headers arrive (an abort only ends the
     // wait), and its own timeout covers the whole body, so T1 does not stream: a `stream`
     // request is read in full under that timeout, which ends the native request with it, up to
     // T1_STREAM_MAX_BYTES. The policy then serves the bytes as chunks, as for T2.
-    const response = await (await client).fetch(url, { headers, signal, timeout: timeoutMs });
+    const response = await (await client).fetch(url, {
+      headers,
+      signal,
+      timeout: timeoutMs,
+      ...(form ? { method: "POST", body: form } : {}),
+    });
     if (!stream) return toRaw(response.url || url, response, binary);
     return toRaw(response.url || url, response, true, T1_STREAM_MAX_BYTES);
   };

@@ -14,6 +14,14 @@ export interface HttpRequest {
   minTier?: Tier;
   /** Accept-Language flavour. Default "cs". */
   locale?: "cs" | "de" | "en";
+  /**
+   * Send a POST with this form-urlencoded body instead of a GET, for APIs that take their
+   * query in the body (EEA DiscoData's SQL endpoint, whose gateway refuses SQL in a URL). Only
+   * for read-only queries: like a GET it is retried, re-sent at T1 and cached. T0 and T1 only:
+   * T2 sends requests as page navigations, which carry no body, so a form request never
+   * reaches T2.
+   */
+  form?: Record<string, string>;
   /** Return the raw bytes in `Page.bytes` (PDF price lists, ZIP datasets). */
   binary?: boolean;
   /**

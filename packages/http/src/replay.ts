@@ -4,6 +4,7 @@ import { chunksOf, relayChunks, streams } from "./chunks.ts";
 import {
   type Http,
   HttpBlockedError,
+  type HttpRequest,
   normalizeRequest,
   type Page,
   ReplayMissError,
@@ -12,7 +13,8 @@ import {
 
 /** One recorded request/response pair. */
 export interface Interaction {
-  request: { url: string };
+  /** `form` is the body of a POST (`HttpRequest.form`); a GET has none. */
+  request: { url: string; form?: Record<string, string> };
   response: {
     url: string;
     status: number;
@@ -32,22 +34,22 @@ export interface Cassette {
 
 /**
  * The test Http adapter. Serves recorded responses matched on the URL (query parameter
- * order ignored). Repeated requests for one URL get the recorded responses in order, then
+ * order ignored) and the form body, if any (field order ignored). Repeated requests for one URL get the recorded responses in order, then
  * the last one again. A recorded bot challenge rejects with HttpBlockedError, as the live
  * adapter would after exhausting its tiers.
  */
 export function createReplayHttp(cassette: Cassette): Http {
   const byUrl = new Map<string, Interaction[]>();
   for (const interaction of cassette.interactions) {
-    const key = matchKey(interaction.request.url);
+    const key = matchKey(interaction.request.url, interaction.request.form);
     byUrl.set(key, [...(byUrl.get(key) ?? []), interaction]);
   }
   const served = new Map<string, number>();
   return {
     async get(input) {
-      const { url, signal, binary, stream } = normalizeRequest(input);
+      const { url, form, signal, binary, stream } = normalizeRequest(input);
       signal?.throwIfAborted();
-      const key = matchKey(url);
+      const key = matchKey(url, form);
       const candidates = byUrl.get(key);
       if (!candidates) throw new ReplayMissError(url);
       const index = Math.min(served.get(key) ?? 0, candidates.length - 1);
@@ -76,7 +78,7 @@ export function recordingHttp(inner: Http): { http: Http; cassette(): Cassette }
       async get(input) {
         const request = normalizeRequest(input);
         const page = await inner.get(request);
-        const interaction = toInteraction(request.url, page);
+        const interaction = toInteraction(request, page);
         interactions.push(interaction);
         if (!page.chunks) return page;
         // A streamed body lands in the cassette when the consumer finishes or stops reading,
@@ -107,12 +109,13 @@ export async function saveCassette(path: string | URL, cassette: Cassette): Prom
 }
 
 /** Stores a Page as an Interaction (also the raw response cache's entry format). */
-export function toInteraction(url: string, page: Page): Interaction {
+export function toInteraction(request: HttpRequest, page: Page): Interaction {
   // Cookies are session state, not fixture data; keep them out of committed cassettes.
   const { "set-cookie": _cookie, ...headers } = page.headers;
   const { bytes, chunks: _chunks, ...rest } = page;
+  const { url, form } = request;
   return {
-    request: { url },
+    request: form ? { url, form: { ...form } } : { url },
     response: {
       ...rest,
       headers,
@@ -131,10 +134,16 @@ export function toPage(response: Interaction["response"], binary: boolean): Page
   return page;
 }
 
-/** URL identity for matching: query parameter order and fragment ignored. */
-export function matchKey(url: string): string {
+/**
+ * Request identity for matching: query parameter order and fragment ignored; a form body
+ * (field order ignored) makes it a POST, distinct from a GET of the same URL.
+ */
+export function matchKey(url: string, form?: Record<string, string>): string {
   const parsed = new URL(url);
   parsed.searchParams.sort();
   parsed.hash = "";
-  return parsed.toString();
+  if (!form) return parsed.toString();
+  const body = new URLSearchParams(form);
+  body.sort();
+  return `POST ${parsed} ${body}`;
 }

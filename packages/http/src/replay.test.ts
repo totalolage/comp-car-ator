@@ -81,6 +81,32 @@ describe("replay Http", () => {
     expect((await createReplayHttp(recorded).get("https://b.example/")).body).toBe("hello");
   });
 
+  it("matches a form request on its fields in any order, apart from a GET of the URL", async () => {
+    const inner: Http = {
+      get: async (request) => ({
+        url: "https://b.example/sql",
+        status: 200,
+        headers: {},
+        body: typeof request === "string" ? "get" : `posted ${request.form?.query}`,
+        tier: "T0",
+      }),
+    };
+    const recorder = recordingHttp(inner);
+    await recorder.http.get({ url: "https://b.example/sql", form: { query: "q1", p: "1" } });
+    const recorded = recorder.cassette();
+    expect(recorded.interactions[0]?.request).toEqual({
+      url: "https://b.example/sql",
+      form: { query: "q1", p: "1" },
+    });
+    const http = createReplayHttp(recorded);
+    const page = await http.get({ url: "https://b.example/sql", form: { p: "1", query: "q1" } });
+    expect(page.body).toBe("posted q1");
+    await expect(http.get("https://b.example/sql")).rejects.toBeInstanceOf(ReplayMissError);
+    await expect(
+      http.get({ url: "https://b.example/sql", form: { query: "q2", p: "1" } }),
+    ).rejects.toBeInstanceOf(ReplayMissError);
+  });
+
   it("round-trips binary responses (PDF, ZIP) through a cassette", async () => {
     const bytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x00, 0xff]);
     const inner: Http = {

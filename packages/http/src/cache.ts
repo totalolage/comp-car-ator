@@ -53,7 +53,7 @@ export function createCachedHttp(
       version: 1,
       storedAt: new Date(now()).toISOString(),
       key,
-      interaction: toInteraction(request.url, page),
+      interaction: toInteraction(request, page),
     };
     await mkdir(options.dir, { recursive: true });
     // Write then rename, so a crash never leaves a half-written entry behind.
@@ -83,7 +83,7 @@ function cacheKey(request: HttpRequest): string {
     .map(([name, value]) => [name.toLowerCase(), value])
     .sort(([a], [b]) => ((a as string) < (b as string) ? -1 : 1));
   return JSON.stringify([
-    matchKey(request.url),
+    matchKey(request.url, request.form),
     request.binary ?? false,
     request.locale ?? "cs",
     request.minTier ?? "T0",
