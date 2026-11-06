@@ -523,7 +523,28 @@ describe("bazos source", () => {
       expect(listings(observations).every((o) => o.slice?.startsWith("seat;"))).toBe(true);
     });
 
-    it("incremental run: reads the ads listed and goes on", async () => {
+    it("full run: a known ad listed on the last page only is still proven live", async () => {
+      const kia = await category_();
+      const lastOnly = kia.ids.slice(36, 40).filter((id) => IN_SCOPE.includes(id));
+      expect(lastOnly.length).toBeGreaterThan(0);
+      const details = await loadCassette(fixture("details"));
+      const { observations, error } = await harvest(
+        { version: 1, interactions: [...(await capped("kia")), ...details.interactions] },
+        "full",
+        { isKnown: (ref) => lastOnly.includes(ref) },
+      );
+      expect(String(error)).toMatch(/not harvested whole: kia \(the site lists 40 of its 59 ads/);
+      expect(
+        observations
+          .filter((o): o is ListingPriceSeen => o.kind === "ListingPriceSeen")
+          .map((o) => o.ref),
+      ).toEqual(lastOnly);
+    });
+
+    it("incremental run: reads the ads listed, the last page's too, and goes on", async () => {
+      const kia = await category_();
+      const lastOnly = kia.ids.slice(36, 40).filter((id) => IN_SCOPE.includes(id));
+      expect(lastOnly.length).toBeGreaterThan(0);
       const recorded = await capped("kia");
       const details = await loadCassette(fixture("details"));
       const { observations, error, warnings, listed } = await harvest(
@@ -534,7 +555,31 @@ describe("bazos source", () => {
       expect(error).toBeUndefined();
       expect(warnings).toContain("bazos: kia is listed only to ad 40 of 59");
       expect(listed).toEqual(["/kia/", "/kia/16/", "/kia/32/"]);
-      expect(refs(observations).length).toBeGreaterThan(0);
+      expect(refs(observations).sort()).toEqual(
+        IN_SCOPE.filter((id) => kia.ids.indexOf(id) < 40).sort(),
+      );
+    });
+
+    it("a last page off its offset that reaches the count ends the walk as usual", async () => {
+      // As when ads go during the walk: /kia/48/ serves 41-59, the category's end.
+      const kia = await category_();
+      const served = await kia.cassette([
+        [0, kia.ids],
+        [16, kia.ids],
+        [32, kia.ids],
+        [40, kia.ids],
+      ]);
+      for (const i of served.interactions) {
+        if (!i.request.url.endsWith("/kia/40/")) continue;
+        const url = "https://auto.bazos.cz/kia/48/";
+        i.request = { url };
+        i.response = { ...i.response, url };
+      }
+      const { observations, error, warnings } = await harvest(served, "full");
+      expect(error).toBeUndefined();
+      expect(warnings).toEqual([]);
+      expect(refs(observations).sort()).toEqual([...IN_SCOPE].sort());
+      expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
     });
   });
 

@@ -507,8 +507,8 @@ class Harvest {
    * A category's pages from the top, each overlapping the one before by a few rows. Ends
    * at the page whose header reaches the count. Throws LostPlace when ads keep moving up
    * past the overlap faster than the walk can step back, or a page shows none of its rows,
-   * and Unlisted when a page short of the count starts elsewhere than its offset: the site
-   * lists no ads past that page, and serves it for every offset beyond.
+   * and Unlisted after a page short of the count that starts elsewhere than its offset: the
+   * site lists no ads past that page, and serves it for every offset beyond.
    * A census's sightings from each read come out before its page (`listPage`).
    */
   private async *pages(category: string): AsyncGenerator<ListPage | Sighting> {
@@ -520,6 +520,8 @@ class Harvest {
       // A page showing none of its rows leaves the walk nowhere to go on from.
       if (page.uneven && page.rows.length === 0) throw new LostPlace(category, offset);
       if (page.to < page.total && page.from !== offset + 1) {
+        // Its rows are listed too, the last ones on no other page.
+        yield page;
         throw new Unlisted(category, offset, page);
       }
       if (previous && !page.rows.some((row) => previous?.has(row.id))) {
