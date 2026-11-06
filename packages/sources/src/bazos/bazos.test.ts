@@ -453,6 +453,91 @@ describe("bazos source", () => {
     expect(observations).toEqual([]);
   });
 
+  describe("a category deeper than the site lists", () => {
+    // As Škoda live on 2026-11-06: the site shows a category's first 20,000 ads only, and
+    // every offset past them serves the page ending at the 20,000th (offset 19,968 showed
+    // 19,961-20,000 of 31,401). Here the 59 Kia ads are listed only to the 40th.
+    async function capped(category: string) {
+      const kia = await category_();
+      const served = await kia.cassette([
+        [0, kia.ids],
+        [16, kia.ids],
+        [20, kia.ids],
+      ]);
+      const last = served.interactions.find(({ request }) => request.url.endsWith("/kia/20/"));
+      if (!last) throw new Error("no page at offset 20");
+      const interactions = served.interactions.filter((i) => i !== last);
+      // Far enough past the cap that a walk not stopping there runs out of recorded pages.
+      for (let offset = 32; offset <= 160; offset += 16) {
+        const url = `https://auto.bazos.cz/kia/${offset}/`;
+        interactions.push({ request: { url }, response: { ...last.response, url } });
+      }
+      const atCategory = (url: string) => url.replace("/kia/", `/${category}/`);
+      for (const i of interactions) {
+        i.request = { ...i.request, url: atCategory(i.request.url) };
+        i.response = { ...i.response, url: atCategory(i.response.url) };
+      }
+      return interactions;
+    }
+    const category_ = category;
+
+    it("full run: the category stays out of the census, by name, after one walk to the last page listed, and the run goes on", async () => {
+      // Kia listed only to its 40th ad; the same 59 ads, listed whole, as Seat.
+      const seat = await category_();
+      const whole = await seat.cassette([
+        [0, seat.ids],
+        [16, seat.ids],
+        [32, seat.ids],
+        [48, seat.ids],
+      ]);
+      const seatPages = whole.interactions
+        .filter(({ request }) => !request.url.includes("/inzerat/"))
+        .map((i) => {
+          const url = i.request.url.replace("/kia/", "/seat/");
+          return { request: { url }, response: { ...i.response, url } };
+        });
+      const ads = whole.interactions.filter(({ request }) => request.url.includes("/inzerat/"));
+      const { observations, error, warnings, listed } = await harvest(
+        { version: 1, interactions: [...(await capped("kia")), ...seatPages, ...ads] },
+        "full",
+        {},
+        undefined,
+        ["kia", "seat"],
+      );
+      expect(warnings).toContain("bazos: kia is listed only to ad 40 of 59");
+      expect(String(error)).toBe(
+        "Error: bazos: categories not harvested whole: kia (the site lists 40 of its 59 ads (offset 32 served 21-40))",
+      );
+      // One walk, ended at the first page off its offset: no second attempt, no top-up.
+      expect(listed.filter((path) => path.startsWith("/kia/"))).toEqual([
+        "/kia/",
+        "/kia/16/",
+        "/kia/32/",
+      ]);
+      // Seat, after it, is harvested whole, and only Seat: Kia's listed ads get no ad page.
+      expect(observations.filter((o) => o.kind === "SliceDone")).toEqual([
+        { kind: "SliceDone", slice: "seat;part=0/2" },
+        { kind: "SliceDone", slice: "seat;part=1/2" },
+      ]);
+      expect(refs(observations).sort()).toEqual([...IN_SCOPE].sort());
+      expect(listings(observations).every((o) => o.slice?.startsWith("seat;"))).toBe(true);
+    });
+
+    it("incremental run: reads the ads listed and goes on", async () => {
+      const recorded = await capped("kia");
+      const details = await loadCassette(fixture("details"));
+      const { observations, error, warnings, listed } = await harvest(
+        { version: 1, interactions: [...recorded, ...details.interactions] },
+        "incremental",
+        { lastRunAt: LONG_AGO },
+      );
+      expect(error).toBeUndefined();
+      expect(warnings).toContain("bazos: kia is listed only to ad 40 of 59");
+      expect(listed).toEqual(["/kia/", "/kia/16/", "/kia/32/"]);
+      expect(refs(observations).length).toBeGreaterThan(0);
+    });
+  });
+
   it("leaves out new cars", async () => {
     const recorded = await cassette("full", (c) => {
       // Said in the list row: no ad page. Said on the ad page only: read, then left out.
