@@ -534,10 +534,15 @@ describe("aaaauto source", () => {
     await expect(harvest(noIds, { mode: "full" })).rejects.toThrow(/no car on it has an id/);
     // A car list the site did set, but not as it answers it, is a change too: no second read.
     const urls: string[] = [];
-    const malformed = edit(await loadCassette(full), Y2005_2, (r) => ({
-      ...r,
-      body: r.body.replace('"car-list":{', '"car-list":{"message":null,"was":{'),
-    }));
+    const malformed = edit(await loadCassette(full), Y2005_2, (r) => {
+      const start = r.body.indexOf(STATE) + STATE.length;
+      const end = r.body.indexOf("</script>", start);
+      const state = { ...JSON.parse(r.body.slice(start, end)), "car-list": { message: null } };
+      return {
+        ...r,
+        body: `${r.body.slice(0, start)}${JSON.stringify(state)}${r.body.slice(end)}`,
+      };
+    });
     await expect(harvest(malformed, { mode: "full", urls })).rejects.toThrow(
       /AAA Auto page changed: no car list/,
     );
