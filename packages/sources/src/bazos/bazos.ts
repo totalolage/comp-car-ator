@@ -42,6 +42,13 @@
  * - A list page can show fewer rows than its header counts, twice running: seen in Citroën
  *   mid-list, where the same page and its neighbours read later showed every row, so the
  *   site served it short; Ford and Mercedes also repeatedly showed 19 of 20 rows.
+ *   Live probes on 2026-11-09 (/volkswagen/, /ostatni/) showed why: the site counts and places
+ *   ads from a list it refreshes in batches every few minutes but renders only ads still live,
+ *   so a removed ad keeps a counted slot with no row (no id, no link) for 2-8 minutes, across
+ *   2-3 overlapping pages, until the batch that lowers the total. A big category meets several
+ *   per walk, so Volkswagen and Ostatní rarely complete a census. Discounting such slots would
+ *   be unsound (an ad hidden while edited can return behind the check as another drops out),
+ *   so the check stays.
  *   Incremental reads the rows shown and goes on. A census walk cannot tell which ad such a
  *   page lacks, so it does not take the walk (see `collect`): a category where the site
  *   counts an ad it never lists stays out of the census, and the run fails naming it.
