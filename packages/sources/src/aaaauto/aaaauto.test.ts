@@ -115,6 +115,18 @@ function edit(
   return { ...cassette, interactions };
 }
 
+/**
+ * The page as the site serves it when its list API fails while rendering: HTTP 200, its state
+ * without `car-list` (the site sets the key only from a successful answer).
+ */
+const unrendered = (r: Response): Response => {
+  const start = r.body.indexOf(STATE) + STATE.length;
+  const end = r.body.indexOf("</script>", start);
+  const { "car-list": _, ...state } = JSON.parse(r.body.slice(start, end));
+  const body = `${r.body.slice(0, start)}${JSON.stringify({ ...state, "app-language": "cs" })}${r.body.slice(end)}`;
+  return { ...r, body };
+};
+
 const cars = (f: (cars: Car[]) => Car[]) => (r: Response) => ({
   ...r,
   body: withCars(r.body, f),
@@ -520,6 +532,48 @@ describe("aaaauto source", () => {
       cars((c) => c.map((car) => ({ ...car, id: undefined }))),
     );
     await expect(harvest(noIds, { mode: "full" })).rejects.toThrow(/no car on it has an id/);
+    // A car list the site did set, but not as it answers it, is a change too: no second read.
+    const urls: string[] = [];
+    const malformed = edit(await loadCassette(full), Y2005_2, (r) => {
+      const start = r.body.indexOf(STATE) + STATE.length;
+      const end = r.body.indexOf("</script>", start);
+      const state = { ...JSON.parse(r.body.slice(start, end)), "car-list": { message: null } };
+      return {
+        ...r,
+        body: `${r.body.slice(0, start)}${JSON.stringify(state)}${r.body.slice(end)}`,
+      };
+    });
+    await expect(harvest(malformed, { mode: "full", urls })).rejects.toThrow(
+      /AAA Auto page changed: no car list/,
+    );
+    expect(urls.filter((u) => u.endsWith(Y2005_2))).toHaveLength(1);
+  });
+
+  it("a page served without its car list is read again, and the slice is done", async () => {
+    // Replay serves a URL's recordings in order: page 2 of year:2005 comes twice without its list.
+    const cassette = await loadCassette(full);
+    const page = at(cassette, Y2005_2);
+    const empty = { ...page, response: unrendered(page.response) };
+    const interactions = [...cassette.interactions];
+    interactions.splice(interactions.indexOf(page), 0, empty, empty);
+    const urls: string[] = [];
+    const os = await harvest({ ...cassette, interactions }, { mode: "full", urls });
+    expect(urls.filter((u) => u.endsWith(Y2005_2))).toHaveLength(3);
+    expect(slicesDone(os)).toEqual(FULL_SLICES);
+    expect(listings(os)).toHaveLength(80);
+  });
+
+  it("a page that keeps coming without its car list fails the run after three reads", async () => {
+    const cassette = edit(await loadCassette(full), Y2005_2, unrendered);
+    const urls: string[] = [];
+    const os: Observation[] = [];
+    await expect(harvest(cassette, { mode: "full", urls }, os)).rejects.toThrow(
+      /AAA Auto served .*page=2 3 times without its car list/,
+    );
+    expect(urls.filter((u) => u.endsWith(Y2005_2))).toHaveLength(3);
+    // year:2005 is not done and none of its listings came out; year:2004 is whole.
+    expect(slicesDone(os)).toEqual(["year:2004"]);
+    expect(listings(os)).toHaveLength(24);
   });
 
   it("an HTTP error on a list page fails the run", async () => {

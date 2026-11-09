@@ -16,6 +16,11 @@
  *   (demo, same exclusion). Both are read newest added first (`sort=14`), so cars added while
  *   a list is paged only repeat a card. A URL without a query string is served from a stale
  *   cache with an older total, so every URL here has one.
+ * - The server renders a page from that API and sets `car-list` only from a successful answer:
+ *   when the call fails it still serves the page, HTTP 200, its state without the key (seen
+ *   once in some 560 list pages read 2026-11-08/09; that page read fine an hour later). Such a
+ *   page is read again, three reads in all, before the run fails; any other state without
+ *   its list is a changed page and fails the run at once.
  * - The card's headline "Akční cena" is a financing-only price; the cash price is the one a
  *   buyer pays outright. A VAT-deductible car is shown incl. VAT with its "bez DPH" price
  *   under it; for the others the site states nothing.
@@ -66,6 +71,8 @@ const FIRST_YEAR = 2000;
 /** "Užitkové vozy" (vans, trucks, buses), outside the passenger-car scope. */
 const NOT_UTILITY = "exclude-categoryId-array=16";
 const NEWEST_ADDED = "sort=14";
+/** Reads of a page the site serves without its car list before the run fails. */
+const LIST_READS = 3;
 
 interface List {
   /** Slice key in full runs. */
@@ -219,13 +226,28 @@ class Harvest {
       }
       const query = [list.filter, NOT_UTILITY, NEWEST_ADDED, `page=${n}`].filter(Boolean);
       const url = `${BASE}${list.path}?${query.join("&")}`;
-      const page = parseListPage(await this.get(url), url);
+      const page = await this.listPage(url);
       if (page.cars.length > 0 && !page.cars.some(refOf)) {
         throw new Error(`AAA Auto page changed: no car on it has an id at ${url}`);
       }
       this.ctx.log.info("aaaauto page", { url, cars: page.cars.length, total: page.total });
       if (page.cars.length > 0 || n === 1) yield page;
       if (page.cars.length === 0 || n >= page.pages) return;
+    }
+  }
+
+  /** A list page, read again when the site served it without its car list (see the top). */
+  private async listPage(url: string): Promise<ListPage> {
+    for (let attempt = 1; ; attempt++) {
+      const page = parseListPage(await this.get(url), url);
+      if (page) return page;
+      if (attempt >= LIST_READS) {
+        throw new Error(`AAA Auto served ${url} ${LIST_READS} times without its car list`);
+      }
+      this.ctx.log.warn("aaaauto page came without its car list; reading it again", {
+        url,
+        attempt,
+      });
     }
   }
 
@@ -300,7 +322,11 @@ interface ListPage {
 
 const STATE_OPEN = '<script id="ng-state" type="application/json">';
 
-function parseListPage(html: string, url: string): ListPage {
+/**
+ * The list in a page's state, or undefined for a state without `car-list`: the site's list API
+ * failed while it rendered the page.
+ */
+function parseListPage(html: string, url: string): ListPage | undefined {
   const start = html.indexOf(STATE_OPEN);
   const end = start < 0 ? -1 : html.indexOf("</script>", start);
   let state: Raw | undefined;
@@ -308,6 +334,9 @@ function parseListPage(html: string, url: string): ListPage {
     state = end < 0 ? undefined : JSON.parse(html.slice(start + STATE_OPEN.length, end));
   } catch {
     state = undefined;
+  }
+  if (state && typeof state === "object" && !Array.isArray(state) && !("car-list" in state)) {
+    return undefined;
   }
   const message = (state?.["car-list"] as Raw | undefined)?.message as Raw | undefined;
   const pagination = message?.pagination as Raw | undefined;
