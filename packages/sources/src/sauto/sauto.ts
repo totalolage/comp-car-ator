@@ -164,8 +164,8 @@ class Run {
    * only to the listings the Ledger does not know: those created since the last run or older
    * ones (published days after they were drafted, back after their removal, or not yet
    * reached by the census), and to two kinds whose search item may come from a search replica
-   * that has not applied an edit yet (see `walk`): suspects, and listings met again at another
-   * date. A listing only ever met as a lagging replica's item, dated before the cutoff, shows
+   * that has not applied an edit yet (see `walk`): suspects, met first or again, and listings
+   * met again at another date. A listing only ever met as a lagging replica's item, dated before the cutoff, shows
    * nothing to tell it from the rest, and waits for the census or its next edit. The run walks the whole order before any detail (some 110,000
    * listings took 173 searches of 1,000 and five minutes on 2026-11-01), so the order barely
    * moves under the walk, and no cutoff ends it before a listing it cannot date. Every price
@@ -201,7 +201,7 @@ class Run {
           const ref = refOf(item);
           if (ref !== undefined) {
             if (met.has(ref)) {
-              if (met.get(ref) !== dateOf(item)) unknown.push(item);
+              if (met.get(ref) !== dateOf(item) || this.suspects.has(ref)) unknown.push(item);
               continue;
             }
             met.set(ref, dateOf(item));
@@ -621,7 +621,13 @@ function halve(band: Band): [Band, Band] | undefined {
  */
 function halveSharing(band: Band): [Band, Band] | undefined {
   const mid = band.to === undefined ? band.from * 2 : Math.floor((band.from + band.to) / 2);
-  if (mid <= band.from || (band.to !== undefined && mid + 1 >= band.to)) return undefined;
+  // The open band doubles its floor: past a safe integer it stops splitting.
+  if (
+    !Number.isSafeInteger(mid) ||
+    mid <= band.from ||
+    (band.to !== undefined && mid + 1 >= band.to)
+  )
+    return undefined;
   return [
     { from: band.from, to: mid + 1 },
     { ...band, from: mid },

@@ -1225,6 +1225,29 @@ describe("sauto source", () => {
     expect(new Set(prices(observations).map(([ref]) => ref)).size).toBe(100);
   });
 
+  it("incremental run reads a listing a nested short pass missed, though met before at the same date", async () => {
+    // The unbanded pass meets 1 and 2 of 3 (2 served twice) and walks its halves; the lower
+    // half's pass meets 2 and 3 of 3 (3 served twice), missing 1, and walks its own halves,
+    // where the lower quarter meets all three. 1, met first at the same date, is a suspect now,
+    // and so is 3, which the unbanded pass missed: both get their detail read.
+    const search = (q: URLSearchParams) => {
+      const band = `${q.get("price_from") ?? "-"}-${q.get("price_to") ?? ""}`;
+      if (band === "--") return { total: 3, results: [car(1), car(2), car(2)] };
+      if (band === "0-134217728") return { total: 3, results: [car(2), car(3), car(3)] };
+      if (band === "0-67108864") return { total: 3, results: cars(1, 2, 3) };
+      return empty;
+    };
+    const { observations, error } = await harvestSite("incremental", search, {
+      checkpoint: { lastRunAt: new Date("2026-10-25T08:00:00Z"), isKnown: () => true },
+    });
+    expect(error).toBeUndefined();
+    expect(
+      listings(observations)
+        .map((o) => o.ref)
+        .sort(),
+    ).toEqual(["1", "3"]);
+  });
+
   it("incremental run fails on a band that stays short down to one it cannot split", async () => {
     // Every band holding the listings' price serves one of them twice in place of a third.
     const search = (q: URLSearchParams) => {
