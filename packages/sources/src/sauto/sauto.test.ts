@@ -28,6 +28,11 @@ const recordedAt = new Date("2026-11-01T23:49:00Z");
 /** The synthetic API's clock: its listings are dated on 2026-10-25 (`car`, `secondsBefore`). */
 const now = new Date("2026-10-25T13:27:00Z");
 const withoutVat = new URL("./fixtures/without-vat.cassette.json", import.meta.url);
+/**
+ * without-vat's Toyota Siennas as two search replicas would serve them, one lagging an edit
+ * (see the test that uses it); built from that recording, its details unchanged.
+ */
+const replicaSplit = new URL("./fixtures/replica-split.cassette.json", import.meta.url);
 const OPTIONS = { manufacturerModel: "dacia:spring", pageSize: 4, sliceLimit: 8 };
 /** A last run before every listing of the fixture: an incremental run yields all it does not know. */
 const LONG_AGO = new Date("2020-01-01T00:00:00Z");
@@ -1117,6 +1122,151 @@ describe("sauto source", () => {
     expect(listings(full.observations).map((o) => o.ref)).toEqual(["2", "4"]);
     expect(slices(full.observations)).toEqual(ALL_SLICES);
     expect(searches(full.urls).every((u) => u.includes("vehicle_age_from=2000"))).toBe(true);
+  });
+
+  it("incremental run walks a short band again in price halves, so a search replica lagging an edit hides no listing", async () => {
+    // Built from without-vat's recorded Toyota Siennas: the first unbanded page comes from a
+    // replica that has not applied 211327473's edit and still shows it dated 2025-03-01, on the
+    // page at offset 10; every other page comes from the up-to-date replica, which shows it on
+    // the first page. So the walk meets 13 of the 14 listings; walking the same URLs again (as
+    // Sauto routes each URL to the same replica every time) met 13 again, and the price halves
+    // meet all 14. Seen live on 2026-11-10: in band 524288-589824, 211268217 sat at 384 on one
+    // replica and at 1221, dated four days earlier, on the other.
+    const run = async (checkpoint: Partial<Checkpoint>) => {
+      const urls: string[] = [];
+      const replay = createReplayHttp(await loadCassette(replicaSplit));
+      const ctx: HarvestContext = {
+        http: {
+          get(request) {
+            urls.push(typeof request === "string" ? request : request.url);
+            return replay.get(request);
+          },
+        },
+        mode: "incremental",
+        checkpoint: { ...emptyCheckpoint, lastRunAt: LONG_AGO, ...checkpoint },
+        now: recordedAt,
+        log: silentLogger,
+        signal: new AbortController().signal,
+      };
+      const observations: Observation[] = [];
+      const source = sautoSource({ manufacturerModel: "toyota:sienna", pageSize: 4 });
+      for await (const o of source.harvest(ctx)) observations.push(o);
+      return { observations, urls };
+    };
+    const fresh = await run({});
+    expect(new Set(listings(fresh.observations).map((o) => o.ref)).size).toBe(14);
+    expect(listings(fresh.observations).map((o) => o.ref)).toContain("211327473");
+    const walked = searches(fresh.urls);
+    expect(new Set(walked).size).toBe(walked.length);
+    expect(walked.filter((u) => u.includes("price_from=0&price_to=134217728"))).toHaveLength(6);
+
+    // Known, the listing the short pass missed gets its detail read, as its item may be a
+    // lagging replica's; the rest get their search price.
+    const known = await run({ isKnown: () => true });
+    expect(listings(known.observations).map((o) => o.ref)).toEqual(["211327473"]);
+    expect(prices(known.observations).map(([ref]) => ref)).not.toContain("211327473");
+    expect(new Set(prices(known.observations).map(([ref]) => ref)).size).toBe(13);
+  });
+
+  it("incremental run reads a listing its price halves meet only as a lagging replica's old copy", async () => {
+    // Listing 2's edit dated it at the top on one replica; the other still shows it from
+    // 2026-10-20, before the cutoff. The first unbanded page comes from the lagging replica, the
+    // rest of the walk from the other, so it misses 2; every banded page comes from the lagging
+    // replica, so the halves meet only its old copy, which the cutoff would drop.
+    const list = datedCars(1, 12);
+    const lagging = [
+      ...list.slice(0, 1),
+      ...list.slice(2),
+      car(2, { sorting_date: "2026-10-20T00:00:00" }),
+    ];
+    const search = (q: URLSearchParams) => {
+      const offset = Number(q.get("offset"));
+      const banded = q.has("price_from");
+      if (banded && Number(q.get("price_from")) > 100_000) return empty;
+      const order = banded || offset === 0 ? lagging : list;
+      return { total: order.length, results: order.slice(offset, offset + 4) };
+    };
+    const { observations, error } = await harvestSite("incremental", search, {
+      checkpoint: { lastRunAt: new Date("2026-10-25T08:00:00Z"), isKnown: () => true },
+    });
+    expect(error).toBeUndefined();
+    expect(listings(observations).map((o) => o.ref)).toEqual(["2"]);
+    expect(new Set(prices(observations).map(([ref]) => ref))).toEqual(
+      new Set(
+        range(1, 12)
+          .filter((id) => id !== 2)
+          .map(String),
+      ),
+    );
+  });
+
+  it("incremental run reads the detail of a listing it meets at two dates", async () => {
+    // The first page comes from a replica that shows listing 1 at the top; later pages from one
+    // that still shows it lower down. Both copies are dated after the cutoff: its search price
+    // may be the lagging one, so its detail is read too.
+    const list = datedCars(1, 100);
+    const lagging = [
+      ...list.slice(1, 60),
+      car(1, { sorting_date: secondsBefore(60) }),
+      ...list.slice(60),
+    ];
+    const search = (q: URLSearchParams) => {
+      const offset = Number(q.get("offset"));
+      const limit = Number(q.get("limit"));
+      const order = offset === 0 ? list : lagging;
+      return { total: order.length, results: order.slice(offset, offset + limit) };
+    };
+    const { observations, error } = await harvestSite("incremental", search, {
+      checkpoint: { lastRunAt: new Date("2026-10-25T08:00:00Z"), isKnown: () => true },
+      source: { pageSize: 40 },
+    });
+    expect(error).toBeUndefined();
+    expect(listings(observations).map((o) => o.ref)).toEqual(["1"]);
+    expect(new Set(prices(observations).map(([ref]) => ref)).size).toBe(100);
+  });
+
+  it("incremental run reads a listing a nested short pass missed, though met before at the same date", async () => {
+    // The unbanded pass meets 1 and 2 of 3 (2 served twice) and walks its halves; the lower
+    // half's pass meets 2 and 3 of 3 (3 served twice), missing 1, and walks its own halves,
+    // where the lower quarter meets all three. 1, met first at the same date, is a suspect now,
+    // and so is 3, which the unbanded pass missed: both get their detail read.
+    const search = (q: URLSearchParams) => {
+      const band = `${q.get("price_from") ?? "-"}-${q.get("price_to") ?? ""}`;
+      if (band === "--") return { total: 3, results: [car(1), car(2), car(2)] };
+      if (band === "0-134217728") return { total: 3, results: [car(2), car(3), car(3)] };
+      if (band === "0-67108864") return { total: 3, results: cars(1, 2, 3) };
+      return empty;
+    };
+    const { observations, error } = await harvestSite("incremental", search, {
+      checkpoint: { lastRunAt: new Date("2026-10-25T08:00:00Z"), isKnown: () => true },
+    });
+    expect(error).toBeUndefined();
+    expect(
+      listings(observations)
+        .map((o) => o.ref)
+        .sort(),
+    ).toEqual(["1", "3"]);
+  });
+
+  it("incremental run fails on a band that stays short down to one it cannot split", async () => {
+    // Every band holding the listings' price serves one of them twice in place of a third.
+    const search = (q: URLSearchParams) => {
+      const from = Number(q.get("price_from") ?? 0);
+      const to = q.has("price_to") ? Number(q.get("price_to")) : Number.POSITIVE_INFINITY;
+      if (from > 100_000 || to < 100_000) return empty;
+      return { total: 3, results: [car(1), car(1), car(2)] };
+    };
+    const { observations, error } = await harvestSite("incremental", search, {
+      checkpoint: { lastRunAt: new Date("2026-10-25T08:00:00Z") },
+    });
+    expect(String(error)).toMatch(
+      /band \d+-\d+ cannot be split, and a pass over it met 2 of its 3 listings/,
+    );
+    expect(
+      listings(observations)
+        .map((o) => o.ref)
+        .sort(),
+    ).toEqual(["1", "2"]);
   });
 
   it("stops when the run is aborted", async () => {

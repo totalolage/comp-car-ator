@@ -421,7 +421,7 @@ describe.each([
     );
     expect(failure).toBeInstanceOf(RunFailedError);
     expect(String((failure as RunFailedError).cause)).toMatch(
-      /met 60 of the 61 listings in band - on each of 3 passes/,
+      /cannot be split, and a pass over it met 60 of its 61 listings/,
     );
     expect(n).toBeGreaterThan(6);
     expect(refs()).toEqual(range(1, 10).map(String));
