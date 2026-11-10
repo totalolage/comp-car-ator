@@ -15,6 +15,10 @@
  *   listing it met moved since the last run (a day back on a first run), or without a date,
  *   that the Ledger does not know, up to `budget` search and detail calls; past it, or having met a
  *   listing without a date, the run fails and the next one resumes (see `incremental`).
+ *   Known limit: Sauto's search replicas can lag an edit for hours (see `walk`). A listing the
+ *   walk meets only as a lagging replica's copy, dated before the cutoff, counts as met but is
+ *   not read: no count or date can tell it from an unedited listing. Its edit is read at its
+ *   next edit, or by the census.
  * full: a census sliced by condition and price band; a band over `sliceLimit` results is
  *   halved until each fits (2,000 by default: some 40 minutes of detail pages, well within
  *   one run). Slices done earlier in the census are skipped before any split. Each band
