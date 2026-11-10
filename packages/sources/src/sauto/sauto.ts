@@ -10,7 +10,8 @@
  *   The Ledger stores each ListingSeen whole, so every listing yielded carries its detail.
  *
  * incremental: walks the whole newest-first order, in price halves where it outgrows the
- *   10,000-result window or one `sorting_date` fills a page, then reads a detail for every
+ *   10,000-result window, one `sorting_date` fills a page, or a pass meets fewer listings than
+ *   its band holds (Sauto's search replicas can disagree), then reads a detail for every
  *   listing it met moved since the last run (a day back on a first run), or without a date,
  *   that the Ledger does not know, up to `budget` search and detail calls; past it, or having met a
  *   listing without a date, the run fails and the next one resumes (see `incremental`).
@@ -50,12 +51,6 @@ const PAGE_LIMIT = 1_000;
  * fails: an order that shifted up more than this many pages between two searches is not followed.
  */
 const BACKSTEPS = 3;
-/**
- * Passes an incremental walk makes over one band before it fails, when each meets fewer
- * listings than the band held as the pass began (one removed or topped up from below the walk
- * meanwhile, or one moved where no date can place it).
- */
-const PASSES = 3;
 /** Incremental runs re-check listings changed this long before the last run's start. */
 const SINCE_MARGIN_MS = 2 * 3_600_000;
 /** How far back an incremental run without a last run looks: a day, as a daily run would. */
@@ -134,6 +129,12 @@ interface Query {
 class Run {
   /** Refs already yielded in this run: pages overlap and bumped listings shift between them. */
   private readonly done = new Set<string>();
+  /**
+   * Refs a short incremental pass missed and a walk of its price halves met: as likely as not
+   * a listing one of Sauto's search replicas still shows as it was before an edit (see `walk`),
+   * so its search item may be stale, and its detail is read whatever the item says.
+   */
+  private readonly suspects = new Set<string>();
   private readonly ctx: HarvestContext;
   private readonly filter: string | undefined;
   private readonly pageSize: number;
@@ -162,7 +163,10 @@ class Run {
    * search item instead, so its price changes land daily (an edit moves it up). Details go
    * only to the listings the Ledger does not know: those created since the last run or older
    * ones (published days after they were drafted, back after their removal, or not yet
-   * reached by the census). The run walks the whole order before any detail (some 110,000
+   * reached by the census), and to two kinds whose search item may come from a search replica
+   * that has not applied an edit yet (see `walk`): suspects, and listings met again at another
+   * date. A listing only ever met as a lagging replica's item, dated before the cutoff, shows
+   * nothing to tell it from the rest, and waits for the census or its next edit. The run walks the whole order before any detail (some 110,000
    * listings took 173 searches of 1,000 and five minutes on 2026-11-01), so the order barely
    * moves under the walk, and no cutoff ends it before a listing it cannot date. Every price
    * comes out as met; the details follow, newest first (undated first, as any may be the
@@ -182,7 +186,9 @@ class Run {
       ? checkpoint.lastRunAt.getTime() - SINCE_MARGIN_MS
       : now.getTime() - FIRST_RUN_LOOKBACK_MS;
     const since = pragueLocal(new Date(from));
-    const met = new Set<string>();
+    // The date each listing was first met at: one met again at another date may be served by a
+    // search replica that has not applied its edit, so its detail is read (see `walk`).
+    const met = new Map<string, string | undefined>();
     const unknown: Item[] = [];
     // Listings met without a well-formed date, in scope or not: none can be placed or counted on.
     const undated = new Set<string>();
@@ -194,9 +200,12 @@ class Run {
           if (isSkipped(item)) continue;
           const ref = refOf(item);
           if (ref !== undefined) {
-            if (met.has(ref)) continue;
-            met.add(ref);
-            if (checkpoint.isKnown(ref)) {
+            if (met.has(ref)) {
+              if (met.get(ref) !== dateOf(item)) unknown.push(item);
+              continue;
+            }
+            met.set(ref, dateOf(item));
+            if (checkpoint.isKnown(ref) && !this.suspects.has(ref)) {
               if (typeof item.price === "number") {
                 yield {
                   kind: "ListingPriceSeen",
@@ -259,34 +268,52 @@ class Run {
    * many means meeting them all (a
    * listing entering below the top can stand in for an undated one that moved: meeting an
    * undated one fails the run, but one with an old date cannot be told from the rest, so the
-   * moved one stays eligible for a later run; see `incremental`). A
-   * pass that falls short (a listing removed or topped up from below the walk meanwhile) walks
-   * the band again, up to PASSES times, and then fails the run. Every page size overlaps by at least one
-   * listing, so no step goes unchecked; pages of one or two never step on, and walk price
-   * halves.
+   * moved one stays eligible for a later run; see `incremental`). A pass falls short when a
+   * listing is removed or topped up from below the walk meanwhile, and also, steadily, when
+   * Sauto's search replicas disagree: each request goes to one of at least two, the same URL
+   * always to the same one, and one may lag an edit for hours, still showing the listing at its
+   * old date further down (2026-11-10: listing 211268217 dated 2026-11-10T08:35:14 at 384 on one,
+   * 2026-11-06T11:03:53 at 1221 on the other; 12 such listings in band 327680-393216, batches
+   * edited the same second). The replicas agreed on every total and on which listings a band
+   * holds. A pass that reads the listing's new place from the lagging replica and its old place
+   * from the other meets neither, and walking the same URLs again meets neither again. So a
+   * short pass walks the band's price halves instead, each with its own pass and check, down to
+   * bands one page holds: one page comes from one replica, which holds each listing once. A band
+   * that cannot be split fails the run. A listing the short pass missed and the halves met is a
+   * suspect: its item may be the lagging replica's, dated before `since` though edited since, so
+   * it is kept whatever its date and its detail is read (see `incremental`). Every page size
+   * overlaps by at least one listing, so no step goes unchecked; pages of one or two never step
+   * on, and walk price halves.
    */
-  private async *walk(since: string, band?: Band): AsyncIterable<Item[]> {
-    for (let pass = 1; ; pass++) {
-      const short = yield* this.pass(since, band);
-      if (!short) return;
-      if (pass >= PASSES) {
-        throw new Error(
-          `Sauto incremental met ${short.met} of the ${short.of} listings in band ${bandName(band)} on each of ${PASSES} passes`,
-        );
-      }
-      this.ctx.log.warn("sauto incremental band came out short; walking it again", {
-        band: bandName(band),
-        pass,
-        ...short,
-      });
-    }
+  private async *walk(
+    since: string,
+    band?: Band,
+    missedBy: readonly ReadonlySet<string>[] = [],
+  ): AsyncIterable<Item[]> {
+    const short = yield* this.pass(since, band, missedBy);
+    if (!short) return;
+    const { met, of, seen } = short;
+    this.ctx.log.warn("sauto incremental band came out short; walking its price halves", {
+      band: bandName(band),
+      met,
+      of,
+    });
+    yield* this.halves(since, band, `a pass over it met ${met} of its ${of} listings`, [
+      ...missedBy,
+      seen,
+    ]);
   }
 
-  /** One pass of `walk`; what it met and of how many when it falls short of its first page's total. */
+  /**
+   * One pass of `walk`; when it falls short of its first page's total, what it met (`seen`, by
+   * ref) and of how many. `missedBy` holds what each short pass enclosing this one met: a listing
+   * one of them missed is kept whatever its date, and marked a suspect.
+   */
   private async *pass(
     since: string,
     band: Band | undefined,
-  ): AsyncGenerator<Item[], { met: number; of: number } | undefined> {
+    missedBy: readonly ReadonlySet<string>[],
+  ): AsyncGenerator<Item[], { met: number; of: number; seen: ReadonlySet<string> } | undefined> {
     const overlap = Math.max(1, Math.floor(this.pageSize / 20));
     // Every listing the pass met; a malformed entry has no id, so its place stands in for it.
     const seen = new Set<string>();
@@ -295,12 +322,12 @@ class Run {
     let held = 0;
     for (let offset = 0; ; ) {
       if (offset + this.pageSize > WINDOW) {
-        yield* this.halves(since, band, `its order outgrows the ${WINDOW}-result window`);
+        yield* this.halves(since, band, `its order outgrows the ${WINDOW}-result window`, missedBy);
         return;
       }
       const page = await this.search({ conditions: CONDITION_SEOS, band, offset });
       if (offset === 0 && page.total > WINDOW - this.pageSize) {
-        yield* this.halves(since, band, `its ${page.total} results outgrow the window`);
+        yield* this.halves(since, band, `its ${page.total} results outgrow the window`, missedBy);
         return;
       }
       if (offset === 0 && reached === undefined) held = page.total;
@@ -322,12 +349,15 @@ class Run {
         offset = Math.max(0, offset - (this.pageSize - overlap));
         continue;
       }
-      yield page.items.filter((_, i) => {
+      yield page.items.filter((item, i) => {
+        const ref = refOf(item);
+        const missed = ref !== undefined && missedBy.some((met) => !met.has(ref));
+        if (missed) this.suspects.add(ref);
         const date = dates[i];
-        return date === undefined || date >= since;
+        return missed || date === undefined || date >= since;
       });
       if (offset + page.items.length >= page.total) {
-        return seen.size < held ? { met: seen.size, of: held } : undefined;
+        return seen.size < held ? { met: seen.size, of: held, seen } : undefined;
       }
       if (page.items.length < this.pageSize) {
         throw new Error(
@@ -338,7 +368,7 @@ class Run {
       if (last === undefined) {
         const why = `no listing on its page at offset ${offset} is dated`;
         this.ctx.log.info("sauto incremental walks price halves", { offset, why });
-        yield* this.halves(since, band, why);
+        yield* this.halves(since, band, why, missedBy);
         return;
       }
       if (reached === undefined || last < reached) {
@@ -353,7 +383,7 @@ class Run {
       if (above < 0 || step <= 0) {
         const why = `${page.items.length - tie} listings dated ${last} fill its page`;
         this.ctx.log.info("sauto incremental walks price halves", { offset, why });
-        yield* this.halves(since, band, why);
+        yield* this.halves(since, band, why, missedBy);
         return;
       }
       offset += step;
@@ -361,14 +391,19 @@ class Run {
   }
 
   /** `walk` over each price half of `band` (of every price when absent). */
-  private async *halves(since: string, band: Band | undefined, why: string): AsyncIterable<Item[]> {
+  private async *halves(
+    since: string,
+    band: Band | undefined,
+    why: string,
+    missedBy: readonly ReadonlySet<string>[],
+  ): AsyncIterable<Item[]> {
     const halves = band
       ? halveSharing(band)
       : [{ from: 0, to: PRICE_TOP + 1 }, { from: PRICE_TOP }];
     if (!halves) {
       throw new Error(`Sauto incremental: band ${bandName(band)} cannot be split, and ${why}`);
     }
-    for (const half of halves) yield* this.walk(since, half);
+    for (const half of halves) yield* this.walk(since, half, missedBy);
   }
 
   /** The census: every band, then a failure naming the bands that came out short. */
