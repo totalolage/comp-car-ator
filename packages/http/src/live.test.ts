@@ -88,6 +88,30 @@ describe("live Http", () => {
     expect(hits).toEqual(["/a", "/a"]);
   });
 
+  it("POSTs a form body at T0, and again at T1 after a 403", async () => {
+    // A gateway that refuses clients without Chrome client hints, echoing what it was sent.
+    handler = (req, res) => {
+      let body = "";
+      req.on("data", (chunk) => {
+        body += chunk;
+      });
+      req.on("end", () => {
+        const seen = `${req.method} ${req.headers["content-type"]} ${body}`;
+        if (!req.headers["sec-ch-ua"]) res.writeHead(403).end(seen);
+        else res.writeHead(200).end(seen);
+      });
+    };
+    const http = createLiveHttp({ hostIntervalMs: 0, browser: false });
+    const page = await http.get({
+      url: `${base}/sql`,
+      form: { query: "SELECT 'CZ' AS x", p: "1" },
+    });
+    const sent =
+      "POST application/x-www-form-urlencoded;charset=UTF-8 query=SELECT+%27CZ%27+AS+x&p=1";
+    expect(page).toMatchObject({ status: 200, tier: "T1", body: sent });
+    expect(hits).toEqual(["/sql", "/sql"]);
+  });
+
   it("returns raw bytes for binary requests", async () => {
     handler = (_req, res) => {
       res
@@ -131,6 +155,22 @@ describe("raw response cache", () => {
     await http.get(`${base}/d`);
     const binary = await http.get({ url: `${base}/d`, binary: true });
     expect(new TextDecoder().decode(binary.bytes)).toBe("data");
+    expect(hits).toHaveLength(2);
+  });
+
+  it("keys form requests on their fields, in any order", async () => {
+    handler = (req, res) => {
+      let body = "";
+      req.on("data", (chunk) => {
+        body += chunk;
+      });
+      req.on("end", () => res.end(body));
+    };
+    const http = createLiveHttp({ hostIntervalMs: 0, cache: { dir } });
+    await http.get({ url: `${base}/sql`, form: { query: "a", p: "1" } });
+    const again = await http.get({ url: `${base}/sql`, form: { p: "1", query: "a" } });
+    const other = await http.get({ url: `${base}/sql`, form: { query: "a", p: "2" } });
+    expect([again.body, other.body]).toEqual(["query=a&p=1", "query=a&p=2"]);
     expect(hits).toHaveLength(2);
   });
 

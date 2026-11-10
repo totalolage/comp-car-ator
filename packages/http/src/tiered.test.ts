@@ -316,6 +316,33 @@ describe("Http policy: tiers and challenges", () => {
     expect((await http.get({ url: "https://a.example/", minTier: "T2" })).tier).toBe("T1");
   });
 
+  it("sends a form request's body to each tier and never escalates it to T2", async () => {
+    const forbidden = { ...ok("https://a.example/sql"), status: 403, body: "Forbidden" };
+    const forms: (string | undefined)[] = [];
+    const tier: TierFetcher = async ({ form }) => {
+      forms.push(form?.toString());
+      return forbidden;
+    };
+    const t2 = scripted([]);
+    const http = createTieredHttp(
+      { T0: tier, T1: tier, T2: t2 },
+      { hostIntervalMs: 0, ...clock() },
+    );
+    const page = await http.get({ url: "https://a.example/sql", form: { query: "SELECT 'CZ'" } });
+    expect(page).toMatchObject({ status: 403, tier: "T1" });
+    expect(forms).toEqual(["query=SELECT+%27CZ%27", "query=SELECT+%27CZ%27"]);
+    expect(t2.calls).toHaveLength(0);
+    // Asking for T2 outright starts a form request at T1 instead.
+    const fromT2 = await http.get({
+      url: "https://a.example/sql",
+      form: { q: "1" },
+      minTier: "T2",
+    });
+    expect(fromT2.tier).toBe("T1");
+    expect(forms.at(-1)).toBe("q=1");
+    expect(t2.calls).toHaveLength(0);
+  });
+
   it("stops sending a host anything after repeated blocked requests", async () => {
     const t0 = always(cloudflare);
     const t1 = always(cloudflare);
