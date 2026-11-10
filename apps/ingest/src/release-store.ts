@@ -5,6 +5,7 @@
  */
 import { cp, mkdir, readdir, rename, rm } from "node:fs/promises";
 import { basename, join } from "node:path";
+import type { Logger } from "@cca/sources";
 import { githubReleaseStore } from "./github-release-store.ts";
 
 export interface ReleaseStore {
@@ -68,9 +69,14 @@ export function localReleaseStore(root: string): ReleaseStore {
  * `github:<owner>/<repo>` (token from GITHUB_TOKEN; only releases tagged `tagPrefix…`) or a
  * directory path.
  */
-export function releaseStoreFrom(spec: string, tagPrefix: string, env = process.env): ReleaseStore {
+export function releaseStoreFrom(
+  spec: string,
+  tagPrefix: string,
+  log?: Logger,
+  env = process.env,
+): ReleaseStore {
   if (!spec.startsWith("github:")) return localReleaseStore(spec);
   const token = env.GITHUB_TOKEN;
   if (!token) throw new Error(`${spec} needs GITHUB_TOKEN`);
-  return githubReleaseStore({ repo: spec.slice("github:".length), token, tagPrefix });
+  return githubReleaseStore({ repo: spec.slice("github:".length), token, tagPrefix, log });
 }

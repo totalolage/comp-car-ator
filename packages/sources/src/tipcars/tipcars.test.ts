@@ -565,14 +565,82 @@ describe("tipcars source", () => {
       expect(urls.filter((url) => url.endsWith("&0-249999kc="))).toHaveLength(2);
     });
 
+    /** The seam between 0-249999 and 250000-499999: the band, then its two whole prices. */
+    function seam(
+      cassette: Cassette,
+      cards: Map<string, string>,
+      root: string,
+      band: readonly string[],
+      [low, high] = [0, 0],
+    ): Cassette {
+      let out = serve(cassette, `${root}&249999-250000kc=`, [listPage(cards, band.length, band)]);
+      out = serve(out, `${root}&249999-249999kc=`, [listPage(cards, low, [])]);
+      return serve(out, `${root}&250000-250000kc=`, [listPage(cards, high, [])]);
+    }
+
     it("leaves the parent unfinished when a stable listing is excluded by both smaller bands", async () => {
       const { cards, root, cassette, done } = await setup();
-      const gap = serve(cassette, `${root}&250000-499999kc=`, [listPage(cards, 0, [])]);
+      const gap = seam(
+        serve(cassette, `${root}&250000-499999kc=`, [listPage(cards, 0, [])]),
+        cards,
+        root,
+        [],
+      );
       const out: Observation[] = [];
       await expect(harvest(gap, { ...SPLIT_RUN, done }, out)).rejects.toThrow(
         /used:2000:0-499999 \(listings in neither half\)/,
       );
-      expect(slicesDone(out)).toEqual([]);
+      // The seam between the halves holds nothing: done itself, it leaves the parent short.
+      expect(slicesDone(out)).toEqual(["used:2000:249999-250000"]);
+    });
+
+    it("finishes the parent through the one-Kč seam that holds a fractional price", async () => {
+      const { cards, refs, root, cassette, initial, done } = await setup();
+      const between = refs[20] as string;
+      // The site stores a fraction (249,999.31 Kč, shown as 249,999): neither half returns
+      // it, the seam does, and neither whole price of the seam does.
+      const gap = seam(
+        serve(cassette, `${root}&250000-499999kc=`, [listPage(cards, 0, [])]),
+        cards,
+        root,
+        [between],
+      );
+      const out = await harvest(gap, { ...SPLIT_RUN, done });
+      expect(slicesDone(out)).toEqual([
+        "used:2000:249999-250000",
+        "used:2000:0-999999",
+        "used:2000",
+      ]);
+      expect(new Set(listings(out).map((o) => o.ref))).toEqual(
+        new Set(listings(initial).map((o) => o.ref)),
+      );
+      // A later run of the census pages the done seam again instead of trusting it.
+      const urls: string[] = [];
+      const again = await harvest(gap, {
+        ...SPLIT_RUN,
+        done: [...done, "used:2000:249999-250000"],
+        urls,
+      });
+      expect(slicesDone(again)).toEqual(["used:2000:0-999999", "used:2000"]);
+      expect(urls.filter((url) => url.endsWith("&249999-250000kc="))).toHaveLength(3);
+    });
+
+    it("credits no seam listing that a whole price or a part accounts for", async () => {
+      const { cards, refs, root, cassette, done } = await setup();
+      const between = refs[20] as string;
+      const upperless = serve(cassette, `${root}&250000-499999kc=`, [listPage(cards, 0, [])]);
+      // The seam's listing is at a whole 250,000 Kč, which the upper half should have returned.
+      const whole = seam(upperless, cards, root, [between], [0, 1]);
+      await expect(harvest(whole, { ...SPLIT_RUN, done })).rejects.toThrow(
+        /used:2000:0-499999 \(listings in neither half\)/,
+      );
+      // The seam reports a listing beyond its whole prices but serves only one a part met.
+      const met = seam(upperless, cards, root, [refs[0] as string]);
+      const out: Observation[] = [];
+      await expect(harvest(met, { ...SPLIT_RUN, done }, out)).rejects.toThrow(
+        /used:2000:0-499999 \(listings in neither half\)/,
+      );
+      expect(slicesDone(out)).toEqual(["used:2000:249999-250000"]);
     });
 
     it("never pools the short parent pass with an incomplete smaller band", async () => {
@@ -740,7 +808,12 @@ describe("tipcars source", () => {
       const { x, os, run, record } = await year(21, { passFails: true });
       await expect(run).rejects.toThrow(/No recorded interaction for .*str=2-20&2000-2000=/);
       expect(prices(os)).toEqual([
-        { kind: "ListingPriceSeen", ref: x, price: { amount: record, currency: "CZK" } },
+        {
+          kind: "ListingPriceSeen",
+          ref: x,
+          price: { amount: record, currency: "CZK" },
+          slice: "used:2000",
+        },
       ]);
       expect(listings(os).map((o) => o.ref)).not.toContain(x);
     });
@@ -1243,12 +1316,66 @@ describe("tipcars source", () => {
         .map((o) => o.ref)
         .sort(),
     ).toEqual([b, c].sort());
-    const marks = slicesDone(resumed);
-    expect(marks[0]).toBe("new");
-    expect(marks.slice(1).sort()).toEqual([`listing:${b}`, `listing:${c}`].sort());
+    // Each band paged again yields its SliceDone again, with the marks of what it read whole.
+    expect(slicesDone(resumed)).toEqual([
+      "new:500000-599999",
+      `listing:${c}`,
+      "new:0-499999",
+      `listing:${b}`,
+      "new",
+    ]);
     // A marked listing the Ledger no longer knows (gone since) is read again.
     const revived = await harvest(cassette, { ...run, done: later, known: new Set([b, c]) });
     expect(listings(revived).map((o) => o.ref)).toContain(a);
+  });
+
+  it("a part paged again keeps its marks when the run stops before the slice holding it is done", async () => {
+    // A later run of the census, every band done and no listing read whole, stops at b's
+    // detail page: c's band, paged again before it, keeps the mark of c.
+    const { cassette, a, b, c } = await newBands();
+    const run = { mode: "full", options: { slices: ["new"], sliceCap: 2 } } as const;
+    const bands = slicesDone(await harvest(cassette, run)).filter((d) => d.startsWith("new:"));
+    const detailOf = (ref: string) =>
+      cassette.interactions.find((x) => x.request.url.endsWith(`-${ref}.html`))?.request.url;
+    const out: Observation[] = [];
+    const known = new Set([a, b, c]);
+    await expect(
+      harvest(cassette, { ...run, done: bands, known, failAt: detailOf(b) }, out),
+    ).rejects.toThrow(/planned interruption/);
+    expect(slicesDone(out)).toEqual(["new:500000-599999", `listing:${c}`]);
+    // Its price sightings name the new list, so one the Ledger rejects keeps that not done
+    // rather than the band's SliceDone after it.
+    expect(prices(out).length).toBeGreaterThan(0);
+    expect(prices(out).every((o) => o.slice === "new")).toBe(true);
+    // The next run of the census reads c whole no more.
+    const urls: string[] = [];
+    await harvest(cassette, { ...run, done: [...bands, ...slicesDone(out)], known, urls });
+    expect(urls.filter((u) => u.endsWith(".html")).sort()).toEqual(
+      [detailOf(a), detailOf(b)].sort(),
+    );
+  });
+
+  it("a part paged again after a rejected listing naming no slice leaves its marks to the slice holding it", async () => {
+    // a's card in the cheapest band shows an unknown currency: its ListingSeen naming no
+    // slice is rejected, which the Ledger counts towards the next SliceDone, so that band
+    // yields none of its own and b's mark waits for the new list's.
+    const { cassette: plain, a, b, c } = await newBands();
+    const cassette = edit(plain, "/nove?0-499999kc=", (r) => ({
+      ...r,
+      body: r.body
+        .split(CARD)
+        .map((p) =>
+          p.startsWith(`${a}"`) ? p.replace(/(price_currency&quot;:&quot;)\w+/, "$1X") : p,
+        )
+        .join(CARD),
+    }));
+    const run = { mode: "full", options: { slices: ["new"], sliceCap: 2 } } as const;
+    const bands = slicesDone(await harvest(plain, run)).filter((d) => d.startsWith("new:"));
+    const out = await harvest(cassette, { ...run, done: bands, known: new Set([a, b, c]) });
+    const done = slicesDone(out);
+    expect(done.slice(0, 2)).toEqual(["new:500000-599999", `listing:${c}`]);
+    expect(done).not.toContain("new:0-499999");
+    expect(done.indexOf(`listing:${b}`)).toBeGreaterThan(done.indexOf("new"));
   });
 
   it("a part done earlier in the census, paged again, proves its known new or demo listings live before their detail pages", async () => {

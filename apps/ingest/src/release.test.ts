@@ -26,7 +26,7 @@ const day = (date: string) => new Date(`${date}T03:00:00Z`);
 /** A ReleaseStore plus test-only access to what it holds. */
 interface Harness {
   store: ReleaseStore;
-  /** Makes uploading this asset fail (once). */
+  /** Makes the next release's upload of this asset fail, however often it is tried. */
   breakUpload(asset: string): void;
   tamper(tag: string, asset: string): Promise<void>;
   drafts(): Promise<number>;
@@ -68,12 +68,31 @@ interface FakeRelease {
   assets: { id: number; name: string; bytes: Buffer }[];
 }
 
+/**
+ * How the fake answers one upload: a status (`early`: before reading the body, as GitHub may),
+ * or a scenario: `partial` leaves an empty asset of that name and answers 502; `lost` stores
+ * the asset but drops the connection; `gone` deletes the release and answers 404; `published`
+ * publishes the release (as another writer would) and answers 502; `unchecked` answers 502 and
+ * drops the connection of the next release lookup.
+ */
+type UploadFault =
+  | { status: number; early?: boolean; retryAfter?: string }
+  | "partial"
+  | "lost"
+  | "gone"
+  | "published"
+  | "unchecked";
+
 /** The slice of the GitHub REST API the adapter uses, in memory. */
 interface GithubHarness extends Harness {
   /** The publishing update goes through but its response is lost (and the follow-up lookup). */
   losePublishResponse(alsoLookup: boolean): void;
   addRelease(tag: string, draft: boolean): void;
   tags(): string[];
+  /** The next uploads fail like this, one fault each. */
+  failUploads(...faults: UploadFault[]): void;
+  /** Asset names of every upload request so far, in order. */
+  uploads(): string[];
 }
 
 async function githubHarness(): Promise<GithubHarness> {
@@ -82,6 +101,8 @@ async function githubHarness(): Promise<GithubHarness> {
   let broken: string | null = null;
   let loseResponse = false;
   let loseLookup = false;
+  const faults: UploadFault[] = [];
+  const uploads: string[] = [];
   const body = async (req: IncomingMessage) => {
     const chunks: Buffer[] = [];
     for await (const chunk of req) chunks.push(chunk as Buffer);
@@ -147,13 +168,37 @@ async function githubHarness(): Promise<GithubHarness> {
     if (m) {
       const release = releases.find((r) => r.id === Number(m?.[1]));
       const name = url.searchParams.get("name") ?? "";
+      uploads.push(name);
+      const fault = faults.shift();
+      if (typeof fault === "object" && fault.early)
+        return send(fault.status, { message: "Not Found" });
       const bytes = await body(req);
-      if (name === broken) {
-        broken = null;
+      if (name === broken) return send(502, { message: "upload failed" });
+      if (!release || Number(req.headers["content-length"]) !== bytes.length) return send(400);
+      if (fault === "gone") {
+        releases.splice(releases.indexOf(release), 1);
+        return send(404, { message: "Not Found" });
+      }
+      if (fault === "published") {
+        release.draft = false;
         return send(502, { message: "upload failed" });
       }
-      if (!release || Number(req.headers["content-length"]) !== bytes.length) return send(400);
+      if (fault === "unchecked") {
+        loseLookup = true;
+        return send(502, { message: "upload failed" });
+      }
+      if (fault === "partial") {
+        release.assets.push({ id: nextId++, name, bytes: Buffer.alloc(0) });
+        return send(502, { message: "upload failed" });
+      }
+      if (typeof fault === "object") {
+        if (fault.retryAfter) res.setHeader("retry-after", fault.retryAfter);
+        return send(fault.status, { message: "upload failed" });
+      }
+      if (release.assets.some((a) => a.name === name))
+        return send(422, { message: "Validation Failed", errors: [{ code: "already_exists" }] });
       release.assets.push({ id: nextId++, name, bytes });
+      if (fault === "lost") return res.socket?.destroy();
       return send(201, {});
     }
     m = url.pathname.match(new RegExp(`^${repo}/releases/(\\d+)$`));
@@ -179,6 +224,17 @@ async function githubHarness(): Promise<GithubHarness> {
       }
       return send(200, view(release));
     }
+    m = route("DELETE", new RegExp(`^${repo}/releases/assets/(\\d+)$`));
+    if (m) {
+      for (const release of releases) {
+        const index = release.assets.findIndex((a) => a.id === Number(m?.[1]));
+        if (index >= 0) {
+          release.assets.splice(index, 1);
+          return send(204);
+        }
+      }
+      return send(404);
+    }
     m = route("GET", new RegExp(`^${repo}/releases/assets/(\\d+)$`));
     if (m) {
       const storagePort = (storage.address() as AddressInfo).port;
@@ -198,6 +254,7 @@ async function githubHarness(): Promise<GithubHarness> {
       token: "t0ken",
       tagPrefix: "data-",
       apiUrl: `http://127.0.0.1:${port}`,
+      retryDelayMs: 0,
     }),
     breakUpload: (asset) => {
       broken = asset;
@@ -217,6 +274,10 @@ async function githubHarness(): Promise<GithubHarness> {
       });
     },
     tags: () => releases.map((r) => r.tag_name),
+    failUploads: (...more) => {
+      faults.push(...more);
+    },
+    uploads: () => [...uploads],
     tamper: async (tag, asset) => {
       const found = releases.find((r) => r.tag_name === tag)?.assets.find((a) => a.name === asset);
       if (found) found.bytes = Buffer.from("tampered");
@@ -532,7 +593,8 @@ describe("GitHub release store", () => {
   beforeEach(async () => {
     dir = await mkdtemp(join(tmpdir(), "cca-gh-"));
     h = await githubHarness();
-    await writeFile(join(dir, "a.txt"), "a");
+    // Big enough that GitHub can answer before it has read the whole body.
+    await writeFile(join(dir, "a.txt"), Buffer.alloc(4 * 2 ** 20, "a"));
   });
   afterEach(async () => {
     await h.close();
@@ -552,6 +614,66 @@ describe("GitHub release store", () => {
     await expect(create("data-1")).rejects.toThrow();
     expect(h.tags()).toEqual(["data-1"]);
     expect(await h.store.list()).toEqual([{ tag: "data-1", assets: ["a.txt"] }]);
+  });
+
+  it.each([
+    ["a 404 answered before the body was read", { status: 404, early: true }],
+    ["a 502", { status: 502 }],
+    ["a 429 with Retry-After", { status: 429, retryAfter: "0" }],
+    ["an empty asset left by a failed upload", "partial"],
+    ["a lost answer to an upload that went through", "lost"],
+  ] as const)("uploads again after %s, to the same draft", async (_, fault) => {
+    h.failUploads(fault);
+    await create("data-1");
+    expect(h.uploads()).toEqual(["a.txt", "a.txt"]);
+    expect(h.tags()).toEqual(["data-1"]);
+    expect(await h.store.list()).toEqual([{ tag: "data-1", assets: ["a.txt"] }]);
+    const out = join(dir, "out.txt");
+    await h.store.download("data-1", "a.txt", out);
+    expect((await readFile(out)).equals(await readFile(join(dir, "a.txt")))).toBe(true);
+  });
+
+  it("gives up on an upload after three tries and leaves no draft", async () => {
+    h.failUploads({ status: 502 }, { status: 502 }, { status: 502 });
+    await expect(create("data-1")).rejects.toThrow(/502/);
+    expect(h.uploads()).toEqual(["a.txt", "a.txt", "a.txt"]);
+    expect(h.tags()).toEqual([]);
+  });
+
+  it("waits as long as GitHub's Retry-After asks before uploading again", async () => {
+    h.failUploads({ status: 429, retryAfter: "1" });
+    const started = Date.now();
+    await create("data-1");
+    expect(Date.now() - started).toBeGreaterThanOrEqual(1000);
+    expect(h.uploads()).toEqual(["a.txt", "a.txt"]);
+  });
+
+  it("does not upload again to a draft whose state it could not check", async () => {
+    h.failUploads("unchecked");
+    await expect(create("data-1")).rejects.toThrow(/502/);
+    expect(h.uploads()).toEqual(["a.txt"]);
+    expect(h.tags()).toEqual([]);
+  });
+
+  it("does not retry an upload GitHub refused", async () => {
+    h.failUploads({ status: 403 });
+    await expect(create("data-1")).rejects.toThrow(/403/);
+    expect(h.uploads()).toEqual(["a.txt"]);
+    expect(h.tags()).toEqual([]);
+  });
+
+  it("does not retry an upload to a draft that is gone", async () => {
+    h.failUploads("gone");
+    await expect(create("data-1")).rejects.toThrow(/404/);
+    expect(h.uploads()).toEqual(["a.txt"]);
+    expect(h.tags()).toEqual([]);
+  });
+
+  it("fails, keeping the release, when another writer published it mid-upload", async () => {
+    h.failUploads("published");
+    await expect(create("data-1")).rejects.toThrow(/502/);
+    expect(h.uploads()).toEqual(["a.txt"]);
+    expect(await h.store.list()).toEqual([{ tag: "data-1", assets: [] }]);
   });
 
   it("cleans up only its own unfinished drafts, and sees past the first page", async () => {

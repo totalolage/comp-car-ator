@@ -23,13 +23,16 @@
  *   (ads bumped or posted during the walk land there), and check the ads met cover the
  *   count the site reports. The category's ads are split by id into `parts` slices
  *   ("skoda;part=3/10"), each fetched and reported done in turn, so a census of the large
- *   categories (Škoda: ~31,000 ads) resumes part by part. A category whose walk cannot be
+ *   categories (Mercedes: ~9,500 ads) resumes part by part. A category whose walk cannot be
  *   reconciled reports no part done and fails the run at the end; the other categories
- *   still run. Each ad names its part (`ListingSeen.slice`, in both modes), so the parts that
- *   finish retire the ads they no longer list while Ford never finishes. A walk gives each
- *   known ad a ListingPriceSeen as it meets it on any page read, so one moved into another
- *   category stays live even when that walk is not taken, the page is read again or stepped
- *   back from, or the run fails or is stopped later.
+ *   still run. So does one larger than the site lists: it shows a category's first 20,000
+ *   ads only (offset 19,968 serves 19,961-20,000 of Škoda's 31,401 on 2026-11-06), and the
+ *   walk ends at that page rather than read it until the run times out. Each ad names its
+ *   part (`ListingSeen.slice`, in both modes), so the parts that finish retire the ads they
+ *   no longer list while Ford never finishes. A walk gives each known ad a ListingPriceSeen
+ *   as it meets it on any page read, so one moved into another category stays live even
+ *   when that walk is not taken, the page is read again or stepped back from, or the run
+ *   fails or is stopped later.
  * - incremental: per category, from the top, ad pages for the ads on each page read that are
  *   not in the Ledger and a ListingPriceSeen from the list row for those it knows, stopping
  *   after the first page dated wholly before the last run's day (yesterday, without a
@@ -39,6 +42,13 @@
  * - A list page can show fewer rows than its header counts, twice running: seen in Citroën
  *   mid-list, where the same page and its neighbours read later showed every row, so the
  *   site served it short; Ford and Mercedes also repeatedly showed 19 of 20 rows.
+ *   Live probes on 2026-11-09 (/volkswagen/, /ostatni/) showed why: the site counts and places
+ *   ads from a list it refreshes in batches every few minutes but renders only ads still live,
+ *   so a removed ad keeps a counted slot with no row (no id, no link) for 2-8 minutes, across
+ *   2-3 overlapping pages, until the batch that lowers the total. A big category meets several
+ *   per walk, so Volkswagen and Ostatní rarely complete a census. Discounting such slots would
+ *   be unsound (an ad hidden while edited can return behind the check as another drops out),
+ *   so the check stays.
  *   Incremental reads the rows shown and goes on. A census walk cannot tell which ad such a
  *   page lacks, so it does not take the walk (see `collect`): a category where the site
  *   counts an ad it never lists stays out of the census, and the run fails naming it.
@@ -156,6 +166,19 @@ class LostPlace extends Error {
     super(`bazos: lost its place in ${category} at offset ${offset}`);
     this.name = "LostPlace";
     this.reason = `lost its place at offset ${offset}`;
+  }
+}
+
+/**
+ * The site lists a category only so deep: past its 20,000th ad (Škoda holds some 31,400 on
+ * 2026-11-06) every offset serves the page ending there, so no walk reaches the count.
+ */
+class Unlisted extends Error {
+  readonly reason: string;
+  constructor(category: string, offset: number, page: ListPage) {
+    super(`bazos: ${category} is listed only to ad ${page.to} of ${page.total}`);
+    this.name = "Unlisted";
+    this.reason = `the site lists ${page.to} of its ${page.total} ads (offset ${offset} served ${page.from}-${page.to})`;
   }
 }
 
@@ -320,6 +343,11 @@ class Harvest {
           if (page.rows.every((row) => row.date !== undefined && row.date < this.today)) break;
         }
       } catch (error) {
+        if (error instanceof Unlisted) {
+          // Walking again meets the same last page: the run goes on to the other categories.
+          this.ctx.log.warn(error.message, { category, attempt, requests: this.requests });
+          return error.reason;
+        }
         if (!(error instanceof LostPlace)) throw error;
         this.ctx.log.warn(error.message, { attempt });
         reason = error.reason;
@@ -470,7 +498,7 @@ class Harvest {
         });
         return;
       }
-      if (!(error instanceof LostPlace)) throw error;
+      if (!(error instanceof LostPlace || error instanceof Unlisted)) throw error;
       this.unfinish(category, error.reason);
       this.ctx.log.warn(error.message);
     }
@@ -485,7 +513,9 @@ class Harvest {
   /**
    * A category's pages from the top, each overlapping the one before by a few rows. Ends
    * at the page whose header reaches the count. Throws LostPlace when ads keep moving up
-   * past the overlap faster than the walk can step back, or a page shows none of its rows.
+   * past the overlap faster than the walk can step back, or a page shows none of its rows,
+   * and Unlisted after a page short of the count that starts elsewhere than its offset: the
+   * site lists no ads past that page, and serves it for every offset beyond.
    * A census's sightings from each read come out before its page (`listPage`).
    */
   private async *pages(category: string): AsyncGenerator<ListPage | Sighting> {
@@ -496,6 +526,11 @@ class Harvest {
       const page = yield* this.listPage(category, offset);
       // A page showing none of its rows leaves the walk nowhere to go on from.
       if (page.uneven && page.rows.length === 0) throw new LostPlace(category, offset);
+      if (page.to < page.total && page.from !== offset + 1) {
+        // Its rows are listed too, the last ones on no other page.
+        yield page;
+        throw new Unlisted(category, offset, page);
+      }
       if (previous && !page.rows.some((row) => previous?.has(row.id))) {
         if (offset === 0 || ++stepsBack > MAX_STEPS_BACK) throw new LostPlace(category, offset);
         offset = Math.max(0, offset - STRIDE);

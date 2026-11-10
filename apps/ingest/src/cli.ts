@@ -134,7 +134,7 @@ switch (command) {
   }
   case "plan": {
     // Explicit sources (a manual dispatch) run in the given mode; otherwise the schedule decides.
-    const base = await findRelease(releaseStoreFrom(required("store"), TAG_PREFIX));
+    const base = await findRelease(releaseStoreFrom(required("store"), TAG_PREFIX, log));
     const harvests = values.source
       ? values.source.split(",").map((id) => ({ source: knownSource(id).id, mode: harvestModes() }))
       : plan(
@@ -147,7 +147,7 @@ switch (command) {
   }
   case "restore": {
     const release = await restoreLedger(
-      releaseStoreFrom(required("store"), TAG_PREFIX),
+      releaseStoreFrom(required("store"), TAG_PREFIX, log),
       required("ledger"),
       { base: base(), init: values.init },
     );
@@ -193,7 +193,7 @@ switch (command) {
       break;
     }
     const result = await releaseRuns({
-      store: releaseStoreFrom(required("store"), TAG_PREFIX),
+      store: releaseStoreFrom(required("store"), TAG_PREFIX, log),
       logs,
       work: values.work ?? join(dir, ".work"),
       now,

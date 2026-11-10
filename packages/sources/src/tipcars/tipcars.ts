@@ -39,8 +39,13 @@
  *   pages), or one still short over more than one page, is split by price, dearest first:
  *   the new list into fixed bands (`new:500000-599999`), a used year at 1,000,000 Kč
  *   (`used:2017:0-999999`), an open band [from, ∞) at 2·from, a closed one in the middle at
- *   whole Kč. A split slice is done when each part is, a recount finds no listing outside
- *   them, and the distinct listings harvested for it (from its parts, the proofs below and
+ *   whole Kč. The site filters on a stored price that can hold a fraction of a Kč, so a
+ *   listing can fall between a price band's halves (one showing 249,999 Kč between 0-249999
+ *   and 250000-499999); when a band's recount finds listings outside its halves, the one-Kč
+ *   seam between them (`used:2021:249999-250000`) is harvested as a slice of its own and
+ *   accounts for the listings it holds beyond its two whole prices (`seam`). A split slice
+ *   is done when each part (and seam harvested) is, a recount finds no listing outside them,
+ *   and the distinct listings harvested for it (from its parts, seam, the proofs below and
  *   the parts done earlier in the census, paged again) are at least as many as it reports at
  *   the end. That count is taken at the end, not at the start: a listing sold before its
  *   part was paged leaves nothing to harvest. Prices mostly drop, so a listing that drops
@@ -48,7 +53,8 @@
  *   balances the recount without coming out, but leaves the count by ref short: a year then
  *   gets the whole pass below, a price band stays not done. A new or demo listing of a part
  *   done earlier in the census comes out again only if no run of the census read it whole:
- *   a SliceDone `listing:<ref>` after its part's SliceDone marks one that was. Limit: the
+ *   a SliceDone `listing:<ref>` after its part's SliceDone marks one that was (a part paged
+ *   again yields its SliceDone again for the ones it read whole; see `again`). Limit: the
  *   count by ref is necessary, not sufficient: a used listing harvested and then sold still
  *   counts, so it can stand in for one that rose into a part already done within the same
  *   minutes.
@@ -232,6 +238,12 @@ class Harvest {
   private readonly skipped: Slice[] = [];
   /** Requests this run has made. */
   private requests = 0;
+  /**
+   * Whether a ListingSeen the Ledger rejects, naming no slice, came out since the last
+   * SliceDone: the Ledger counts it towards the next SliceDone, so a part paged again yields
+   * none of its own (`again`) and leaves it to the slice holding the part.
+   */
+  private unclaimed = false;
   private readonly ctx: HarvestContext;
   private readonly maxPages: number;
   private readonly cap: number;
@@ -258,11 +270,17 @@ class Harvest {
     }
     // A listing names its year or list (ListingSeen.slice), not a price part: a price moves.
     // One the Ledger rejects names none, so it keeps the part it came out in not done, as
-    // well as the slice it holds a known listing in.
+    // well as the slice it holds a known listing in. A price sighting names it too: only the
+    // Ledger knows when it rejects one (a price in another currency), and a part paged again
+    // may yield its SliceDone before the slice is done (`again`).
     for (const slice of this.slices()) {
       const key = sliceKey(slice);
-      for await (const o of this.slice(slice))
-        yield o.kind === "ListingSeen" && takeable(o) ? { ...o, slice: key } : o;
+      for await (const o of this.slice(slice)) {
+        if (o.kind === "SliceDone") this.unclaimed = false;
+        else if (o.kind === "ListingSeen" && !takeable(o)) this.unclaimed = true;
+        if (o.kind === "ListingPriceSeen") yield { ...o, slice: key };
+        else yield o.kind === "ListingSeen" && takeable(o) ? { ...o, slice: key } : o;
+      }
     }
     if (this.short.length > 0) {
       throw new Error(
@@ -346,7 +364,8 @@ class Harvest {
   /**
    * Whether the parts of a slice take every listing it reports, counted back to back, and
    * the listings harvested for it by ref are at least as many as it reports at the end. A
-   * price band's halves take every whole-Kč price. A year or the new list also has listings
+   * price band's halves take every whole-Kč price, and its seam (`seam`) the ones between,
+   * priced at a fraction of a Kč. A year or the new list also has listings
    * no price filter returns, "Dohodou" ones and some priced ones (the site's price filter
    * leaves out 177 used and 185 new or demo cards on 2026-10-28, not one of them returned by
    * a band around its own price); the slice is done when each of those is proven (`candidates`).
@@ -367,6 +386,7 @@ class Harvest {
     }
     const key = sliceKey(slice);
     let { left, total } = yield* this.recount(slice, parts);
+    if (left > 0 && slice.price) left -= yield* this.seam(slice, parts, harvested);
     if (left <= 0 && this.live(harvested).size >= total) return harvested;
     if (slice.price) {
       const why = left > 0 ? "listings in neither half" : this.tally(harvested, total);
@@ -410,6 +430,45 @@ class Harvest {
     return null;
   }
 
+  /**
+   * How many of the listings price band `slice` reports and its halves do not lie between
+   * them. The site filters on the price it stores, which can hold a fraction of a Kč (on
+   * 2026-11-01 two 2021 cards showing 249,999 Kč were returned by 249999-250000kc but by
+   * neither 249999-249999kc nor 250000-250000kc), so such a listing falls between halves split
+   * at whole Kč. The one-Kč seam [a, a + 1] between the halves is harvested as a slice of its
+   * own (paged again when done earlier in the census), and its listings join `harvested`. It
+   * accounts for the listings it reports beyond its two whole prices (the seam counted there
+   * and back keeping its lower count, each price its higher count), and for no more than it
+   * met that neither half did; none when it is not done or is the slice itself.
+   */
+  private async *seam(
+    slice: Slice,
+    [upper, lower]: readonly Slice[],
+    harvested: Set<string>,
+  ): AsyncGenerator<Observation, number> {
+    const a = lower?.price?.to;
+    if (a === undefined || upper?.price?.from !== a + 1) return 0;
+    const seam: Slice = { ...slice, price: { from: a, to: a + 1 } };
+    const key = sliceKey(seam);
+    // The seam's own halves are its two whole prices: their seam is the seam itself.
+    if (key === sliceKey(slice)) return 0;
+    const refs = this.ctx.checkpoint.sliceDoneAt(key)
+      ? yield* this.again(seam)
+      : yield* this.slice(seam);
+    if (!refs) return 0;
+    const unmet = this.live(new Set([...refs].filter((ref) => !harvested.has(ref))));
+    for (const ref of refs) harvested.add(ref);
+    const at = (price: number): Slice => ({ ...slice, price: { from: price, to: price } });
+    const there = yield* this.count(seam);
+    const low = yield* this.count(at(a));
+    const high = yield* this.count(at(a + 1));
+    const back = yield* this.count(seam);
+    const highAgain = yield* this.count(at(a + 1));
+    const lowAgain = yield* this.count(at(a));
+    const between = Math.min(there, back) - Math.max(low, lowAgain) - Math.max(high, highAgain);
+    return Math.max(0, Math.min(between, unmet.size));
+  }
+
   /** `refs` without the ones that came out as ListingGone. */
   private live(refs: ReadonlySet<string>): Set<string> {
     return new Set([...refs].filter((ref) => !this.gone.has(ref)));
@@ -420,14 +479,35 @@ class Harvest {
   }
 
   /**
+   * Pages a part done earlier in the census again (`reread`), returning its complete pass's
+   * refs. When that pass read new or demo listings whole, the part's SliceDone comes out again
+   * with their marks right after it, as after a slice's first SliceDone. Left to the SliceDone
+   * of the slice holding the part, the marks were lost whenever a run stopped before that
+   * slice was done, so each run of the census read the same listings whole again: on
+   * 2026-11-03 to 05 some 8,000 of the new list's detail pages a day, which left no time to
+   * finish it. Not after a rejected ListingSeen naming no slice (`unclaimed`): the Ledger
+   * counts that one towards the next SliceDone, which must stay the holding slice's.
+   */
+  private async *again(part: Slice): AsyncGenerator<Observation, Set<string> | null> {
+    const refs = yield* this.reread(part);
+    const unmarked = (ref: string) => this.detailed.has(ref) && !this.marked.has(ref);
+    // `run` has seen every observation `reread` yielded before it resumed `reread`.
+    if (refs && !this.unclaimed && [...refs].some(unmarked)) {
+      yield { kind: "SliceDone", slice: sliceKey(part) };
+      yield* this.marks(refs);
+    }
+    return refs;
+  }
+
+  /**
    * Pages a part done earlier in the census again, returning its complete pass's refs. A
    * used one comes out again from its card. A new or demo one costs a detail page, so it
    * comes out again only when no run of this census has read it whole (its `listing:<ref>`
    * mark, and the Ledger still knows it): one that moved into the part since it was done, or
-   * arrived. A short pass recovers through smaller parts, each complete and reconciled
-   * against this part; its short pass's refs never count towards that recovery.
+   * arrived. A short pass recovers through smaller parts (`again`), each complete and
+   * reconciled against this part; its short pass's refs never count towards that recovery.
    */
-  private async *again(part: Slice): AsyncGenerator<Observation, Set<string> | null> {
+  private async *reread(part: Slice): AsyncGenerator<Observation, Set<string> | null> {
     const harvested = new Set<string>();
     let reported = 0;
     for await (const page of this.pages(part, true)) {

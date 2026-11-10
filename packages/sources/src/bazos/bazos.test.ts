@@ -453,6 +453,136 @@ describe("bazos source", () => {
     expect(observations).toEqual([]);
   });
 
+  describe("a category deeper than the site lists", () => {
+    // As Škoda live on 2026-11-06: the site shows a category's first 20,000 ads only, and
+    // every offset past them serves the page ending at the 20,000th (offset 19,968 showed
+    // 19,961-20,000 of 31,401). Here the 59 Kia ads are listed only to the 40th.
+    async function capped(category: string) {
+      const kia = await category_();
+      const served = await kia.cassette([
+        [0, kia.ids],
+        [16, kia.ids],
+        [20, kia.ids],
+      ]);
+      const last = served.interactions.find(({ request }) => request.url.endsWith("/kia/20/"));
+      if (!last) throw new Error("no page at offset 20");
+      const interactions = served.interactions.filter((i) => i !== last);
+      // Far enough past the cap that a walk not stopping there runs out of recorded pages.
+      for (let offset = 32; offset <= 160; offset += 16) {
+        const url = `https://auto.bazos.cz/kia/${offset}/`;
+        interactions.push({ request: { url }, response: { ...last.response, url } });
+      }
+      const atCategory = (url: string) => url.replace("/kia/", `/${category}/`);
+      for (const i of interactions) {
+        i.request = { ...i.request, url: atCategory(i.request.url) };
+        i.response = { ...i.response, url: atCategory(i.response.url) };
+      }
+      return interactions;
+    }
+    const category_ = category;
+
+    it("full run: the category stays out of the census, by name, after one walk to the last page listed, and the run goes on", async () => {
+      // Kia listed only to its 40th ad; the same 59 ads, listed whole, as Seat.
+      const seat = await category_();
+      const whole = await seat.cassette([
+        [0, seat.ids],
+        [16, seat.ids],
+        [32, seat.ids],
+        [48, seat.ids],
+      ]);
+      const seatPages = whole.interactions
+        .filter(({ request }) => !request.url.includes("/inzerat/"))
+        .map((i) => {
+          const url = i.request.url.replace("/kia/", "/seat/");
+          return { request: { url }, response: { ...i.response, url } };
+        });
+      const ads = whole.interactions.filter(({ request }) => request.url.includes("/inzerat/"));
+      const { observations, error, warnings, listed } = await harvest(
+        { version: 1, interactions: [...(await capped("kia")), ...seatPages, ...ads] },
+        "full",
+        {},
+        undefined,
+        ["kia", "seat"],
+      );
+      expect(warnings).toContain("bazos: kia is listed only to ad 40 of 59");
+      expect(String(error)).toBe(
+        "Error: bazos: categories not harvested whole: kia (the site lists 40 of its 59 ads (offset 32 served 21-40))",
+      );
+      // One walk, ended at the first page off its offset: no second attempt, no top-up.
+      expect(listed.filter((path) => path.startsWith("/kia/"))).toEqual([
+        "/kia/",
+        "/kia/16/",
+        "/kia/32/",
+      ]);
+      // Seat, after it, is harvested whole, and only Seat: Kia's listed ads get no ad page.
+      expect(observations.filter((o) => o.kind === "SliceDone")).toEqual([
+        { kind: "SliceDone", slice: "seat;part=0/2" },
+        { kind: "SliceDone", slice: "seat;part=1/2" },
+      ]);
+      expect(refs(observations).sort()).toEqual([...IN_SCOPE].sort());
+      expect(listings(observations).every((o) => o.slice?.startsWith("seat;"))).toBe(true);
+    });
+
+    it("full run: a known ad listed on the last page only is still proven live", async () => {
+      const kia = await category_();
+      const lastOnly = kia.ids.slice(36, 40).filter((id) => IN_SCOPE.includes(id));
+      expect(lastOnly.length).toBeGreaterThan(0);
+      const details = await loadCassette(fixture("details"));
+      const { observations, error } = await harvest(
+        { version: 1, interactions: [...(await capped("kia")), ...details.interactions] },
+        "full",
+        { isKnown: (ref) => lastOnly.includes(ref) },
+      );
+      expect(String(error)).toMatch(/not harvested whole: kia \(the site lists 40 of its 59 ads/);
+      expect(
+        observations
+          .filter((o): o is ListingPriceSeen => o.kind === "ListingPriceSeen")
+          .map((o) => o.ref),
+      ).toEqual(lastOnly);
+    });
+
+    it("incremental run: reads the ads listed, the last page's too, and goes on", async () => {
+      const kia = await category_();
+      const lastOnly = kia.ids.slice(36, 40).filter((id) => IN_SCOPE.includes(id));
+      expect(lastOnly.length).toBeGreaterThan(0);
+      const recorded = await capped("kia");
+      const details = await loadCassette(fixture("details"));
+      const { observations, error, warnings, listed } = await harvest(
+        { version: 1, interactions: [...recorded, ...details.interactions] },
+        "incremental",
+        { lastRunAt: LONG_AGO },
+      );
+      expect(error).toBeUndefined();
+      expect(warnings).toContain("bazos: kia is listed only to ad 40 of 59");
+      expect(listed).toEqual(["/kia/", "/kia/16/", "/kia/32/"]);
+      expect(refs(observations).sort()).toEqual(
+        IN_SCOPE.filter((id) => kia.ids.indexOf(id) < 40).sort(),
+      );
+    });
+
+    it("a last page off its offset that reaches the count ends the walk as usual", async () => {
+      // As when ads go during the walk: /kia/48/ serves 41-59, the category's end.
+      const kia = await category_();
+      const served = await kia.cassette([
+        [0, kia.ids],
+        [16, kia.ids],
+        [32, kia.ids],
+        [40, kia.ids],
+      ]);
+      for (const i of served.interactions) {
+        if (!i.request.url.endsWith("/kia/40/")) continue;
+        const url = "https://auto.bazos.cz/kia/48/";
+        i.request = { url };
+        i.response = { ...i.response, url };
+      }
+      const { observations, error, warnings } = await harvest(served, "full");
+      expect(error).toBeUndefined();
+      expect(warnings).toEqual([]);
+      expect(refs(observations).sort()).toEqual([...IN_SCOPE].sort());
+      expect(observations.filter((o) => o.kind === "SliceDone")).toHaveLength(2);
+    });
+  });
+
   it("leaves out new cars", async () => {
     const recorded = await cassette("full", (c) => {
       // Said in the list row: no ad page. Said on the ad page only: read, then left out.

@@ -401,6 +401,34 @@ describe("autoesa source", () => {
     expect(slicesDone(os)).toEqual(FULL_SLICES);
   });
 
+  it("a listing link whose fuel slug holds a slash is a listing like any other", async () => {
+    const plain = await loadCassette(full);
+    const page = plain.interactions.find((x) => x.request.url.endsWith(SLICE_2003));
+    const href = /<a href="(\/[^"]*\/(\d+))"\s+class="car_item"/.exec(page?.response.body ?? "");
+    const [, path, ref] = href as RegExpExecArray;
+    const slashed = (path as string).replace(/\/[^/]+\/(\d+)$/, "/benzin/nafta/$1");
+    let cassette = edit(
+      plain,
+      SLICE_2003,
+      body((b) => b.replace(`"${path}"`, `"${slashed}"`)),
+    );
+    // The site serves the listing at the link it gives.
+    cassette = {
+      ...cassette,
+      interactions: cassette.interactions.map((x) =>
+        x.request.url.endsWith(path as string)
+          ? { ...x, request: { ...x.request, url: `https://www.autoesa.cz${slashed}` } }
+          : x,
+      ),
+    };
+    const os = await harvest(cassette, { mode: "full" });
+    const seen = listings(os);
+    expect(os.filter((o) => o.kind === "ListingSeen" && o.ref === "")).toHaveLength(0);
+    expect(seen.map((o) => o.ref)).toContain(ref);
+    expect(seen).toHaveLength(32);
+    expect(slicesDone(os)).toEqual(FULL_SLICES);
+  });
+
   it("a slice that stays short of its count is paged twice, then fails the run after the others", async () => {
     const cassette = edit(await loadCassette(full), SLICE_2003, body(withoutCard));
     const urls: string[] = [];
