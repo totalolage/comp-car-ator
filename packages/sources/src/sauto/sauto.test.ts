@@ -1043,7 +1043,7 @@ describe("sauto source", () => {
   });
 
   it("full run judges each pass alone, against the highest total its pages reported", async () => {
-    // Two short passes that together hold all 3 results.
+    // Short passes (the band's, then each lower half's) that together hold all 3 results.
     let passes = 0;
     const apart = await harvestSite("full", (q) => {
       if (!newLow(q)) return empty;
