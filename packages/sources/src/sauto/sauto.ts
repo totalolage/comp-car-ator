@@ -469,19 +469,23 @@ class Run {
     first: Page,
   ): Promise<{ items: Item[]; complete: boolean }> {
     const items = new Map<string, Item>();
-    const complete = await this.sweep(slice, query, first, items);
-    return { items: [...items.values()], complete };
+    const met = await this.sweep(slice, query, first, items);
+    return { items: [...items.values()], complete: met !== undefined };
   }
 
   /**
-   * One pass over `query`'s band, into `items`; true when the pass alone reaches the highest
-   * total its pages reported (skipped listings count, as the total counts them). Consecutive
+   * One pass over `query`'s band, into `items`; what it met (by ref) when it accounts for the
+   * band, else undefined. A pass accounts for it when it alone reaches the highest total its
+   * pages reported (skipped listings count, as the total counts them). Consecutive
    * pages overlap a little in case deletions shift the order up. A pass falls short when a
    * listing is removed meanwhile (the next one shifts onto a page already read), and steadily
    * when Sauto's search replicas disagree (see `walk`): paging the same URLs again reaches the
    * same replicas and misses the same listing. So a short pass pages the band's price halves
-   * instead, each with its own pass and check, and the band is complete when every half is.
-   * One page comes from one replica, which holds each listing once, so halves one page holds
+   * instead, each with its own pass and check. Every half reaching its own total is not enough:
+   * a listing repriced across the middle meanwhile is in neither half when one replica serves
+   * the lower half its new price and the other the upper half its old one. So the halves must
+   * also meet together as many listings as the band holds, counted again after them (a listing
+   * removed since the short pass leaves that count). One page comes from one replica, which holds each listing once, so halves one page holds
    * see each listing; a short half is halved again, and one that cannot be split stays short.
    * Only short halves recurse, so a listing the site counts but never serves costs a pass over
    * each half at every halving (some 27 halvings below PRICE_TOP) before its slice fails.
@@ -491,7 +495,7 @@ class Run {
     query: Omit<Query, "offset">,
     first: Page | undefined,
     items: Map<string, Item>,
-  ): Promise<boolean> {
+  ): Promise<ReadonlySet<string> | undefined> {
     const step = this.pageSize - Math.min(5, Math.floor(this.pageSize / 4));
     const distinct = new Set<string>();
     let offset = 0;
@@ -512,7 +516,7 @@ class Run {
       }
       page = await this.search({ ...query, offset });
     }
-    if (distinct.size >= reported) return true;
+    if (distinct.size >= reported) return distinct;
     const halves = query.band && halveSharing(query.band);
     this.ctx.log.warn("sauto slice came out short", {
       slice,
@@ -521,12 +525,24 @@ class Run {
       reported,
       next: halves ? "price halves" : "none",
     });
-    if (!halves) return false;
+    if (!halves) return undefined;
+    const met = new Set<string>();
     let complete = true;
     for (const half of halves) {
-      if (!(await this.sweep(slice, { ...query, band: half }, undefined, items))) complete = false;
+      const metInHalf = await this.sweep(slice, { ...query, band: half }, undefined, items);
+      if (!metInHalf) complete = false;
+      for (const ref of metInHalf ?? []) met.add(ref);
     }
-    return complete;
+    if (!complete) return undefined;
+    const { total } = await this.search({ ...query, offset: 0 });
+    if (met.size >= total) return met;
+    this.ctx.log.warn("sauto slice's price halves came out short together", {
+      slice,
+      band: bandName(query.band),
+      met: met.size,
+      total,
+    });
+    return undefined;
   }
 
   /**
