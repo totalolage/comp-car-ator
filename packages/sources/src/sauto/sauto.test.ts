@@ -33,6 +33,14 @@ const withoutVat = new URL("./fixtures/without-vat.cassette.json", import.meta.u
  * (see the test that uses it); built from that recording, its details unchanged.
  */
 const replicaSplit = new URL("./fixtures/replica-split.cassette.json", import.meta.url);
+/**
+ * A census of without-vat's Toyota Siennas as two search replicas would serve it, one lagging
+ * an edit (see the test that uses it); built from that recording, its details unchanged.
+ */
+const censusReplicaSplit = new URL(
+  "./fixtures/census-replica-split.cassette.json",
+  import.meta.url,
+);
 const OPTIONS = { manufacturerModel: "dacia:spring", pageSize: 4, sliceLimit: 8 };
 /** A last run before every listing of the fixture: an incremental run yields all it does not know. */
 const LONG_AGO = new Date("2020-01-01T00:00:00Z");
@@ -1004,8 +1012,10 @@ describe("sauto source", () => {
     expect(String(error)).toMatch(/fewer results than reported: new\/0-134217728$/);
     expect(listings(observations).map((o) => o.ref)).toEqual(["1001", "1002"]);
     expect(slices(observations)).toEqual(ALL_SLICES.filter((s) => s !== NEW_LOW));
-    // Paged once more before giving up.
-    expect(searches(urls).filter((u) => newLow(new URL(u).searchParams))).toHaveLength(2);
+    // Its price halves are paged rather than the same URLs, down to a band it cannot split.
+    const low = searches(urls).filter((u) => newLow(new URL(u).searchParams));
+    expect(new Set(low).size).toBe(low.length);
+    expect(new URL(low.at(-1) as string).searchParams.get("price_to")).toBe("1");
   });
 
   it("full run does not count a page served twice towards its band's total", async () => {
@@ -1018,12 +1028,12 @@ describe("sauto source", () => {
     expect(slices(observations)).not.toContain(NEW_LOW);
   });
 
-  it("full run finishes a short band when paging it again reaches its total", async () => {
+  it("full run finishes a short band when paging its price halves reaches their totals", async () => {
     let passes = 0;
     const { observations, error } = await harvestSite("full", (q) => {
       if (!newLow(q)) return empty;
       passes++;
-      // The first pass misses 3 and serves 1 without a price; the second has it priced.
+      // The first pass misses 3 and serves 1 without a price; the lower half's has it priced.
       const unpriced = car(1, { price: null, price_by_agreement: true });
       return { total: 3, results: passes === 1 ? [unpriced, car(2)] : cars(1, 2, 3) };
     });
@@ -1033,7 +1043,7 @@ describe("sauto source", () => {
   });
 
   it("full run judges each pass alone, against the highest total its pages reported", async () => {
-    // Two short passes that together hold all 3 results.
+    // Short passes (the band's, then each lower half's) that together hold all 3 results.
     let passes = 0;
     const apart = await harvestSite("full", (q) => {
       if (!newLow(q)) return empty;
@@ -1166,6 +1176,78 @@ describe("sauto source", () => {
     expect(listings(known.observations).map((o) => o.ref)).toEqual(["211327473"]);
     expect(prices(known.observations).map(([ref]) => ref)).not.toContain("211327473");
     expect(new Set(prices(known.observations).map(([ref]) => ref)).size).toBe(13);
+  });
+
+  it("full run pages a short band's price halves, so a search replica lagging an edit leaves no slice short", async () => {
+    // Built from without-vat's recorded Toyota Siennas as a census of them: the used band's
+    // first page comes from a replica that has not applied 211327473's edit and still shows it
+    // dated 2025-03-01, ninth of the band's 10; every other page comes from the up-to-date
+    // replica, which shows it first, on the page the lagging one served. So a pass over the band
+    // meets 9 of its 10 listings, and paging the same URLs again (Sauto routes each URL to the
+    // same replica every time) met 9 again; its price halves meet all 10, as many as the band
+    // counts after them.
+    const urls: string[] = [];
+    const replay = createReplayHttp(await loadCassette(censusReplicaSplit));
+    const ctx: HarvestContext = {
+      http: {
+        get(request) {
+          urls.push(typeof request === "string" ? request : request.url);
+          return replay.get(request);
+        },
+      },
+      mode: "full",
+      checkpoint: emptyCheckpoint,
+      now: recordedAt,
+      log: silentLogger,
+      signal: new AbortController().signal,
+    };
+    const observations: Observation[] = [];
+    const source = sautoSource({ manufacturerModel: "toyota:sienna", pageSize: 4 });
+    for await (const o of source.harvest(ctx)) observations.push(o);
+    expect(slices(observations)).toEqual(ALL_SLICES);
+    expect(new Set(listings(observations).map((o) => o.ref)).size).toBe(14);
+    expect(listings(observations).map((o) => o.ref)).toContain("211327473");
+    const used = searches(urls).filter((u) => u.includes("condition_seo=ojete"));
+    const band = used.filter((u) => u.includes("price_from=0&price_to=134217727"));
+    // Its 4 pages once, then its first page again for its count; never its later pages again.
+    expect(band).toHaveLength(5);
+    expect(band.filter((u) => u.includes("offset=0"))).toHaveLength(2);
+    expect(used.filter((u) => u.includes("price_from=0&price_to=67108864"))).toHaveLength(4);
+  });
+
+  it("full run fails a band whose price halves each reach their totals but together miss a listing the band counts", async () => {
+    // Listing 6 repriced across the band's middle: the band's pass misses it, the lower half
+    // comes from a replica with its new (upper) price and the upper half from one with its old,
+    // so neither half holds it, and each reaches its own total of what it holds.
+    const five = cars(1, 2, 3, 4, 5);
+    const { observations, urls, error } = await harvestSite("full", (q) => {
+      if (!newLow(q)) return empty;
+      const page = paged(five)(q);
+      return q.get("price_to") === "134217727" ? { ...page, total: 6 } : page;
+    });
+    expect(String(error)).toMatch(/fewer results than reported: new\/0-134217728$/);
+    expect(listings(observations).map((o) => o.ref)).toEqual(["1", "2", "3", "4", "5"]);
+    expect(slices(observations)).toEqual(ALL_SLICES.filter((s) => s !== NEW_LOW));
+    // The band counted again after its halves.
+    const band = searches(urls).filter(
+      (u) => newLow(new URL(u).searchParams) && u.includes("price_to=134217727"),
+    );
+    expect(band.filter((u) => u.includes("offset=0"))).toHaveLength(2);
+  });
+
+  it("full run finishes a band short of a listing removed meanwhile, once its halves meet what it counts after them", async () => {
+    // The band's pass reports 6 but meets 5: listing 6 was removed between its pages. Its halves
+    // and its count after them hold the 5 left.
+    let counted = 0;
+    const { observations, error } = await harvestSite("full", (q) => {
+      if (!newLow(q)) return empty;
+      const page = paged(cars(1, 2, 3, 4, 5))(q);
+      const band = q.get("price_to") === "134217727";
+      return band && counted++ < 2 ? { ...page, total: 6 } : page;
+    });
+    expect(error).toBeUndefined();
+    expect(listings(observations).map((o) => o.ref)).toEqual(["1", "2", "3", "4", "5"]);
+    expect(slices(observations)).toEqual(ALL_SLICES);
   });
 
   it("incremental run reads a listing its price halves meet only as a lagging replica's old copy", async () => {

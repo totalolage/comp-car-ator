@@ -22,8 +22,9 @@
  * full: a census sliced by condition and price band; a band over `sliceLimit` results is
  *   halved until each fits (2,000 by default: some 40 minutes of detail pages, well within
  *   one run). Slices done earlier in the census are skipped before any split. Each band
- *   yields SliceDone once one pass over it reaches the band's total; a band that stays
- *   short fails the run at its end.
+ *   yields SliceDone once one pass over it, or over each of its price halves, reaches its
+ *   total (a short pass pages price halves, not the same URLs again, as the incremental's walk
+ *   does); a band that stays short fails the run at its end.
  *
  * In scope: priced listings (not price by agreement) made in 2000 or later. Searches filter
  * the year (`vehicle_age_from`); listings that slip through are skipped.
@@ -458,49 +459,90 @@ class Run {
   }
 
   /**
-   * Every search item of a leaf band, paged once more when a pass has fewer distinct results
-   * than the band reports (a listing removed meanwhile shifts the next one onto a page already
-   * read). A pass is complete when it alone reaches the highest total its pages reported;
-   * skipped listings count, as the total counts them. The items of both passes come out, each
-   * as last served, so a listing priced or dated into scope by the second pass is not skipped.
-   * Consecutive pages overlap a little in case deletions shift the order up.
+   * Every search item of a leaf band, and whether its passes account for every result the band
+   * reports. The items come out each as last served, so a listing priced or dated into scope by
+   * a later pass is not skipped.
    */
   private async census(
     slice: string,
-    band: Omit<Query, "offset">,
+    query: Omit<Query, "offset">,
     first: Page,
   ): Promise<{ items: Item[]; complete: boolean }> {
     const items = new Map<string, Item>();
+    const met = await this.sweep(slice, query, first, items);
+    return { items: [...items.values()], complete: met !== undefined };
+  }
+
+  /**
+   * One pass over `query`'s band, into `items`; what it met (by ref) when it accounts for the
+   * band, else undefined. A pass accounts for it when it alone reaches the highest total its
+   * pages reported (skipped listings count, as the total counts them). Consecutive
+   * pages overlap a little in case deletions shift the order up. A pass falls short when a
+   * listing is removed meanwhile (the next one shifts onto a page already read), and steadily
+   * when Sauto's search replicas disagree (see `walk`): paging the same URLs again reaches the
+   * same replicas and misses the same listing. So a short pass pages the band's price halves
+   * instead, each with its own pass and check. Every half reaching its own total is not enough:
+   * a listing repriced across the middle meanwhile is in neither half when one replica serves
+   * the lower half its new price and the other the upper half its old one. So the halves must
+   * also meet together as many listings as the band holds, counted again after them (a listing
+   * removed since the short pass leaves that count). One page comes from one replica, which holds each listing once, so halves one page holds
+   * see each listing; a short half is halved again, and one that cannot be split stays short.
+   * Only short halves recurse, so a listing the site counts but never serves costs a pass over
+   * each half at every halving (some 27 halvings below PRICE_TOP) before its slice fails.
+   */
+  private async sweep(
+    slice: string,
+    query: Omit<Query, "offset">,
+    first: Page | undefined,
+    items: Map<string, Item>,
+  ): Promise<ReadonlySet<string> | undefined> {
     const step = this.pageSize - Math.min(5, Math.floor(this.pageSize / 4));
-    for (let pass = 1; pass <= 2; pass++) {
-      const distinct = new Set<string>();
-      let offset = 0;
-      let page = pass === 1 ? first : await this.search({ ...band, offset });
-      let reported = 0;
-      for (;;) {
-        reported = Math.max(reported, page.total);
-        for (const [i, item] of page.items.entries()) {
-          // A malformed entry has no id: its place stands in for it.
-          const key = refOf(item) ?? `@${offset + i}`;
-          distinct.add(key);
-          items.set(key, item);
-        }
-        if (page.items.length < this.pageSize || offset + step >= page.total) break;
-        offset += step;
-        if (offset + this.pageSize > WINDOW) {
-          throw new Error(`Sauto slice ${slice} grew past the ${WINDOW}-result window`);
-        }
-        page = await this.search({ ...band, offset });
+    const distinct = new Set<string>();
+    let offset = 0;
+    let page = first ?? (await this.search({ ...query, offset }));
+    let reported = 0;
+    for (;;) {
+      reported = Math.max(reported, page.total);
+      for (const [i, item] of page.items.entries()) {
+        // A malformed entry has no id: its place in its band stands in for it.
+        const key = refOf(item) ?? `@${bandName(query.band)}:${offset + i}`;
+        distinct.add(key);
+        items.set(key, item);
       }
-      if (distinct.size >= reported) return { items: [...items.values()], complete: true };
-      this.ctx.log.warn("sauto slice came out short", {
-        slice,
-        pass,
-        distinct: distinct.size,
-        reported,
-      });
+      if (page.items.length < this.pageSize || offset + step >= page.total) break;
+      offset += step;
+      if (offset + this.pageSize > WINDOW) {
+        throw new Error(`Sauto slice ${slice} grew past the ${WINDOW}-result window`);
+      }
+      page = await this.search({ ...query, offset });
     }
-    return { items: [...items.values()], complete: false };
+    if (distinct.size >= reported) return distinct;
+    const halves = query.band && halveSharing(query.band);
+    this.ctx.log.warn("sauto slice came out short", {
+      slice,
+      band: bandName(query.band),
+      distinct: distinct.size,
+      reported,
+      next: halves ? "price halves" : "none",
+    });
+    if (!halves) return undefined;
+    const met = new Set<string>();
+    let complete = true;
+    for (const half of halves) {
+      const metInHalf = await this.sweep(slice, { ...query, band: half }, undefined, items);
+      if (!metInHalf) complete = false;
+      for (const ref of metInHalf ?? []) met.add(ref);
+    }
+    if (!complete) return undefined;
+    const { total } = await this.search({ ...query, offset: 0 });
+    if (met.size >= total) return met;
+    this.ctx.log.warn("sauto slice's price halves came out short together", {
+      slice,
+      band: bandName(query.band),
+      met: met.size,
+      total,
+    });
+    return undefined;
   }
 
   /**
