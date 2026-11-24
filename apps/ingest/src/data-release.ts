@@ -20,6 +20,7 @@ import { packBundle } from "@cca/bundle/node";
 import { openLedger, RunFailedError, type RunSummary } from "@cca/ledger";
 import { publish } from "@cca/publisher";
 import { type HarvestMode, type Logger, silentLogger } from "@cca/sources";
+import { describeError } from "./error-text.ts";
 import type { ReleaseStore } from "./release-store.ts";
 import { readLogInfo, recordLog } from "./run-log.ts";
 
@@ -201,7 +202,7 @@ export async function releaseRuns(options: ReleaseRunsOptions): Promise<ReleaseR
       } catch (error) {
         if (!(error instanceof RunFailedError)) throw error;
         run.summary = error.summary;
-        run.error = String(error.cause);
+        run.error = describeError(error.cause);
         log.warn(`recorded failed run ${info.source} ${info.mode}`, {
           error: run.error,
           ...run.summary,
@@ -261,7 +262,7 @@ export async function releaseRuns(options: ReleaseRunsOptions): Promise<ReleaseR
       log.info(`pruned ${old}`);
     }
   } catch (error) {
-    log.warn("could not prune old data releases", { error: String(error) });
+    log.warn("could not prune old data releases", { error: describeError(error) });
   }
   return { tag, runs };
 }
