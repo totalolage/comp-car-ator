@@ -15,6 +15,7 @@ import type { Http } from "@cca/http";
 import { type Ledger, RunFailedError, type RunInfo, type RunSummary } from "@cca/ledger";
 import { type HarvestMode, type Logger, type Source, silentLogger } from "@cca/sources";
 import type { Observation } from "@cca/vocabulary";
+import { describeError } from "./error-text.ts";
 
 type Line =
   | { run: { source: string; mode: HarvestMode; scope?: string; startedAt: string } }
@@ -85,7 +86,7 @@ export async function harvestToLog(options: HarvestToLogOptions): Promise<Harves
       await write({ end: "complete" });
     } catch (error) {
       if (writeError) throw writeError;
-      report.error = String(error);
+      report.error = describeError(error);
       await write({ end: "failed", error: report.error });
     }
   } finally {

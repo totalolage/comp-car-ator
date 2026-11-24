@@ -5,6 +5,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream } from "node:stream/web";
 import { type Logger, silentLogger } from "@cca/sources";
+import { describeError } from "./error-text.ts";
 import type { ReleaseStore } from "./release-store.ts";
 
 export interface GithubReleaseStoreOptions {
@@ -165,7 +166,7 @@ export function githubReleaseStore(options: GithubReleaseStoreOptions): ReleaseS
           error instanceof GithubError ? (error.retryAfterMs ?? 0) : 0,
         );
         log.warn(`upload of ${file.name} to draft ${release.id} failed; trying again`, {
-          error: String(error),
+          error: describeError(error),
           attempt,
           waitSeconds: wait / 1000,
         });

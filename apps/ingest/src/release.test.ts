@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { memoryLoader } from "@cca/bundle";
 import { unpackBundle } from "@cca/bundle/node";
 import { openCatalog } from "@cca/catalog";
-import { createReplayHttp, loadCassette } from "@cca/http";
+import { createReplayHttp, HttpNetworkError, loadCassette } from "@cca/http";
 import { openLedger } from "@cca/ledger";
 import { publish } from "@cca/publisher";
 import { cnbSource, type Source } from "@cca/sources";
@@ -293,7 +293,11 @@ async function githubHarness(): Promise<GithubHarness> {
 }
 
 /** A full-census Source that yields a listing per ref and SliceDone per slice, failing in `failIn`. */
-function census(slices: Record<string, string[]>, failIn?: string): Source {
+function census(
+  slices: Record<string, string[]>,
+  failIn?: string,
+  failure: unknown = new Error("HTTP 503"),
+): Source {
   return {
     id: "autoscout24-de",
     scope: "de",
@@ -314,7 +318,7 @@ function census(slices: Record<string, string[]>, failIn?: string): Source {
             seller: "dealer",
             photos: [],
           };
-        if (slice === failIn) throw new Error("HTTP 503");
+        if (slice === failIn) throw failure;
         yield { kind: "SliceDone", slice };
       }
     },
@@ -436,6 +440,25 @@ describe.each([
     expect(ledger.checkpoint("autoscout24-de", "de").lastRunAt).toEqual(day("2026-10-11"));
     expect([...ledger.snapshot().listings()].map((l) => l.ref).sort()).toEqual(["a1", "a2", "b1"]);
     ledger.close();
+  });
+
+  it("keeps a failed harvest's cause chain in its run log and the release manifest", async () => {
+    await ingestDay(SAMPLE.now, [cnbSource()], true);
+    const refused = Object.assign(new Error("connect ECONNREFUSED 192.0.2.1:443"), {
+      code: "ECONNREFUSED",
+    });
+    const failure = new HttpNetworkError(
+      "https://www.autoscout24.de/lst",
+      new TypeError("fetch failed", { cause: refused }),
+    );
+    const chain =
+      "HttpNetworkError: Network failure after retries: https://www.autoscout24.de/lst" +
+      "; caused by: TypeError: fetch failed; caused by: Error: connect ECONNREFUSED 192.0.2.1:443";
+    const failed = await ingestDay(day("2026-10-26"), [census({ A: ["a1"] }, "A", failure)]);
+    expect(failed.runs[0]?.error).toContain(chain);
+    await h.store.download(failed.tag, ASSETS.manifest, join(dir, "manifest.json"));
+    const manifest = JSON.parse(await readFile(join(dir, "manifest.json"), "utf8")) as Manifest;
+    expect(manifest.runs[0]?.error).toContain(chain);
   });
 
   it("refuses run logs that started before their base was released", async () => {
@@ -688,6 +711,36 @@ describe("GitHub release store", () => {
 });
 
 describe("run logs", () => {
+  it("writes a failed harvest's error with its causes, and records the run as failed", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "cca-run-log-"));
+    const out = join(dir, "run.ndjson");
+    const ledger = openLedger(":memory:");
+    const failure = new HttpNetworkError(
+      "https://www.autoscout24.de/lst",
+      new TypeError("fetch failed", {
+        cause: Object.assign(new Error("Connect Timeout Error"), {
+          code: "UND_ERR_CONNECT_TIMEOUT",
+        }),
+      }),
+    );
+    const report = await harvestToLog({
+      ledger,
+      source: census({ A: ["a1"] }, "A", failure),
+      http: noHttp,
+      mode: "full",
+      now: day("2026-10-26"),
+      out,
+    });
+    const chain =
+      "HttpNetworkError: Network failure after retries: https://www.autoscout24.de/lst" +
+      "; caused by: TypeError: fetch failed" +
+      "; caused by: Error: Connect Timeout Error [UND_ERR_CONNECT_TIMEOUT]";
+    expect(report.error).toBe(chain);
+    await expect(recordLog(ledger, out)).rejects.toThrow(`harvest failed: ${chain}`);
+    ledger.close();
+    await rm(dir, { recursive: true, force: true });
+  });
+
   it("rejects, rather than reporting a failed harvest, when the log cannot be written", async () => {
     const ledger = openLedger(":memory:");
     const out = join(tmpdir(), "cca-missing-dir", "x", "cnb.ndjson");

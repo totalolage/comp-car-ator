@@ -32,6 +32,7 @@ import { openLedger } from "@cca/ledger";
 import { publish } from "@cca/publisher";
 import { type HarvestMode, type Logger, sources } from "@cca/sources";
 import { findRelease, releaseRuns, restoreLedger, TAG_PREFIX } from "./data-release.ts";
+import { describeError } from "./error-text.ts";
 import { harvestJob } from "./harvest-job.ts";
 import {
   buildSampleBundle,
@@ -123,7 +124,7 @@ switch (command) {
         log.info(`${id} ${mode} run complete`, { ...summary });
       } catch (error) {
         failed = true;
-        log.warn(`${id} ${mode} run failed`, { error: String(error) });
+        log.warn(`${id} ${mode} run failed`, { error: describeError(error) });
       }
     }
     await live?.close();
