@@ -106,8 +106,19 @@ describe("describeError", () => {
     expect(describeError({ status: 503 })).toBe("[object Object]");
     expect(
       describeError(new Error("outer", { cause: [{ code: "ERR_A" }, { code: "ERR_B" }] })),
-    ).toBe('Error: outer; caused by: [{"code":"ERR_A"},{"code":"ERR_B"}]');
+    ).toBe('Error: outer; caused by: [{"code":"ERR_A"}, {"code":"ERR_B"}]');
     expect(describeError(new Error("outer", { cause: [] }))).toBe("Error: outer; caused by: []");
+    expect(
+      describeError(new Error("outer", { cause: [new Error("socket closed"), { code: "ERR_B" }] })),
+    ).toBe('Error: outer; caused by: [Error: socket closed, {"code":"ERR_B"}]');
+    const nested: unknown[] = [[new Error("inner")]];
+    nested.push(nested);
+    expect(describeError(new Error("outer", { cause: nested }))).toBe(
+      "Error: outer; caused by: [[Error: inner], [cycle]]",
+    );
+    expect(describeError(new Error("outer", { cause: { reason: new Error("reset") } }))).toBe(
+      'Error: outer; caused by: {"reason":"Error: reset"}',
+    );
     const revoked = Proxy.revocable({}, {});
     revoked.revoke();
     expect(

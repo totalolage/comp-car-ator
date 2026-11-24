@@ -6,6 +6,8 @@
 
 /** Links read before the chain is cut short. */
 const MAX_LINKS = 8;
+/** Arrays inside arrays listed before a cause value is cut short. */
+const MAX_NESTING = 3;
 const SEPARATOR = "; caused by: ";
 
 /**
@@ -85,12 +87,7 @@ function readLink(value: unknown, isCause: boolean): Link {
   // Connecting to every address of a host fails as one AggregateError, often with no message.
   const errors = isCause && value instanceof AggregateError ? read(() => value.errors) : undefined;
   if (Array.isArray(errors)) {
-    const inner = new Set(
-      errors.map(
-        (e) =>
-          read(() => (e instanceof Error ? safeString(e) : describeValue(e))) ?? "[unreadable]",
-      ),
-    );
+    const inner = new Set(errors.map((e) => read(() => describeValue(e)) ?? "[unreadable]"));
     if (inner.size > 0) text += ` (${[...inner].join(", ")})`;
   }
   let cause: unknown;
@@ -116,16 +113,25 @@ function read(get: () => unknown): unknown {
   }
 }
 
-/**
- * A non-Error cause: its own string form, or its JSON when that says nothing (an array, or
- * Object's "[object …]" tag).
- */
-function describeValue(value: unknown): string {
+/** A non-Error cause; an array lists its entries, so Errors inside keep their messages. */
+function describeValue(value: unknown, within: readonly unknown[] = []): string {
+  if (!Array.isArray(value)) return describeEntry(value);
+  if (within.includes(value)) return "[cycle]";
+  if (within.length === MAX_NESTING) return "[…]";
+  const entries = value.map(
+    (entry) => read(() => describeValue(entry, [...within, value])) ?? "[unreadable]",
+  );
+  return `[${entries.join(", ")}]`;
+}
+
+/** An Error as String(error); anything else as its string form, or JSON when that is only a tag. */
+function describeEntry(value: unknown): string {
   const text = safeString(value);
-  if (typeof value !== "object" || value === null) return text;
-  if (!Array.isArray(value) && !/^\[object \w+\]$/.test(text)) return text;
+  if (value instanceof Error || typeof value !== "object" || value === null) return text;
+  if (!/^\[object \w+\]$/.test(text)) return text;
   try {
-    return JSON.stringify(value) ?? text;
+    // Errors inside keep their message rather than JSON's "{}".
+    return JSON.stringify(value, (_, v) => (v instanceof Error ? safeString(v) : v)) ?? text;
   } catch {
     // Circular or BigInt-holding objects keep their tag.
     return text;
