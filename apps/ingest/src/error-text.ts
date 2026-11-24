@@ -73,17 +73,24 @@ interface Link {
   unreadableCause: boolean;
 }
 
+/** String(error), plus its string `code` when the message lacks it. */
+function errorText(error: Error): string {
+  const text = safeString(error);
+  // Node and undici put the informative part of a socket error in `code` (UND_ERR_CONNECT_TIMEOUT).
+  // DOMException's numeric legacy codes say nothing its name doesn't.
+  const code = read(() => (error as { code?: unknown }).code);
+  return typeof code === "string" && code !== "" && !text.includes(code)
+    ? `${text} [${code}]`
+    : text;
+}
+
 /** One link of the chain, each property read once; a getter that throws spoils only itself. */
 function readLink(value: unknown, isCause: boolean): Link {
   if (!(value instanceof Error)) {
     const text = isCause ? describeValue(value) : safeString(value);
     return { text, message: undefined, cause: undefined, unreadableCause: false };
   }
-  let text = safeString(value);
-  // Node and undici put the informative part of a socket error in `code` (UND_ERR_CONNECT_TIMEOUT).
-  // DOMException's numeric legacy codes say nothing its name doesn't.
-  const code = read(() => (value as { code?: unknown }).code);
-  if (typeof code === "string" && code !== "" && !text.includes(code)) text += ` [${code}]`;
+  let text = errorText(value);
   // Connecting to every address of a host fails as one AggregateError, often with no message.
   const errors = isCause && value instanceof AggregateError ? read(() => value.errors) : undefined;
   if (Array.isArray(errors)) {
@@ -124,14 +131,15 @@ function describeValue(value: unknown, within: readonly unknown[] = []): string 
   return `[${entries.join(", ")}]`;
 }
 
-/** An Error as String(error); anything else as its string form, or JSON when that is only a tag. */
+/** An Error as in the chain; anything else as its string form, or JSON when that is only a tag. */
 function describeEntry(value: unknown): string {
+  if (value instanceof Error) return errorText(value);
   const text = safeString(value);
-  if (value instanceof Error || typeof value !== "object" || value === null) return text;
+  if (typeof value !== "object" || value === null) return text;
   if (!/^\[object \w+\]$/.test(text)) return text;
   try {
     // Errors inside keep their message rather than JSON's "{}".
-    return JSON.stringify(value, (_, v) => (v instanceof Error ? safeString(v) : v)) ?? text;
+    return JSON.stringify(value, (_, v) => (v instanceof Error ? errorText(v) : v)) ?? text;
   } catch {
     // Circular or BigInt-holding objects keep their tag.
     return text;

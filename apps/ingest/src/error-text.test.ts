@@ -119,6 +119,13 @@ describe("describeError", () => {
     expect(describeError(new Error("outer", { cause: { reason: new Error("reset") } }))).toBe(
       'Error: outer; caused by: {"reason":"Error: reset"}',
     );
+    const closed = Object.assign(new Error("socket closed"), { code: "UND_ERR_SOCKET" });
+    expect(describeError(new Error("outer", { cause: [closed] }))).toBe(
+      "Error: outer; caused by: [Error: socket closed [UND_ERR_SOCKET]]",
+    );
+    expect(describeError(new Error("outer", { cause: { reason: closed } }))).toBe(
+      'Error: outer; caused by: {"reason":"Error: socket closed [UND_ERR_SOCKET]"}',
+    );
     const revoked = Proxy.revocable({}, {});
     revoked.revoke();
     expect(
