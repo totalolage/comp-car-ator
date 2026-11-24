@@ -37,17 +37,25 @@ function describeChain(error: unknown): string {
       break;
     }
     seen.add(current);
-    const link = readLink(current, seen.size > 1);
+    const isCause = seen.size > 1;
+    let link: Link;
+    try {
+      link = readLink(current, isCause);
+    } catch {
+      // A value even `instanceof` cannot inspect (a revoked Proxy); the links above it stand.
+      parts.push(isCause ? "[unreadable cause]" : safeString(current));
+      break;
+    }
     // A plain wrapper that repeats its cause's message (the Ledger's RunFailedError) adds only
     // noise; one with its own name or code still prints. Kept when the cause loops back, and as
     // the last link read, so a cut chain still shows its message.
+    const { cause, message } = link;
     const repeats =
-      link.message !== undefined &&
-      link.text === `Error: ${link.message}` &&
-      link.cause instanceof Error &&
-      !seen.has(link.cause) &&
+      message !== undefined &&
+      link.text === `Error: ${message}` &&
+      !seen.has(cause) &&
       seen.size < MAX_LINKS &&
-      readMessage(link.cause) === link.message;
+      read(() => cause instanceof Error && readMessage(cause) === message) === true;
     if (!repeats) parts.push(link.text);
     if (link.unreadableCause) parts.push("[unreadable cause]");
     if (link.cause === undefined) break;
@@ -78,7 +86,10 @@ function readLink(value: unknown, isCause: boolean): Link {
   const errors = isCause && value instanceof AggregateError ? read(() => value.errors) : undefined;
   if (Array.isArray(errors)) {
     const inner = new Set(
-      errors.map((e) => (e instanceof Error ? safeString(e) : describeValue(e))),
+      errors.map(
+        (e) =>
+          read(() => (e instanceof Error ? safeString(e) : describeValue(e))) ?? "[unreadable]",
+      ),
     );
     if (inner.size > 0) text += ` (${[...inner].join(", ")})`;
   }
@@ -105,10 +116,14 @@ function read(get: () => unknown): unknown {
   }
 }
 
-/** A non-Error cause: its own string form, or its JSON when it has only Object's "[object …]". */
+/**
+ * A non-Error cause: its own string form, or its JSON when that says nothing (an array, or
+ * Object's "[object …]" tag).
+ */
 function describeValue(value: unknown): string {
   const text = safeString(value);
-  if (typeof value !== "object" || value === null || !/^\[object \w+\]$/.test(text)) return text;
+  if (typeof value !== "object" || value === null) return text;
+  if (!Array.isArray(value) && !/^\[object \w+\]$/.test(text)) return text;
   try {
     return JSON.stringify(value) ?? text;
   } catch {

@@ -104,6 +104,22 @@ describe("describeError", () => {
       "Error: outer; caused by: transport unavailable",
     );
     expect(describeError({ status: 503 })).toBe("[object Object]");
+    expect(
+      describeError(new Error("outer", { cause: [{ code: "ERR_A" }, { code: "ERR_B" }] })),
+    ).toBe('Error: outer; caused by: [{"code":"ERR_A"},{"code":"ERR_B"}]');
+    expect(describeError(new Error("outer", { cause: [] }))).toBe("Error: outer; caused by: []");
+    const revoked = Proxy.revocable({}, {});
+    revoked.revoke();
+    expect(
+      describeError(
+        new Error("outer", { cause: new Error("transport", { cause: revoked.proxy }) }),
+      ),
+    ).toBe("Error: outer; caused by: Error: transport; caused by: [unreadable cause]");
+    expect(describeError(revoked.proxy)).toBe("[unprintable value]");
+    const all = new AggregateError([revoked.proxy, new Error("refused")]);
+    expect(describeError(new Error("outer", { cause: all }))).toBe(
+      "Error: outer; caused by: AggregateError ([unreadable], Error: refused)",
+    );
   });
 
   it("stops at a cause cycle", () => {
