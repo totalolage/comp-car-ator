@@ -89,13 +89,21 @@ describe("describeError", () => {
     expect(describeError(new Error("outer", { cause: hostile }))).toBe(
       "Error: outer; caused by: [object Object]",
     );
-    const getter = new Error("outer");
-    Object.defineProperty(getter, "cause", {
+    const transport = new Error("transport");
+    Object.defineProperty(transport, "cause", {
       get() {
         throw new Error("no cause");
       },
     });
-    expect(describeError(getter)).toBe("Error: outer");
+    expect(describeError(new Error("outer", { cause: transport }))).toBe(
+      "Error: outer; caused by: Error: transport; caused by: [unreadable cause]",
+    );
+    const unavailable = { toString: () => "transport unavailable" };
+    expect(describeError(unavailable)).toBe("transport unavailable");
+    expect(describeError(new Error("outer", { cause: unavailable }))).toBe(
+      "Error: outer; caused by: transport unavailable",
+    );
+    expect(describeError({ status: 503 })).toBe("[object Object]");
   });
 
   it("stops at a cause cycle", () => {
@@ -134,9 +142,15 @@ describe("describeError", () => {
     expect(describeError(reset)).toBe(
       "Error: socket hang up [ECONNRESET]; caused by: Error: socket hang up",
     );
-    let same = new Error("socket");
-    for (let i = 0; i < 9; i++) same = new Error("socket", { cause: same });
-    expect(describeError(same)).toBe("Error: socket");
+    const repeated = (count: number, root: Error) => {
+      let error = root;
+      for (let i = 0; i < count; i++) error = new Error(root.message, { cause: error });
+      return error;
+    };
+    expect(describeError(repeated(3, new Error("socket")))).toBe("Error: socket");
+    // The bound counts links read, not printed: a deep cause is cut, the message kept.
+    const deep = Object.assign(new Error("socket"), { code: "EDEEP" });
+    expect(describeError(repeated(64, deep))).toBe("Error: socket; caused by: …");
   });
 });
 

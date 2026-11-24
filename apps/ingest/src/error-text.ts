@@ -4,7 +4,7 @@
  * after retries: <url>" without the connection error that explains it.
  */
 
-/** Links printed before the chain is cut short. */
+/** Links read before the chain is cut short. */
 const MAX_LINKS = 8;
 const SEPARATOR = "; caused by: ";
 
@@ -32,57 +32,89 @@ function describeChain(error: unknown): string {
       parts.push("[cause cycle]");
       break;
     }
-    if (parts.length === MAX_LINKS) {
+    if (seen.size === MAX_LINKS) {
       parts.push("…");
       break;
     }
     seen.add(current);
-    const hasCause = current instanceof Error && current.cause !== undefined;
-    const cause = hasCause ? (current as Error).cause : undefined;
-    const text = describeLink(current, seen.size > 1);
+    const link = readLink(current, seen.size > 1);
     // A plain wrapper that repeats its cause's message (the Ledger's RunFailedError) adds only
-    // noise; one with its own name or code still prints. Kept when the cause loops back.
+    // noise; one with its own name or code still prints. Kept when the cause loops back, and as
+    // the last link read, so a cut chain still shows its message.
     const repeats =
-      current instanceof Error &&
-      cause instanceof Error &&
-      !seen.has(cause) &&
-      current.message === cause.message &&
-      text === `Error: ${current.message}`;
-    if (!repeats) parts.push(text);
-    if (!hasCause) break;
-    current = cause;
+      link.message !== undefined &&
+      link.text === `Error: ${link.message}` &&
+      link.cause instanceof Error &&
+      !seen.has(link.cause) &&
+      seen.size < MAX_LINKS &&
+      readMessage(link.cause) === link.message;
+    if (!repeats) parts.push(link.text);
+    if (link.unreadableCause) parts.push("[unreadable cause]");
+    if (link.cause === undefined) break;
+    current = link.cause;
   }
   return parts.join(SEPARATOR);
 }
 
-function describeLink(value: unknown, isCause: boolean): string {
-  if (!(value instanceof Error)) return describeValue(value);
+interface Link {
+  text: string;
+  message: string | undefined;
+  cause: unknown;
+  unreadableCause: boolean;
+}
+
+/** One link of the chain, each property read once; a getter that throws spoils only itself. */
+function readLink(value: unknown, isCause: boolean): Link {
+  if (!(value instanceof Error)) {
+    const text = isCause ? describeValue(value) : safeString(value);
+    return { text, message: undefined, cause: undefined, unreadableCause: false };
+  }
   let text = safeString(value);
   // Node and undici put the informative part of a socket error in `code` (UND_ERR_CONNECT_TIMEOUT).
   // DOMException's numeric legacy codes say nothing its name doesn't.
-  const code = (value as { code?: unknown }).code;
+  const code = read(() => (value as { code?: unknown }).code);
   if (typeof code === "string" && code !== "" && !text.includes(code)) text += ` [${code}]`;
   // Connecting to every address of a host fails as one AggregateError, often with no message.
-  if (isCause && value instanceof AggregateError && Array.isArray(value.errors)) {
+  const errors = isCause && value instanceof AggregateError ? read(() => value.errors) : undefined;
+  if (Array.isArray(errors)) {
     const inner = new Set(
-      value.errors.map((e) => (e instanceof Error ? safeString(e) : describeValue(e))),
+      errors.map((e) => (e instanceof Error ? safeString(e) : describeValue(e))),
     );
     if (inner.size > 0) text += ` (${[...inner].join(", ")})`;
   }
-  return text;
+  let cause: unknown;
+  let unreadableCause = false;
+  try {
+    cause = value.cause;
+  } catch {
+    unreadableCause = true;
+  }
+  return { text, message: readMessage(value), cause, unreadableCause };
 }
 
-function describeValue(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "object" && value !== null) {
-    try {
-      const json = JSON.stringify(value);
-      if (json !== undefined) return json;
-    } catch {
-      // Circular or BigInt-holding objects fall back to String.
-    }
+function readMessage(error: Error): string | undefined {
+  const message = read(() => error.message);
+  return typeof message === "string" ? message : undefined;
+}
+
+function read(get: () => unknown): unknown {
+  try {
+    return get();
+  } catch {
+    return undefined;
   }
-  return safeString(value);
+}
+
+/** A non-Error cause: its own string form, or its JSON when it has only Object's "[object …]". */
+function describeValue(value: unknown): string {
+  const text = safeString(value);
+  if (typeof value !== "object" || value === null || !/^\[object \w+\]$/.test(text)) return text;
+  try {
+    return JSON.stringify(value) ?? text;
+  } catch {
+    // Circular or BigInt-holding objects keep their tag.
+    return text;
+  }
 }
 
 /** String(value), or its tag when it has no usable toString (Object.create(null)). */
