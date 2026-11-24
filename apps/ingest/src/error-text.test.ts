@@ -55,6 +55,12 @@ describe("describeError", () => {
     );
   });
 
+  it("keeps a cause-free AggregateError as String(error)", () => {
+    expect(describeError(new AggregateError([new Error("specific")], "all failed"))).toBe(
+      "AggregateError: all failed",
+    );
+  });
+
   it("prints a non-Error cause as its value", () => {
     expect(describeError(new Error("outer", { cause: "socket hang up" }))).toBe(
       "Error: outer; caused by: socket hang up",
@@ -63,6 +69,33 @@ describe("describeError", () => {
       'Error: outer; caused by: {"status":503}',
     );
     expect(describeError(new Error("outer", { cause: 42 }))).toBe("Error: outer; caused by: 42");
+  });
+
+  it("prints causes that have no usable toString, and never throws", () => {
+    expect(describeError(new Error("outer", { cause: null }))).toBe(
+      "Error: outer; caused by: null",
+    );
+    expect(describeError(new Error("outer", { cause: Object.create(null) }))).toBe(
+      "Error: outer; caused by: {}",
+    );
+    const hostile = {
+      toJSON() {
+        throw new Error("no JSON");
+      },
+      toString() {
+        throw new Error("no string");
+      },
+    };
+    expect(describeError(new Error("outer", { cause: hostile }))).toBe(
+      "Error: outer; caused by: [object Object]",
+    );
+    const getter = new Error("outer");
+    Object.defineProperty(getter, "cause", {
+      get() {
+        throw new Error("no cause");
+      },
+    });
+    expect(describeError(getter)).toBe("Error: outer");
   });
 
   it("stops at a cause cycle", () => {
@@ -91,6 +124,19 @@ describe("describeError", () => {
       "HttpNetworkError: Network failure after retries: https://example.com/" +
         "; caused by: Error: socket hang up",
     );
+  });
+
+  it("keeps a repeating wrapper that adds a code, and one copy of a repeated message", () => {
+    const reset = Object.assign(
+      new Error("socket hang up", { cause: new Error("socket hang up") }),
+      { code: "ECONNRESET" },
+    );
+    expect(describeError(reset)).toBe(
+      "Error: socket hang up [ECONNRESET]; caused by: Error: socket hang up",
+    );
+    let same = new Error("socket");
+    for (let i = 0; i < 9; i++) same = new Error("socket", { cause: same });
+    expect(describeError(same)).toBe("Error: socket");
   });
 });
 

@@ -15,6 +15,15 @@ const SEPARATOR = "; caused by: ";
  * `code` when the message lacks it).
  */
 export function describeError(error: unknown): string {
+  // Writing the run log depends on this, so an error that cannot be printed must not throw here.
+  try {
+    return describeChain(error);
+  } catch {
+    return safeString(error);
+  }
+}
+
+function describeChain(error: unknown): string {
   const parts: string[] = [];
   const seen = new Set<unknown>();
   let current: unknown = error;
@@ -23,39 +32,42 @@ export function describeError(error: unknown): string {
       parts.push("[cause cycle]");
       break;
     }
-    if (seen.size === MAX_LINKS) {
+    if (parts.length === MAX_LINKS) {
       parts.push("…");
       break;
     }
     seen.add(current);
-    const cause = current instanceof Error ? current.cause : undefined;
-    // A wrapper that repeats its cause's message (the Ledger's RunFailedError) adds only noise.
-    // Kept when the cause loops back, so a cycle still prints the error once.
+    const hasCause = current instanceof Error && current.cause !== undefined;
+    const cause = hasCause ? (current as Error).cause : undefined;
+    const text = describeLink(current, seen.size > 1);
+    // A plain wrapper that repeats its cause's message (the Ledger's RunFailedError) adds only
+    // noise; one with its own name or code still prints. Kept when the cause loops back.
     const repeats =
       current instanceof Error &&
       cause instanceof Error &&
       !seen.has(cause) &&
-      current.message === cause.message;
-    if (!repeats) parts.push(describeLink(current));
-    if (cause === undefined || cause === null) break;
+      current.message === cause.message &&
+      text === `Error: ${current.message}`;
+    if (!repeats) parts.push(text);
+    if (!hasCause) break;
     current = cause;
   }
   return parts.join(SEPARATOR);
 }
 
-function describeLink(value: unknown): string {
+function describeLink(value: unknown, isCause: boolean): string {
   if (!(value instanceof Error)) return describeValue(value);
-  let text = String(value);
+  let text = safeString(value);
   // Node and undici put the informative part of a socket error in `code` (UND_ERR_CONNECT_TIMEOUT).
   // DOMException's numeric legacy codes say nothing its name doesn't.
   const code = (value as { code?: unknown }).code;
   if (typeof code === "string" && code !== "" && !text.includes(code)) text += ` [${code}]`;
   // Connecting to every address of a host fails as one AggregateError, often with no message.
-  if (value instanceof AggregateError && Array.isArray(value.errors) && value.errors.length > 0) {
-    const inner = [
-      ...new Set(value.errors.map((e) => (e instanceof Error ? String(e) : describeValue(e)))),
-    ];
-    text += ` (${inner.join(", ")})`;
+  if (isCause && value instanceof AggregateError && Array.isArray(value.errors)) {
+    const inner = new Set(
+      value.errors.map((e) => (e instanceof Error ? safeString(e) : describeValue(e))),
+    );
+    if (inner.size > 0) text += ` (${[...inner].join(", ")})`;
   }
   return text;
 }
@@ -65,10 +77,23 @@ function describeValue(value: unknown): string {
   if (typeof value === "object" && value !== null) {
     try {
       const json = JSON.stringify(value);
-      if (json !== undefined && json !== "{}") return json;
+      if (json !== undefined) return json;
     } catch {
       // Circular or BigInt-holding objects fall back to String.
     }
   }
-  return String(value);
+  return safeString(value);
+}
+
+/** String(value), or its tag when it has no usable toString (Object.create(null)). */
+function safeString(value: unknown): string {
+  try {
+    return String(value);
+  } catch {
+    try {
+      return Object.prototype.toString.call(value);
+    } catch {
+      return "[unprintable value]";
+    }
+  }
 }
