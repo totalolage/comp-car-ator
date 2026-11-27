@@ -111,7 +111,13 @@ describe("Ledger", () => {
 
   it("reprices a live listing from a price-only sighting, leaving the rest and when it was seen", async () => {
     ledger = openLedger(":memory:");
-    await run("sauto", "full", "2026-10-10", [seen("1", 489_000), seen("2", 1)]);
+    await run("sauto", "full", "2026-10-10", [
+      seen("1", 489_000),
+      seen("2", 250_000),
+      seen("3", 250_000, {
+        sellerExtras: { amount: 10_000, currency: "CZK", basis: "gross" },
+      }),
+    ]);
     const price = (ref: string, amount: number, currency = "CZK"): Observation => ({
       kind: "ListingPriceSeen",
       ref,
@@ -121,18 +127,30 @@ describe("Ledger", () => {
     expect(unchanged).toMatchObject({ priceChanges: 0, rejected: [] });
     const later = await run("sauto", "incremental", "2026-10-12", [
       price("1", 479_000),
-      // Only a ListingSeen adds a listing or changes its currency.
+      // A listing without sellerExtras can move currency on a price-only sighting.
+      price("2", 10_000, "EUR"),
+      // Only a ListingSeen adds a listing or moves currency when sellerExtras are stored.
       price("9", 1),
-      price("2", 1, "EUR"),
+      price("3", 10_000, "EUR"),
     ]);
-    expect(later).toMatchObject({ priceChanges: 1, recorded: { ListingPriceSeen: 1 } });
+    expect(later).toMatchObject({ priceChanges: 2, recorded: { ListingPriceSeen: 2 } });
     expect(later.rejected.map((r) => r.reason)).toEqual([
       "no live listing with this ref to reprice",
-      "price currency EUR differs from the listing's CZK",
+      "price currency EUR differs from the listing's sellerExtras currency CZK",
     ]);
 
-    const [listing] = [...ledger.snapshot().listings()];
-    expect(listing).toMatchObject({
+    // Switching back with the same numeric amount still counts as a price change.
+    const sameAmountOtherCurrency = await run("sauto", "incremental", "2026-10-13", [
+      price("2", 10_000, "CZK"),
+    ]);
+    expect(sameAmountOtherCurrency).toMatchObject({
+      priceChanges: 1,
+      recorded: { ListingPriceSeen: 1 },
+      rejected: [],
+    });
+
+    const byId = new Map([...ledger.snapshot().listings()].map((l) => [l.id, l]));
+    expect(byId.get("sauto:1")).toMatchObject({
       id: "sauto:1",
       lastSeen: "2026-10-10",
       price: { amount: 479_000, currency: "CZK" },
@@ -143,11 +161,27 @@ describe("Ledger", () => {
         { date: "2026-10-12", price: { amount: 479_000, currency: "CZK" } },
       ],
     });
+    expect(byId.get("sauto:2")).toMatchObject({
+      id: "sauto:2",
+      lastSeen: "2026-10-10",
+      price: { amount: 10_000, currency: "CZK" },
+      priceHistory: [
+        { date: "2026-10-10", price: { amount: 250_000, currency: "CZK" } },
+        { date: "2026-10-12", price: { amount: 10_000, currency: "EUR" } },
+        { date: "2026-10-13", price: { amount: 10_000, currency: "CZK" } },
+      ],
+    });
+    expect(byId.get("sauto:3")).toMatchObject({
+      price: { amount: 250_000, currency: "CZK" },
+      sellerExtras: { amount: 10_000, currency: "CZK", basis: "gross" },
+    });
     // A price-only sighting is a census sighting: a listing full runs miss stays live by it.
-    await run("sauto", "full", "2026-10-17", [seen("2", 1)]);
+    await run("sauto", "full", "2026-10-17", [seen("2", 10_000), seen("3", 250_000)]);
     await run("sauto", "incremental", "2026-10-18", [price("1", 479_000)]);
-    expect((await run("sauto", "full", "2026-10-24", [seen("2", 1)])).gone).toBe(0);
-    const twice = await run("sauto", "full", "2026-10-31", [seen("2", 1)]);
+    expect(
+      (await run("sauto", "full", "2026-10-24", [seen("2", 10_000), seen("3", 250_000)])).gone,
+    ).toBe(0);
+    const twice = await run("sauto", "full", "2026-10-31", [seen("2", 10_000), seen("3", 250_000)]);
     expect(twice.gone).toBe(1);
     const gone = await run("sauto", "incremental", "2026-11-01", [price("1", 1)]);
     expect(gone.rejected).toHaveLength(1);
@@ -1249,11 +1283,15 @@ describe("Ledger absence per finished slice", () => {
 
   it("a rejected price sighting naming its slice keeps that one not done, not the next SliceDone", async () => {
     ledger = openLedger(":memory:");
-    // x was first recorded by an incremental run, so the Ledger holds it in no slice. a2 is
-    // held in A by a census that is over, and the next census does not meet it.
-    await run("bazos", "incremental", "2026-10-03", [seen("x", 1)]);
+    // x was first recorded by an incremental run with sellerExtras in CZK, so the Ledger holds
+    // it in no slice. a2 is held in A by a census that is over, and the next census does not
+    // meet it.
+    await run("bazos", "incremental", "2026-10-03", [
+      seen("x", 1, { sellerExtras: { amount: 100, currency: "CZK", basis: "gross" } }),
+    ]);
     await run("bazos", "full", "2026-10-04", [inSlice("a1", "A"), inSlice("a2", "A"), done("A")]);
-    // x now shows a price in another currency, met in A before C's SliceDone comes out.
+    // x now shows a price in another currency conflicting with sellerExtras, met in A before
+    // C's SliceDone comes out.
     const price = { kind: "ListingPriceSeen", ref: "x", price: { amount: 1, currency: "EUR" } };
     const obs = [inSlice("a1", "A"), { ...price, slice: "A" } as Observation, done("C"), done("A")];
     async function* failing() {
@@ -1267,6 +1305,54 @@ describe("Ledger absence per finished slice", () => {
     const checkpoint = ledger.checkpoint("bazos");
     expect(checkpoint.sliceDoneAt("C")).toEqual(day("2026-10-05"));
     expect(checkpoint.sliceDoneAt("A")).toBeNull();
+  });
+
+  it("a currency change on a price sighting without sellerExtras does not taint its slice or census", async () => {
+    ledger = openLedger(":memory:");
+    await run("tipcars", "full", "2026-10-04", [
+      inSlice("a1", "new"),
+      inSlice("a2", "new"),
+      done("new"),
+    ]);
+    const summary = await run("tipcars", "full", "2026-10-11", [
+      {
+        kind: "ListingPriceSeen",
+        ref: "a1",
+        price: { amount: 10_000, currency: "EUR" },
+        slice: "new",
+      },
+      { ...inSlice("a1", "new"), price: { amount: 10_000, currency: "EUR" } },
+      {
+        kind: "ListingPriceSeen",
+        ref: "a2",
+        price: { amount: 12_000, currency: "EUR" },
+        slice: "new",
+      },
+      done("new"),
+    ]);
+    expect(summary).toMatchObject({
+      rejectedTotal: 0,
+      priceChanges: 2,
+      census: "applied",
+      recorded: { ListingPriceSeen: 2, ListingSeen: 1, SliceDone: 1 },
+    });
+    const byId = new Map([...ledger.snapshot().listings()].map((l) => [l.id, l]));
+    expect(byId.get("tipcars:a1")).toMatchObject({
+      lastSeen: "2026-10-11",
+      price: { amount: 10_000, currency: "EUR" },
+      priceHistory: [
+        { date: "2026-10-04", price: { amount: 1, currency: "CZK" } },
+        { date: "2026-10-11", price: { amount: 10_000, currency: "EUR" } },
+      ],
+    });
+    expect(byId.get("tipcars:a2")).toMatchObject({
+      lastSeen: "2026-10-04",
+      price: { amount: 12_000, currency: "EUR" },
+      priceHistory: [
+        { date: "2026-10-04", price: { amount: 1, currency: "CZK" } },
+        { date: "2026-10-11", price: { amount: 12_000, currency: "EUR" } },
+      ],
+    });
   });
 
   it("retires a listing missed twice only once the census of its second miss is over", async () => {
