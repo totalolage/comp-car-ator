@@ -271,7 +271,7 @@ class Harvest {
     // A listing names its year or list (ListingSeen.slice), not a price part: a price moves.
     // One the Ledger rejects names none, so it keeps the part it came out in not done, as
     // well as the slice it holds a known listing in. A price sighting names it too: only the
-    // Ledger knows when it rejects one (a price in another currency), and a part paged again
+    // Ledger knows when it rejects one (e.g. a listing not live), and a part paged again
     // may yield its SliceDone before the slice is done (`again`).
     for (const slice of this.slices()) {
       const key = sliceKey(slice);
@@ -847,8 +847,8 @@ class Harvest {
    * none outside the scope. One whose price or currency does not parse gets the ListingSeen
    * the Ledger rejects that its listing would (`rejected`): that still proves it live, and
    * keeps its slice not done. Its own ListingSeen, if any, still comes out later. A card whose
-   * currency is not the one the Ledger holds gets a ListingPriceSeen the Ledger rejects, with
-   * the same effect; its ListingSeen moves the currency for the next run.
+   * currency moved since the last ListingSeen gets a ListingPriceSeen in the new currency,
+   * which the Ledger records (TipCars carries no sellerExtras).
    */
   private *alive(cards: readonly Card[]): Iterable<ListingPriceSeen | ListingSeen> {
     for (const card of cards) {

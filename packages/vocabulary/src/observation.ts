@@ -80,12 +80,14 @@ export interface SellerExtras extends Money {
 /**
  * A listing the Ledger knows was visible at the source during this run with this price, read
  * from list data that lacks the rest of its ListingSeen (an incremental run's search page). The
- * Ledger updates only the listing's price and its price history; every other field, and when
- * the listing was last seen, stays as the last ListingSeen left it, `priceBasis` included. It
- * still proves the listing live: a census it falls in does not count the listing missed.
- * `price` must be the amount the source's ListingSeen would carry, from the same field and in
- * the same currency, or the history records a change that did not happen. A ref the Ledger has no live listing for, or a
- * price in another currency, is rejected: only a ListingSeen can add or change those.
+ * Ledger updates only the listing's price (amount and currency) and its price history; every
+ * other field, and when the listing was last seen, stays as the last ListingSeen left it,
+ * `priceBasis` included. It still proves the listing live: a census it falls in does not count
+ * the listing missed. `price` must be the amount and currency the source's ListingSeen would
+ * carry, from the same field, or the history records a change that did not happen. A ref the
+ * Ledger has no live listing for, or a price whose currency differs from the listing's stored
+ * `sellerExtras`, is rejected: only a ListingSeen can add a listing, revive a gone one, or
+ * update `sellerExtras` alongside a currency change.
  */
 export interface ListingPriceSeen {
   kind: "ListingPriceSeen";

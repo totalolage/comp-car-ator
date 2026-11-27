@@ -81,11 +81,11 @@ export function openLedger(path: string): Ledger {
     ),
     getListing: db.prepare("SELECT price_amount, price_currency FROM listings WHERE id = ?"),
     getLiveListing: db.prepare(
-      "SELECT price_amount, price_currency FROM listings WHERE id = ? AND gone IS NULL",
+      "SELECT price_amount, price_currency, json_extract(data, '$.sellerExtras.currency') AS extras_currency FROM listings WHERE id = ? AND gone IS NULL",
     ),
     // A price-only sighting: the rest of the listing, and when it was last seen, stay.
     repriceListing: db.prepare(
-      "UPDATE listings SET data = json_set(data, '$.price', json(?)), price_amount = ? WHERE id = ?",
+      "UPDATE listings SET data = json_set(data, '$.price', json(?)), price_amount = ?, price_currency = ? WHERE id = ?",
     ),
     insertListing: db.prepare(
       `INSERT INTO listings (id, source, ref, scope, slice, data, price_amount, price_currency, first_seen, last_seen, last_seen_run)
@@ -225,12 +225,18 @@ export function openLedger(path: string): Ledger {
         break;
       }
       case "ListingPriceSeen": {
-        // Checked live and in the listing's currency before recording (`repriceReason`).
+        // Checked live and compatible with any stored sellerExtras before recording (`repriceReason`).
         const id = `${run.source}:${o.ref}`;
-        const existing = q.getLiveListing.get(id) as { price_amount: number };
+        const existing = q.getLiveListing.get(id) as {
+          price_amount: number;
+          price_currency: string;
+        };
         q.aliveListing.run(runId, id);
-        if (existing.price_amount !== o.price.amount) {
-          q.repriceListing.run(JSON.stringify(o.price), o.price.amount, id);
+        if (
+          existing.price_amount !== o.price.amount ||
+          existing.price_currency !== o.price.currency
+        ) {
+          q.repriceListing.run(JSON.stringify(o.price), o.price.amount, o.price.currency, id);
           q.upsertHistory.run(id, day, o.price.amount, o.price.currency);
           summary.priceChanges++;
         }
@@ -385,15 +391,18 @@ export function openLedger(path: string): Ledger {
         retired: 0,
         census: full ? "incomplete" : "not-full",
       };
-      /** Why a price-only sighting cannot apply: only a ListingSeen adds a listing or moves its currency. */
+      /**
+       * Why a price-only sighting cannot apply: only a ListingSeen adds a listing, revives a gone
+       * one, or changes currency while stored sellerExtras stay in the old currency.
+       */
       const repriceReason = (o: ListingPriceSeen): string | null => {
         const live = q.getLiveListing.get(`${run.source}:${o.ref}`) as
-          | { price_currency: string }
+          | { extras_currency: string | null }
           | undefined;
         if (!live) return "no live listing with this ref to reprice";
-        return live.price_currency === o.price.currency
+        return live.extras_currency === null || live.extras_currency === o.price.currency
           ? null
-          : `price currency ${o.price.currency} differs from the listing's ${live.price_currency}`;
+          : `price currency ${o.price.currency} differs from the listing's sellerExtras currency ${live.extras_currency}`;
       };
       // Observations since the previous SliceDone belong to the next one, unless they name
       // theirs (ListingSeen.slice). A slice that had a rejection stays not done for the rest
